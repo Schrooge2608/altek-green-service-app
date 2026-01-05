@@ -1,3 +1,5 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PerformanceChart } from '@/components/performance-chart';
 import { equipment } from '@/lib/data';
