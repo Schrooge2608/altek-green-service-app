@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "pump-1",
+      "description": "An industrial water pump.",
+      "imageUrl": "https://images.unsplash.com/photo-1699791912502-84f9cb24cb01?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxpbmR1c3RyaWFsJTIwcHVtcHxlbnwwfHx8fDE3Njc1NzY1MTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "industrial pump"
+    },
+    {
+      "id": "fan-1",
+      "description": "A large industrial fan.",
+      "imageUrl": "https://images.unsplash.com/photo-1737244351296-0b8b2a5ced9f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxpbmR1c3RyaWFsJTIwZmFufGVufDB8fHx8MTc2NzU0MDUyMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "industrial fan"
+    },
+    {
+      "id": "compressor-1",
+      "description": "An industrial air compressor.",
+      "imageUrl": "https://images.unsplash.com/photo-1710743385173-5d94a85682af?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxhaXIlMjBjb21wcmVzc29yfGVufDB8fHx8MTc2NzU4NDk5MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "air compressor"
+    },
+    {
+      "id": "dashboard-hero",
+      "description": "A modern factory interior.",
+      "imageUrl": "https://images.unsplash.com/photo-1680595848057-66631ee6fd1f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxtb2Rlcm4lMjBmYWN0b3J5fGVufDB8fHx8MTc2NzUzNDIxN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "modern factory"
+    },
+    {
+      "id": "user-avatar",
+      "description": "A user's profile picture.",
+      "imageUrl": "https://images.unsplash.com/photo-1521146764736-56c929d59c83?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwb3J0cmFpdCUyMHBlcnNvbnxlbnwwfHx8fDE3Njc1MTEzNDJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "portrait person"
+    }
+  ]
 }
