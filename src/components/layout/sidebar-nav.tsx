@@ -96,7 +96,7 @@ export function SidebarNav() {
                          <SidebarMenuItem key={division.href}>
                             <Link href={division.href} passHref>
                                 <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                  <a>{division.label}</a>
+                                  <span>{division.label}</span>
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
