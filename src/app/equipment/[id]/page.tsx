@@ -1,3 +1,4 @@
+
 'use client';
 
 import { notFound, useParams } from 'next/navigation';
@@ -13,6 +14,7 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { useEffect } from 'react';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -59,6 +61,21 @@ function EquipmentDetailSkeleton() {
     );
 }
 
+function VSDInfo({ vsdId }: { vsdId: string }) {
+    const firestore = useFirestore();
+    const vsdRef = useMemoFirebase(() => doc(firestore, 'vsds', vsdId), [firestore, vsdId]);
+    const { data: eqVsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
+
+    return (
+         <div className="mt-2 space-y-1">
+            <p><strong>VSD ID:</strong> {vsdId}</p>
+            <p><strong>VSD Model:</strong> {vsdLoading ? <Skeleton className="h-4 w-24 inline-block"/> : (eqVsd?.model || 'N/A')}</p>
+            <p><strong>Status:</strong> {vsdLoading ? <Skeleton className="h-6 w-16" /> : <Badge variant={eqVsd?.status === 'active' ? 'default' : (eqVsd?.status === 'maintenance' ? 'secondary' : 'destructive')}>{eqVsd?.status || 'Unknown'}</Badge>}</p>
+        </div>
+    );
+}
+
+
 export default function EquipmentDetailPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
@@ -67,22 +84,19 @@ export default function EquipmentDetailPage() {
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
 
-  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
-  const { data: eqVsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
-  
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
+  useEffect(() => {
+    // This effect now correctly checks for the final state after loading has completed.
+    if (!eqLoading && !eq && id) {
+      notFound();
+    }
+  }, [eqLoading, eq, id]);
 
-  if (eqLoading) {
+
+  if (eqLoading || !eq) {
     return <EquipmentDetailSkeleton />;
-  }
-
-  // After loading, if there's no equipment data and no error, then it's a 404
-  if (!eq && !eqError) {
-    notFound();
-    return null;
   }
   
   if (eqError) {
@@ -90,10 +104,7 @@ export default function EquipmentDetailPage() {
     return <div>Error loading equipment details. Please check the console and try again later.</div>;
   }
   
-  // This check is redundant if the above `!eq` check calls notFound(), but it's safe to keep.
-  if (!eq) {
-      return null;
-  }
+  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
   
   return (
     <div className="flex flex-col gap-8">
@@ -119,10 +130,7 @@ export default function EquipmentDetailPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-muted-foreground">VSD Control</h3>
-                         <div className="mt-2 space-y-1">
-                            <p><strong>VSD ID:</strong> {eq.vsdId}</p>
-                            <p><strong>VSD Model:</strong> {vsdLoading ? <Skeleton className="h-4 w-24 inline-block"/> : (eqVsd?.model || 'N/A')}</p>
-                        </div>
+                        {eq.vsdId ? <VSDInfo vsdId={eq.vsdId} /> : <p>No VSD assigned.</p>}
                     </div>
                      <div>
                         <h3 className="font-semibold text-muted-foreground">Specifications</h3>
@@ -212,10 +220,6 @@ export default function EquipmentDetailPage() {
                         <span className="text-muted-foreground">Power Consumption</span>
                         <span className="font-bold">{eq.powerConsumption} kWh</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Status</span>
-                         {vsdLoading ? <Skeleton className="h-6 w-16" /> : <Badge variant={eqVsd?.status === 'active' ? 'default' : (eqVsd?.status === 'maintenance' ? 'secondary' : 'destructive')}>{eqVsd?.status || 'Unknown'}</Badge>}
-                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -223,3 +227,5 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
+    
