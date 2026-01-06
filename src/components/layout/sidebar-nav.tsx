@@ -30,7 +30,6 @@ import React from 'react';
 
 const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/vsds', label: 'VSDs', icon: Wrench },
   { href: '/maintenance', label: 'Maintenance', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
