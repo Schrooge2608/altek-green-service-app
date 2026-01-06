@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -31,6 +32,66 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown: Breakdown, onResolve: (b: Breakdown, hours: {normal: number, overtime: number}) => void, children: React.ReactNode }) {
+  const [normalHours, setNormalHours] = React.useState(0);
+  const [overtimeHours, setOvertimeHours] = React.useState(0);
+
+  const handleResolveClick = () => {
+    onResolve(breakdown, { normal: normalHours, overtime: overtimeHours });
+  };
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        {children}
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Resolve Breakdown for {breakdown.equipmentName}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will mark the issue as resolved. Please enter the hours spent on this task. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="normal-hours" className="text-right">
+                    Normal Hours
+                </Label>
+                <Input
+                    id="normal-hours"
+                    type="number"
+                    value={normalHours}
+                    onChange={(e) => setNormalHours(Number(e.target.value))}
+                    className="col-span-3"
+                />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="overtime-hours" className="text-right">
+                    Overtime Hours
+                </Label>
+                <Input
+                    id="overtime-hours"
+                    type="number"
+                    value={overtimeHours}
+                    onChange={(e) => setOvertimeHours(Number(e.target.value))}
+                    className="col-span-3"
+                />
+            </div>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleResolveClick}>
+            Continue
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 
 export default function BreakdownsPage() {
   const firestore = useFirestore();
@@ -38,9 +99,13 @@ export default function BreakdownsPage() {
   const breakdownsQuery = useMemoFirebase(() => collection(firestore, 'breakdown_reports'), [firestore]);
   const { data: breakdowns, isLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const handleResolve = (breakdown: Breakdown) => {
+  const handleResolve = (breakdown: Breakdown, hours: {normal: number, overtime: number}) => {
     const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
-    updateDocumentNonBlocking(breakdownRef, { resolved: true });
+    updateDocumentNonBlocking(breakdownRef, { 
+        resolved: true,
+        normalHours: hours.normal,
+        overtimeHours: hours.overtime,
+    });
     toast({
         title: "Breakdown Resolved",
         description: `The issue for ${breakdown.equipmentName} has been marked as resolved.`,
@@ -72,13 +137,15 @@ export default function BreakdownsPage() {
                 <TableHead>Equipment</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Normal Hours</TableHead>
+                <TableHead className="text-right">Overtime Hours</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">Loading breakdowns...</TableCell>
+                  <TableCell colSpan={7} className="text-center h-24">Loading breakdowns...</TableCell>
                 </TableRow>
               ) : breakdowns && breakdowns.length > 0 ? (
                 breakdowns.map((b) => (
@@ -95,37 +162,23 @@ export default function BreakdownsPage() {
                         {b.resolved ? 'Resolved' : 'Pending'}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-right">{b.resolved ? b.normalHours ?? 0 : 'N/A'}</TableCell>
+                    <TableCell className="text-right">{b.resolved ? b.overtimeHours ?? 0 : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                       {!b.resolved && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                             <Button variant="ghost" size="sm">
+                         <ResolveBreakdownDialog breakdown={b} onResolve={handleResolve}>
+                            <Button variant="ghost" size="sm">
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Resolve
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will mark the breakdown for <span className="font-semibold">{b.equipmentName}</span> as resolved. This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleResolve(b)}>
-                                Continue
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        </ResolveBreakdownDialog>
                       )}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">No breakdowns found.</TableCell>
+                  <TableCell colSpan={7} className="text-center h-24">No breakdowns found.</TableCell>
                 </TableRow>
               )}
             </TableBody>

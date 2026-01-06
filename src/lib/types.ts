@@ -46,4 +46,6 @@ export interface Breakdown {
   description: string;
   resolved: boolean;
   resolution?: string;
+  normalHours?: number;
+  overtimeHours?: number;
 }
