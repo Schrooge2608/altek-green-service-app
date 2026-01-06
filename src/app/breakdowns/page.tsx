@@ -34,10 +34,12 @@ export default function BreakdownsPage() {
             History of all reported equipment breakdowns.
           </p>
         </div>
-        <Button variant="destructive">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Report New Breakdown
-        </Button>
+        <Link href="/breakdowns/new" passHref>
+          <Button variant="destructive">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Report New Breakdown
+          </Button>
+        </Link>
       </header>
       <Card>
         <CardContent className="pt-6">
