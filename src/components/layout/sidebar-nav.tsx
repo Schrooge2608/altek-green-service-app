@@ -12,7 +12,6 @@ import {
   SidebarTrigger,
   SidebarMenuSub,
   SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { AltekLogo } from '@/components/altek-logo';
 import {
@@ -38,7 +37,6 @@ const mainLinks = [
 ];
 
 const miningDivisions = [
-    { href: '/equipment/mining/boosters', label: 'Boosters' },
     { href: '/equipment/mining/pump-stations', label: 'Pump Stations' },
     { href: '/equipment/mining/dredgers', label: 'Dredgers' },
 ]
@@ -96,7 +94,7 @@ export function SidebarNav() {
                 <SidebarMenuSub>
                     {miningDivisions.map((division) => (
                          <SidebarMenuItem key={division.href}>
-                            <Link href={division.href} passHref>
+                            <Link href={division.href}>
                                 <SidebarMenuSubButton asChild isActive={pathname === division.href}>
                                   <a>{division.label}</a>
                                 </SidebarMenuSubButton>
