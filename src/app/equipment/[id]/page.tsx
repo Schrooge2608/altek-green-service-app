@@ -80,7 +80,7 @@ export default function EquipmentDetailPage() {
   if (eqError) {
     console.error("Firestore error:", eqError);
     // This could render a specific error component
-    return <div>Error loading equipment details.</div>;
+    return <div>Error loading equipment details. Please try again later.</div>;
   }
   
   if (!eq) {
@@ -115,7 +115,7 @@ export default function EquipmentDetailPage() {
                         <h3 className="font-semibold text-muted-foreground">VSD Control</h3>
                          <div className="mt-2 space-y-1">
                             <p><strong>VSD ID:</strong> {eq.vsdId}</p>
-                            <p><strong>VSD Model:</strong> {eqVsd?.model || 'N/A'}</p>
+                            <p><strong>VSD Model:</strong> {vsdLoading ? <Skeleton className="h-4 w-24 inline-block"/> : (eqVsd?.model || 'N/A')}</p>
                         </div>
                     </div>
                      <div>
