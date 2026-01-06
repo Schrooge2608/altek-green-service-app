@@ -84,7 +84,7 @@ function VSDInfo({ vsdId }: { vsdId: string }) {
          <div className="mt-2 space-y-1">
             <p><strong>VSD ID:</strong> {vsd.id}</p>
             <p><strong>VSD Model:</strong> {vsd.model || 'N/A'}</p>
-            <p><strong>Status:</strong> <Badge variant={vsd.status === 'active' ? 'default' : (vsd.status === 'maintenance' ? 'secondary' : 'destructive')}>{vsd.status || 'Unknown'}</Badge></p>
+            <div><strong>Status:</strong> <Badge variant={vsd.status === 'active' ? 'default' : (vsd.status === 'maintenance' ? 'secondary' : 'destructive')}>{vsd.status || 'Unknown'}</Badge></div>
         </div>
     );
 }
@@ -100,19 +100,13 @@ export default function EquipmentDetailPage() {
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  useEffect(() => {
-    if (!eqLoading && !eq) {
-      notFound();
-    }
-  }, [eqLoading, eq]);
-
-
   if (eqLoading) {
     return <EquipmentDetailSkeleton />;
   }
 
   if (!eq) {
-    return null; // This case is handled by the useEffect which calls notFound()
+    notFound();
+    return null; // notFound() throws an error, but this is needed for type safety
   }
   
   const defaultPlaceholder = eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
