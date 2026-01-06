@@ -45,27 +45,26 @@ const validDivisions: Record<string, string> = {
 export default function MiningDivisionPage() {
   const params = useParams();
   const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
-  const divisionName = divisionSlug ? validDivisions[divisionSlug] : undefined;
-
-  const firestore = useFirestore();
   
-  const equipmentQuery = useMemoFirebase(() => {
-    if (!divisionName) return null;
-    return query(
-        collection(firestore, 'equipment'), 
-        where('plant', '==', 'Mining'),
-        where('division', '==', divisionName)
-    );
-  }, [firestore, divisionName]);
-  
-  const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
-
   const memoizedDivisionName = useMemo(() => {
     if (!divisionSlug || !validDivisions[divisionSlug]) {
         notFound();
     }
     return validDivisions[divisionSlug];
   }, [divisionSlug]);
+
+  const firestore = useFirestore();
+  
+  const equipmentQuery = useMemoFirebase(() => {
+    if (!memoizedDivisionName) return null;
+    return query(
+        collection(firestore, 'equipment'), 
+        where('plant', '==', 'Mining'),
+        where('division', '==', memoizedDivisionName)
+    );
+  }, [firestore, memoizedDivisionName]);
+  
+  const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
   
   const equipmentByLocation = useMemo(() => {
     if (!equipment) return {};
@@ -84,9 +83,7 @@ export default function MiningDivisionPage() {
   }
 
   const isGroupedByLocation = divisionSlug === 'boosters' || divisionSlug === 'pump-stations';
-  const locations = isGroupedByLocation 
-    ? ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION', 'Uncategorized']
-    : Object.keys(equipmentByLocation);
+  const locations = Object.keys(equipmentByLocation);
 
   return (
     <div className="flex flex-col gap-8">
