@@ -23,6 +23,7 @@ import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useFirestore } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 const formSchema = z.object({
@@ -66,13 +67,11 @@ export default function NewEquipmentPage() {
     name: 'division',
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  function onSubmit(values: z.infer<typeof formSchema>) {
     if (values.plant === 'Mining' && !values.division) {
         form.setError('division', { type: 'manual', message: 'Please select a division for the Mining plant.' });
         return;
     }
-
-    const batch = writeBatch(firestore);
 
     const vsdRef = doc(collection(firestore, 'vsds'));
     const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
@@ -105,24 +104,14 @@ export default function NewEquipmentPage() {
         equipmentData.division = values.division;
     }
 
-    batch.set(vsdRef, vsdData);
-    batch.set(equipmentRef, equipmentData);
+    setDocumentNonBlocking(vsdRef, vsdData, {});
+    setDocumentNonBlocking(equipmentRef, equipmentData, {});
 
-    try {
-      await batch.commit();
-      toast({
-        title: 'VSD & Equipment Added',
-        description: `VSD with serial ${values.serialNumber} and equipment ${values.equipmentName} have been successfully added.`,
-      });
-      form.reset();
-    } catch (e) {
-      console.error("Error adding document: ", e);
-      toast({
-        variant: "destructive",
-        title: 'Error',
-        description: `There was an error saving the data. Please try again.`,
-      });
-    }
+    toast({
+      title: 'VSD & Equipment Added',
+      description: `VSD with serial ${values.serialNumber} and equipment ${values.equipmentName} have been successfully added.`,
+    });
+    form.reset();
   }
 
   return (
