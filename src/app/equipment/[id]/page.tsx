@@ -14,7 +14,7 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -61,42 +61,42 @@ function EquipmentDetailSkeleton() {
     );
 }
 
-function VSDInfo({ vsdId }: { vsdId: string }) {
-    const firestore = useFirestore();
-    const vsdRef = useMemoFirebase(() => doc(firestore, 'vsds', vsdId), [firestore, vsdId]);
-    const { data: eqVsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
-
+function VSDInfo({ vsd }: { vsd: VSD | null }) {
+    if (!vsd) {
+        return <p>VSD information not available.</p>;
+    }
     return (
          <div className="mt-2 space-y-1">
-            <p><strong>VSD ID:</strong> {vsdId}</p>
-            <p><strong>VSD Model:</strong> {vsdLoading ? <Skeleton className="h-4 w-24 inline-block"/> : (eqVsd?.model || 'N/A')}</p>
-            <p><strong>Status:</strong> {vsdLoading ? <Skeleton className="h-6 w-16" /> : <Badge variant={eqVsd?.status === 'active' ? 'default' : (eqVsd?.status === 'maintenance' ? 'secondary' : 'destructive')}>{eqVsd?.status || 'Unknown'}</Badge>}</p>
+            <p><strong>VSD ID:</strong> {vsd.id}</p>
+            <p><strong>VSD Model:</strong> {vsd.model || 'N/A'}</p>
+            <p><strong>Status:</strong> <Badge variant={vsd.status === 'active' ? 'default' : (vsd.status === 'maintenance' ? 'secondary' : 'destructive')}>{vsd.status || 'Unknown'}</Badge></p>
         </div>
     );
 }
-
 
 export default function EquipmentDetailPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
   const firestore = useFirestore();
+  const [isNotFound, setIsNotFound] = useState(false);
 
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
+
+  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
+  const { data: eqVsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
 
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
   useEffect(() => {
-    // This effect now correctly checks for the final state after loading has completed.
     if (!eqLoading && !eq && id) {
-      notFound();
+      setIsNotFound(true);
     }
   }, [eqLoading, eq, id]);
 
-
-  if (eqLoading || !eq) {
-    return <EquipmentDetailSkeleton />;
+  if (isNotFound) {
+      notFound();
   }
   
   if (eqError) {
@@ -104,7 +104,17 @@ export default function EquipmentDetailPage() {
     return <div>Error loading equipment details. Please check the console and try again later.</div>;
   }
   
-  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
+  if (eqLoading || !id) {
+    return <EquipmentDetailSkeleton />;
+  }
+
+  // Ensure eq exists before rendering, as skeleton handles loading state
+  if (!eq) {
+    // This case should be caught by isNotFound, but as a safeguard:
+    return <EquipmentDetailSkeleton />;
+  }
+  
+  const placeholder = eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
   
   return (
     <div className="flex flex-col gap-8">
@@ -130,7 +140,7 @@ export default function EquipmentDetailPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-muted-foreground">VSD Control</h3>
-                        {eq.vsdId ? <VSDInfo vsdId={eq.vsdId} /> : <p>No VSD assigned.</p>}
+                        {vsdLoading ? <Skeleton className="h-16 w-full" /> : <VSDInfo vsd={eqVsd} />}
                     </div>
                      <div>
                         <h3 className="font-semibold text-muted-foreground">Specifications</h3>
@@ -227,5 +237,3 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
-
-    
