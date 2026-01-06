@@ -61,10 +61,19 @@ function EquipmentDetailSkeleton() {
     );
 }
 
-function VSDInfo({ vsd }: { vsd: VSD | null }) {
+function VSDInfo({ vsdId }: { vsdId: string }) {
+    const firestore = useFirestore();
+    const vsdRef = useMemoFirebase(() => doc(firestore, 'vsds', vsdId), [firestore, vsdId]);
+    const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
+
+    if (vsdLoading) {
+        return <Skeleton className="h-16 w-full" />;
+    }
+
     if (!vsd) {
         return <p>VSD information not available.</p>;
     }
+
     return (
          <div className="mt-2 space-y-1">
             <p><strong>VSD ID:</strong> {vsd.id}</p>
@@ -78,40 +87,26 @@ export default function EquipmentDetailPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
   const firestore = useFirestore();
-  const [isNotFound, setIsNotFound] = useState(false);
-
+  
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
-
-  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
-  const { data: eqVsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
 
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  useEffect(() => {
-    if (!eqLoading && !eq && id) {
-      setIsNotFound(true);
-    }
-  }, [eqLoading, eq, id]);
+  if (eqLoading || !id) {
+    return <EquipmentDetailSkeleton />;
+  }
 
-  if (isNotFound) {
+  if (!eq) {
+      // If loading is finished and there's still no equipment, then it's a 404.
       notFound();
+      return null; // notFound() throws an error, but we need this for type safety.
   }
   
   if (eqError) {
     console.error("Firestore error:", eqError);
     return <div>Error loading equipment details. Please check the console and try again later.</div>;
-  }
-  
-  if (eqLoading || !id) {
-    return <EquipmentDetailSkeleton />;
-  }
-
-  // Ensure eq exists before rendering, as skeleton handles loading state
-  if (!eq) {
-    // This case should be caught by isNotFound, but as a safeguard:
-    return <EquipmentDetailSkeleton />;
   }
   
   const placeholder = eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
@@ -140,7 +135,7 @@ export default function EquipmentDetailPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-muted-foreground">VSD Control</h3>
-                        {vsdLoading ? <Skeleton className="h-16 w-full" /> : <VSDInfo vsd={eqVsd} />}
+                        <VSDInfo vsdId={eq.vsdId} />
                     </div>
                      <div>
                         <h3 className="font-semibold text-muted-foreground">Specifications</h3>
