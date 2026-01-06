@@ -14,10 +14,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
-import { Fan, Droplets, AirVent } from 'lucide-react';
+import { Fan, Droplets, AirVent, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 const equipmentIcons: Record<string, React.ReactNode> = {
     Pump: <Droplets className="h-4 w-4 text-muted-foreground" />,
@@ -27,16 +28,24 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 
 export default function EquipmentPage() {
   const firestore = useFirestore();
-  const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
+  const equipmentQuery = useMemoFirebase(() => query(collection(firestore, 'equipment'), where('plant', '==', 'Mining')), [firestore]);
   const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
 
   return (
     <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">Mining Equipment</h1>
-        <p className="text-muted-foreground">
-          View and manage all monitored equipment.
-        </p>
+      <header className="flex items-center justify-between">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Mining Equipment</h1>
+            <p className="text-muted-foreground">
+            View and manage all monitored equipment in the Mining plant.
+            </p>
+        </div>
+         <Link href="/equipment/new" passHref>
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Equipment
+          </Button>
+        </Link>
       </header>
       <Card>
         <CardContent className="pt-6">
@@ -45,7 +54,7 @@ export default function EquipmentPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Plant</TableHead>
+                <TableHead>Division</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
                 <TableHead className="text-right">Power (kWh)</TableHead>
@@ -70,7 +79,7 @@ export default function EquipmentPage() {
                           {eq.type}
                       </div>
                     </TableCell>
-                    <TableCell>{eq.plant}</TableCell>
+                    <TableCell>{eq.division || 'N/A'}</TableCell>
                     <TableCell>{eq.location}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
@@ -82,7 +91,7 @@ export default function EquipmentPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">No equipment found.</TableCell>
+                  <TableCell colSpan={6} className="text-center h-24">No mining equipment found.</TableCell>
                 </TableRow>
               )}
             </TableBody>
