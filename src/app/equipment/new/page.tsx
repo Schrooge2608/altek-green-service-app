@@ -215,7 +215,7 @@ export default function NewEquipmentPage() {
             <CardHeader>
               <CardTitle>Driven Equipment Details</CardTitle>
               <CardDescription>Information about the equipment this VSD controls.</CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
