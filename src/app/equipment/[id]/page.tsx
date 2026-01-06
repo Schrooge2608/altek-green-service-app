@@ -12,6 +12,7 @@ import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -32,7 +33,7 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
   const breakdownsQuery = useMemoFirebase(() => (eq ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', eq.id)) : null), [firestore, eq]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const placeholder = eq && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : null;
+  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : null;
 
   useEffect(() => {
     if (!eqLoading && !eq) {
@@ -41,16 +42,42 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
   }, [eq, eqLoading]);
 
 
-  if (eqLoading || vsdLoading || breakdownsLoading) {
+  if (eqLoading || !eq) {
     return (
-        <div className="flex justify-center items-center h-screen">
-            <p>Loading equipment details...</p>
+        <div className="flex flex-col gap-8">
+            <header>
+                <Skeleton className="h-9 w-1/2" />
+                <Skeleton className="h-4 w-1/3 mt-2" />
+            </header>
+             <div className="grid gap-8 lg:grid-cols-3">
+                <div className="lg:col-span-2 space-y-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle><Skeleton className="h-7 w-1/4" /></CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid md:grid-cols-2 gap-6">
+                            <Skeleton className="h-20 w-full" />
+                            <Skeleton className="h-20 w-full" />
+                            <Skeleton className="h-20 w-full" />
+                            <Skeleton className="h-20 w-full" />
+                        </CardContent>
+                    </Card>
+                    <Card>
+                         <CardHeader>
+                            <CardTitle><Skeleton className="h-7 w-1/3" /></CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                           <Skeleton className="h-40 w-full" />
+                        </CardContent>
+                    </Card>
+                </div>
+                 <div className="space-y-8">
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-40 w-full" />
+                </div>
+            </div>
         </div>
     );
-  }
-
-  if (!eq) {
-    return null;
   }
 
   return (
@@ -117,7 +144,11 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {eqBreakdowns && eqBreakdowns.length > 0 ? eqBreakdowns.map(b => (
+                            {breakdownsLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center h-24">Loading history...</TableCell>
+                                </TableRow>
+                            ) : eqBreakdowns && eqBreakdowns.length > 0 ? eqBreakdowns.map(b => (
                                 <TableRow key={b.id}>
                                     <TableCell>{b.date}</TableCell>
                                     <TableCell>{b.description}</TableCell>
@@ -166,7 +197,7 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Status</span>
-                        <Badge variant={eqVsd?.status === 'active' ? 'default' : (eqVsd?.status === 'maintenance' ? 'secondary' : 'destructive')}>{eqVsd?.status || 'Unknown'}</Badge>
+                         {vsdLoading ? <Skeleton className="h-6 w-16" /> : <Badge variant={eqVsd?.status === 'active' ? 'default' : (eqVsd?.status === 'maintenance' ? 'secondary' : 'destructive')}>{eqVsd?.status || 'Unknown'}</Badge>}
                     </div>
                 </CardContent>
             </Card>
@@ -174,3 +205,4 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
       </div>
     </div>
   );
+}
