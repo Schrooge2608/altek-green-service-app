@@ -25,9 +25,10 @@ import {
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
-import { Fan, Droplets, AirVent } from 'lucide-react';
+import { Fan, Droplets, AirVent, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
 
 const equipmentIcons: Record<string, React.ReactNode> = {
     Pump: <Droplets className="h-4 w-4 text-muted-foreground" />,
@@ -89,11 +90,19 @@ export default function MiningDivisionPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">Equipment: {memoizedDivisionName}</h1>
-        <p className="text-muted-foreground">
-          All monitored equipment in the {memoizedDivisionName} division.
-        </p>
+      <header className="flex items-center justify-between">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Equipment: {memoizedDivisionName}</h1>
+            <p className="text-muted-foreground">
+            All monitored equipment in the {memoizedDivisionName} division.
+            </p>
+        </div>
+        <Link href="/equipment/new" passHref>
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Equipment
+          </Button>
+        </Link>
       </header>
         {isLoading ? (
             <Card>

@@ -41,7 +41,7 @@ const formSchema = z.object({
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
 
-export default function NewVsdPage() {
+export default function NewEquipmentPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -128,9 +128,9 @@ export default function NewVsdPage() {
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Add New VSD & Equipment</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Add New Equipment</h1>
         <p className="text-muted-foreground">
-          Capture serial numbers, equipment IDs, and other data.
+          Capture serial numbers, equipment IDs, and other data for new equipment.
         </p>
       </header>
       <Form {...form}>
@@ -138,7 +138,7 @@ export default function NewVsdPage() {
           <Card>
             <CardHeader>
               <CardTitle>VSD Information</CardTitle>
-              <CardDescription>Details of the Variable Speed Drive.</CardDescription>
+              <CardDescription>Details of the Variable Speed Drive associated with the equipment.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
               <FormField
@@ -146,7 +146,7 @@ export default function NewVsdPage() {
                 name="serialNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Serial Number</FormLabel>
+                    <FormLabel>VSD Serial Number</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
                     </FormControl>
@@ -351,7 +351,7 @@ export default function NewVsdPage() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit">Save VSD &amp; Equipment</Button>
+            <Button type="submit">Save Equipment</Button>
           </div>
         </form>
       </Form>
