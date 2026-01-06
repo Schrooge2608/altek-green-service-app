@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -297,7 +298,7 @@ export default function NewEquipmentPage() {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a division" />
-                          </Trigger>
+                          </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="Boosters">Boosters</SelectItem>
