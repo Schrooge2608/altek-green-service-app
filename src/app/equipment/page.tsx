@@ -33,7 +33,7 @@ export default function EquipmentPage() {
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Equipment</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Mining Equipment</h1>
         <p className="text-muted-foreground">
           View and manage all monitored equipment.
         </p>

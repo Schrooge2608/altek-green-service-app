@@ -10,32 +10,44 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarTrigger,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { AltekLogo } from '@/components/altek-logo';
 import {
   LayoutDashboard,
-  Database,
   Wrench,
   Calendar,
   FileText,
   TriangleAlert,
+  ChevronDown,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import React from 'react';
 
-const links = [
+const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/equipment', label: 'Equipment', icon: Wrench },
   { href: '/maintenance', label: 'Maintenance', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
 ];
 
+const miningDivisions = [
+    { href: '/equipment/mining/boosters', label: 'Boosters' },
+    { href: '/equipment/mining/pump-stations', label: 'Pump Stations' },
+    { href: '/equipment/mining/dredgers', label: 'Dredgers' },
+]
+
 const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment'));
+
 
   return (
     <>
@@ -48,11 +60,11 @@ export function SidebarNav() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {links.map((link) => (
+          {mainLinks.map((link) => (
             <SidebarMenuItem key={link.href}>
               <Link href={link.href}>
                 <SidebarMenuButton
-                  isActive={pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href))}
+                  isActive={pathname === link.href}
                   tooltip={link.label}
                 >
                   <link.icon />
@@ -61,6 +73,33 @@ export function SidebarNav() {
               </Link>
             </SidebarMenuItem>
           ))}
+           <Collapsible open={isMiningOpen} onOpenChange={setIsMiningOpen}>
+            <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                    <SidebarMenuButton tooltip="Mining Equipment" isActive={pathname.startsWith('/equipment')}>
+                        <Wrench />
+                        <span>Mining Equipment</span>
+                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                    </SidebarMenuButton>
+                </CollapsibleTrigger>
+            </SidebarMenuItem>
+            <CollapsibleContent>
+                <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                        <Link href="/equipment">
+                            <SidebarMenuSubButton isActive={pathname === '/equipment'}>All Equipment</SidebarMenuSubButton>
+                        </Link>
+                    </SidebarMenuSubItem>
+                    {miningDivisions.map((division) => (
+                         <SidebarMenuSubItem key={division.href}>
+                            <Link href={division.href}>
+                                <SidebarMenuSubButton isActive={pathname === division.href}>{division.label}</SidebarMenuSubButton>
+                            </Link>
+                        </SidebarMenuSubItem>
+                    ))}
+                </SidebarMenuSub>
+            </CollapsibleContent>
+           </Collapsible>
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
