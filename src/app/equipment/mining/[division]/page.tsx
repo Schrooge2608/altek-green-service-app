@@ -37,6 +37,7 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 const validDivisions: Record<string, string> = {
     'dredgers': 'Dredgers',
     'boosters': 'Boosters',
+    'pump-stations': 'Pump Stations',
 }
 
 export default function MiningDivisionPage() {
@@ -79,7 +80,8 @@ export default function MiningDivisionPage() {
     return null;
   }
 
-  const isGroupedByLocation = false; // Always false for now
+  // Only group by location if the division is NOT dredgers, boosters, or pump stations
+  const isGroupedByLocation = !['Dredgers', 'Boosters', 'Pump Stations'].includes(memoizedDivisionName);
   const locations = Object.keys(equipmentByLocation);
 
   return (
