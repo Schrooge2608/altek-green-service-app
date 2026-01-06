@@ -12,11 +12,13 @@ import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
     Fan: "fan-1",
     Compressor: "compressor-1",
+    "Utility Room": "dashboard-hero"
 };
 
 function EquipmentDetailSkeleton() {
@@ -68,10 +70,10 @@ export default function EquipmentDetailPage() {
   const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
   const { data: eqVsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
   
-  const breakdownsQuery = useMemoFirebase(() => (eq ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', eq.id)) : null), [firestore, eq]);
+  const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'pump-1');
+  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
 
   if (eqLoading) {
     return <EquipmentDetailSkeleton />;
@@ -79,14 +81,12 @@ export default function EquipmentDetailPage() {
 
   if (eqError) {
     console.error("Firestore error:", eqError);
-    // This could render a specific error component
-    return <div>Error loading equipment details. Please try again later.</div>;
+    return <div>Error loading equipment details. Please check the console and try again later.</div>;
   }
   
   if (!eq) {
-    // Only call notFound if loading is complete and there's no data
     notFound();
-    return null; // Keep TypeScript happy
+    return null;
   }
   
   return (
@@ -141,7 +141,9 @@ export default function EquipmentDetailPage() {
                         <CardTitle>Breakdown History</CardTitle>
                         <CardDescription>Log of all reported issues for this equipment.</CardDescription>
                     </div>
-                    <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Log Breakdown</Button>
+                    <Link href="/breakdowns/new" passHref>
+                        <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Log Breakdown</Button>
+                    </Link>
                 </CardHeader>
                 <CardContent>
                     <Table>
