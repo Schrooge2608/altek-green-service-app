@@ -92,13 +92,6 @@ export function SidebarNav() {
             </SidebarMenuItem>
             <CollapsibleContent>
                 <SidebarMenuSub>
-                    <SidebarMenuItem>
-                        <Link href="/equipment">
-                            <SidebarMenuSubButton asChild isActive={pathname === '/equipment'}>
-                              <a>All Equipment</a>
-                            </SidebarMenuSubButton>
-                        </Link>
-                    </SidebarMenuItem>
                     {miningDivisions.map((division) => (
                          <SidebarMenuItem key={division.href}>
                             <Link href={division.href}>
