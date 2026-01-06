@@ -20,9 +20,10 @@ const imageMap: { [key: string]: string } = {
 };
 
 export default function EquipmentDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const firestore = useFirestore();
 
-  const eqRef = useMemoFirebase(() => doc(firestore, 'equipment', params.id), [firestore, params.id]);
+  const eqRef = useMemoFirebase(() => doc(firestore, 'equipment', id), [firestore, id]);
   const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
 
   const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
