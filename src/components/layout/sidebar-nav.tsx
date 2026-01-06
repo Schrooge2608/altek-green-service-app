@@ -37,7 +37,6 @@ const mainLinks = [
 ];
 
 const miningDivisions = [
-    { href: '/equipment/mining/pump-stations', label: 'Pump Stations' },
     { href: '/equipment/mining/dredgers', label: 'Dredgers' },
 ]
 
@@ -95,8 +94,8 @@ export function SidebarNav() {
                     {miningDivisions.map((division) => (
                          <SidebarMenuItem key={division.href}>
                             <Link href={division.href}>
-                                <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                  <a>{division.label}</a>
+                                <SidebarMenuSubButton isActive={pathname === division.href}>
+                                  {division.label}
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
