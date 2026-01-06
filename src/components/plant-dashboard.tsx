@@ -5,6 +5,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import {
   Table,
@@ -14,18 +15,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Activity, AlertTriangle, Cpu, Zap, Building, Pickaxe } from 'lucide-react';
+import { Activity, AlertTriangle, Cpu, Zap, Building, Pickaxe, ExternalLink } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { PerformanceChart } from '@/components/performance-chart';
 import { collection, query, where, limit, Query, and } from 'firebase/firestore';
 import type { VSD, Equipment, MaintenanceTask } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useMemo } from 'react';
+import Link from 'next/link';
+import { Button } from './ui/button';
 
 
 interface PlantDashboardProps {
     plantName: 'Mining' | 'Smelter';
     divisionName?: 'Boosters & Pumpstations' | 'Dredgers';
+}
+
+function getDivisionSlug(divisionName?: string) {
+    if (!divisionName) return '';
+    return divisionName.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
 }
 
 export function PlantDashboard({ plantName, divisionName }: PlantDashboardProps) {
@@ -68,13 +76,24 @@ export function PlantDashboard({ plantName, divisionName }: PlantDashboardProps)
 
     const isDataLoading = equipmentLoading || vsdsLoading || tasksLoading;
 
+    const divisionSlug = getDivisionSlug(divisionName);
+    const viewEquipmentLink = divisionName ? `/equipment/mining/${divisionSlug}` : '/equipment';
+
     return (
         <Card className="col-span-1">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    {divisionName ? <Pickaxe className="h-6 w-6 text-primary" /> : <Building className="h-6 w-6 text-primary" />}
-                    {divisionName ? `${plantName} - ${divisionName}` : plantName}
-                </CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2">
+                        {divisionName ? <Pickaxe className="h-6 w-6 text-primary" /> : <Building className="h-6 w-6 text-primary" />}
+                        {divisionName ? `${plantName} - ${divisionName}` : plantName}
+                    </CardTitle>
+                    {divisionName && <CardDescription>A subdivision of the {plantName} plant.</CardDescription>}
+                </div>
+                 <Link href={viewEquipmentLink} passHref>
+                    <Button variant="outline" size="sm">
+                        View Equipment <ExternalLink className="ml-2 h-4 w-4" />
+                    </Button>
+                </Link>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
