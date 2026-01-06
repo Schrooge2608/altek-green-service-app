@@ -5,8 +5,6 @@ import { notFound, useParams } from 'next/navigation';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Table,
@@ -81,7 +79,7 @@ export default function MiningDivisionPage() {
     return null;
   }
 
-  const isGroupedByLocation = divisionSlug === 'pump-stations' || divisionSlug === 'boosters';
+  const isGroupedByLocation = false; // Always false for now
   const locations = Object.keys(equipmentByLocation);
 
   return (
