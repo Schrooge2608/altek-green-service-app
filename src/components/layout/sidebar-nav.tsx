@@ -36,7 +36,6 @@ const mainLinks = [
 ];
 
 const miningDivisions = [
-    { href: '/equipment/mining/dredgers', label: 'Dredgers' },
     { href: '/equipment/mining/boosters', label: 'Boosters' },
     { href: '/equipment/mining/pump-stations', label: 'Pump Stations' },
 ]

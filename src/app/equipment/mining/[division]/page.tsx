@@ -35,7 +35,6 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 }
 
 const validDivisions: Record<string, string> = {
-    'dredgers': 'Dredgers',
     'boosters': 'Boosters',
     'pump-stations': 'Pump Stations',
 }

@@ -38,7 +38,7 @@ const formSchema = z.object({
   equipmentName: z.string().min(1, 'Equipment name is required'),
   equipmentType: z.string().min(1, 'Equipment type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
-  division: z.enum(["Boosters", "Pump Stations", "Dredgers"]).optional(),
+  division: z.enum(["Boosters", "Pump Stations"]).optional(),
   location: z.string().min(1, 'Location is required'),
 });
 
@@ -299,7 +299,6 @@ export default function NewEquipmentPage() {
                         <SelectContent>
                           <SelectItem value="Boosters">Boosters</SelectItem>
                           <SelectItem value="Pump Stations">Pump Stations</SelectItem>
-                          <SelectItem value="Dredgers">Dredgers</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
