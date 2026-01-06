@@ -80,8 +80,7 @@ export default function MiningDivisionPage() {
     return null;
   }
 
-  // Only group by location if the division is NOT dredgers, boosters, or pump stations
-  const isGroupedByLocation = !['Dredgers', 'Boosters', 'Pump Stations'].includes(memoizedDivisionName);
+  const isGroupedByLocation = ['Boosters', 'Pump Stations'].includes(memoizedDivisionName);
   const locations = Object.keys(equipmentByLocation);
 
   return (
