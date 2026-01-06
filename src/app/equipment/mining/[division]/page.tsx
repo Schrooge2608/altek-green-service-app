@@ -36,7 +36,8 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 }
 
 const validDivisions: Record<string, string> = {
-    'boosters-pumpstations': 'Boosters & Pumpstations',
+    'boosters': 'Boosters',
+    'pump-stations': 'Pump Stations',
     'dredgers': 'Dredgers',
 }
 
@@ -81,8 +82,8 @@ export default function MiningDivisionPage() {
     return null;
   }
 
-  const isBoosters = divisionSlug === 'boosters-pumpstations';
-  const locations = isBoosters 
+  const isGroupedByLocation = divisionSlug === 'boosters' || divisionSlug === 'pump-stations';
+  const locations = isGroupedByLocation 
     ? ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION', 'Uncategorized']
     : Object.keys(equipmentByLocation);
 
@@ -100,7 +101,7 @@ export default function MiningDivisionPage() {
                     <div className="text-center h-24">Loading equipment...</div>
                 </CardContent>
             </Card>
-        ) : isBoosters ? (
+        ) : isGroupedByLocation ? (
              <Accordion type="multiple" className="w-full" defaultValue={locations.map(l => `item-${l}`)}>
                 {locations.map((location) => (
                     equipmentByLocation[location] && (

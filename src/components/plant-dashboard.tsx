@@ -28,7 +28,7 @@ import { Button } from './ui/button';
 
 interface PlantDashboardProps {
     plantName: 'Mining' | 'Smelter';
-    divisionName?: 'Boosters & Pumpstations' | 'Dredgers';
+    divisionName?: 'Boosters' | 'Pump Stations' | 'Dredgers';
 }
 
 function getDivisionSlug(divisionName?: string) {

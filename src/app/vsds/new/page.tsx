@@ -35,7 +35,7 @@ const formSchema = z.object({
   equipmentName: z.string().min(1, 'Equipment name is required'),
   equipmentType: z.enum(['Pump', 'Fan', 'Compressor', 'Utility Room']),
   plant: z.enum(['Mining', 'Smelter']),
-  division: z.enum(['Boosters & Pumpstations', 'Dredgers']).optional(),
+  division: z.enum(["Boosters", "Pump Stations", "Dredgers"]).optional(),
   location: z.string().min(1, 'Location is required'),
 });
 
@@ -301,7 +301,8 @@ export default function NewVsdPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Boosters & Pumpstations">Boosters &amp; Pumpstations</SelectItem>
+                          <SelectItem value="Boosters">Boosters</SelectItem>
+                          <SelectItem value="Pump Stations">Pump Stations</SelectItem>
                           <SelectItem value="Dredgers">Dredgers</SelectItem>
                         </SelectContent>
                       </Select>
@@ -310,7 +311,7 @@ export default function NewVsdPage() {
                   )}
                 />
               )}
-               {watchedPlant === 'Mining' && watchedDivision === 'Boosters & Pumpstations' ? (
+               {watchedPlant === 'Mining' && (watchedDivision === 'Boosters' || watchedDivision === 'Pump Stations') ? (
                  <FormField
                   control={form.control}
                   name="location"

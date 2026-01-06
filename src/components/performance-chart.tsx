@@ -24,7 +24,7 @@ const chartConfig = {
 
 interface PerformanceChartProps {
     plant?: 'Mining' | 'Smelter';
-    division?: 'Boosters & Pumpstations' | 'Dredgers';
+    division?: 'Boosters' | 'Pump Stations' | 'Dredgers';
 }
 
 export function PerformanceChart({ plant, division }: PerformanceChartProps) {
