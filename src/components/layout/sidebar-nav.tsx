@@ -94,7 +94,7 @@ export function SidebarNav() {
                 <SidebarMenuSub>
                     {miningDivisions.map((division) => (
                          <SidebarMenuItem key={division.href}>
-                            <Link href={division.href}>
+                            <Link href={division.href} passHref legacyBehavior>
                                 <SidebarMenuSubButton isActive={pathname === division.href}>
                                   {division.label}
                                 </SidebarMenuSubButton>
