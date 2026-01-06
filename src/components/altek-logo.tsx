@@ -5,12 +5,11 @@ import { cn } from '@/lib/utils';
 export const AltekLogo = ({ className }: { className?: string }) => (
   <div className={cn("relative", className)}>
     <Image 
-        src="https://picsum.photos/seed/logo/160/40" 
+        src="/Altek Logo.jpeg" 
         alt="Altek Green"
         width={160}
         height={40}
         className="object-contain"
-        data-ai-hint="company logo"
     />
   </div>
 );
