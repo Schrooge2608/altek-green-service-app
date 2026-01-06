@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -169,7 +170,7 @@ export default function BreakdownsPage() {
                          <ResolveBreakdownDialog breakdown={b} onResolve={handleResolve}>
                             <Button variant="ghost" size="sm">
                                 <CheckCircle className="mr-2 h-4 w-4" />
-                                Resolve
+                                Resolved
                             </Button>
                         </ResolveBreakdownDialog>
                       )}
