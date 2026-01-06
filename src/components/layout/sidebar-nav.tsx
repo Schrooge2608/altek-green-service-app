@@ -26,7 +26,6 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const links = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/vsds', label: 'VSDs', icon: Database },
   { href: '/equipment', label: 'Equipment', icon: Wrench },
   { href: '/maintenance', label: 'Maintenance', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: FileText },
