@@ -48,4 +48,6 @@ export interface Breakdown {
   resolution?: string;
   normalHours?: number;
   overtimeHours?: number;
+  timeReported?: string;
+  timeBackInService?: string;
 }

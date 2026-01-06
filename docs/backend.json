@@ -68,9 +68,11 @@
         "resolved": { "type": "boolean" },
         "resolution": { "type": "string" },
         "normalHours": { "type": "number" },
-        "overtimeHours": { "type": "number" }
+        "overtimeHours": { "type": "number" },
+        "timeReported": { "type": "string", "format": "date-time" },
+        "timeBackInService": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "equipmentId", "equipmentName", "date", "description", "resolved"]
+      "required": ["id", "equipmentId", "equipmentName", "date", "description", "resolved", "timeReported"]
     }
   },
   "auth": {

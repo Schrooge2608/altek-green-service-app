@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, CheckCircle } from 'lucide-react';
+import { PlusCircle, CheckCircle, CalendarIcon } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Breakdown } from '@/lib/types';
@@ -35,13 +35,23 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
-function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown: Breakdown, onResolve: (b: Breakdown, hours: {normal: number, overtime: number}) => void, children: React.ReactNode }) {
+function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown: Breakdown, onResolve: (b: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => void, children: React.ReactNode }) {
   const [normalHours, setNormalHours] = React.useState(0);
   const [overtimeHours, setOvertimeHours] = React.useState(0);
+  const [timeBackInService, setTimeBackInService] = React.useState<Date | undefined>();
 
   const handleResolveClick = () => {
-    onResolve(breakdown, { normal: normalHours, overtime: overtimeHours });
+    if (!timeBackInService) {
+        // Ideally, show a toast or message to the user
+        console.error("Time back in service is required.");
+        return;
+    }
+    onResolve(breakdown, { normal: normalHours, overtime: overtimeHours, timeBackInService });
   };
 
   return (
@@ -53,7 +63,7 @@ function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown:
         <AlertDialogHeader>
           <AlertDialogTitle>Resolve Breakdown for {breakdown.equipmentName}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will mark the issue as resolved. Please enter the hours spent on this task. This action cannot be undone.
+            This will mark the issue as resolved. Please enter the hours spent and time the equipment was back in service. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-4 py-4">
@@ -81,10 +91,38 @@ function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown:
                     className="col-span-3"
                 />
             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="time-back" className="text-right">
+                    Back in Service
+                </Label>
+                 <Popover>
+                      <PopoverTrigger asChild>
+                          <Button
+                            id="time-back"
+                            variant={"outline"}
+                            className={cn(
+                              "col-span-3 justify-start text-left font-normal",
+                              !timeBackInService && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {timeBackInService ? format(timeBackInService, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={timeBackInService}
+                          onSelect={setTimeBackInService}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+            </div>
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleResolveClick}>
+          <AlertDialogAction onClick={handleResolveClick} disabled={!timeBackInService}>
             Continue
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -100,18 +138,29 @@ export default function BreakdownsPage() {
   const breakdownsQuery = useMemoFirebase(() => collection(firestore, 'breakdown_reports'), [firestore]);
   const { data: breakdowns, isLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const handleResolve = (breakdown: Breakdown, hours: {normal: number, overtime: number}) => {
+  const handleResolve = (breakdown: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => {
     const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
     updateDocumentNonBlocking(breakdownRef, { 
         resolved: true,
-        normalHours: hours.normal,
-        overtimeHours: hours.overtime,
+        normalHours: resolutionDetails.normal,
+        overtimeHours: resolutionDetails.overtime,
+        timeBackInService: resolutionDetails.timeBackInService.toISOString(),
     });
     toast({
         title: "Breakdown Resolved",
         description: `The issue for ${breakdown.equipmentName} has been marked as resolved.`,
     });
   }
+  
+  const formatDate = (dateString?: string) => {
+      if (!dateString) return 'N/A';
+      try {
+          return format(new Date(dateString), 'yyyy-MM-dd HH:mm');
+      } catch (e) {
+          return dateString; // fallback to original string if format fails
+      }
+  }
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -134,10 +183,11 @@ export default function BreakdownsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
+                <TableHead>Time Reported</TableHead>
                 <TableHead>Equipment</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Time Back in Service</TableHead>
                 <TableHead className="text-right">Normal Hours</TableHead>
                 <TableHead className="text-right">Overtime Hours</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -146,12 +196,12 @@ export default function BreakdownsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-24">Loading breakdowns...</TableCell>
+                  <TableCell colSpan={8} className="text-center h-24">Loading breakdowns...</TableCell>
                 </TableRow>
               ) : breakdowns && breakdowns.length > 0 ? (
                 breakdowns.map((b) => (
                   <TableRow key={b.id}>
-                    <TableCell>{b.date}</TableCell>
+                    <TableCell>{formatDate(b.timeReported)}</TableCell>
                     <TableCell className="font-medium">
                       <Link href={`/equipment/${b.equipmentId}`} className="hover:underline text-primary">
                           {b.equipmentName}
@@ -163,6 +213,7 @@ export default function BreakdownsPage() {
                         {b.resolved ? 'Resolved' : 'Pending'}
                       </Badge>
                     </TableCell>
+                    <TableCell>{b.resolved ? formatDate(b.timeBackInService) : 'N/A'}</TableCell>
                     <TableCell className="text-right">{b.resolved ? b.normalHours ?? 0 : 'N/A'}</TableCell>
                     <TableCell className="text-right">{b.resolved ? b.overtimeHours ?? 0 : 'N/A'}</TableCell>
                     <TableCell className="text-right">
@@ -179,7 +230,7 @@ export default function BreakdownsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-24">No breakdowns found.</TableCell>
+                  <TableCell colSpan={8} className="text-center h-24">No breakdowns found.</TableCell>
                 </TableRow>
               )}
             </TableBody>

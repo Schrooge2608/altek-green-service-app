@@ -70,6 +70,7 @@ export default function NewBreakdownPage() {
       date: format(values.date, "yyyy-MM-dd"),
       description: values.description,
       resolved: false,
+      timeReported: new Date().toISOString(),
     };
 
     addDocumentNonBlocking(breakdownRef, breakdownData);
@@ -126,7 +127,7 @@ export default function NewBreakdownPage() {
                 name="date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Date of Breakdown</FormLabel>
+                    <FormLabel>Date & Time of Breakdown</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
