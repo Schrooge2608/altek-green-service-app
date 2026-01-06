@@ -46,6 +46,9 @@ const formSchema = z.object({
   motorPower: z.coerce.number().optional(),
   motorVoltage: z.coerce.number().optional(),
   motorSerialNumber: z.string().optional(),
+  breakerModel: z.string().optional(),
+  breakerAmperage: z.coerce.number().optional(),
+  breakerLocation: z.string().optional(),
 });
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
@@ -75,6 +78,8 @@ export default function NewEquipmentPage() {
       imageUrl: '',
       motorModel: '',
       motorSerialNumber: '',
+      breakerModel: '',
+      breakerLocation: '',
     },
   });
 
@@ -125,6 +130,9 @@ export default function NewEquipmentPage() {
       motorPower: values.motorPower || 0,
       motorVoltage: values.motorVoltage || 0,
       motorSerialNumber: values.motorSerialNumber || '',
+      breakerModel: values.breakerModel || '',
+      breakerAmperage: values.breakerAmperage || 0,
+      breakerLocation: values.breakerLocation || '',
     };
 
     if (values.plant === 'Mining') {
@@ -224,6 +232,54 @@ export default function NewEquipmentPage() {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>Protection Details (Circuit Breaker)</CardTitle>
+                <CardDescription>Information about the equipment's circuit breaker.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-3">
+                <FormField
+                    control={form.control}
+                    name="breakerModel"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Breaker Model</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Schneider GV2ME" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="breakerAmperage"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Amperage (A)</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="e.g., 63" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="breakerLocation"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Breaker Location</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., MCC-01 Panel 3" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
             </CardContent>
           </Card>
 

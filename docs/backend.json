@@ -37,7 +37,10 @@
         "motorPower": { "type": "number" },
         "motorVoltage": { "type": "number" },
         "motorSerialNumber": { "type": "string" },
-        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." }
+        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." },
+        "breakerModel": { "type": "string", "description": "The model of the circuit breaker." },
+        "breakerAmperage": { "type": "number", "description": "The amperage rating of the circuit breaker." },
+        "breakerLocation": { "type": "string", "description": "The location of the circuit breaker (e.g., panel name)." }
       },
       "required": ["id", "name", "type", "location", "vsdId", "plant"]
     },

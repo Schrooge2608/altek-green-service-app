@@ -27,6 +27,9 @@ export interface Equipment {
   motorVoltage?: number;
   motorSerialNumber?: string;
   totalDowntimeHours?: number;
+  breakerModel?: string;
+  breakerAmperage?: number;
+  breakerLocation?: string;
 }
 
 export interface MaintenanceTask {

@@ -173,6 +173,14 @@ export default function EquipmentDetailPage() {
                         </div>
                     </div>
                     <div>
+                        <h3 className="font-semibold text-muted-foreground">Protection</h3>
+                         <div className="mt-2 space-y-1">
+                            <p><strong>Breaker Model:</strong> {eq.breakerModel || 'N/A'}</p>
+                            <p><strong>Breaker Amperage:</strong> {eq.breakerAmperage > 0 ? `${eq.breakerAmperage}A` : 'N/A'}</p>
+                            <p><strong>Breaker Location:</strong> {eq.breakerLocation || 'N/A'}</p>
+                        </div>
+                    </div>
+                    <div>
                         <h3 className="font-semibold text-muted-foreground">Maintenance</h3>
                          <div className="mt-2 space-y-1">
                             <p><strong>Last:</strong> {eq.lastMaintenance}</p>
