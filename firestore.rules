@@ -7,23 +7,7 @@ service cloud.firestore {
     }
 
     match /{document=**} {
-      allow read: if true;
-    }
-
-    match /vsds/{vsdId} {
-      allow create, update, delete: if isRegisteredUser();
-    }
-    
-    match /equipment/{equipmentId} {
-      allow create, update, delete: if isRegisteredUser();
-    }
-
-    match /tasks/{taskId} {
-      allow create, update, delete: if isRegisteredUser();
-    }
-
-    match /breakdown_reports/{breakdownReportId} {
-      allow create, update, delete: if isRegisteredUser();
+      allow read, write: if true;
     }
   }
 }
