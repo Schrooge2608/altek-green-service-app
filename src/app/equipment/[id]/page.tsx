@@ -1,6 +1,6 @@
 'use client';
 
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -20,11 +20,12 @@ const imageMap: { [key: string]: string } = {
     Compressor: "compressor-1",
 };
 
-export default function EquipmentDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function EquipmentDetailPage() {
+  const params = useParams();
+  const id = typeof params.id === 'string' ? params.id : '';
   const firestore = useFirestore();
 
-  const eqRef = useMemoFirebase(() => doc(firestore, 'equipment', id), [firestore, id]);
+  const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
 
   const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
@@ -36,10 +37,10 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
   const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : null;
 
   useEffect(() => {
-    if (!eqLoading && !eq) {
+    if (!eqLoading && !eq && id) {
       notFound();
     }
-  }, [eq, eqLoading]);
+  }, [eq, eqLoading, id]);
 
 
   if (eqLoading || !eq) {
