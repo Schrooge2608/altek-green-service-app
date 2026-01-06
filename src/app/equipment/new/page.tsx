@@ -25,6 +25,7 @@ import { useFirestore } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Combobox } from '@/components/ui/combobox';
+import { useMemo } from 'react';
 
 
 const formSchema = z.object({
@@ -43,16 +44,18 @@ const formSchema = z.object({
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
 
-const equipmentTypes = [
+const initialEquipmentTypes = [
   { value: "Pump", label: "Pump" },
   { value: "Fan", label: "Fan" },
   { value: "Compressor", label: "Compressor" },
   { value: "Utility Room", label: "Utility Room" },
-]
+];
 
 export default function NewEquipmentPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+
+  const equipmentTypes = useMemo(() => initialEquipmentTypes, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
