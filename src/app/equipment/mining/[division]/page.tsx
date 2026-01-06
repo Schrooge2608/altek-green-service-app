@@ -108,7 +108,7 @@ export default function MiningDivisionPage() {
         ) : isGroupedByLocation ? (
              <Accordion type="multiple" className="w-full" defaultValue={locations.map(l => `item-${l}`)}>
                 {locations.map((location) => (
-                    equipmentByLocation[location] && (
+                    equipmentByLocation[location] && equipmentByLocation[location].length > 0 && (
                         <AccordionItem value={`item-${location}`} key={location}>
                             <AccordionTrigger className="text-xl font-semibold">
                                 {location} ({equipmentByLocation[location].length})
