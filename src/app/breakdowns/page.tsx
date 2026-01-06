@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, CheckCircle, CalendarIcon } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDoc } from 'firebase/firestore';
-import type { Breakdown, Equipment } from '@/lib/types';
+import type { Breakdown, Equipment, VSD } from '@/lib/types';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -150,14 +150,34 @@ export default function BreakdownsPage() {
         downtimeHours = downtimeMillis / (1000 * 60 * 60);
     }
     
-    // Update equipment's total downtime
+    // Update equipment's total downtime and uptime percentage
     try {
         const eqDoc = await getDoc(equipmentRef);
         if (eqDoc.exists()) {
             const eqData = eqDoc.data() as Equipment;
-            const currentDowntime = eqData.totalDowntimeHours || 0;
-            const newTotalDowntime = currentDowntime + downtimeHours;
-            updateDocumentNonBlocking(equipmentRef, { totalDowntimeHours: newTotalDowntime });
+            const vsdRef = doc(firestore, 'vsds', eqData.vsdId);
+            const vsdDoc = await getDoc(vsdRef);
+
+            if (vsdDoc.exists()) {
+                const vsdData = vsdDoc.data() as VSD;
+                const currentDowntime = eqData.totalDowntimeHours || 0;
+                const newTotalDowntime = currentDowntime + downtimeHours;
+
+                // Calculate new uptime percentage
+                const installationDate = new Date(vsdData.installationDate);
+                const now = new Date();
+                const totalHours = (now.getTime() - installationDate.getTime()) / (1000 * 60 * 60);
+                let newUptimePercentage = 100;
+                if (totalHours > 0) {
+                    const uptimeHours = totalHours - newTotalDowntime;
+                    newUptimePercentage = Math.max(0, (uptimeHours / totalHours) * 100);
+                }
+
+                updateDocumentNonBlocking(equipmentRef, { 
+                    totalDowntimeHours: newTotalDowntime,
+                    uptime: newUptimePercentage,
+                });
+            }
         }
     } catch (e) {
         console.error("Failed to update equipment downtime: ", e);
