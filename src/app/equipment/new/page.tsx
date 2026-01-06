@@ -22,8 +22,9 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useFirestore } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Combobox } from '@/components/ui/combobox';
 
 
 const formSchema = z.object({
@@ -34,13 +35,20 @@ const formSchema = z.object({
   }),
   equipmentId: z.string().min(1, 'Equipment ID is required'),
   equipmentName: z.string().min(1, 'Equipment name is required'),
-  equipmentType: z.enum(['Pump', 'Fan', 'Compressor', 'Utility Room']),
+  equipmentType: z.string().min(1, 'Equipment type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters", "Pump Stations", "Dredgers"]).optional(),
   location: z.string().min(1, 'Location is required'),
 });
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
+
+const equipmentTypes = [
+  { value: "Pump", label: "Pump" },
+  { value: "Fan", label: "Fan" },
+  { value: "Compressor", label: "Compressor" },
+  { value: "Utility Room", label: "Utility Room" },
+]
 
 export default function NewEquipmentPage() {
   const { toast } = useToast();
@@ -53,6 +61,7 @@ export default function NewEquipmentPage() {
       model: '',
       equipmentId: '',
       equipmentName: '',
+      equipmentType: '',
       location: '',
     },
   });
@@ -236,21 +245,16 @@ export default function NewEquipmentPage() {
                 control={form.control}
                 name="equipmentType"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Equipment Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select equipment type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Pump">Pump</SelectItem>
-                        <SelectItem value="Fan">Fan</SelectItem>
-                        <SelectItem value="Compressor">Compressor</SelectItem>
-                        <SelectItem value="Utility Room">Utility Room</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Combobox
+                        options={equipmentTypes}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select or create type..."
+                        searchPlaceholder='Search types...'
+                        noResultsMessage='No types found.'
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
