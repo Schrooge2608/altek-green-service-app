@@ -14,7 +14,7 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -95,12 +95,29 @@ export default function EquipmentDetailPage() {
   const firestore = useFirestore();
   
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
-  const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
+  const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
+
+  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
+  const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
 
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  if (eqLoading) {
+  const uptimePercentage = useMemo(() => {
+    if (!vsd?.installationDate || !eq) return 100;
+    const installationDate = new Date(vsd.installationDate);
+    const now = new Date();
+    const totalHours = (now.getTime() - installationDate.getTime()) / (1000 * 60 * 60);
+    if (totalHours <= 0) return 100;
+
+    const downtimeHours = eq.totalDowntimeHours || 0;
+    const uptimeHours = totalHours - downtimeHours;
+    
+    return Math.max(0, (uptimeHours / totalHours) * 100);
+
+  }, [eq, vsd]);
+
+  if (eqLoading || vsdLoading) {
     return <EquipmentDetailSkeleton />;
   }
 
@@ -160,6 +177,7 @@ export default function EquipmentDetailPage() {
                          <div className="mt-2 space-y-1">
                             <p><strong>Last:</strong> {eq.lastMaintenance}</p>
                             <p><strong>Next:</strong> {eq.nextMaintenance}</p>
+                             <p><strong>Installation:</strong> {vsd?.installationDate || 'N/A'}</p>
                         </div>
                     </div>
                 </CardContent>
@@ -230,7 +248,11 @@ export default function EquipmentDetailPage() {
                 <CardContent className="space-y-4 text-sm">
                     <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Uptime</span>
-                        <span className="font-bold">{eq.uptime}%</span>
+                        <span className="font-bold">{uptimePercentage.toFixed(2)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Total Downtime</span>
+                        <span className="font-bold">{(eq.totalDowntimeHours || 0).toFixed(2)} hours</span>
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Power Consumption</span>

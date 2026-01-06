@@ -19,8 +19,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, CheckCircle, CalendarIcon } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import type { Breakdown } from '@/lib/types';
+import { collection, doc, getDoc } from 'firebase/firestore';
+import type { Breakdown, Equipment } from '@/lib/types';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -107,7 +107,7 @@ function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown:
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {timeBackInService ? format(timeBackInService, "PPP") : <span>Pick a date</span>}
+                            {timeBackInService ? format(timeBackInService, "PPP HH:mm") : <span>Pick date and time</span>}
                           </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -139,14 +139,44 @@ export default function BreakdownsPage() {
   const breakdownsQuery = useMemoFirebase(() => collection(firestore, 'breakdown_reports'), [firestore]);
   const { data: breakdowns, isLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const handleResolve = (breakdown: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => {
+  const handleResolve = async (breakdown: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => {
     const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
+    const equipmentRef = doc(firestore, 'equipment', breakdown.equipmentId);
+
+    // Calculate downtime
+    let downtimeHours = 0;
+    if (breakdown.timeReported && resolutionDetails.timeBackInService) {
+        const downtimeMillis = resolutionDetails.timeBackInService.getTime() - new Date(breakdown.timeReported).getTime();
+        downtimeHours = downtimeMillis / (1000 * 60 * 60);
+    }
+    
+    // Update equipment's total downtime
+    try {
+        const eqDoc = await getDoc(equipmentRef);
+        if (eqDoc.exists()) {
+            const eqData = eqDoc.data() as Equipment;
+            const currentDowntime = eqData.totalDowntimeHours || 0;
+            const newTotalDowntime = currentDowntime + downtimeHours;
+            updateDocumentNonBlocking(equipmentRef, { totalDowntimeHours: newTotalDowntime });
+        }
+    } catch (e) {
+        console.error("Failed to update equipment downtime: ", e);
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: "Could not update the equipment's downtime. The breakdown status was not updated.",
+        });
+        return; // Stop if we can't update the equipment
+    }
+
+    // Update breakdown report
     updateDocumentNonBlocking(breakdownRef, { 
         resolved: true,
         normalHours: resolutionDetails.normal,
         overtimeHours: resolutionDetails.overtime,
         timeBackInService: resolutionDetails.timeBackInService.toISOString(),
     });
+
     toast({
         title: "Breakdown Resolved",
         description: `The issue for ${breakdown.equipmentName} has been marked as resolved.`,

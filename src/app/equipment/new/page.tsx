@@ -119,6 +119,7 @@ export default function NewEquipmentPage() {
       nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
       uptime: 100,
       powerConsumption: 0,
+      totalDowntimeHours: 0,
       imageUrl: values.imageUrl,
       motorModel: values.motorModel || '',
       motorPower: values.motorPower || 0,

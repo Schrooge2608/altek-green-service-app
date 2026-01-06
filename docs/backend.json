@@ -36,7 +36,8 @@
         "motorModel": { "type": "string" },
         "motorPower": { "type": "number" },
         "motorVoltage": { "type": "number" },
-        "motorSerialNumber": { "type": "string" }
+        "motorSerialNumber": { "type": "string" },
+        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." }
       },
       "required": ["id", "name", "type", "location", "vsdId", "plant"]
     },
