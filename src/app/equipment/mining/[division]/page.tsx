@@ -5,6 +5,8 @@ import { notFound, useParams } from 'next/navigation';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import {
   Table,
@@ -14,6 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
@@ -56,10 +64,27 @@ export default function MiningDivisionPage() {
     }
     return validDivisions[divisionSlug];
   }, [divisionSlug]);
+  
+  const equipmentByLocation = useMemo(() => {
+    if (!equipment) return {};
+    return equipment.reduce((acc, eq) => {
+        const location = eq.location || 'Uncategorized';
+        if (!acc[location]) {
+            acc[location] = [];
+        }
+        acc[location].push(eq);
+        return acc;
+    }, {} as Record<string, Equipment[]>);
+  }, [equipment]);
 
   if (!memoizedDivisionName) {
     return null;
   }
+
+  const isBoosters = divisionSlug === 'boosters-pumpstations';
+  const locations = isBoosters 
+    ? ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION', 'Uncategorized']
+    : Object.keys(equipmentByLocation);
 
   return (
     <div className="flex flex-col gap-8">
@@ -69,55 +94,110 @@ export default function MiningDivisionPage() {
           All monitored equipment in the {memoizedDivisionName} division.
         </p>
       </header>
-      <Card>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead className="text-right">Uptime</TableHead>
-                <TableHead className="text-right">Power (kWh)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">Loading equipment...</TableCell>
-                </TableRow>
-              ) : equipment && equipment.length > 0 ? (
-                equipment.map((eq) => (
-                  <TableRow key={eq.id}>
-                    <TableCell className="font-medium">
-                      <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
-                        {eq.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                          {equipmentIcons[eq.type] || null}
-                          {eq.type}
-                      </div>
-                    </TableCell>
-                    <TableCell>{eq.location}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
-                        {eq.uptime}%
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
+        {isLoading ? (
+            <Card>
+                <CardContent className="pt-6">
+                    <div className="text-center h-24">Loading equipment...</div>
+                </CardContent>
+            </Card>
+        ) : isBoosters ? (
+             <Accordion type="multiple" className="w-full" defaultValue={locations.map(l => `item-${l}`)}>
+                {locations.map((location) => (
+                    equipmentByLocation[location] && (
+                        <AccordionItem value={`item-${location}`} key={location}>
+                            <AccordionTrigger className="text-xl font-semibold">
+                                {location} ({equipmentByLocation[location].length})
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <Card>
+                                    <CardContent className="pt-6">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Name</TableHead>
+                                                    <TableHead>Type</TableHead>
+                                                    <TableHead className="text-right">Uptime</TableHead>
+                                                    <TableHead className="text-right">Power (kWh)</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {equipmentByLocation[location].map((eq) => (
+                                                  <TableRow key={eq.id}>
+                                                    <TableCell className="font-medium">
+                                                      <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
+                                                        {eq.name}
+                                                      </Link>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      <div className="flex items-center gap-2">
+                                                          {equipmentIcons[eq.type] || null}
+                                                          {eq.type}
+                                                      </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                      <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
+                                                        {eq.uptime}%
+                                                      </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
+                                                  </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </AccordionContent>
+                        </AccordionItem>
+                    )
+                ))}
+            </Accordion>
+        ) : (
+          <Card>
+            <CardContent className="pt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead className="text-right">Uptime</TableHead>
+                    <TableHead className="text-right">Power (kWh)</TableHead>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">No equipment found for this division.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {equipment && equipment.length > 0 ? (
+                    equipment.map((eq) => (
+                      <TableRow key={eq.id}>
+                        <TableCell className="font-medium">
+                          <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
+                            {eq.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                              {equipmentIcons[eq.type] || null}
+                              {eq.type}
+                          </div>
+                        </TableCell>
+                        <TableCell>{eq.location}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
+                            {eq.uptime}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center h-24">No equipment found for this division.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
     </div>
   );
 }

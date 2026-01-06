@@ -39,6 +39,8 @@ const formSchema = z.object({
   location: z.string().min(1, 'Location is required'),
 });
 
+const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
+
 export default function NewVsdPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -57,6 +59,11 @@ export default function NewVsdPage() {
   const watchedPlant = useWatch({
     control: form.control,
     name: 'plant',
+  });
+  
+  const watchedDivision = useWatch({
+    control: form.control,
+    name: 'division',
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -208,7 +215,7 @@ export default function NewVsdPage() {
             <CardHeader>
               <CardTitle>Driven Equipment Details</CardTitle>
               <CardDescription>Information about the equipment this VSD controls.</CardDescription>
-            </CardHeader>
+            </Header>
             <CardContent className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -303,19 +310,42 @@ export default function NewVsdPage() {
                   )}
                 />
               )}
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Sector C, Line 2" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+               {watchedPlant === 'Mining' && watchedDivision === 'Boosters & Pumpstations' ? (
+                 <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location (Plant Heading)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a location" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {boosterLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+               ) : (
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Sector C, Line 2" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </CardContent>
           </Card>
 
