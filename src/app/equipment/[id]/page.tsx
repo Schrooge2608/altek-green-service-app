@@ -34,16 +34,20 @@ export default function EquipmentDetailPage() {
   const breakdownsQuery = useMemoFirebase(() => (eq ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', eq.id)) : null), [firestore, eq]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : null;
+  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'pump-1');
 
-  useEffect(() => {
-    if (!eqLoading && !eq && id) {
-      notFound();
-    }
-  }, [eq, eqLoading, id]);
+  if (eqError) {
+    // If there's a Firestore error (like permissions), you might want to handle it.
+    // For now, we can treat it like a not found case for simplicity.
+    notFound();
+  }
+  
+  if (!eqLoading && !eq && id) {
+    notFound();
+  }
 
 
-  if (eqLoading || !eq) {
+  if (eqLoading || !eq || !id) {
     return (
         <div className="flex flex-col gap-8">
             <header>
@@ -80,7 +84,7 @@ export default function EquipmentDetailPage() {
         </div>
     );
   }
-
+  
   return (
     <div className="flex flex-col gap-8">
       <header>
