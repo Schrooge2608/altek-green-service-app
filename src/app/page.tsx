@@ -14,7 +14,6 @@ export default function Home() {
 
       <div className="grid grid-cols-1 gap-8">
         <PlantDashboard plantName="Mining" divisionName="Boosters" />
-        <PlantDashboard plantName="Mining" divisionName="Pump Stations" />
         <PlantDashboard plantName="Smelter" />
       </div>
     </div>

@@ -36,7 +36,6 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 
 const validDivisions: Record<string, string> = {
     'boosters': 'Boosters',
-    'pump-stations': 'Pump Stations',
 }
 
 export default function MiningDivisionPage() {
@@ -79,7 +78,7 @@ export default function MiningDivisionPage() {
     return null;
   }
 
-  const isGroupedByLocation = ['Boosters', 'Pump Stations'].includes(memoizedDivisionName);
+  const isGroupedByLocation = ['Boosters'].includes(memoizedDivisionName);
   const locations = Object.keys(equipmentByLocation);
 
   return (
