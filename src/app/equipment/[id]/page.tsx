@@ -32,7 +32,7 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
   const breakdownsQuery = useMemoFirebase(() => (eq ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', eq.id)) : null), [firestore, eq]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const placeholder = eq ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : null;
+  const placeholder = eq && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : null;
 
   useEffect(() => {
     if (!eqLoading && !eq) {
@@ -174,4 +174,3 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
       </div>
     </div>
   );
-}
