@@ -11,7 +11,6 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD } from '@/lib/types';
-import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const imageMap: { [key: string]: string } = {
@@ -38,16 +37,14 @@ export default function EquipmentDetailPage() {
 
   if (eqError) {
     // If there's a Firestore error (like permissions), you might want to handle it.
+    console.error("Firestore error:", eqError);
     // For now, we can treat it like a not found case for simplicity.
     notFound();
   }
   
-  if (!eqLoading && !eq && id) {
-    notFound();
-  }
-
-
-  if (eqLoading || !eq || !id) {
+  // This is the main fix: Show skeleton loading screen until loading is complete.
+  // Only call notFound() if loading is finished AND the data is still null.
+  if (eqLoading) {
     return (
         <div className="flex flex-col gap-8">
             <header>
@@ -83,6 +80,12 @@ export default function EquipmentDetailPage() {
             </div>
         </div>
     );
+  }
+
+  if (!eq) {
+    // This will only be reached if eqLoading is false and eq is null.
+    notFound();
+    return null; // Return null to prevent rendering anything further.
   }
   
   return (
