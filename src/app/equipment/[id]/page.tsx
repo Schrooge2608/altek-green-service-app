@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -26,9 +26,12 @@ const imageMap: { [key: string]: string } = {
 function EquipmentDetailSkeleton() {
     return (
         <div className="flex flex-col gap-8">
-            <header>
-                <Skeleton className="h-9 w-1/2" />
-                <Skeleton className="h-4 w-1/3 mt-2" />
+            <header className="flex items-center justify-between">
+                <div>
+                    <Skeleton className="h-9 w-1/2" />
+                    <Skeleton className="h-4 w-1/3 mt-2" />
+                </div>
+                <Skeleton className="h-10 w-24" />
             </header>
              <div className="grid gap-8 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-8">
@@ -132,9 +135,17 @@ export default function EquipmentDetailPage() {
   
   return (
     <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">{eq.name}</h1>
-        <p className="text-muted-foreground">Detailed view of equipment ID: {eq.id}</p>
+      <header className="flex items-center justify-between">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">{eq.name}</h1>
+            <p className="text-muted-foreground">Detailed view of equipment ID: {eq.id}</p>
+        </div>
+        <Link href={`/equipment/${id}/edit`} passHref>
+            <Button variant="outline">
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit Equipment
+            </Button>
+        </Link>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -273,3 +284,5 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
+    
