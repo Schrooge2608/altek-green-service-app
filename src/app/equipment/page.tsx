@@ -45,6 +45,7 @@ export default function EquipmentPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Plant</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
                 <TableHead className="text-right">Power (kWh)</TableHead>
@@ -53,7 +54,7 @@ export default function EquipmentPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">Loading equipment...</TableCell>
+                  <TableCell colSpan={6} className="text-center h-24">Loading equipment...</TableCell>
                 </TableRow>
               ) : equipment && equipment.length > 0 ? (
                 equipment.map((eq) => (
@@ -69,6 +70,7 @@ export default function EquipmentPage() {
                           {eq.type}
                       </div>
                     </TableCell>
+                    <TableCell>{eq.plant}</TableCell>
                     <TableCell>{eq.location}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
@@ -80,7 +82,7 @@ export default function EquipmentPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">No equipment found.</TableCell>
+                  <TableCell colSpan={6} className="text-center h-24">No equipment found.</TableCell>
                 </TableRow>
               )}
             </TableBody>

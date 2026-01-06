@@ -23,6 +23,7 @@
         "name": { "type": "string" },
         "type": { "type": "string", "enum": ["Pump", "Fan", "Compressor", "Utility Room"] },
         "location": { "type": "string" },
+        "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
         "vsdId": { "type": "string" },
         "pumpHead": { "type": "number" },
         "flowRate": { "type": "number" },
@@ -31,7 +32,7 @@
         "uptime": { "type": "number" },
         "powerConsumption": { "type": "number" }
       },
-      "required": ["id", "name", "type", "location", "vsdId"]
+      "required": ["id", "name", "type", "location", "vsdId", "plant"]
     },
     "MaintenanceTask": {
       "title": "MaintenanceTask",

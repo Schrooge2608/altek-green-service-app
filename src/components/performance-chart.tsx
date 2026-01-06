@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 
@@ -22,9 +22,20 @@ const chartConfig = {
   },
 };
 
-export function PerformanceChart() {
+interface PerformanceChartProps {
+    plant?: 'Mining' | 'Smelter';
+}
+
+export function PerformanceChart({ plant }: PerformanceChartProps) {
   const firestore = useFirestore();
-  const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
+
+  const equipmentQuery = useMemoFirebase(() => {
+    if (plant) {
+      return query(collection(firestore, 'equipment'), where('plant', '==', plant))
+    }
+    return collection(firestore, 'equipment');
+  }, [firestore, plant]);
+
   const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
 
   const chartData = equipment?.map(eq => ({
@@ -39,7 +50,7 @@ export function PerformanceChart() {
 
   return (
     <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-        <ResponsiveContainer width="100%" height={350}>
+        <ResponsiveContainer width="100%" height={250}>
             <BarChart data={chartData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <XAxis
                 dataKey="name"

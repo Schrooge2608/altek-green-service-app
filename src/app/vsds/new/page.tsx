@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 
 
@@ -33,7 +33,8 @@ const formSchema = z.object({
   }),
   equipmentId: z.string().min(1, 'Equipment ID is required'),
   equipmentName: z.string().min(1, 'Equipment name is required'),
-  equipmentType: z.enum(['Pump', 'Fan', 'Compressor']),
+  equipmentType: z.enum(['Pump', 'Fan', 'Compressor', 'Utility Room']),
+  plant: z.enum(['Mining', 'Smelter']),
   location: z.string().min(1, 'Location is required'),
 });
 
@@ -71,6 +72,7 @@ export default function NewVsdPage() {
       id: values.equipmentId,
       name: values.equipmentName,
       type: values.equipmentType,
+      plant: values.plant,
       location: values.location,
       vsdId: vsdRef.id,
       pumpHead: 0, // Default values
@@ -235,6 +237,28 @@ export default function NewVsdPage() {
                         <SelectItem value="Pump">Pump</SelectItem>
                         <SelectItem value="Fan">Fan</SelectItem>
                         <SelectItem value="Compressor">Compressor</SelectItem>
+                        <SelectItem value="Utility Room">Utility Room</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="plant"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Plant</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a plant" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Mining">Mining</SelectItem>
+                        <SelectItem value="Smelter">Smelter</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
