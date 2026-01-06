@@ -38,6 +38,7 @@ const mainLinks = [
 
 const miningDivisions = [
     { href: '/equipment/mining/dredgers', label: 'Dredgers' },
+    { href: '/equipment/mining/boosters', label: 'Boosters' },
 ]
 
 const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');

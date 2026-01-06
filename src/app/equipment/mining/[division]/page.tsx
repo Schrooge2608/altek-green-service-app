@@ -38,6 +38,7 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 
 const validDivisions: Record<string, string> = {
     'dredgers': 'Dredgers',
+    'boosters': 'Boosters',
 }
 
 export default function MiningDivisionPage() {
@@ -80,7 +81,7 @@ export default function MiningDivisionPage() {
     return null;
   }
 
-  const isGroupedByLocation = divisionSlug === 'pump-stations';
+  const isGroupedByLocation = divisionSlug === 'pump-stations' || divisionSlug === 'boosters';
   const locations = Object.keys(equipmentByLocation);
 
   return (
