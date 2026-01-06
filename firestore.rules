@@ -1,156 +1,29 @@
-/**
- * This ruleset establishes a secure-by-default foundation for the VSD Data
- * Base application, designed for rapid prototyping and future extension.
- *
- * Core Philosophy:
- * The security model prioritizes open readability with controlled, authenticated
- * writes. All data is considered public to read, accommodating both anonymous
- * and authenticated users for viewing purposes. However, any action that
- * creates data requires a registered (non-anonymous) user, providing a baseline
- * of accountability. Modification and deletion of existing data are explicitly
- * disabled by default, pending the implementation of a formal ownership model.
- *
- * Data Structure:
- * The data is organized around top-level collections for 'equipment',
- * 'maintenance_schedules', and 'tasks'. Equipment-specific data, such as
- * 'vsd_data' and 'breakdown_reports', are logically nested as subcollections
- * under the relevant '/equipment/{equipmentId}' document. This structure
- * creates clear relational contexts.
- *
- * Key Security Decisions:
- * 1. Public Read Access: All collections are publicly readable ('get' and 'list')
- *    to support dashboarding or catalog-style features for any user, including
- *    those not signed in.
- * 2. Authenticated Creation: Only registered, non-anonymous users are permitted
- *    to create new documents. This prevents anonymous writes while allowing
- *    prototyping by any team member with an account.
- * 3. Locked Updates & Deletes: To prevent unauthorized data modification in this
- *    initial prototype, 'update' and 'delete' operations are disabled across all
- *    collections. This is a critical security measure because the data models
- *    currently lack the 'ownerId' or 'members' fields required to safely
- *    authorize these actions. Rules are marked with 'TODO' comments to guide
- *    developers on adding ownership checks.
- *
- * Denormalization for Authorization:
- * While not yet enforced, the ideal security model (as noted in the system
- * reasoning) is to denormalize a `members` map or an `ownerId` field from a
- * parent 'equipment' document down to its subcollections. This design avoids
- * costly 'get()' calls in rules and is the recommended pattern for enabling
- * secure update and delete functionality.
- *
- * Structural Segregation:
- * Each primary data entity ('Equipment', 'Task', etc.) resides in its own
- * top-level collection. This separation simplifies rule logic, enhances query
- * performance, and ensures that the security posture of one data type does not
- * inadvertently affect another.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ----------------------------------------------------------------------
-    // Helper Functions
-    // ----------------------------------------------------------------------
-
-    /**
-     * Checks if the user is authenticated with a permanent account
-     * (e.g., email/password, social), not an anonymous one.
-     */
     function isRegisteredUser() {
       return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
-    /**
-     * On create, ensures a document's foreign key field matches the parent
-     * document's ID from the path.
-     */
-    function hasCorrectParentId(parentId, fieldName) {
-      return request.resource.data[fieldName] == parentId;
+    match /{document=**} {
+      allow read: if true;
     }
 
-
-    // ----------------------------------------------------------------------
-    // Collection Rules
-    // ----------------------------------------------------------------------
-
-    /**
-     * @description Manages equipment records. Anyone can read equipment data, but
-     *   only registered users can create new records. Updates and deletes
-     *   are disabled until an ownership model is defined.
-     * @path /equipment/{equipmentId}
-     * @allow (get) Any user, signed in or not, can retrieve a specific equipment document.
-     * @deny (update) A registered user attempting to change an equipment's name fails because there's no ownership check.
-     * @principle Public read access with secure, authenticated-only creation. Updates/deletes are locked pending an ownership schema.
-     */
+    match /vsds/{vsdId} {
+      allow create, update, delete: if isRegisteredUser();
+    }
+    
     match /equipment/{equipmentId} {
-      allow get, list: if true;
-      allow create: if isRegisteredUser();
-      // CRITICAL: Cannot implement owner-only writes. The 'Equipment' entity is missing an 'ownerId' or 'members' field.
-      allow update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if isRegisteredUser();
     }
 
-    /**
-     * @description Stores VSD data readings for a specific piece of equipment.
-     *   Publicly readable, but only registered users can add new data.
-     *   Relational integrity with the parent equipment is enforced on create.
-     * @path /equipment/{equipmentId}/vsd_data/{vsdDataId}
-     * @allow (create) A registered user can create a VSD data entry if its 'equipmentId' field matches the path.
-     * @deny (create) A registered user's request is denied if the 'equipmentId' in the data does not match the {equipmentId} in the path.
-     * @principle Enforces relational integrity between a subcollection document and its parent upon creation.
-     */
-    match /equipment/{equipmentId}/vsd_data/{vsdDataId} {
-      allow get, list: if true;
-      allow create: if isRegisteredUser() && hasCorrectParentId(equipmentId, 'equipmentId');
-      // CRITICAL: Cannot implement secure writes. This rule should depend on the parent Equipment's ownership, which is not defined.
-      allow update, delete: if false; // TODO: Check ownership on the parent equipment document, e.g., get(/databases/$(database)/documents/equipment/$(equipmentId)).data.ownerId == request.auth.uid
-    }
-
-    /**
-     * @description Stores breakdown reports for a specific piece of equipment.
-     *   Publicly readable, but only registered users can add new reports.
-     *   Relational integrity with the parent equipment is enforced on create.
-     * @path /equipment/{equipmentId}/breakdown_reports/{breakdownReportId}
-     * @allow (create) A registered user can create a breakdown report if its 'equipmentId' field matches the path.
-     * @deny (create) A registered user's request is denied if the 'equipmentId' in the data does not match the {equipmentId} in the path.
-     * @principle Enforces relational integrity between a subcollection document and its parent upon creation.
-     */
-    match /equipment/{equipmentId}/breakdown_reports/{breakdownReportId} {
-      allow get, list: if true;
-      allow create: if isRegisteredUser() && hasCorrectParentId(equipmentId, 'equipmentId');
-      // CRITICAL: Cannot implement secure writes. This rule should depend on the parent Equipment's ownership, which is not defined.
-      allow update, delete: if false; // TODO: Check ownership on the parent equipment document, e.g., get(/databases/$(database)/documents/equipment/$(equipmentId)).data.ownerId == request.auth.uid
-    }
-
-    /**
-     * @description Manages maintenance schedules. Anyone can read schedules, but
-     *   only registered users can create new ones. Updates and deletes
-     *   are disabled until an ownership model is defined.
-     * @path /maintenance_schedules/{maintenanceScheduleId}
-     * @allow (list) Any user, signed in or not, can list all maintenance schedules.
-     * @deny (delete) A registered user attempting to delete a schedule fails because there is no ownership check.
-     * @principle Public read access with secure, authenticated-only creation. Updates/deletes are locked pending an ownership schema.
-     */
-    match /maintenance_schedules/{maintenanceScheduleId} {
-      allow get, list: if true;
-      allow create: if isRegisteredUser();
-      // CRITICAL: Cannot implement owner-only writes. The 'MaintenanceSchedule' entity is missing an 'ownerId' or 'members' field.
-      allow update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-    }
-
-    /**
-     * @description Manages maintenance tasks. Anyone can read tasks, but only
-     *   registered users can create new ones. Updates and deletes
-     *   are disabled until an ownership model is defined.
-     * @path /tasks/{taskId}
-     * @allow (create) A registered user can create a new maintenance task.
-     * @deny (update) A registered user attempting to change a task's status fails because there is no ownership check.
-     * @principle Public read access with secure, authenticated-only creation. Updates/deletes are locked pending an ownership schema.
-     */
     match /tasks/{taskId} {
-      allow get, list: if true;
-      allow create: if isRegisteredUser();
-      // CRITICAL: Cannot implement owner-only writes. The 'Task' entity is missing an 'ownerId', 'assigneeId', or other ownership field.
-      allow update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if isRegisteredUser();
+    }
+
+    match /breakdown_reports/{breakdownReportId} {
+      allow create, update, delete: if isRegisteredUser();
     }
   }
 }

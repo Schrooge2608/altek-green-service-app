@@ -1,4 +1,5 @@
-import { equipment, breakdowns, vsds } from '@/lib/data';
+'use client';
+
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,6 +8,10 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, where } from 'firebase/firestore';
+import type { Equipment, Breakdown, VSD } from '@/lib/types';
+import { useEffect } from 'react';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -15,14 +20,37 @@ const imageMap: { [key: string]: string } = {
 };
 
 export default function EquipmentDetailPage({ params }: { params: { id: string } }) {
-  const eq = equipment.find((e) => e.id === params.id);
-  if (!eq) {
-    notFound();
+  const firestore = useFirestore();
+
+  const eqRef = useMemoFirebase(() => doc(firestore, 'equipment', params.id), [firestore, params.id]);
+  const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
+
+  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
+  const { data: eqVsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
+  
+  const breakdownsQuery = useMemoFirebase(() => (eq ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', eq.id)) : null), [firestore, eq]);
+  const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
+
+  const placeholder = eq ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : null;
+
+  useEffect(() => {
+    if (!eqLoading && !eq) {
+      notFound();
+    }
+  }, [eq, eqLoading]);
+
+
+  if (eqLoading || vsdLoading || breakdownsLoading) {
+    return (
+        <div className="flex justify-center items-center h-screen">
+            <p>Loading equipment details...</p>
+        </div>
+    );
   }
 
-  const eqVsd = vsds.find(v => v.id === eq.vsdId);
-  const eqBreakdowns = breakdowns.filter(b => b.equipmentId === eq.id);
-  const placeholder = PlaceHolderImages.find(p => p.id === imageMap[eq.type]);
+  if (!eq) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -88,7 +116,7 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {eqBreakdowns.length > 0 ? eqBreakdowns.map(b => (
+                            {eqBreakdowns && eqBreakdowns.length > 0 ? eqBreakdowns.map(b => (
                                 <TableRow key={b.id}>
                                     <TableCell>{b.date}</TableCell>
                                     <TableCell>{b.description}</TableCell>

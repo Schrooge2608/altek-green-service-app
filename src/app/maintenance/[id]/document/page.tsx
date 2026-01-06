@@ -1,6 +1,5 @@
 'use client';
 
-import { maintenanceTasks, equipment } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -8,23 +7,36 @@ import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import { AltekLogo } from '@/components/altek-logo';
 import { useEffect } from 'react';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { MaintenanceTask, Equipment } from '@/lib/types';
 
 export default function MaintenanceDocumentPage({ params }: { params: { id: string } }) {
-  const task = maintenanceTasks.find((t) => t.id === params.id);
+  const firestore = useFirestore();
+
+  const taskRef = useMemoFirebase(() => doc(firestore, 'tasks', params.id), [firestore, params.id]);
+  const { data: task, isLoading: taskLoading, error: taskError } = useDoc<MaintenanceTask>(taskRef);
+
+  const eqRef = useMemoFirebase(() => (task ? doc(firestore, 'equipment', task.equipmentId) : null), [firestore, task]);
+  const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
   
-  // Use useEffect to handle notFound on the client-side after initial render attempt
   useEffect(() => {
-    if (!task) {
+    if (!taskLoading && !task) {
       notFound();
     }
-  }, [task]);
+  }, [task, taskLoading]);
+
+  if (taskLoading || eqLoading) {
+    return (
+        <div className="flex justify-center items-center h-screen">
+            <p>Loading document...</p>
+        </div>
+    );
+  }
 
   if (!task) {
-    // Render a loading state or null while waiting for the effect to run
     return null;
   }
-  
-  const eq = equipment.find((e) => e.id === task.equipmentId);
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8">

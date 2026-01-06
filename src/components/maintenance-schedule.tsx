@@ -21,7 +21,8 @@ import {
 
 interface MaintenanceScheduleProps {
   title: string;
-  tasks: MaintenanceTask[];
+  tasks: MaintenanceTask[] | null;
+  isLoading: boolean;
 }
 
 type StatusVariant = "default" | "secondary" | "destructive";
@@ -32,10 +33,14 @@ const statusVariantMap: Record<string, StatusVariant> = {
   overdue: 'destructive',
 };
 
-export function MaintenanceSchedule({ title, tasks }: MaintenanceScheduleProps) {
+export function MaintenanceSchedule({ title, tasks, isLoading }: MaintenanceScheduleProps) {
   return (
     <div className="mt-4">
-      {tasks.length > 0 ? (
+      {isLoading ? (
+        <div className="text-center py-10 text-muted-foreground">
+          Loading {title.toLowerCase()}...
+        </div>
+      ) : tasks && tasks.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow>

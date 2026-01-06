@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Card,
   CardContent,
@@ -13,10 +15,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { breakdowns } from '@/lib/data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Breakdown } from '@/lib/types';
 import Link from 'next/link';
 
 export default function BreakdownsPage() {
+  const firestore = useFirestore();
+  const breakdownsQuery = useMemoFirebase(() => collection(firestore, 'breakdown_reports'), [firestore]);
+  const { data: breakdowns, isLoading } = useCollection<Breakdown>(breakdownsQuery);
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex items-center justify-between">
@@ -43,22 +51,32 @@ export default function BreakdownsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {breakdowns.map((b) => (
-                <TableRow key={b.id}>
-                  <TableCell>{b.date}</TableCell>
-                  <TableCell className="font-medium">
-                    <Link href={`/equipment/${b.equipmentId}`} className="hover:underline text-primary">
-                        {b.equipmentName}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{b.description}</TableCell>
-                  <TableCell>
-                    <Badge variant={b.resolved ? 'default' : 'destructive'}>
-                      {b.resolved ? 'Resolved' : 'Pending'}
-                    </Badge>
-                  </TableCell>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center h-24">Loading breakdowns...</TableCell>
                 </TableRow>
-              ))}
+              ) : breakdowns && breakdowns.length > 0 ? (
+                breakdowns.map((b) => (
+                  <TableRow key={b.id}>
+                    <TableCell>{b.date}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/equipment/${b.equipmentId}`} className="hover:underline text-primary">
+                          {b.equipmentName}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{b.description}</TableCell>
+                    <TableCell>
+                      <Badge variant={b.resolved ? 'default' : 'destructive'}>
+                        {b.resolved ? 'Resolved' : 'Pending'}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center h-24">No breakdowns found.</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

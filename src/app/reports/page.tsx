@@ -2,11 +2,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PerformanceChart } from '@/components/performance-chart';
-import { equipment } from '@/lib/data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Equipment } from '@/lib/types';
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-
-const powerConsumptionData = equipment.map(e => ({ name: e.name, kWh: e.powerConsumption }));
+import { Skeleton } from '@/components/ui/skeleton';
 
 const chartConfig = {
     kWh: {
@@ -16,6 +17,12 @@ const chartConfig = {
 };
 
 export default function ReportsPage() {
+    const firestore = useFirestore();
+    const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
+    const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
+
+    const powerConsumptionData = equipment?.map(e => ({ name: e.name, kWh: e.powerConsumption })) || [];
+
     return (
         <div className="flex flex-col gap-8">
             <header>
@@ -42,23 +49,25 @@ export default function ReportsPage() {
                         <CardDescription>Comparing the energy usage of individual units.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-                            <ResponsiveContainer width="100%" height={350}>
-                                <BarChart accessibilityLayer data={powerConsumptionData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                                    <XAxis
-                                        dataKey="name"
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickMargin={8}
-                                        fontSize={12}
-                                        stroke="hsl(var(--muted-foreground))"
-                                    />
-                                    <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} stroke="hsl(var(--muted-foreground))" />
-                                    <ChartTooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                                    <Bar dataKey="kWh" fill="var(--color-kWh)" radius={4} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
+                        {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
+                            <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                                <ResponsiveContainer width="100%" height={350}>
+                                    <BarChart accessibilityLayer data={powerConsumptionData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                                        <XAxis
+                                            dataKey="name"
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={8}
+                                            fontSize={12}
+                                            stroke="hsl(var(--muted-foreground))"
+                                        />
+                                        <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} stroke="hsl(var(--muted-foreground))" />
+                                        <ChartTooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                                        <Bar dataKey="kWh" fill="var(--color-kWh)" radius={4} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </ChartContainer>
+                        )}
                     </CardContent>
                 </Card>
             </div>

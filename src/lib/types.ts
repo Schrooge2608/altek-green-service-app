@@ -10,7 +10,7 @@ export interface VSD {
 export interface Equipment {
   id: string;
   name: string;
-  type: 'Pump' | 'Fan' | 'Compressor';
+  type: 'Pump' | 'Fan' | 'Compressor' | 'Utility Room';
   location: string;
   vsdId: string;
   pumpHead: number;

@@ -6,13 +6,10 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { equipment } from '@/lib/data';
-
-const chartData = equipment.map(eq => ({
-    name: eq.name,
-    uptime: eq.uptime,
-    power: eq.powerConsumption / 1000
-}));
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Equipment } from '@/lib/types';
+import { Skeleton } from './ui/skeleton';
 
 const chartConfig = {
   uptime: {
@@ -26,6 +23,20 @@ const chartConfig = {
 };
 
 export function PerformanceChart() {
+  const firestore = useFirestore();
+  const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
+  const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
+
+  const chartData = equipment?.map(eq => ({
+      name: eq.name,
+      uptime: eq.uptime,
+      power: eq.powerConsumption / 1000
+  })) || [];
+
+  if (isLoading) {
+      return <Skeleton className="h-[350px] w-full" />;
+  }
+
   return (
     <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
         <ResponsiveContainer width="100%" height={350}>

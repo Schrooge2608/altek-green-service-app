@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Card,
   CardContent,
@@ -13,14 +15,31 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Activity, AlertTriangle, Cpu, Zap } from 'lucide-react';
-import { vsds, equipment, maintenanceTasks } from '@/lib/data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { PerformanceChart } from '@/components/performance-chart';
+import { collection, query, where, limit } from 'firebase/firestore';
+import type { VSD, Equipment, MaintenanceTask } from '@/lib/types';
 
 export default function Home() {
-  const activeVSDs = vsds.filter((vsd) => vsd.status === 'active').length;
-  const criticalAlerts = equipment.filter(
+  const firestore = useFirestore();
+
+  const vsdsQuery = useMemoFirebase(() => collection(firestore, 'vsds'), [firestore]);
+  const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
+  const maintenanceTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('status', '==', 'pending'), limit(5)), [firestore]);
+
+  const { data: vsds, isLoading: vsdsLoading } = useCollection<VSD>(vsdsQuery);
+  const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
+  const { data: maintenanceTasks, isLoading: tasksLoading } = useCollection<MaintenanceTask>(maintenanceTasksQuery);
+
+  const activeVSDs = vsds?.filter((vsd) => vsd.status === 'active').length ?? 0;
+  const criticalAlerts = equipment?.filter(
     (eq) => eq.uptime < 98
-  ).length;
+  ).length ?? 0;
+  const avgPowerConsumption = equipment
+    ? equipment.reduce((acc, eq) => acc + eq.powerConsumption, 0) /
+      equipment.length /
+      1000
+    : 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -38,7 +57,7 @@ export default function Home() {
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vsds.length}</div>
+            <div className="text-2xl font-bold">{vsdsLoading ? '...' : vsds?.length ?? 0}</div>
             <p className="text-xs text-muted-foreground">
               {activeVSDs} active units
             </p>
@@ -52,7 +71,7 @@ export default function Home() {
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{equipment.length}</div>
+            <div className="text-2xl font-bold">{equipmentLoading ? '...' : equipment?.length ?? 0}</div>
             <p className="text-xs text-muted-foreground">
               Pumps, Fans, Compressors
             </p>
@@ -67,11 +86,7 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(
-                equipment.reduce((acc, eq) => acc + eq.powerConsumption, 0) /
-                equipment.length /
-                1000
-              ).toFixed(2)}{' '}
+              {equipmentLoading ? '...' : avgPowerConsumption.toFixed(2)}{' '}
               MWh
             </div>
             <p className="text-xs text-muted-foreground">Total across all units</p>
@@ -83,7 +98,7 @@ export default function Home() {
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{criticalAlerts}</div>
+            <div className="text-2xl font-bold">{equipmentLoading ? '...' : criticalAlerts}</div>
             <p className="text-xs text-muted-foreground">
               Requiring immediate attention
             </p>
@@ -114,10 +129,12 @@ export default function Home() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {maintenanceTasks
-                  .filter((task) => task.status === 'pending')
-                  .slice(0, 5)
-                  .map((task) => (
+                {tasksLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center h-24">Loading tasks...</TableCell>
+                  </TableRow>
+                ) : maintenanceTasks && maintenanceTasks.length > 0 ? (
+                  maintenanceTasks.map((task) => (
                     <TableRow key={task.id}>
                       <TableCell>
                         <div className="font-medium">{task.equipmentName}</div>
@@ -125,7 +142,12 @@ export default function Home() {
                       </TableCell>
                       <TableCell>{task.dueDate}</TableCell>
                     </TableRow>
-                  ))}
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center h-24">No upcoming tasks.</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>

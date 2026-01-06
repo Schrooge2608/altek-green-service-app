@@ -14,13 +14,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/componentsui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -37,6 +39,8 @@ const formSchema = z.object({
 
 export default function NewVsdPage() {
   const { toast } = useToast();
+  const firestore = useFirestore();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -48,13 +52,53 @@ export default function NewVsdPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    toast({
-      title: 'VSD Added',
-      description: `VSD with serial ${values.serialNumber} has been successfully added.`,
-    });
-    form.reset();
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const batch = writeBatch(firestore);
+
+    const vsdRef = doc(collection(firestore, 'vsds'));
+    const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
+
+    const vsdData = {
+      id: vsdRef.id,
+      serialNumber: values.serialNumber,
+      model: values.model,
+      installationDate: format(values.installationDate, "yyyy-MM-dd"),
+      status: 'active',
+      equipmentId: values.equipmentId,
+    };
+
+    const equipmentData = {
+      id: values.equipmentId,
+      name: values.equipmentName,
+      type: values.equipmentType,
+      location: values.location,
+      vsdId: vsdRef.id,
+      pumpHead: 0, // Default values
+      flowRate: 0, // Default values
+      lastMaintenance: format(new Date(), "yyyy-MM-dd"),
+      nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
+      uptime: 100,
+      powerConsumption: 0,
+    };
+
+    batch.set(vsdRef, vsdData);
+    batch.set(equipmentRef, equipmentData);
+
+    try {
+      await batch.commit();
+      toast({
+        title: 'VSD & Equipment Added',
+        description: `VSD with serial ${values.serialNumber} and equipment ${values.equipmentName} have been successfully added.`,
+      });
+      form.reset();
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      toast({
+        variant: "destructive",
+        title: 'Error',
+        description: `There was an error saving the data. Please try again.`,
+      });
+    }
   }
 
   return (

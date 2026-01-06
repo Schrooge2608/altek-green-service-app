@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import {
   Card,
@@ -11,7 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { equipment } from '@/lib/data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Equipment } from '@/lib/types';
 import { Fan, Droplets, AirVent } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -22,6 +26,10 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 }
 
 export default function EquipmentPage() {
+  const firestore = useFirestore();
+  const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
+  const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
+
   return (
     <div className="flex flex-col gap-8">
       <header>
@@ -43,28 +51,38 @@ export default function EquipmentPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {equipment.map((eq) => (
-                <TableRow key={eq.id}>
-                  <TableCell className="font-medium">
-                    <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
-                      {eq.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                        {equipmentIcons[eq.type] || null}
-                        {eq.type}
-                    </div>
-                  </TableCell>
-                  <TableCell>{eq.location}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
-                      {eq.uptime}%
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center h-24">Loading equipment...</TableCell>
                 </TableRow>
-              ))}
+              ) : equipment && equipment.length > 0 ? (
+                equipment.map((eq) => (
+                  <TableRow key={eq.id}>
+                    <TableCell className="font-medium">
+                      <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
+                        {eq.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                          {equipmentIcons[eq.type] || null}
+                          {eq.type}
+                      </div>
+                    </TableCell>
+                    <TableCell>{eq.location}</TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
+                        {eq.uptime}%
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center h-24">No equipment found.</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
