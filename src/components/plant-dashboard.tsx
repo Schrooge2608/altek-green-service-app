@@ -14,21 +14,33 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Activity, AlertTriangle, Cpu, Zap, Building } from 'lucide-react';
+import { Activity, AlertTriangle, Cpu, Zap, Building, Pickaxe } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { PerformanceChart } from '@/components/performance-chart';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { collection, query, where, limit, Query, and } from 'firebase/firestore';
 import type { VSD, Equipment, MaintenanceTask } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
+import { useMemo } from 'react';
+
 
 interface PlantDashboardProps {
     plantName: 'Mining' | 'Smelter';
+    divisionName?: 'Boosters & Pumpstations' | 'Dredgers';
 }
 
-export function PlantDashboard({ plantName }: PlantDashboardProps) {
+export function PlantDashboard({ plantName, divisionName }: PlantDashboardProps) {
     const firestore = useFirestore();
 
-    const equipmentQuery = useMemoFirebase(() => query(collection(firestore, 'equipment'), where('plant', '==', plantName)), [firestore, plantName]);
+    const equipmentQuery = useMemoFirebase(() => {
+        let q: Query = collection(firestore, 'equipment');
+        const conditions = [where('plant', '==', plantName)];
+        if (divisionName) {
+            conditions.push(where('division', '==', divisionName));
+        }
+        q = query(q, ...conditions);
+        return q;
+    }, [firestore, plantName, divisionName]);
+
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
     
     // We need all VSDs to find the ones associated with the plant's equipment
@@ -38,10 +50,10 @@ export function PlantDashboard({ plantName }: PlantDashboardProps) {
     const maintenanceTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('status', '==', 'pending'), limit(5)), [firestore]);
     const { data: maintenanceTasks, isLoading: tasksLoading } = useCollection<MaintenanceTask>(maintenanceTasksQuery);
 
-    const plantVSDs = useMemoFirebase(() => {
+    const plantVSDs = useMemo(() => {
         if (!equipment || !allVsds) return [];
-        const equipmentIds = equipment.map(e => e.vsdId);
-        return allVsds.filter(vsd => equipmentIds.includes(vsd.id));
+        const equipmentVsdIds = new Set(equipment.map(e => e.vsdId));
+        return allVsds.filter(vsd => equipmentVsdIds.has(vsd.id));
     }, [equipment, allVsds]);
 
     const activeVSDs = plantVSDs?.filter((vsd) => vsd.status === 'active').length ?? 0;
@@ -60,8 +72,8 @@ export function PlantDashboard({ plantName }: PlantDashboardProps) {
         <Card className="col-span-1">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <Building className="h-6 w-6 text-primary" />
-                    {plantName} Plant
+                    {divisionName ? <Pickaxe className="h-6 w-6 text-primary" /> : <Building className="h-6 w-6 text-primary" />}
+                    {divisionName ? `${plantName} - ${divisionName}` : plantName}
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -95,7 +107,7 @@ export function PlantDashboard({ plantName }: PlantDashboardProps) {
                         </CardHeader>
                         <CardContent>
                              {isDataLoading ? <Skeleton className="h-6 w-20" /> : <div className="text-2xl font-bold">{avgPowerConsumption.toFixed(2)} MWh</div>}
-                             <p className="text-xs text-muted-foreground">Total across plant</p>
+                             <p className="text-xs text-muted-foreground">Total across units</p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -117,7 +129,7 @@ export function PlantDashboard({ plantName }: PlantDashboardProps) {
                             <CardTitle className="text-base">Equipment Performance</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <PerformanceChart plant={plantName} />
+                            <PerformanceChart plant={plantName} division={divisionName} />
                         </CardContent>
                     </Card>
                     <Card>

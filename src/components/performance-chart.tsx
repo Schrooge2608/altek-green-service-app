@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, Query } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 
@@ -24,17 +24,26 @@ const chartConfig = {
 
 interface PerformanceChartProps {
     plant?: 'Mining' | 'Smelter';
+    division?: 'Boosters & Pumpstations' | 'Dredgers';
 }
 
-export function PerformanceChart({ plant }: PerformanceChartProps) {
+export function PerformanceChart({ plant, division }: PerformanceChartProps) {
   const firestore = useFirestore();
 
   const equipmentQuery = useMemoFirebase(() => {
+    let q: Query = collection(firestore, 'equipment');
+    const conditions = [];
     if (plant) {
-      return query(collection(firestore, 'equipment'), where('plant', '==', plant))
+      conditions.push(where('plant', '==', plant));
     }
-    return collection(firestore, 'equipment');
-  }, [firestore, plant]);
+    if (division) {
+      conditions.push(where('division', '==', division));
+    }
+    if (conditions.length > 0) {
+      q = query(q, ...conditions);
+    }
+    return q;
+  }, [firestore, plant, division]);
 
   const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
 

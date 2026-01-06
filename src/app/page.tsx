@@ -13,7 +13,8 @@ export default function Home() {
       </header>
 
       <div className="grid grid-cols-1 gap-8">
-        <PlantDashboard plantName="Mining" />
+        <PlantDashboard plantName="Mining" divisionName="Boosters & Pumpstations" />
+        <PlantDashboard plantName="Mining" divisionName="Dredgers" />
         <PlantDashboard plantName="Smelter" />
       </div>
     </div>

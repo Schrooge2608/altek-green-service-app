@@ -13,6 +13,7 @@ export interface Equipment {
   type: 'Pump' | 'Fan' | 'Compressor' | 'Utility Room';
   location: string;
   plant: 'Mining' | 'Smelter';
+  division?: 'Boosters & Pumpstations' | 'Dredgers';
   vsdId: string;
   pumpHead: number;
   flowRate: number;

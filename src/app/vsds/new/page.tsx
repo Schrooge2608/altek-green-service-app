@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import {
   Form,
@@ -35,6 +35,7 @@ const formSchema = z.object({
   equipmentName: z.string().min(1, 'Equipment name is required'),
   equipmentType: z.enum(['Pump', 'Fan', 'Compressor', 'Utility Room']),
   plant: z.enum(['Mining', 'Smelter']),
+  division: z.enum(['Boosters & Pumpstations', 'Dredgers']).optional(),
   location: z.string().min(1, 'Location is required'),
 });
 
@@ -53,7 +54,17 @@ export default function NewVsdPage() {
     },
   });
 
+  const watchedPlant = useWatch({
+    control: form.control,
+    name: 'plant',
+  });
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (values.plant === 'Mining' && !values.division) {
+        form.setError('division', { type: 'manual', message: 'Please select a division for the Mining plant.' });
+        return;
+    }
+
     const batch = writeBatch(firestore);
 
     const vsdRef = doc(collection(firestore, 'vsds'));
@@ -68,7 +79,7 @@ export default function NewVsdPage() {
       equipmentId: values.equipmentId,
     };
 
-    const equipmentData = {
+    const equipmentData: any = {
       id: values.equipmentId,
       name: values.equipmentName,
       type: values.equipmentType,
@@ -82,6 +93,10 @@ export default function NewVsdPage() {
       uptime: 100,
       powerConsumption: 0,
     };
+
+    if (values.plant === 'Mining') {
+        equipmentData.division = values.division;
+    }
 
     batch.set(vsdRef, vsdData);
     batch.set(equipmentRef, equipmentData);
@@ -265,6 +280,29 @@ export default function NewVsdPage() {
                   </FormItem>
                 )}
               />
+              {watchedPlant === 'Mining' && (
+                <FormField
+                  control={form.control}
+                  name="division"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Division</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a division" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Boosters & Pumpstations">Boosters &amp; Pumpstations</SelectItem>
+                          <SelectItem value="Dredgers">Dredgers</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="location"
@@ -282,7 +320,7 @@ export default function NewVsdPage() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit">Save VSD & Equipment</Button>
+            <Button type="submit">Save VSD &amp; Equipment</Button>
           </div>
         </form>
       </Form>

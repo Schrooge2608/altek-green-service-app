@@ -24,6 +24,7 @@
         "type": { "type": "string", "enum": ["Pump", "Fan", "Compressor", "Utility Room"] },
         "location": { "type": "string" },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
+        "division": { "type": "string", "enum": ["Boosters & Pumpstations", "Dredgers"], "description": "The specific division within the Mining plant." },
         "vsdId": { "type": "string" },
         "pumpHead": { "type": "number" },
         "flowRate": { "type": "number" },
