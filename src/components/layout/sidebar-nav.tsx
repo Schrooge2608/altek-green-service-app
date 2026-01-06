@@ -12,6 +12,7 @@ import {
   SidebarTrigger,
   SidebarMenuSub,
   SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { AltekLogo } from '@/components/altek-logo';
 import {
@@ -30,6 +31,7 @@ import React from 'react';
 
 const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/vsds', label: 'VSDs', icon: Wrench },
   { href: '/maintenance', label: 'Maintenance', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
@@ -83,7 +85,7 @@ export function SidebarNav() {
            <Collapsible open={isMiningOpen} onOpenChange={setIsMiningOpen}>
             <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip="Mining Equipment" isActive={pathname.startsWith('/equipment')}>
+                    <SidebarMenuButton tooltip="Mining Equipment" isActive={pathname.startsWith('/equipment/mining')}>
                         <Wrench />
                         <span>Mining Equipment</span>
                         <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
@@ -94,7 +96,7 @@ export function SidebarNav() {
                 <SidebarMenuSub>
                     {miningDivisions.map((division) => (
                          <SidebarMenuItem key={division.href}>
-                            <Link href={division.href}>
+                            <Link href={division.href} passHref>
                                 <SidebarMenuSubButton asChild isActive={pathname === division.href}>
                                   <a>{division.label}</a>
                                 </SidebarMenuSubButton>
