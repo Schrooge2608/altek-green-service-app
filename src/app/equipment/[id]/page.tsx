@@ -14,6 +14,7 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { useEffect } from 'react';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -66,7 +67,13 @@ function VSDInfo({ vsdId }: { vsdId: string }) {
     const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
 
     if (vsdLoading) {
-        return <Skeleton className="h-16 w-full" />;
+        return (
+            <div className="mt-2 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-6 w-20" />
+            </div>
+        );
     }
 
     if (!vsd) {
@@ -88,18 +95,29 @@ export default function EquipmentDetailPage() {
   const firestore = useFirestore();
   
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
-  const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
+  const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
 
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
+
+  useEffect(() => {
+    // This effect now correctly waits for loading to finish before checking for existence.
+    if (!eqLoading && !eq) {
+      notFound();
+    }
+  }, [eqLoading, eq, eqError]);
+
 
   if (eqLoading) {
     return <EquipmentDetailSkeleton />;
   }
 
+  // Because of the useEffect above, if we reach this point while eqLoading is false, 'eq' must exist.
+  // We can safely render the component assuming 'eq' is available.
   if (!eq) {
-    notFound();
-    return null; 
+     // This case will be handled by the useEffect, but we keep it as a safeguard.
+     // It can also render a skeleton or loading state to prevent a flash of nothing.
+    return <EquipmentDetailSkeleton />;
   }
   
   const placeholder = eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
@@ -128,7 +146,8 @@ export default function EquipmentDetailPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-muted-foreground">VSD Control</h3>
-                        <VSDInfo vsdId={eq.vsdId} />
+                        {/* The VSDInfo component is now only rendered when we know `eq` and `eq.vsdId` exist */}
+                        {eq.vsdId ? <VSDInfo vsdId={eq.vsdId} /> : <p>No VSD associated.</p>}
                     </div>
                      <div>
                         <h3 className="font-semibold text-muted-foreground">Specifications</h3>
