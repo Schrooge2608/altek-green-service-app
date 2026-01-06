@@ -21,6 +21,7 @@ export interface Equipment {
   nextMaintenance: string;
   uptime: number;
   powerConsumption: number;
+  imageUrl?: string;
 }
 
 export interface MaintenanceTask {

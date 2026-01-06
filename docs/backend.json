@@ -31,7 +31,8 @@
         "lastMaintenance": { "type": "string", "format": "date" },
         "nextMaintenance": { "type": "string", "format": "date" },
         "uptime": { "type": "number" },
-        "powerConsumption": { "type": "number" }
+        "powerConsumption": { "type": "number" },
+        "imageUrl": { "type": "string", "description": "URL of the equipment image." }
       },
       "required": ["id", "name", "type", "location", "vsdId", "plant"]
     },

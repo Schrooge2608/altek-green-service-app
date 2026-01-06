@@ -101,26 +101,23 @@ export default function EquipmentDetailPage() {
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
   useEffect(() => {
-    // This effect now correctly waits for loading to finish before checking for existence.
     if (!eqLoading && !eq) {
       notFound();
     }
-  }, [eqLoading, eq, eqError]);
+  }, [eqLoading, eq]);
 
 
   if (eqLoading) {
     return <EquipmentDetailSkeleton />;
   }
 
-  // Because of the useEffect above, if we reach this point while eqLoading is false, 'eq' must exist.
-  // We can safely render the component assuming 'eq' is available.
   if (!eq) {
-     // This case will be handled by the useEffect, but we keep it as a safeguard.
-     // It can also render a skeleton or loading state to prevent a flash of nothing.
-    return <EquipmentDetailSkeleton />;
+    return null; // This case is handled by the useEffect which calls notFound()
   }
   
-  const placeholder = eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
+  const defaultPlaceholder = eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
+  const imageUrl = eq.imageUrl || defaultPlaceholder?.imageUrl;
+  const imageHint = defaultPlaceholder?.imageHint || 'industrial equipment';
   
   return (
     <div className="flex flex-col gap-8">
@@ -146,7 +143,6 @@ export default function EquipmentDetailPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-muted-foreground">VSD Control</h3>
-                        {/* The VSDInfo component is now only rendered when we know `eq` and `eq.vsdId` exist */}
                         {eq.vsdId ? <VSDInfo vsdId={eq.vsdId} /> : <p>No VSD associated.</p>}
                     </div>
                      <div>
@@ -212,15 +208,15 @@ export default function EquipmentDetailPage() {
         </div>
 
         <div className="space-y-8">
-            {placeholder && (
+            {imageUrl && (
                 <Card className="overflow-hidden">
                     <Image 
-                        src={placeholder.imageUrl}
+                        src={imageUrl}
                         alt={eq.name}
                         width={600}
                         height={400}
                         className="w-full h-auto object-cover"
-                        data-ai-hint={placeholder.imageHint}
+                        data-ai-hint={imageHint}
                     />
                 </Card>
             )}

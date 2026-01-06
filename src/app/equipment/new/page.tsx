@@ -21,12 +21,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useFirestore } from '@/firebase';
+import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Combobox } from '@/components/ui/combobox';
 import { useMemo } from 'react';
-
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const formSchema = z.object({
   serialNumber: z.string().min(1, 'Serial number is required'),
@@ -40,6 +40,7 @@ const formSchema = z.object({
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters"]).optional(),
   location: z.string().min(1, 'Location is required'),
+  imageUrl: z.string().optional(),
 });
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
@@ -66,6 +67,7 @@ export default function NewEquipmentPage() {
       equipmentName: '',
       equipmentType: '',
       location: '',
+      imageUrl: '',
     },
   });
 
@@ -110,6 +112,7 @@ export default function NewEquipmentPage() {
       nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
       uptime: 100,
       powerConsumption: 0,
+      imageUrl: values.imageUrl,
     };
 
     if (values.plant === 'Mining') {
@@ -294,7 +297,7 @@ export default function NewEquipmentPage() {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a division" />
-                          </SelectTrigger>
+                          </Trigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="Boosters">Boosters</SelectItem>
@@ -341,6 +344,28 @@ export default function NewEquipmentPage() {
                   )}
                 />
               )}
+              <div className="md:col-span-2">
+                <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Image</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select an image for the equipment" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {PlaceHolderImages.map(img => <SelectItem key={img.id} value={img.imageUrl}>{img.description}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
             </CardContent>
           </Card>
 
