@@ -1,0 +1,295 @@
+{
+  "entities": {
+    "VSDData": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "VSDData",
+      "type": "object",
+      "description": "Represents data captured from a Variable Speed Drive (VSD).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the VSD data entry."
+        },
+        "serialNumber": {
+          "type": "string",
+          "description": "The serial number of the VSD."
+        },
+        "equipmentId": {
+          "type": "string",
+          "description": "Reference to the Equipment being driven by the VSD. (Relationship: Equipment 1:N VSDData)"
+        },
+        "captureTimestamp": {
+          "type": "string",
+          "description": "Timestamp of when the VSD data was captured.",
+          "format": "date-time"
+        },
+        "parameter1": {
+          "type": "number",
+          "description": "A generic parameter reading from the VSD."
+        },
+        "parameter2": {
+          "type": "number",
+          "description": "Another generic parameter reading from the VSD."
+        },
+        "parameter3": {
+          "type": "number",
+          "description": "A third generic parameter reading from the VSD."
+        }
+      },
+      "required": [
+        "id",
+        "serialNumber",
+        "equipmentId",
+        "captureTimestamp"
+      ]
+    },
+    "Equipment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Equipment",
+      "type": "object",
+      "description": "Represents a piece of equipment driven by a VSD.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the equipment."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the equipment."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of equipment (e.g., pump, fan, compressor)."
+        },
+        "manufacturer": {
+          "type": "string",
+          "description": "Manufacturer of the equipment."
+        },
+        "model": {
+          "type": "string",
+          "description": "Model number of the equipment."
+        },
+        "pumpSpecification": {
+          "type": "string",
+          "description": "Specification of the pump being driven (if applicable)."
+        },
+        "maintenanceScheduleId": {
+          "type": "string",
+          "description": "Reference to the maintenance schedule associated with this equipment. (Relationship: MaintenanceSchedule 1:1 Equipment)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type",
+        "manufacturer",
+        "model"
+      ]
+    },
+    "MaintenanceSchedule": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MaintenanceSchedule",
+      "type": "object",
+      "description": "Represents a maintenance schedule for a specific equipment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the maintenance schedule."
+        },
+        "weeklyTasks": {
+          "type": "array",
+          "description": "References to tasks that should be completed weekly. (Relationship: Task 1:N MaintenanceSchedule)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "monthlyTasks": {
+          "type": "array",
+          "description": "References to tasks that should be completed monthly. (Relationship: Task 1:N MaintenanceSchedule)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "quarterlyTasks": {
+          "type": "array",
+          "description": "References to tasks that should be completed quarterly. (Relationship: Task 1:N MaintenanceSchedule)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a specific maintenance task.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the maintenance task."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the maintenance task."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "Date the task is due.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the task (e.g., To Do, In Progress, Completed)."
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "dueDate",
+        "status"
+      ]
+    },
+    "BreakdownReport": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BreakdownReport",
+      "type": "object",
+      "description": "Represents a breakdown report for a piece of equipment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the breakdown report."
+        },
+        "equipmentId": {
+          "type": "string",
+          "description": "Reference to the Equipment that broke down. (Relationship: Equipment 1:N BreakdownReport)"
+        },
+        "reportDate": {
+          "type": "string",
+          "description": "Date of the breakdown report.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the breakdown."
+        },
+        "cause": {
+          "type": "string",
+          "description": "Cause of the breakdown."
+        },
+        "resolution": {
+          "type": "string",
+          "description": "Resolution of the breakdown."
+        }
+      },
+      "required": [
+        "id",
+        "equipmentId",
+        "reportDate",
+        "description"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/equipment/{equipmentId}",
+        "definition": {
+          "entityName": "Equipment",
+          "schema": {
+            "$ref": "#/backend/entities/Equipment"
+          },
+          "description": "Stores equipment details. Includes denormalized 'members' map for authorization independence if user based restrictions are required.",
+          "params": [
+            {
+              "name": "equipmentId",
+              "description": "Unique identifier for the equipment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/equipment/{equipmentId}/vsd_data/{vsdDataId}",
+        "definition": {
+          "entityName": "VSDData",
+          "schema": {
+            "$ref": "#/backend/entities/VSDData"
+          },
+          "description": "Stores VSD data associated with a specific equipment. Includes denormalized 'members' map (copied from the parent Equipment document) for authorization independence if user based restrictions are required.",
+          "params": [
+            {
+              "name": "equipmentId",
+              "description": "Unique identifier for the equipment."
+            },
+            {
+              "name": "vsdDataId",
+              "description": "Unique identifier for the VSD data entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/equipment/{equipmentId}/breakdown_reports/{breakdownReportId}",
+        "definition": {
+          "entityName": "BreakdownReport",
+          "schema": {
+            "$ref": "#/backend/entities/BreakdownReport"
+          },
+          "description": "Stores breakdown reports associated with a specific equipment. Includes denormalized 'members' map (copied from the parent Equipment document) for authorization independence if user based restrictions are required.",
+          "params": [
+            {
+              "name": "equipmentId",
+              "description": "Unique identifier for the equipment."
+            },
+            {
+              "name": "breakdownReportId",
+              "description": "Unique identifier for the breakdown report."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/maintenance_schedules/{maintenanceScheduleId}",
+        "definition": {
+          "entityName": "MaintenanceSchedule",
+          "schema": {
+            "$ref": "#/backend/entities/MaintenanceSchedule"
+          },
+          "description": "Stores maintenance schedules.",
+          "params": [
+            {
+              "name": "maintenanceScheduleId",
+              "description": "Unique identifier for the maintenance schedule."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Stores maintenance tasks.",
+          "params": [
+            {
+              "name": "taskId",
+              "description": "Unique identifier for the maintenance task."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the Altek Green VSD Data Base application, focusing on secure, scalable, and easily debuggable data management. It incorporates key principles such as Authorization Independence, Clarity of Intent, and Structural Segregation. The core data is centered around VSD data, Equipment, Maintenance Schedules, Tasks, and Breakdown Reports. \n\nTo achieve Authorization Independence, if we were to introduce user-based access controls (e.g., users can only see data related to their assigned equipment), the `Equipment` document would include a `members` map to list authorized user IDs and roles. This `members` map is then DENORMALIZED into the `VSDData` and `BreakdownReport` documents associated with that equipment. This eliminates the need for `get()` calls in security rules, ensuring atomic operations.\n\nStructural Segregation is applied by storing different entities in separate collections, each with its own security posture. This simplifies security rules and avoids mixing data with varying access needs. All paths follow the standard methodology of using subcollections to connect ownership of data through the User ID.\n\nQAPs (Rules are not Filters) are supported by ensuring that `list` operations are secure. For example, listing `VSDData` requires that the user is in the `members` map of the parent `Equipment` document (whose details are denormalized into the `VSDData` document itself). This prevents unauthorized listing of data. The structure provides explicit state modeling, predictable schemas, and radical consistency through semantic naming conventions."
+  }
+}
