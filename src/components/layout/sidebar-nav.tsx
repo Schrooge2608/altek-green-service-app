@@ -22,6 +22,7 @@ import {
   FileText,
   TriangleAlert,
   ChevronDown,
+  Building,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -47,6 +48,7 @@ const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
 export function SidebarNav() {
   const pathname = usePathname();
   const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment'));
+  const [isSmelterOpen, setIsSmelterOpen] = React.useState(false);
 
 
   return (
@@ -104,6 +106,20 @@ export function SidebarNav() {
                 </SidebarMenuSub>
             </CollapsibleContent>
            </Collapsible>
+            <Collapsible open={isSmelterOpen} onOpenChange={setIsSmelterOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Smelter Equipment" isActive={pathname.startsWith('/smelter')}>
+                            <Building />
+                            <span>Smelter Equipment</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    {/* Smelter sub-items will go here */}
+                </CollapsibleContent>
+            </Collapsible>
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
