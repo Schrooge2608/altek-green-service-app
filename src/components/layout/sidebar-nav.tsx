@@ -12,7 +12,6 @@ import {
   SidebarTrigger,
   SidebarMenuSub,
   SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { AltekLogo } from '@/components/altek-logo';
 import {
@@ -22,7 +21,6 @@ import {
   FileText,
   TriangleAlert,
   ChevronDown,
-  Building,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -47,8 +45,15 @@ const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment'));
+  const isEquipmentPath = pathname.startsWith('/equipment');
+  const [isMiningOpen, setIsMiningOpen] = React.useState(isEquipmentPath);
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isEquipmentPath) {
+      setIsMiningOpen(true);
+    }
+  }, [isEquipmentPath]);
 
 
   return (
@@ -87,21 +92,21 @@ export function SidebarNav() {
             </SidebarMenuItem>
             <CollapsibleContent>
                 <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                        <Link href="/equipment" passHref>
+                    <SidebarMenuItem>
+                        <Link href="/equipment">
                             <SidebarMenuSubButton asChild isActive={pathname === '/equipment'}>
                               <a>All Equipment</a>
                             </SidebarMenuSubButton>
                         </Link>
-                    </SidebarMenuSubItem>
+                    </SidebarMenuItem>
                     {miningDivisions.map((division) => (
-                         <SidebarMenuSubItem key={division.href}>
-                            <Link href={division.href} passHref>
+                         <SidebarMenuItem key={division.href}>
+                            <Link href={division.href}>
                                 <SidebarMenuSubButton asChild isActive={pathname === division.href}>
                                   <a>{division.label}</a>
                                 </SidebarMenuSubButton>
                             </Link>
-                        </SidebarMenuSubItem>
+                        </SidebarMenuItem>
                     ))}
                 </SidebarMenuSub>
             </CollapsibleContent>
@@ -110,7 +115,7 @@ export function SidebarNav() {
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                         <SidebarMenuButton tooltip="Smelter Equipment" isActive={pathname.startsWith('/smelter')}>
-                            <Building />
+                            <Wrench />
                             <span>Smelter Equipment</span>
                             <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
                         </SidebarMenuButton>
