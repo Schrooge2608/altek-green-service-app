@@ -5,11 +5,12 @@ import { cn } from '@/lib/utils';
 export const AltekLogo = ({ className }: { className?: string }) => (
   <div className={cn("relative", className)}>
     <Image 
-        src="/Altek-Logo.jpeg" 
+        src="/Altek-Logo.jpeg?v=2" 
         alt="Altek Green"
         width={160}
         height={40}
         className="object-contain"
+        unoptimized
     />
   </div>
 );
