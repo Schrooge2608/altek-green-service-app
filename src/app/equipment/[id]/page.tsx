@@ -14,7 +14,6 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -89,24 +88,18 @@ export default function EquipmentDetailPage() {
   const firestore = useFirestore();
   
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
-  const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
+  const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
 
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  if (eqLoading || !id) {
+  if (eqLoading) {
     return <EquipmentDetailSkeleton />;
   }
 
   if (!eq) {
-      // If loading is finished and there's still no equipment, then it's a 404.
-      notFound();
-      return null; // notFound() throws an error, but we need this for type safety.
-  }
-  
-  if (eqError) {
-    console.error("Firestore error:", eqError);
-    return <div>Error loading equipment details. Please check the console and try again later.</div>;
+    notFound();
+    return null; 
   }
   
   const placeholder = eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
