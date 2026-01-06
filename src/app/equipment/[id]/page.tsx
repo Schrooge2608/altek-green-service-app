@@ -19,32 +19,7 @@ const imageMap: { [key: string]: string } = {
     Compressor: "compressor-1",
 };
 
-export default function EquipmentDetailPage() {
-  const params = useParams();
-  const id = typeof params.id === 'string' ? params.id : '';
-  const firestore = useFirestore();
-
-  const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
-  const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
-
-  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
-  const { data: eqVsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
-  
-  const breakdownsQuery = useMemoFirebase(() => (eq ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', eq.id)) : null), [firestore, eq]);
-  const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
-
-  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'pump-1');
-
-  if (eqError) {
-    // If there's a Firestore error (like permissions), you might want to handle it.
-    console.error("Firestore error:", eqError);
-    // For now, we can treat it like a not found case for simplicity.
-    notFound();
-  }
-  
-  // This is the main fix: Show skeleton loading screen until loading is complete.
-  // Only call notFound() if loading is finished AND the data is still null.
-  if (eqLoading) {
+function EquipmentDetailSkeleton() {
     return (
         <div className="flex flex-col gap-8">
             <header>
@@ -80,12 +55,38 @@ export default function EquipmentDetailPage() {
             </div>
         </div>
     );
+}
+
+export default function EquipmentDetailPage() {
+  const params = useParams();
+  const id = typeof params.id === 'string' ? params.id : '';
+  const firestore = useFirestore();
+
+  const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
+  const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
+
+  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
+  const { data: eqVsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
+  
+  const breakdownsQuery = useMemoFirebase(() => (eq ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', eq.id)) : null), [firestore, eq]);
+  const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
+
+  const placeholder = eq && eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'pump-1');
+
+  if (eqLoading) {
+    return <EquipmentDetailSkeleton />;
   }
 
+  if (eqError) {
+    console.error("Firestore error:", eqError);
+    // This could render a specific error component
+    return <div>Error loading equipment details.</div>;
+  }
+  
   if (!eq) {
-    // This will only be reached if eqLoading is false and eq is null.
+    // Only call notFound if loading is complete and there's no data
     notFound();
-    return null; // Return null to prevent rendering anything further.
+    return null; // Keep TypeScript happy
   }
   
   return (
