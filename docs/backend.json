@@ -32,7 +32,11 @@
         "nextMaintenance": { "type": "string", "format": "date" },
         "uptime": { "type": "number" },
         "powerConsumption": { "type": "number" },
-        "imageUrl": { "type": "string", "description": "URL of the equipment image." }
+        "imageUrl": { "type": "string", "description": "URL of the equipment image." },
+        "motorModel": { "type": "string" },
+        "motorPower": { "type": "number" },
+        "motorVoltage": { "type": "number" },
+        "motorSerialNumber": { "type": "string" }
       },
       "required": ["id", "name", "type", "location", "vsdId", "plant"]
     },

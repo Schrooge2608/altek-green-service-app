@@ -22,6 +22,10 @@ export interface Equipment {
   uptime: number;
   powerConsumption: number;
   imageUrl?: string;
+  motorModel?: string;
+  motorPower?: number;
+  motorVoltage?: number;
+  motorSerialNumber?: string;
 }
 
 export interface MaintenanceTask {

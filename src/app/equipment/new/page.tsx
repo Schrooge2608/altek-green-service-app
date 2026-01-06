@@ -42,6 +42,10 @@ const formSchema = z.object({
   division: z.enum(["Boosters"]).optional(),
   location: z.string().min(1, 'Location is required'),
   imageUrl: z.string().optional(),
+  motorModel: z.string().optional(),
+  motorPower: z.coerce.number().optional(),
+  motorVoltage: z.coerce.number().optional(),
+  motorSerialNumber: z.string().optional(),
 });
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
@@ -69,6 +73,8 @@ export default function NewEquipmentPage() {
       equipmentType: '',
       location: '',
       imageUrl: '',
+      motorModel: '',
+      motorSerialNumber: '',
     },
   });
 
@@ -114,6 +120,10 @@ export default function NewEquipmentPage() {
       uptime: 100,
       powerConsumption: 0,
       imageUrl: values.imageUrl,
+      motorModel: values.motorModel || '',
+      motorPower: values.motorPower || 0,
+      motorVoltage: values.motorVoltage || 0,
+      motorSerialNumber: values.motorSerialNumber || '',
     };
 
     if (values.plant === 'Mining') {
@@ -213,6 +223,67 @@ export default function NewEquipmentPage() {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>Motor Details</CardTitle>
+                <CardDescription>Information about the motor driven by the VSD.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                <FormField
+                    control={form.control}
+                    name="motorModel"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Motor Model</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., WEG W22" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="motorSerialNumber"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Motor Serial Number</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., MOT-SN-12345" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="motorPower"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Power (kW)</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="e.g., 75" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="motorVoltage"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Voltage (V)</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="e.g., 400" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
             </CardContent>
           </Card>
           

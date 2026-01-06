@@ -14,7 +14,7 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import React from 'react';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -140,10 +140,19 @@ export default function EquipmentDetailPage() {
                         {eq.vsdId ? <VSDInfo vsdId={eq.vsdId} /> : <p>No VSD associated.</p>}
                     </div>
                      <div>
-                        <h3 className="font-semibold text-muted-foreground">Specifications</h3>
+                        <h3 className="font-semibold text-muted-foreground">Equipment Specifications</h3>
                          <div className="mt-2 space-y-1">
                             <p><strong>Pump Head:</strong> {eq.pumpHead > 0 ? `${eq.pumpHead}m` : 'N/A'}</p>
                             <p><strong>Flow Rate:</strong> {eq.flowRate > 0 ? `${eq.flowRate} m³/h`: 'N/A'}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-muted-foreground">Motor Specifications</h3>
+                         <div className="mt-2 space-y-1">
+                            <p><strong>Motor Model:</strong> {eq.motorModel || 'N/A'}</p>
+                            <p><strong>Motor Power:</strong> {eq.motorPower > 0 ? `${eq.motorPower} kW`: 'N/A'}</p>
+                            <p><strong>Motor Voltage:</strong> {eq.motorVoltage > 0 ? `${eq.motorVoltage}V` : 'N/A'}</p>
+                            <p><strong>Motor S/N:</strong> {eq.motorSerialNumber || 'N/A'}</p>
                         </div>
                     </div>
                     <div>
