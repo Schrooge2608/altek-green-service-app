@@ -79,14 +79,20 @@ export default function EquipmentDetailPage() {
     return <EquipmentDetailSkeleton />;
   }
 
+  // After loading, if there's no equipment data and no error, then it's a 404
+  if (!eq && !eqError) {
+    notFound();
+    return null;
+  }
+  
   if (eqError) {
     console.error("Firestore error:", eqError);
     return <div>Error loading equipment details. Please check the console and try again later.</div>;
   }
   
+  // This check is redundant if the above `!eq` check calls notFound(), but it's safe to keep.
   if (!eq) {
-    notFound();
-    return null;
+      return null;
   }
   
   return (
