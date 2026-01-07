@@ -11,9 +11,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
 
-    // Admin-only access to the users collection
+    // Rules for the users collection
     match /users/{userId} {
-      allow read, write: if isRegisteredUser() && getUserRole(request.auth.uid) == 'Admin';
+      // Allow users to read their own document
+      allow get: if isRegisteredUser() && request.auth.uid == userId;
+      // Allow supervisors and above to read all user documents (for dropdowns)
+      allow list: if isRegisteredUser() && getUserRole(request.auth.uid) in ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin'];
+      // Only Admins can create, update, or delete users
+      allow write: if isRegisteredUser() && getUserRole(request.auth.uid) == 'Admin';
     }
     
     // Other collections can be read by any registered user
