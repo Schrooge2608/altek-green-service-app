@@ -28,11 +28,10 @@ const validCategories: Record<string, string> = {
 const frequencies: CompletedSchedule['frequency'][] = ['Weekly', 'Monthly', '3-Monthly', '6-Monthly', 'Yearly'];
 
 function CompletedSchedulesTable({ schedules, isLoading, frequency }: { schedules: CompletedSchedule[] | null, isLoading: boolean, frequency: string }) {
+    const hasSchedules = !isLoading && schedules && schedules.length > 0;
+    
     if (isLoading) {
         return <div className="text-center py-10">Loading schedules...</div>
-    }
-    if (!schedules || schedules.length === 0) {
-        return <div className="text-center py-10 text-muted-foreground">No {frequency.toLowerCase()} schedules found.</div>
     }
 
     return (
@@ -47,21 +46,29 @@ function CompletedSchedulesTable({ schedules, isLoading, frequency }: { schedule
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {schedules.map(schedule => (
-                    <TableRow key={schedule.id}>
-                        <TableCell>{schedule.equipmentName}</TableCell>
-                        <TableCell>{schedule.area}</TableCell>
-                        <TableCell>{schedule.completionDate}</TableCell>
-                        <TableCell>{schedule.inspectedBy}</TableCell>
-                        <TableCell className="text-right">
-                            <Link href={`/completed-docs/${schedule.id}`} passHref>
-                                <Button variant="ghost" size="icon">
-                                    <FileText className="h-4 w-4" />
-                                </Button>
-                            </Link>
+                {hasSchedules ? (
+                    schedules.map(schedule => (
+                        <TableRow key={schedule.id}>
+                            <TableCell>{schedule.equipmentName}</TableCell>
+                            <TableCell>{schedule.area}</TableCell>
+                            <TableCell>{schedule.completionDate}</TableCell>
+                            <TableCell>{schedule.inspectedBy}</TableCell>
+                            <TableCell className="text-right">
+                                <Link href={`/completed-docs/${schedule.id}`} passHref>
+                                    <Button variant="ghost" size="icon">
+                                        <FileText className="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                            </TableCell>
+                        </TableRow>
+                    ))
+                ) : (
+                     <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                            No documents found for this frequency.
                         </TableCell>
                     </TableRow>
-                ))}
+                )}
             </TableBody>
         </Table>
     );
