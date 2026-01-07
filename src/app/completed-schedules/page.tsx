@@ -1,114 +1,45 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { CompletedSchedule } from '@/lib/types';
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { FileText } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ChevronRight, Wrench, Shield, CircuitBoard, Droplets } from 'lucide-react';
 
 const categories = [
-    { name: 'VSDs', slug: 'vsds' },
-    { name: 'Protection', slug: 'protection' },
-    { name: 'Motors', slug: 'motors' },
-    { name: 'Pumps', slug: 'pumps' },
+    { name: 'VSDs', slug: 'vsds', description: 'Variable Speed Drives', icon: CircuitBoard },
+    { name: 'Protection', slug: 'protection', description: 'Circuit Breakers & Relays', icon: Shield },
+    { name: 'Motors', slug: 'motors', description: 'Electric Motors', icon: Wrench },
+    { name: 'Pumps', slug: 'pumps', description: 'Fluid Pumps', icon: Droplets },
 ];
 
-export default function CompletedSchedulesPage() {
-    const firestore = useFirestore();
-    const schedulesQuery = useMemoFirebase(() => collection(firestore, 'completed_schedules'), [firestore]);
-    const { data: schedules, isLoading } = useCollection<CompletedSchedule>(schedulesQuery);
-
-    const schedulesByCategory = useMemo(() => {
-        if (!schedules) return {};
-        return schedules.reduce((acc, schedule) => {
-            const category = schedule.maintenanceType.toLowerCase();
-            if (!acc[category]) {
-                acc[category] = [];
-            }
-            acc[category].push(schedule);
-            return acc;
-        }, {} as Record<string, CompletedSchedule[]>);
-    }, [schedules]);
-
-    const TableSkeleton = () => (
-         <div className="space-y-2">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-        </div>
-    );
-
+export default function CompletedSchedulesLandingPage() {
     return (
         <div className="flex flex-col gap-8">
             <header>
-                <h1 className="text-3xl font-bold tracking-tight">Completed Maintenance Schedules</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Completed Maintenance</h1>
                 <p className="text-muted-foreground">
-                    A log of all completed service documents.
+                    Browse completed service documents by equipment discipline.
                 </p>
             </header>
 
-            <div className="space-y-8">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {categories.map(category => (
                     <Card key={category.slug}>
                         <CardHeader>
-                            <CardTitle>{category.name}</CardTitle>
-                            <CardDescription>All completed schedules for {category.name}.</CardDescription>
+                            <CardTitle className="flex items-center gap-3">
+                                <category.icon className="h-6 w-6 text-primary" />
+                                {category.name}
+                            </CardTitle>
+                            <CardDescription>{category.description}</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            {isLoading ? <TableSkeleton /> : (
-                                schedulesByCategory[category.slug] && schedulesByCategory[category.slug].length > 0 ? (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Equipment</TableHead>
-                                                <TableHead>Completion Date</TableHead>
-                                                <TableHead>Frequency</TableHead>
-                                                <TableHead className="text-right">Document</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {schedulesByCategory[category.slug].map(schedule => (
-                                                <TableRow key={schedule.id}>
-                                                    <TableCell className="font-medium">{schedule.equipmentName}</TableCell>
-                                                    <TableCell>{schedule.completionDate}</TableCell>
-                                                    <TableCell>{schedule.frequency}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Link href={`/completed-schedules/${schedule.id}`} passHref>
-                                                            <Button variant="outline" size="sm">
-                                                                <FileText className="mr-2 h-4 w-4" />
-                                                                View Document
-                                                            </Button>
-                                                        </Link>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground text-center py-4">
-                                        No completed schedules found for this category.
-                                    </p>
-                                )
-                            )}
-                        </CardContent>
+                        <CardFooter>
+                            <Link href={`/completed-schedules/${category.slug}`} passHref>
+                                <Button variant="outline">
+                                    View Documents
+                                    <ChevronRight className="ml-2 h-4 w-4" />
+                                </Button>
+                            </Link>
+                        </CardFooter>
                     </Card>
                 ))}
             </div>
