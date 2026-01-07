@@ -1,3 +1,5 @@
+'use client';
+
 import type { MaintenanceTask } from '@/lib/types';
 import Link from 'next/link';
 import {
@@ -34,27 +36,10 @@ const statusVariantMap: Record<string, StatusVariant> = {
   overdue: 'destructive',
 };
 
-const scopeDocumentMap: Record<MaintenanceTask['frequency'], string> = {
-    'Weekly': '/maintenance/service-scopes/weekly',
-    'Monthly': '/maintenance/service-scopes/monthly',
-    '3-Monthly': '/maintenance/service-scopes/3-monthly',
-    '6-Monthly': '/maintenance/service-scopes/6-monthly',
-    'Yearly': '/maintenance/service-scopes/yearly',
-}
-
 export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: MaintenanceScheduleProps) {
-  const scopeDocumentUrl = scopeDocumentMap[frequency];
   
   return (
     <div className="mt-4">
-      <div className="flex justify-end mb-4">
-        <Link href={scopeDocumentUrl} passHref>
-            <Button variant="outline">
-                <FileText className="mr-2 h-4 w-4" />
-                View Service Scope
-            </Button>
-        </Link>
-      </div>
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">
           Loading {title.toLowerCase()}...
