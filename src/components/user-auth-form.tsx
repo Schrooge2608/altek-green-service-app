@@ -29,7 +29,7 @@ const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   email: z.string().email('Please enter a valid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
-  role: z.enum(['Technician', 'Site Supervisor', 'Services Manager', 'Corporate Manager']),
+  role: z.enum(['Technician', 'Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin']),
 });
 
 type UserFormValue = z.infer<typeof formSchema>;
@@ -158,6 +158,7 @@ export function UserAuthForm() {
                             <SelectItem value="Site Supervisor">Site Supervisor</SelectItem>
                             <SelectItem value="Services Manager">Services Manager</SelectItem>
                             <SelectItem value="Corporate Manager">Corporate Manager</SelectItem>
+                            <SelectItem value="Admin">Admin</SelectItem>
                         </SelectContent>
                     </Select>
                     <FormMessage />
