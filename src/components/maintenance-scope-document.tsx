@@ -248,14 +248,15 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
                     </ul>
                 </AlertDescription>
             </Alert>
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+                <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown.</p>
+                <p>At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
+            </div>
 
 
             <Separator className="my-8" />
 
             <div className="prose prose-sm max-w-none dark:prose-invert">
-                <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown.</p>
-                <p>At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
-                
                 <h3 className="mt-6 text-lg font-bold">3-Month VSD Service Schedule</h3>
                 <ol className="list-decimal pl-5 space-y-4">
                     <li>
@@ -286,7 +287,7 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
                         <strong>Performance & Data Analysis</strong>
                         <ul className="list-disc pl-5 mt-2">
                             <li><strong>Fault Log Review:</strong> Download the last 3 months of fault history. Look for recurring "Under-voltage" or "Over-current" warnings that didn't trip the drive but indicate a brewing problem.</li>
-                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically >5V AC), your capacitors are starting to fail.</li>
+                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically &gt;5V AC), your capacitors are starting to fail.</li>
                             <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
                         </ul>
                     </li>
@@ -300,3 +301,5 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
     </div>
   );
 }
+
+    
