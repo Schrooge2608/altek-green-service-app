@@ -33,13 +33,13 @@ import type { Equipment } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '../ui/label';
 
-const threeMonthlyChecklist = [
-    { task: 'Filter Inspection', action: 'If your VSD cabinet has air filters, check for clogs. A clogged filter is the #1 cause of over-temperature trips.' },
-    { task: 'Cleaning', action: 'Use a vacuum (not compressed air, which can push conductive dust deeper into circuits) to remove dust from the heat sink fins.' },
-    { task: 'Check Connections', action: 'Visually inspect power and control wiring for any signs of discoloration or pitting, which indicates loose connections causing heat.' },
-    { task: 'Fan Operation', action: 'Verify that the internal cooling fans are moving air effectively and aren\'t wobbling.' },
+const quarterlyLogTasks = [
+    { task: 'Power terminals torqued' },
+    { task: 'Heat sink fins vacuumed' },
+    { task: 'Fans spinning freely/quietly' },
+    { task: 'Parameter set backed up' },
+    { task: 'Fault log cleared' },
 ];
-
 
 function WorkCrewRow({ onRemove }: { onRemove: () => void }) {
     const [date, setDate] = React.useState<Date | undefined>();
@@ -111,7 +111,7 @@ export function Vsd3MonthlyScopeDocument() {
       <Card className="p-8 shadow-lg border-2 border-primary/20 bg-card">
         <header className="flex items-start justify-between mb-8">
           <div>
-            <AltekLogo className="h-12 w-auto" unoptimized />
+            <AltekLogo className="h-12 w-auto" />
             <p className="text-muted-foreground mt-2">VSD & Equipment Services</p>
           </div>
           <div className="text-right">
@@ -265,35 +265,79 @@ export function Vsd3MonthlyScopeDocument() {
             </AlertDescription>
         </Alert>
 
-        <h3 className="text-xl font-bold mb-4">3-Monthly Maintenance: "The Deep Clean"</h3>
-        <p className="text-sm text-muted-foreground mb-4">3-Monthly tasks focus on the physical health of the drive and ensuring that the cooling systems are actually working, not just spinning.</p>
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Task</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead className="text-center">Checked</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {threeMonthlyChecklist.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.task}</TableCell>
-                  <TableCell>{item.action}</TableCell>
-                  <TableCell className="text-center">
-                    <Checkbox aria-label={`Check task ${item.task}`} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-
         <Separator className="my-8" />
 
-        <h3 className="text-xl font-bold mb-4">Placeholder for other tasks</h3>
-        <p className="text-sm text-muted-foreground mb-4">Details for this service scope will be added here.</p>
+        <div className="prose prose-sm max-w-none dark:prose-invert space-y-4">
+            <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown. At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
+            
+            <h3 className="text-lg font-bold !mt-6">3-Month VSD Service Schedule</h3>
+            
+            <div>
+                <h4>1. Safety & Preparation</h4>
+                <ul className="list-disc pl-5">
+                    <li><strong>Lockout/Tagout (LOTO):</strong> Isolate power and wait for the DC bus to discharge (verify with a meter—usually 5–15 mins).</li>
+                    <li><strong>PPE:</strong> Wear appropriate arc flash protection and use insulated tools.</li>
+                    <li><strong>Backup:</strong> If the drive is still powered, export the current parameter set to a laptop or USB keypad.</li>
+                </ul>
+            </div>
+
+            <div>
+                <h4>2. Electrical Integrity (The "Tightness" Check)</h4>
+                <ul className="list-disc pl-5">
+                    <li><strong>Re-Torque Terminals:</strong> Check the tightness of all power input (L1, L2, L3) and output (U, V, W) connections. Vibrations and thermal cycling naturally loosen these over 90 days.</li>
+                    <li><strong>Control Wiring:</strong> Tug-test small control wires (Start/Stop, Speed Ref) to ensure they haven't vibrated loose.</li>
+                    <li><strong>Grounding:</strong> Inspect the ground strap for corrosion or loose bolts.</li>
+                </ul>
+            </div>
+
+             <div>
+                <h4>3. Thermal & Physical Health</h4>
+                <ul className="list-disc pl-5">
+                    <li><strong>Heat Sink Cleaning:</strong> Use a vacuum or dry, oil-free compressed air to blow out the heat sink fins from the bottom up.</li>
+                    <li><strong>Thermal Imaging:</strong> If the drive is running, use an IR camera to look for "hot spots" on terminal blocks or the main DC bus capacitors.</li>
+                    <li><strong>Capacitor Inspection:</strong> Visually check for "crowning" (bulging tops) or leaking fluid.</li>
+                </ul>
+            </div>
+
+            <div>
+                <h4>4. Performance & Data Analysis</h4>
+                <ul className="list-disc pl-5">
+                    <li><strong>Fault Log Review:</strong> Download the last 3 months of fault history. Look for recurring "Under-voltage" or "Over-current" warnings that didn't trip the drive but indicate a brewing problem.</li>
+                    <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically {'>'}5V AC), your capacitors are starting to fail.</li>
+                    <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
+                </ul>
+            </div>
+
+            <h3 className="text-lg font-bold !mt-6">Quarterly Maintenance Log Template</h3>
+             <Card>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Task</TableHead>
+                            <TableHead>Status (Pass/Fail)</TableHead>
+                            <TableHead>Notes</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {quarterlyLogTasks.map(item => (
+                            <TableRow key={item.task}>
+                                <TableCell className="font-medium">{item.task}</TableCell>
+                                <TableCell className="text-center"><Checkbox /></TableCell>
+                                <TableCell><Input placeholder="Notes..." /></TableCell>
+                            </TableRow>
+                        ))}
+                         <TableRow>
+                            <TableCell className="font-medium">DC Bus Voltage Stability</TableCell>
+                            <TableCell className="text-center"><Checkbox /></TableCell>
+                            <TableCell><Input placeholder="Reading: _______" /></TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </Card>
+
+            <h3 className="text-lg font-bold !mt-6">Why the 3-Month Mark is Critical</h3>
+            <p>Most VSD failures are caused by Dust + Moisture = Conductivity. A quarterly schedule ensures that dust never builds up enough to absorb ambient moisture and create a "tracking" path across your circuit boards.</p>
+        </div>
         
         <footer className="mt-16 text-xs text-muted-foreground text-center">
           <p>Altek Green - Confidential</p>
