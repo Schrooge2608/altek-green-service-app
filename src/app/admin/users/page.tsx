@@ -23,22 +23,70 @@ function AccessDenied() {
     );
 }
 
+function UserList({ userRole }: { userRole: User }) {
+    const firestore = useFirestore();
+
+    const usersQuery = useMemoFirebase(() => {
+        // We can safely create this query because this component only renders for Admins
+        return collection(firestore, 'users');
+    }, [firestore]);
+
+    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
+
+    if (usersLoading) {
+        return (
+             <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="ml-2">Loading users...</p>
+            </div>
+        );
+    }
+    
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Registered Users</CardTitle>
+                <CardDescription>A list of all users who have access to the application.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Role</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {users && users.length > 0 ? (
+                            users.map((u) => (
+                                <TableRow key={u.id}>
+                                    <TableCell className="font-medium">{u.name}</TableCell>
+                                    <TableCell>{u.email}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={u.role === 'Admin' ? 'destructive' : 'secondary'}>{u.role}</Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={3} className="text-center h-24">No users found.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+}
+
+
 export default function UserManagementPage() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
 
     const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
     const { data: userRole, isLoading: userRoleLoading } = useDoc<User>(userRoleRef);
-
-    const usersQuery = useMemoFirebase(() => {
-        // Only create the query if we have confirmed the user is an Admin
-        if (userRole?.role === 'Admin') {
-            return collection(firestore, 'users');
-        }
-        return null; // Return null if not an admin
-    }, [firestore, userRole]);
-
-    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
     
     const isLoading = isUserLoading || userRoleLoading;
 
@@ -46,15 +94,11 @@ export default function UserManagementPage() {
         return (
             <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                <p className="ml-2">Loading user data...</p>
+                <p className="ml-2">Verifying permissions...</p>
             </div>
         );
     }
-
-    if (userRole?.role !== 'Admin') {
-        return <AccessDenied />;
-    }
-
+    
     return (
         <div className="flex flex-col gap-8">
             <header className="flex items-center justify-between">
@@ -64,51 +108,22 @@ export default function UserManagementPage() {
                         View and manage all registered users in the system.
                     </p>
                 </div>
-                <Link href="/auth/register" passHref>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add User
-                    </Button>
-                </Link>
+                {userRole?.role === 'Admin' && (
+                    <Link href="/auth/register" passHref>
+                        <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add User
+                        </Button>
+                    </Link>
+                )}
             </header>
-            <Card>
-                 <CardHeader>
-                    <CardTitle>Registered Users</CardTitle>
-                    <CardDescription>A list of all users who have access to the application.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Role</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {usersLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24">Loading users...</TableCell>
-                                </TableRow>
-                            ) : users && users.length > 0 ? (
-                                users.map((u) => (
-                                    <TableRow key={u.id}>
-                                        <TableCell className="font-medium">{u.name}</TableCell>
-                                        <TableCell>{u.email}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={u.role === 'Admin' ? 'destructive' : 'secondary'}>{u.role}</Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24">No users found.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+            
+            {userRole?.role === 'Admin' ? (
+                <UserList userRole={userRole} />
+            ) : (
+                <AccessDenied />
+            )}
         </div>
     );
 }
+
