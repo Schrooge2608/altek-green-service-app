@@ -7,11 +7,12 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { MaintenanceSchedule } from '@/components/maintenance-schedule';
 import type { MaintenanceTask } from '@/lib/types';
+import { Button } from '@/components/ui/button';
 
 export default function MaintenancePage() {
   const firestore = useFirestore();
@@ -28,6 +29,14 @@ export default function MaintenancePage() {
   const { data: quarterlyTasks, isLoading: quarterlyLoading } = useCollection<MaintenanceTask>(quarterlyTasksQuery);
   const { data: sixMonthlyTasks, isLoading: sixMonthlyLoading } = useCollection<MaintenanceTask>(sixMonthlyTasksQuery);
   const { data: yearlyTasks, isLoading: yearlyLoading } = useCollection<MaintenanceTask>(yearlyTasksQuery);
+
+  const serviceScopes = [
+    { title: 'Weekly Service Scope', frequency: 'Weekly' },
+    { title: 'Monthly Service Scope', frequency: 'Monthly' },
+    { title: '3-Monthly Service Scope', frequency: '3-Monthly' },
+    { title: '6-Monthly Service Scope', frequency: '6-Monthly' },
+    { title: 'Yearly Service Scope', frequency: 'Yearly' },
+  ];
 
   return (
     <div className="flex flex-col gap-8">
@@ -67,6 +76,21 @@ export default function MaintenancePage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {serviceScopes.map(scope => (
+             <Card key={scope.frequency}>
+                <CardHeader>
+                    <CardTitle className="text-lg">{scope.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Button disabled className="w-full">
+                        View Service Scope
+                    </Button>
+                </CardContent>
+            </Card>
+        ))}
+      </div>
     </div>
   );
 }
