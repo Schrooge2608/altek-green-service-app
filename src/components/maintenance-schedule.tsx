@@ -65,7 +65,7 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                    <Link href={`/maintenance/${task.id}/document`} passHref>
+                    <Link href={`/maintenance-docs/${task.id}`} passHref>
                       <Button variant="ghost" size="icon">
                         <FileText className="h-4 w-4" />
                         <span className="sr-only">Generate Document</span>
