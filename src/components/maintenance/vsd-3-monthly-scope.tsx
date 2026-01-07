@@ -324,7 +324,7 @@ export function Vsd3MonthlyScopeDocument() {
                         {quarterlyLogTasks.map(item => (
                             <TableRow key={item.task}>
                                 <TableCell className="font-medium">{item.task}</TableCell>
-                                <TableCell className="text-center"><Checkbox /></TableCell>
+                                <TableCell className="text-center"><Checkbox /> </TableCell>
                                 <TableCell><Input placeholder="Notes..." /></TableCell>
                                 <TableCell className="text-center"><Checkbox /></TableCell>
                                 <TableCell className="text-center"><Checkbox /></TableCell>
