@@ -13,7 +13,8 @@ export function Vsd3MonthlyScopeDocument() {
           <p className="text-muted-foreground">Service Document</p>
         </header>
         <div className="prose prose-sm max-w-none dark:prose-invert">
-            <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown. At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
+            <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown.</p>
+            <p>At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
         </div>
       </Card>
     </div>
