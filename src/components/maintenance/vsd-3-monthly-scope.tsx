@@ -33,20 +33,13 @@ import type { Equipment } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '../ui/label';
 
-const monthlyChecklist = [
+const threeMonthlyChecklist = [
     { task: 'Filter Inspection', action: 'If your VSD cabinet has air filters, check for clogs. A clogged filter is the #1 cause of over-temperature trips.' },
     { task: 'Cleaning', action: 'Use a vacuum (not compressed air, which can push conductive dust deeper into circuits) to remove dust from the heat sink fins.' },
     { task: 'Check Connections', action: 'Visually inspect power and control wiring for any signs of discoloration or pitting, which indicates loose connections causing heat.' },
     { task: 'Fan Operation', action: 'Verify that the internal cooling fans are moving air effectively and aren\'t wobbling.' },
 ];
 
-const annualChecklist = [
-    { component: 'Terminal Torque', action: 'Retighten all power connections to spec.', reason: 'Vibrations over time loosen screws, leading to arcing.' },
-    { component: 'Capacitor Check', action: 'Look for bulging or leaking electrolyte.', reason: 'DC bus capacitors have a finite life (usually 5–10 years).' },
-    { component: 'Voltage Balance', action: 'Measure input voltage phase-to-phase.', reason: 'Imbalance > 2% can cause significant internal heating.' },
-    { component: 'Insulation Test', action: 'Perform a Megger test on the motor cables.', reason: 'Ensures the cable insulation hasn\'t degraded due to harmonics.' },
-    { component: 'Software/Firmware', action: 'Check for manufacturer updates.', reason: 'Updates often include better motor control algorithms or bug fixes.' },
-];
 
 function WorkCrewRow({ onRemove }: { onRemove: () => void }) {
     const [date, setDate] = React.useState<Date | undefined>();
@@ -92,6 +85,7 @@ export function Vsd3MonthlyScopeDocument() {
   const title = "VSDs 3-Monthly Service Scope";
   const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
   const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
+  const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>();
   const firestore = useFirestore();
 
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
@@ -130,27 +124,58 @@ export function Vsd3MonthlyScopeDocument() {
           <CardHeader>
             <CardTitle>Equipment Selection</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Label htmlFor="equipment-select">Select Equipment for Inspection</Label>
-            <Select onValueChange={setSelectedEquipment} value={selectedEquipment} disabled={equipmentLoading}>
-                <SelectTrigger id="equipment-select">
-                    <SelectValue placeholder="Select the equipment..." />
-                </SelectTrigger>
-                <SelectContent>
-                {equipmentLoading ? (
-                    <SelectItem value="loading" disabled>Loading equipment...</SelectItem>
-                ) : (
-                    equipment?.map(eq => <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.id})</SelectItem>)
-                )}
-                </SelectContent>
-            </Select>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+                <Label htmlFor="equipment-select">Select Equipment for Inspection</Label>
+                <Select onValueChange={setSelectedEquipment} value={selectedEquipment} disabled={equipmentLoading}>
+                    <SelectTrigger id="equipment-select">
+                        <SelectValue placeholder="Select the equipment..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {equipmentLoading ? (
+                        <SelectItem value="loading" disabled>Loading equipment...</SelectItem>
+                    ) : (
+                        equipment?.map(eq => <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.id})</SelectItem>)
+                    )}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="area">Area</Label>
+                <Input id="area" placeholder="e.g., MPA Pump Station" />
+            </div>
+            <div className="space-y-2">
+                <Label>Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !inspectionDate && "text-muted-foreground"
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {inspectionDate ? format(inspectionDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={inspectionDate}
+                        onSelect={setInspectionDate}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="inspected-by">Inspected By</Label>
+                <Input id="inspected-by" placeholder="Technician Name" />
+            </div>
           </CardContent>
         </Card>
         
-        <div className="prose prose-sm max-w-none dark:prose-invert">
-            <p className="lead">Building a comprehensive maintenance strategy involves shifting from simple monitoring to deep cleaning and electrical testing. Below is a structured template for 3-Monthly VSD maintenance.</p>
-        </div>
-
         <div className="prose prose-sm max-w-none dark:prose-invert mt-8 space-y-6">
             <div>
                 <h3 className="text-lg font-bold">1. PURPOSE</h3>
@@ -252,7 +277,7 @@ export function Vsd3MonthlyScopeDocument() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {monthlyChecklist.map((item, index) => (
+              {threeMonthlyChecklist.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-medium">{item.task}</TableCell>
                   <TableCell>{item.action}</TableCell>
