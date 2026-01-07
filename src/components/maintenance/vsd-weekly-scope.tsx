@@ -273,7 +273,7 @@ export function VsdWeeklyScopeDocument() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[150px]">Task Type</TableHead>
+                <TableHead className="w-[75px]">Task Type</TableHead>
                 <TableHead className="w-[200px]">Action Item</TableHead>
                 <TableHead className="w-[250px]">What to Look For</TableHead>
                 <TableHead className="text-center w-[100px]">Not Checked</TableHead>
