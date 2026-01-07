@@ -377,6 +377,10 @@ export function Vsd3MonthlyScopeDocument() {
                 </CardContent>
             </Card>
 
+            <div className="prose prose-sm max-w-none dark:prose-invert mt-8">
+                <h3 className="text-lg font-bold">Why the 3-Month Mark is Critical</h3>
+                <p>Most VSD failures are caused by Dust + Moisture = Conductivity. A quarterly schedule ensures that dust never builds up enough to absorb ambient moisture and create a "tracking" path across your circuit boards.</p>
+            </div>
 
             <footer className="mt-16 text-xs text-muted-foreground text-center">
                <p>Altek Green - Confidential</p>
