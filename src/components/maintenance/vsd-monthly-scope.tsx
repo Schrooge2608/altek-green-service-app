@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Printer, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const monthlyChecklist = [
     { task: 'Filter Inspection', action: 'If your VSD cabinet has air filters, check for clogs. A clogged filter is the #1 cause of over-temperature trips.' },
@@ -74,6 +75,7 @@ export function VsdMonthlyScopeDocument() {
               <TableRow>
                 <TableHead>Task</TableHead>
                 <TableHead>Action</TableHead>
+                <TableHead className="text-center">Checked</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -81,6 +83,9 @@ export function VsdMonthlyScopeDocument() {
                 <TableRow key={index}>
                   <TableCell className="font-medium">{item.task}</TableCell>
                   <TableCell>{item.action}</TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox aria-label={`Check task ${item.task}`} />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -98,6 +103,7 @@ export function VsdMonthlyScopeDocument() {
                         <TableHead>Component</TableHead>
                         <TableHead>Action</TableHead>
                         <TableHead>Reason</TableHead>
+                        <TableHead className="text-center">Checked</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -106,6 +112,9 @@ export function VsdMonthlyScopeDocument() {
                             <TableCell className="font-medium">{item.component}</TableCell>
                             <TableCell>{item.action}</TableCell>
                             <TableCell>{item.reason}</TableCell>
+                            <TableCell className="text-center">
+                                <Checkbox aria-label={`Check task ${item.component}`} />
+                            </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
