@@ -158,7 +158,6 @@ export function UserAuthForm() {
                             <SelectItem value="Site Supervisor">Site Supervisor</SelectItem>
                             <SelectItem value="Services Manager">Services Manager</SelectItem>
                             <SelectItem value="Corporate Manager">Corporate Manager</SelectItem>
-                            <SelectItem value="Admin">Admin</SelectItem>
                         </SelectContent>
                     </Select>
                     <FormMessage />
