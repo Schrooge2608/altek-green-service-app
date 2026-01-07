@@ -297,8 +297,8 @@ export function VsdYearlyScopeDocument() {
                                             <TableHead>Component</TableHead>
                                             <TableHead>Action</TableHead>
                                             <TableHead>Critical Metric</TableHead>
-                                            <TableHead className="text-center w-[100px]">Checked</TableHead>
-                                            <TableHead className="text-center w-[100px]">Not checked</TableHead>
+                                            <TableHead className="text-center w-[50px]">Checked</TableHead>
+                                            <TableHead className="text-center w-[50px]">Not checked</TableHead>
                                             <TableHead>Comments / Feedback</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -370,8 +370,8 @@ export function VsdYearlyScopeDocument() {
                                 <TableHead>Frequency</TableHead>
                                 <TableHead>Focus</TableHead>
                                 <TableHead>Goal</TableHead>
-                                <TableHead className="text-center w-[100px]">Checked</TableHead>
-                                <TableHead className="text-center w-[100px]">Not checked</TableHead>
+                                <TableHead className="text-center w-[50px]">Checked</TableHead>
+                                <TableHead className="text-center w-[50px]">Not checked</TableHead>
                                 <TableHead>Comments / Feedback</TableHead>
                             </TableRow>
                         </TableHeader>

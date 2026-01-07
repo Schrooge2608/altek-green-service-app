@@ -78,6 +78,45 @@
         "timeBackInService": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "equipmentId", "equipmentName", "date", "description", "resolved", "timeReported"]
+    },
+     "CompletedSchedule": {
+      "title": "CompletedSchedule",
+      "type": "object",
+      "description": "Represents a completed maintenance schedule document.",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "area": { "type": "string" },
+        "completionDate": { "type": "string", "format": "date" },
+        "inspectedBy": { "type": "string" },
+        "maintenanceType": { "type": "string" },
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
+        "workCrew": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "rtbsNo": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "signature": { "type": "string", "description": "Base64 encoded signature image." }
+            }
+          }
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "task": { "type": "string" },
+              "status": { "type": "string", "enum": ["checked", "not-checked", "n/a"] },
+              "comments": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["id", "equipmentId", "equipmentName", "completionDate", "inspectedBy", "maintenanceType", "frequency"]
     }
   },
   "auth": {
@@ -115,6 +154,14 @@
           "entityName": "BreakdownReport",
           "schema": { "$ref": "#/entities/BreakdownReport" },
           "description": "Stores breakdown reports."
+        }
+      },
+      {
+        "path": "/completed_schedules/{scheduleId}",
+        "definition": {
+          "entityName": "CompletedSchedule",
+          "schema": { "$ref": "#/entities/CompletedSchedule" },
+          "description": "Stores records of completed maintenance schedules."
         }
       }
     ]

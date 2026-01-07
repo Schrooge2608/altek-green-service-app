@@ -56,3 +56,29 @@ export interface Breakdown {
   timeReported?: string;
   timeBackInService?: string;
 }
+
+export interface CompletedSchedule {
+  id: string;
+  equipmentId: string;
+  equipmentName: string;
+  area: string;
+  completionDate: string;
+  inspectedBy: string;
+  maintenanceType: string;
+  frequency: 'Weekly' | 'Monthly' | '3-Monthly' | '6-Monthly' | 'Yearly';
+  workCrew: WorkCrewMember[];
+  checklist: ChecklistItem[];
+}
+
+export interface WorkCrewMember {
+  name: string;
+  rtbsNo: string;
+  date: string;
+  signature: string;
+}
+
+export interface ChecklistItem {
+  task: string;
+  status: 'checked' | 'not-checked' | 'n/a';
+  comments: string;
+}
