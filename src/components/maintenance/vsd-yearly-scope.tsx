@@ -282,68 +282,7 @@ export function VsdYearlyScopeDocument() {
                     </ul>
                 </AlertDescription>
             </Alert>
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-                <p>The annual service is the most comprehensive check, often requiring a scheduled shutdown. It focuses on deep diagnostics, component replacement, and verifying the integrity of the entire system to ensure another year of reliable operation.</p>
-                
-                <h3 className="mt-6 text-lg font-bold">Yearly VSD Service Schedule (The "Overhaul")</h3>
-                <ol className="list-decimal pl-5 space-y-4">
-                    <li>
-                        <strong>Complete All 3 & 6-Month Checks:</strong> Perform all tasks from the quarterly and semi-annual schedules.
-                    </li>
-                    <li>
-                        <strong>Component Replacement (Predictive Maintenance)</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Cooling Fan Replacement:</strong> Most VSD cooling fans have a 2-3 year operational lifespan. Replace them annually in critical applications to prevent overheating.</li>
-                            <li><strong>Terminal Block Replacement:</strong> If thermal imaging from previous checks showed any hot spots, replace the affected terminal blocks.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Firmware & Software</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Update Firmware:</strong> Check the manufacturer’s website for the latest stable firmware version. Updates can improve performance, add features, and patch security vulnerabilities.</li>
-                            <li><strong>Parameter Review:</strong> Compare the current parameters against the original commissioned settings. Document any changes and verify they were intentional and authorized.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Full System Diagnostics</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Full Load Test:</strong> If possible, run the motor at 100% load and monitor the drive for stable current, voltage, and temperature.</li>
-                            <li><strong>Backup & Restore Test:</strong> Perform a full parameter backup, factory reset the drive (with authorization), and then restore the parameters from the backup to ensure the backup file is valid.</li>
-                        </ul>
-                    </li>
-                </ol>
-            </div>
-
-            <Separator className="my-8" />
             
-            <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>VARIABLE SPEED DRIVE Quality Control Sheet</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Action</TableHead>
-                                <TableHead>Comments / Feedback</TableHead>
-                                <TableHead className="text-center">Checked</TableHead>
-                                <TableHead className="text-center">Not checked</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {qualityControlItems.map((item, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{item.text}</TableCell>
-                                    <TableCell><Input placeholder="Comments..." /></TableCell>
-                                    <TableCell className="text-center"><Checkbox /></TableCell>
-                                    <TableCell className="text-center"><Checkbox /></TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
             <footer className="mt-16 text-xs text-muted-foreground text-center">
                <p>Altek Green - Confidential</p>
             </footer>
