@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,11 +6,11 @@ import Link from 'next/link';
 
 export default function MaintenancePage() {
   const serviceScopes = [
-    { title: 'Weekly Service Scope', frequency: 'weekly' },
-    { title: 'Monthly Service Scope', frequency: 'monthly' },
-    { title: '3-Monthly Service Scope', frequency: '3-monthly' },
-    { title: '6-Monthly Service Scope', frequency: '6-monthly' },
-    { title: 'Yearly Service Scope', frequency: 'yearly' },
+    { title: 'Weekly Service Scope', frequency: 'weekly', enabled: true },
+    { title: 'Monthly Service Scope', frequency: 'monthly', enabled: true },
+    { title: '3-Monthly Service Scope', frequency: '3-monthly', enabled: false },
+    { title: '6-Monthly Service Scope', frequency: '6-monthly', enabled: false },
+    { title: 'Yearly Service Scope', frequency: 'yearly', enabled: false },
   ];
 
   const categories = [
@@ -42,8 +41,8 @@ export default function MaintenancePage() {
                           <CardTitle className="text-lg">{scope.title}</CardTitle>
                       </CardHeader>
                       <CardContent className="flex flex-col gap-2">
-                        <Link href={`/maintenance/${category.slug}/${scope.frequency}`} passHref>
-                          <Button className="w-full">
+                        <Link href={`/maintenance/${category.slug}/${scope.frequency}`} passHref legacyBehavior>
+                          <Button className="w-full" disabled={!scope.enabled}>
                               View Service Scope
                           </Button>
                         </Link>

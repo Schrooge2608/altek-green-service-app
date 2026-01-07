@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, notFound } from 'next/navigation';
@@ -16,9 +15,6 @@ const validCategories: Record<string, string> = {
 const validFrequencies: Record<string, string> = {
   weekly: 'Weekly',
   monthly: 'Monthly',
-  '3-monthly': '3-Monthly',
-  '6-monthly': '6-Monthly',
-  yearly: 'Yearly',
 };
 
 export default function MaintenanceScopePage() {
