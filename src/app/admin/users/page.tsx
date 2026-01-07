@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShieldAlert, PlusCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import React from 'react';
 
 function AccessDenied() {
     return (
@@ -23,7 +24,7 @@ function AccessDenied() {
     );
 }
 
-function UserList({ userRole }: { userRole: User }) {
+function UserList() {
     const firestore = useFirestore();
 
     const usersQuery = useMemoFirebase(() => {
@@ -119,7 +120,7 @@ export default function UserManagementPage() {
             </header>
             
             {userRole?.role === 'Admin' ? (
-                <UserList userRole={userRole} />
+                <UserList />
             ) : (
                 <AccessDenied />
             )}
