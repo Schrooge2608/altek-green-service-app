@@ -278,6 +278,7 @@ export function VsdYearlyScopeDocument() {
                         <TableHead>Component</TableHead>
                         <TableHead>Action</TableHead>
                         <TableHead>Reason</TableHead>
+                        <TableHead className="text-center">Not Checked</TableHead>
                         <TableHead className="text-center">Checked</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -287,6 +288,9 @@ export function VsdYearlyScopeDocument() {
                             <TableCell className="font-medium">{item.component}</TableCell>
                             <TableCell>{item.action}</TableCell>
                             <TableCell>{item.reason}</TableCell>
+                             <TableCell className="text-center">
+                                <Checkbox aria-label={`Mark task ${item.component} as not checked`} />
+                            </TableCell>
                             <TableCell className="text-center">
                                 <Checkbox aria-label={`Check task ${item.component}`} />
                             </TableCell>

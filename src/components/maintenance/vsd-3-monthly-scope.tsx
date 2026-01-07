@@ -316,6 +316,8 @@ export function Vsd3MonthlyScopeDocument() {
                             <TableHead>Task</TableHead>
                             <TableHead>Status (Pass/Fail)</TableHead>
                             <TableHead>Notes</TableHead>
+                            <TableHead className="text-center">Not Checked</TableHead>
+                            <TableHead className="text-center">Checked</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -324,12 +326,16 @@ export function Vsd3MonthlyScopeDocument() {
                                 <TableCell className="font-medium">{item.task}</TableCell>
                                 <TableCell className="text-center"><Checkbox /></TableCell>
                                 <TableCell><Input placeholder="Notes..." /></TableCell>
+                                <TableCell className="text-center"><Checkbox /></TableCell>
+                                <TableCell className="text-center"><Checkbox /></TableCell>
                             </TableRow>
                         ))}
                          <TableRow>
                             <TableCell className="font-medium">DC Bus Voltage Stability</TableCell>
                             <TableCell className="text-center"><Checkbox /></TableCell>
                             <TableCell><Input placeholder="Reading: _______" /></TableCell>
+                            <TableCell className="text-center"><Checkbox /></TableCell>
+                            <TableCell className="text-center"><Checkbox /></TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>

@@ -284,6 +284,7 @@ export function Vsd6MonthlyScopeDocument() {
               <TableRow>
                 <TableHead>Task</TableHead>
                 <TableHead>Action</TableHead>
+                <TableHead className="text-center">Not Checked</TableHead>
                 <TableHead className="text-center">Checked</TableHead>
               </TableRow>
             </TableHeader>
@@ -292,6 +293,9 @@ export function Vsd6MonthlyScopeDocument() {
                 <TableRow key={index}>
                   <TableCell className="font-medium">{item.task}</TableCell>
                   <TableCell>{item.action}</TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox aria-label={`Mark task ${item.task} as not checked`} />
+                  </TableCell>
                   <TableCell className="text-center">
                     <Checkbox aria-label={`Check task ${item.task}`} />
                   </TableCell>
