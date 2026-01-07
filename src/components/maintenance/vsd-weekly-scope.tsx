@@ -273,11 +273,11 @@ export function VsdWeeklyScopeDocument() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Task Type</TableHead>
-                <TableHead>Action Item</TableHead>
-                <TableHead>What to Look For</TableHead>
-                <TableHead className="text-center">Not Checked</TableHead>
-                <TableHead className="text-center">Checked</TableHead>
+                <TableHead className="w-[150px]">Task Type</TableHead>
+                <TableHead className="w-[200px]">Action Item</TableHead>
+                <TableHead className="w-[250px]">What to Look For</TableHead>
+                <TableHead className="text-center w-[100px]">Not Checked</TableHead>
+                <TableHead className="text-center w-[100px]">Checked</TableHead>
                 <TableHead>Comments</TableHead>
               </TableRow>
             </TableHeader>

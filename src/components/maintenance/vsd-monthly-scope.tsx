@@ -282,10 +282,10 @@ export function VsdMonthlyScopeDocument() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Task</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead className="text-center">Not Checked</TableHead>
-                <TableHead className="text-center">Checked</TableHead>
+                <TableHead className="w-[150px]">Task</TableHead>
+                <TableHead className="w-[350px]">Action</TableHead>
+                <TableHead className="text-center w-[100px]">Not Checked</TableHead>
+                <TableHead className="text-center w-[100px]">Checked</TableHead>
                 <TableHead>Comments</TableHead>
               </TableRow>
             </TableHeader>
@@ -317,11 +317,11 @@ export function VsdMonthlyScopeDocument() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Component</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Reason</TableHead>
-                        <TableHead className="text-center">Not Checked</TableHead>
-                        <TableHead className="text-center">Checked</TableHead>
+                        <TableHead className="w-[150px]">Component</TableHead>
+                        <TableHead className="w-[250px]">Action</TableHead>
+                        <TableHead className="w-[250px]">Reason</TableHead>
+                        <TableHead className="text-center w-[100px]">Not Checked</TableHead>
+                        <TableHead className="text-center w-[100px]">Checked</TableHead>
                         <TableHead>Comments</TableHead>
                     </TableRow>
                 </TableHeader>
