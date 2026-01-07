@@ -8,9 +8,9 @@ export default function MaintenancePage() {
   const serviceScopes = [
     { title: 'Weekly Service Scope', frequency: 'weekly', enabled: true },
     { title: 'Monthly Service Scope', frequency: 'monthly', enabled: true },
-    { title: '3-Monthly Service Scope', frequency: '3-monthly', enabled: false },
-    { title: '6-Monthly Service Scope', frequency: '6-monthly', enabled: false },
-    { title: 'Yearly Service Scope', frequency: 'yearly', enabled: false },
+    { title: '3-Monthly Service Scope', frequency: '3-monthly', enabled: true },
+    { title: '6-Monthly Service Scope', frequency: '6-monthly', enabled: true },
+    { title: 'Yearly Service Scope', frequency: 'yearly', enabled: true },
   ];
 
   const categories = [
