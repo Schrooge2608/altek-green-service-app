@@ -33,14 +33,6 @@ import type { Equipment } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '../ui/label';
 
-const quarterlyLogTasks = [
-    { task: 'Power terminals torqued' },
-    { task: 'Heat sink fins vacuumed' },
-    { task: 'Fans spinning freely/quietly' },
-    { task: 'Parameter set backed up' },
-    { task: 'Fault log cleared' },
-];
-
 function WorkCrewRow({ onRemove }: { onRemove: () => void }) {
     const [date, setDate] = React.useState<Date | undefined>();
     return (
@@ -266,7 +258,7 @@ export function Vsd3MonthlyScopeDocument() {
         </Alert>
 
         <Separator className="my-8" />
-
+        
         <div className="prose prose-sm max-w-none dark:prose-invert space-y-4">
             <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown. At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
             
@@ -307,42 +299,6 @@ export function Vsd3MonthlyScopeDocument() {
                     <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
                 </ul>
             </div>
-
-            <h3 className="text-lg font-bold !mt-6">Quarterly Maintenance Log Template</h3>
-             <Card>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Task</TableHead>
-                            <TableHead>Status (Pass/Fail)</TableHead>
-                            <TableHead>Notes</TableHead>
-                            <TableHead className="text-center">Not Checked</TableHead>
-                            <TableHead className="text-center">Checked</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {quarterlyLogTasks.map(item => (
-                            <TableRow key={item.task}>
-                                <TableCell className="font-medium">{item.task}</TableCell>
-                                <TableCell className="text-center"><Checkbox /> </TableCell>
-                                <TableCell><Input placeholder="Notes..." /></TableCell>
-                                <TableCell className="text-center"><Checkbox /></TableCell>
-                                <TableCell className="text-center"><Checkbox /></TableCell>
-                            </TableRow>
-                        ))}
-                         <TableRow>
-                            <TableCell className="font-medium">DC Bus Voltage Stability</TableCell>
-                            <TableCell className="text-center"><Checkbox /></TableCell>
-                            <TableCell><Input placeholder="Reading: _______" /></TableCell>
-                            <TableCell className="text-center"><Checkbox /></TableCell>
-                            <TableCell className="text-center"><Checkbox /></TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </Card>
-
-            <h3 className="text-lg font-bold !mt-6">Why the 3-Month Mark is Critical</h3>
-            <p>Most VSD failures are caused by Dust + Moisture = Conductivity. A quarterly schedule ensures that dust never builds up enough to absorb ambient moisture and create a "tracking" path across your circuit boards.</p>
         </div>
         
         <footer className="mt-16 text-xs text-muted-foreground text-center">
