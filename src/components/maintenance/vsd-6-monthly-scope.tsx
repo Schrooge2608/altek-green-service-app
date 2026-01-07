@@ -84,6 +84,22 @@ function WorkCrewRow({ onRemove }: { onRemove: () => void }) {
   );
 }
 
+const qualityControlItems = [
+    { text: "Inspect isolator handle/mechanism for correct operation, including preventing door from being opened when in ON or LOCKOUT position." },
+    { text: "Check for correct alignment of doors and ensure latching mechanisms are all operational. Lubricate rotating door mechanism with good quality electrical penetration oil. If locking mechanisms are worn, rectify immediately (especially if the panel/cubicle door doesn’t want to stay closed). Report to Plant Engineer if there is a serious issue." },
+    { text: "Wash all door filters if the washable type filters are installed. Filters must be 100% dry before being re-fitted. Replace where necessary." },
+    { text: "Inspect all internal covers that prevent inadvertent contact with “Live” busbars for cracks or missing screws/bolts. These covers are either of a poly type or metal mess design. Remove these covers to allow for better access for cleaning." },
+    { text: "Vacuum clean entire cubicle or panel, take care not to disturb control and communication wiring." },
+    { text: "Blow out VSD panels with blower only once vacuuming have been completed. Take care when blowing over delicate control wiring." },
+    { text: "Inspect Power cable connections and bus bars for damage and hot connections (discoloration). Rectify immediately and capture findings in comments field." },
+    { text: "Inspect condition of ribbon cables and make sure they are securely plugged in. Ensure that ribbon cable connectors latching clips (if equipt) are latched into position." },
+    { text: "Check that ribbon cables are not resting on sharp edges or mains bus bars/terminations. Rectify if it is the case." },
+    { text: "Inspect condition of control wiring cables and ensure they are not resting on sharp edges or bus bars/terminations." },
+    { text: "Check all lugged terminals for loose connections and re-tighten where necessary." },
+    { text: "Ensure that supply as well as the control fuses are of the correct ratings and located properly inside fuse holders. Inspect condition of fuse holders as well. Please note that special Ultra-Fast blow fuses are normally installed on power circuits of VSD’s." },
+    { text: "Check cooling fan blades for cracks, free rotation and smooth bearing operation." },
+];
+
 export function Vsd6MonthlyScopeDocument() {
     const title = "VSDs 6-Monthly Service Scope";
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
@@ -300,6 +316,34 @@ export function Vsd6MonthlyScopeDocument() {
 
             <Separator className="my-8" />
             
+            <Card className="mt-8">
+                <CardHeader>
+                    <CardTitle>VARIABLE SPEED DRIVE Quality Control Sheet</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Action</TableHead>
+                                <TableHead>Comments / Feedback</TableHead>
+                                <TableHead className="text-center">Checked</TableHead>
+                                <TableHead className="text-center">Not checked</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {qualityControlItems.map((item, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{item.text}</TableCell>
+                                    <TableCell><Input placeholder="Comments..." /></TableCell>
+                                    <TableCell className="text-center"><Checkbox /></TableCell>
+                                    <TableCell className="text-center"><Checkbox /></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
             <footer className="mt-16 text-xs text-muted-foreground text-center">
                <p>Altek Green - Confidential</p>
             </footer>
