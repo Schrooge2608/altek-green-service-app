@@ -51,7 +51,7 @@ export default function MaintenancePage() {
                       </CardHeader>
                       <CardContent className="flex flex-col gap-2">
                         <Link href={`/maintenance/${category.slug}/${scope.frequency}`}>
-                          <Button className="w-full" disabled={!scope.enabled}>
+                          <Button className="w-full whitespace-normal h-auto py-2" disabled={!scope.enabled}>
                               View Service Scope
                           </Button>
                         </Link>
