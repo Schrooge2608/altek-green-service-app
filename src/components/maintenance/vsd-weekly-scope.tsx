@@ -19,6 +19,7 @@ import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const checklistItems = [
     { type: 'Acoustic Check', action: 'Listen for unusual noises.', lookFor: 'Grinding or clicking in cooling fans; humming or "singing" that sounds different than usual.' },
@@ -67,6 +68,7 @@ export function VsdWeeklyScopeDocument() {
                 <TableHead>Task Type</TableHead>
                 <TableHead>Action Item</TableHead>
                 <TableHead>What to Look For</TableHead>
+                <TableHead className="text-center">Checked</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -75,6 +77,9 @@ export function VsdWeeklyScopeDocument() {
                   <TableCell className="font-medium">{item.type}</TableCell>
                   <TableCell>{item.action}</TableCell>
                   <TableCell>{item.lookFor}</TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox aria-label={`Check task ${item.type}`} />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
