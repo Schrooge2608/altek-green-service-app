@@ -1,9 +1,9 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { FileText } from 'lucide-react';
 
 export default function MaintenancePage() {
   const serviceScopes = [
@@ -34,7 +34,15 @@ export default function MaintenancePage() {
 
       {categories.map(category => (
         <div key={category.slug}>
-          <h2 className="text-2xl font-semibold tracking-tight mb-4 mt-8">{category.name.toUpperCase()}</h2>
+          <div className="flex items-center justify-between mb-4 mt-8">
+            <h2 className="text-2xl font-semibold tracking-tight">{category.name.toUpperCase()}</h2>
+            <Link href={`/maintenance/completed/${category.slug}`} passHref>
+              <Button variant="outline">
+                <FileText className="mr-2 h-4 w-4" />
+                View Completed
+              </Button>
+            </Link>
+          </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
               {serviceScopes.map(scope => (
                   <Card key={`${category.slug}-${scope.frequency}`}>

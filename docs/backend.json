@@ -90,7 +90,7 @@
         "area": { "type": "string" },
         "completionDate": { "type": "string", "format": "date" },
         "inspectedBy": { "type": "string" },
-        "maintenanceType": { "type": "string" },
+        "maintenanceType": { "type": "string", "enum": ["VSDs", "Protection", "Motors", "Pumps"]},
         "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
         "workCrew": {
           "type": "array",
