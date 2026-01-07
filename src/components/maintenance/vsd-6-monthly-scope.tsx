@@ -100,6 +100,19 @@ const qualityControlItems = [
     { text: "Check cooling fan blades for cracks, free rotation and smooth bearing operation." },
 ];
 
+const commissioningItems = [
+    { text: "Ensure that no one is working on the pump/pipeline or fan/ducting or conveyor and if safe to do so de-isolate." },
+    { text: "Ensure panel heaters are operational. Measure the current drawn by each heater (>0.3Amp @ 230V supply), if measuring is not possible, use infrared gun to verify heater temp is between 45 to 50 degrees C . Panel heaters installed are normally 50 or 100W each." },
+    { text: "Test run VSD from control room. Make sure doors are latched during initial start." },
+    { text: "If there are digital displays, panel meters and indication lights installed on the door, inspect that everything is working. Replace faulty indications." },
+    { text: "Verify if all VSD cooling fans are running (Diode rectifier fan/DC link choke fan/inverter fans on the bigger VSD’s. Listen for noisy fan bearings. Verify for correct direction of flow (sucking in at bottom of drive and blowing out on the top)." },
+    { text: "Verify that MCC pressurization ventilation system purging fan which forms part of the spin filter design are running. Verify direction (expelling of air) from purge filter fan." },
+    { text: "Verify that MCC pressurization ventilation system are running and that adequate air gets blown into MCC." },
+    { text: "Verify that MCC extraction ventilation system (generally connected to top of VSD panels) are running and that adequate air gets extracted from VSD panels. "},
+    { text: "In E-houses where there are Air Conditioner systems install, ensure temperature settings for the room are not set below 26 degrees."},
+    { text: "Leave area clean and tidy" },
+];
+
 export function Vsd6MonthlyScopeDocument() {
     const title = "VSDs 6-Monthly Service Scope";
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
@@ -332,6 +345,34 @@ export function Vsd6MonthlyScopeDocument() {
                         </TableHeader>
                         <TableBody>
                             {qualityControlItems.map((item, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{item.text}</TableCell>
+                                    <TableCell><Input placeholder="Comments..." /></TableCell>
+                                    <TableCell className="text-center"><Checkbox /></TableCell>
+                                    <TableCell className="text-center"><Checkbox /></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+            <Card className="mt-8">
+                <CardHeader>
+                    <CardTitle>Commissioning</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Action</TableHead>
+                                <TableHead>Comments / Feedback</TableHead>
+                                <TableHead className="text-center">Checked</TableHead>
+                                <TableHead className="text-center">Not checked</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {commissioningItems.map((item, index) => (
                                 <TableRow key={index}>
                                     <TableCell>{item.text}</TableCell>
                                     <TableCell><Input placeholder="Comments..." /></TableCell>
