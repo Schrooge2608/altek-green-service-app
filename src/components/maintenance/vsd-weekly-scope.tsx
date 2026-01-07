@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/table';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { Printer, CalendarIcon } from 'lucide-react';
+import { Printer, CalendarIcon, Plus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -74,6 +74,7 @@ function WorkCrewRow() {
 
 export function VsdWeeklyScopeDocument() {
   const title = "VSDs Weekly Service Scope";
+  const [crewCount, setCrewCount] = React.useState(3);
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
@@ -145,7 +146,12 @@ export function VsdWeeklyScopeDocument() {
         </div>
 
         <div className="my-8">
-            <h3 className="text-xl font-bold mb-4">Work Crew</h3>
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold">Work Crew</h3>
+                <Button variant="outline" size="sm" onClick={() => setCrewCount(crewCount + 1)} className="print:hidden">
+                    <Plus className="mr-2 h-4 w-4" /> Add Crew Member
+                </Button>
+            </div>
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -156,9 +162,9 @@ export function VsdWeeklyScopeDocument() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <WorkCrewRow />
-                    <WorkCrewRow />
-                    <WorkCrewRow />
+                    {Array.from({ length: crewCount }).map((_, index) => (
+                        <WorkCrewRow key={index} />
+                    ))}
                 </TableBody>
             </Table>
         </div>
