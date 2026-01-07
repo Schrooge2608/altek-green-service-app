@@ -48,7 +48,7 @@ export default function MaintenancePage() {
                           </Button>
                         </Link>
                         <Button variant="secondary" disabled className="w-full">
-                            Completed Scheduled Maintenance
+                            Completed Schedules
                         </Button>
                       </CardContent>
                   </Card>
