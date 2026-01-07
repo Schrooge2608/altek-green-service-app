@@ -37,7 +37,7 @@ export default function MaintenancePage() {
           <div className="flex items-center justify-between mb-4 mt-8">
             <h2 className="text-2xl font-semibold tracking-tight">{category.name.toUpperCase()}</h2>
             <Link href={`/maintenance/completed/${category.slug}`} passHref>
-              <Button variant="secondary" className="text-accent-foreground">
+              <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
                 <FileText className="mr-2 h-4 w-4" />
                 View Completed
               </Button>
