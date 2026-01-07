@@ -1,3 +1,4 @@
+
 export interface VSD {
   id: string;
   serialNumber: string;
@@ -38,7 +39,7 @@ export interface MaintenanceTask {
   equipmentName: string;
   task: string;
   dueDate: string;
-  frequency: 'Weekly' | 'Monthly' | '3-Monthly';
+  frequency: 'Weekly' | 'Monthly' | '3-Monthly' | 'Yearly';
   status: 'pending' | 'completed' | 'overdue';
 }
 

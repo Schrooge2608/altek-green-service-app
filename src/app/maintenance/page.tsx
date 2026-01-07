@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -18,10 +19,13 @@ export default function MaintenancePage() {
   const weeklyTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('frequency', '==', 'Weekly')), [firestore]);
   const monthlyTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('frequency', '==', 'Monthly')), [firestore]);
   const quarterlyTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('frequency', '==', '3-Monthly')), [firestore]);
+  const yearlyTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('frequency', '==', 'Yearly')), [firestore]);
+
 
   const { data: weeklyTasks, isLoading: weeklyLoading } = useCollection<MaintenanceTask>(weeklyTasksQuery);
   const { data: monthlyTasks, isLoading: monthlyLoading } = useCollection<MaintenanceTask>(monthlyTasksQuery);
   const { data: quarterlyTasks, isLoading: quarterlyLoading } = useCollection<MaintenanceTask>(quarterlyTasksQuery);
+  const { data: yearlyTasks, isLoading: yearlyLoading } = useCollection<MaintenanceTask>(yearlyTasksQuery);
 
   return (
     <div className="flex flex-col gap-8">
@@ -34,10 +38,11 @@ export default function MaintenancePage() {
       <Card>
         <CardContent className="pt-6">
           <Tabs defaultValue="weekly">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="weekly">Weekly</TabsTrigger>
               <TabsTrigger value="monthly">Monthly</TabsTrigger>
               <TabsTrigger value="quarterly">3-Monthly</TabsTrigger>
+              <TabsTrigger value="yearly">Yearly</TabsTrigger>
             </TabsList>
             <TabsContent value="weekly">
               <MaintenanceSchedule title="Weekly Tasks" tasks={weeklyTasks} isLoading={weeklyLoading} />
@@ -47,6 +52,9 @@ export default function MaintenancePage() {
             </TabsContent>
             <TabsContent value="quarterly">
               <MaintenanceSchedule title="3-Monthly Tasks" tasks={quarterlyTasks} isLoading={quarterlyLoading} />
+            </TabsContent>
+            <TabsContent value="yearly">
+              <MaintenanceSchedule title="Yearly Tasks" tasks={yearlyTasks} isLoading={yearlyLoading} />
             </TabsContent>
           </Tabs>
         </CardContent>
