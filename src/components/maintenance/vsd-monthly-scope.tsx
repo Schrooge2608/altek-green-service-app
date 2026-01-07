@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { Printer, AlertTriangle, CalendarIcon, Plus } from 'lucide-react';
+import { Printer, AlertTriangle, CalendarIcon, Plus, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -43,7 +43,7 @@ const annualChecklist = [
     { component: 'Software/Firmware', action: 'Check for manufacturer updates.', reason: 'Updates often include better motor control algorithms or bug fixes.' },
 ];
 
-function WorkCrewRow() {
+function WorkCrewRow({ onRemove }: { onRemove: () => void }) {
     const [date, setDate] = React.useState<Date | undefined>();
     return (
         <TableRow>
@@ -74,13 +74,27 @@ function WorkCrewRow() {
                 </Popover>
             </TableCell>
             <TableCell className="w-[250px]"><SignaturePad /></TableCell>
+            <TableCell className="text-right">
+                <Button variant="ghost" size="icon" onClick={onRemove} className="print:hidden">
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </TableCell>
         </TableRow>
     )
 }
 
 export function VsdMonthlyScopeDocument() {
   const title = "VSDs Monthly & Annual Service Scope";
-  const [crewCount, setCrewCount] = React.useState(3);
+  const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
+
+  const addCrewMember = () => {
+    setCrew(c => [...c, { id: Date.now() }]);
+  };
+
+  const removeCrewMember = (id: number) => {
+    setCrew(c => c.filter(member => member.id !== id));
+  };
+
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
@@ -158,7 +172,7 @@ export function VsdMonthlyScopeDocument() {
         <div className="my-8">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold">Work Crew</h3>
-                <Button variant="outline" size="sm" onClick={() => setCrewCount(crewCount + 1)} className="print:hidden">
+                <Button variant="outline" size="sm" onClick={addCrewMember} className="print:hidden">
                     <Plus className="mr-2 h-4 w-4" /> Add Crew Member
                 </Button>
             </div>
@@ -169,11 +183,12 @@ export function VsdMonthlyScopeDocument() {
                         <TableHead>RTBS NO.</TableHead>
                         <TableHead>DATE</TableHead>
                         <TableHead>SIGNATURE</TableHead>
+                        <TableHead className="w-[50px] print:hidden"></TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {Array.from({ length: crewCount }).map((_, index) => (
-                        <WorkCrewRow key={index} />
+                    {crew.map((member) => (
+                        <WorkCrewRow key={member.id} onRemove={() => removeCrewMember(member.id)} />
                     ))}
                 </TableBody>
             </Table>
