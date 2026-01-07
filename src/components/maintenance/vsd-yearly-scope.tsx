@@ -283,6 +283,31 @@ export function VsdYearlyScopeDocument() {
                 </AlertDescription>
             </Alert>
             
+            <div className="prose prose-sm max-w-none dark:prose-invert mt-8">
+                <p>An annual service is your most critical intervention. While weekly and quarterly tasks keep the drive running, the Annual Maintenance is designed to prevent "catastrophic failure"—the kind that leads to smoke, fire, or weeks of lead-time for a replacement.</p>
+                <p>This schedule requires a full plant shutdown for the drive and must be performed by a qualified technician or electrician.</p>
+
+                <h3 className="mt-6 text-lg font-bold">Annual VSD Service Schedule</h3>
+                <ol className="list-decimal pl-5 space-y-6">
+                    <li>
+                        <strong>Power-Down & Safety Discharge</strong>
+                        <ul className="list-disc pl-5 mt-2 space-y-1">
+                            <li><strong>Isolate & Lockout:</strong> Perform LOTO on the main breaker.</li>
+                            <li><strong>Wait for Discharge:</strong> VSD capacitors hold a charge. Wait at least 10–15 minutes (check your manual for the exact "discharge time").</li>
+                            <li><strong>Voltage Verification:</strong> Use a multimeter to verify 0V on the DC Bus terminals (usually marked + and - or BR).</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Deep Mechanical Cleaning</strong>
+                        <ul className="list-disc pl-5 mt-2 space-y-1">
+                            <li><strong>Vacuum Only:</strong> Use a vacuum with an anti-static nozzle to remove dust from all internal boards. Do not use high-pressure compressed air, as it can force conductive dust into the IGBT (transistor) modules.</li>
+                            <li><strong>Heat Sink Inspection:</strong> Check the fins for "clogging" from oils or fibers. If the drive is in a kitchen or textile mill, these may need a specialized non-conductive solvent cleaning.</li>
+                            <li><strong>Filter Replacement:</strong> Do not just clean them; replace all air filters with new ones to ensure maximum CFM (cubic feet per minute) of airflow.</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
             <footer className="mt-16 text-xs text-muted-foreground text-center">
                <p>Altek Green - Confidential</p>
             </footer>
@@ -290,3 +315,6 @@ export function VsdYearlyScopeDocument() {
     </div>
   );
 }
+
+
+    
