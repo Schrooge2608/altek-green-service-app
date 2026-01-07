@@ -339,8 +339,8 @@ export function Vsd6MonthlyScopeDocument() {
                             <TableRow>
                                 <TableHead>Action</TableHead>
                                 <TableHead>Comments / Feedback</TableHead>
-                                <TableHead className="text-center">Checked</TableHead>
-                                <TableHead className="text-center">Not checked</TableHead>
+                                <TableHead className="text-center w-[100px]">Checked</TableHead>
+                                <TableHead className="text-center w-[100px]">Not checked</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -367,8 +367,8 @@ export function Vsd6MonthlyScopeDocument() {
                             <TableRow>
                                 <TableHead>Action</TableHead>
                                 <TableHead>Comments / Feedback</TableHead>
-                                <TableHead className="text-center">Checked</TableHead>
-                                <TableHead className="text-center">Not checked</TableHead>
+                                <TableHead className="text-center w-[100px]">Checked</TableHead>
+                                <TableHead className="text-center w-[100px]">Not checked</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -392,3 +392,5 @@ export function Vsd6MonthlyScopeDocument() {
     </div>
   );
 }
+
+    
