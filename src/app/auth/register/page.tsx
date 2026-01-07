@@ -11,11 +11,11 @@ export default function RegisterPage() {
     const { user, isUserLoading } = useUser();
     const router = useRouter();
 
-    useEffect(() => {
-        if (!isUserLoading && user) {
-            router.push('/');
-        }
-    }, [user, isUserLoading, router]);
+    // useEffect(() => {
+    //     if (!isUserLoading && user) {
+    //         router.push('/');
+    //     }
+    // }, [user, isUserLoading, router]);
 
     if (isUserLoading) {
         return null; // or a loading spinner
@@ -25,10 +25,10 @@ export default function RegisterPage() {
     return (
         <div className="container relative h-svh flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
              <Link
-                href="/"
+                href="/admin/users"
                 className="absolute right-4 top-4 md:right-8 md:top-8"
              >
-                Back to Home
+                Back to User Management
             </Link>
             <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
                 <div
@@ -54,10 +54,10 @@ export default function RegisterPage() {
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <div className="flex flex-col space-y-2 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            Create an account or Sign In
+                            Create a new user account
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Enter your details below to create your account or sign in
+                            Enter the details for the new user below.
                         </p>
                     </div>
                     <UserAuthForm />
