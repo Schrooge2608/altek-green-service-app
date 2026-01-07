@@ -27,6 +27,11 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import React from 'react';
 import { Input } from '../ui/input';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Equipment } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '../ui/label';
 
 const monthlyChecklist = [
     { task: 'Filter Inspection', action: 'If your VSD cabinet has air filters, check for clogs. A clogged filter is the #1 cause of over-temperature trips.' },
@@ -86,6 +91,11 @@ function WorkCrewRow({ onRemove }: { onRemove: () => void }) {
 export function VsdMonthlyScopeDocument() {
   const title = "VSDs Monthly & Annual Service Scope";
   const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
+  const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
+  const firestore = useFirestore();
+
+  const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
+  const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
   const addCrewMember = () => {
     setCrew(c => [...c, { id: Date.now() }]);
@@ -115,6 +125,27 @@ export function VsdMonthlyScopeDocument() {
             <p className="text-muted-foreground">Service Document</p>
           </div>
         </header>
+
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Equipment Selection</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Label htmlFor="equipment-select">Select Equipment for Inspection</Label>
+            <Select onValueChange={setSelectedEquipment} value={selectedEquipment} disabled={equipmentLoading}>
+                <SelectTrigger id="equipment-select">
+                    <SelectValue placeholder="Select the equipment..." />
+                </SelectTrigger>
+                <SelectContent>
+                {equipmentLoading ? (
+                    <SelectItem value="loading" disabled>Loading equipment...</SelectItem>
+                ) : (
+                    equipment?.map(eq => <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.id})</SelectItem>)
+                )}
+                </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
         
         <div className="prose prose-sm max-w-none dark:prose-invert">
             <p className="lead">Building a comprehensive maintenance strategy involves shifting from simple monitoring to deep cleaning and electrical testing. Below is a structured template for Monthly and Annual VSD maintenance.</p>
