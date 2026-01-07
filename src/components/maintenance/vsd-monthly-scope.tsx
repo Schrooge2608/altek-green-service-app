@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -88,6 +87,30 @@ export function VsdMonthlyScopeDocument() {
                     <li>Cancel work permit after work completion.</li>
                 </ul>
             </div>
+        </div>
+
+        <div className="my-8">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>SAFETY</TableHead>
+                        <TableHead>COMPLETED</TableHead>
+                        <TableHead>SIGN</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <TableRow>
+                        <TableCell className="font-medium">Take 5</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                    </TableRow>
+                     <TableRow>
+                        <TableCell className="font-medium">CCC</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
         </div>
 
         <Separator className="my-8" />

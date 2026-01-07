@@ -86,6 +86,30 @@ export function VsdWeeklyScopeDocument() {
             </div>
         </div>
 
+        <div className="my-8">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>SAFETY</TableHead>
+                        <TableHead>COMPLETED</TableHead>
+                        <TableHead>SIGN</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <TableRow>
+                        <TableCell className="font-medium">Take 5</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                    </TableRow>
+                     <TableRow>
+                        <TableCell className="font-medium">CCC</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
+        </div>
+
         <Separator className="my-8" />
 
         <h3 className="text-xl font-bold mb-4">Weekly Maintenance Checklist</h3>
@@ -110,7 +134,7 @@ export function VsdWeeklyScopeDocument() {
                   </TableCell>
                 </TableRow>
               ))}
-            </TableBody>
+            </Body>
           </Table>
         </Card>
 
