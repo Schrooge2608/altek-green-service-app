@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -266,11 +265,10 @@ export function VsdYearlyScopeDocument() {
                     </ul>
                 </AlertDescription>
             </Alert>
-            
             <div className="prose prose-sm max-w-none dark:prose-invert mt-8">
                 <p>An annual service is your most critical intervention. While weekly and quarterly tasks keep the drive running, the Annual Maintenance is designed to prevent "catastrophic failure"—the kind that leads to smoke, fire, or weeks of lead-time for a replacement.</p>
                 <p>This schedule requires a full plant shutdown for the drive and must be performed by a qualified technician or electrician.</p>
-
+                
                 <h3 className="mt-6 text-lg font-bold">Annual VSD Service Schedule</h3>
                 <ol className="list-decimal pl-5 space-y-6">
                     <li>
@@ -415,5 +413,3 @@ export function VsdYearlyScopeDocument() {
     </div>
   );
 }
-
-    
