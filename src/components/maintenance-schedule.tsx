@@ -35,7 +35,7 @@ const statusVariantMap: Record<string, StatusVariant> = {
 };
 
 const scopeDocumentMap: Partial<Record<MaintenanceTask['frequency'], string>> = {
-    '6-Monthly': '/documents/6-monthly-service-scope.pdf',
+    '6-Monthly': '/maintenance/service-scopes/6-monthly',
 }
 
 export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: MaintenanceScheduleProps) {
@@ -45,7 +45,7 @@ export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: Main
     <div className="mt-4">
       <div className="flex justify-end mb-4">
         {scopeDocumentUrl ? (
-            <Link href={scopeDocumentUrl} passHref target="_blank" rel="noopener noreferrer">
+            <Link href={scopeDocumentUrl} passHref>
                 <Button variant="outline">
                     <FileText className="mr-2 h-4 w-4" />
                     View Service Scope

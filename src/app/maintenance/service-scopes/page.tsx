@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Download } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
 export default function ServiceScopesPage() {
   return (
@@ -25,34 +25,16 @@ export default function ServiceScopesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/documents/6-monthly-service-scope.pdf" passHref target="_blank" rel="noopener noreferrer">
+            <Link href="/maintenance/service-scopes/6-monthly" passHref>
               <Button className="w-full">
-                <Download className="mr-2 h-4 w-4" />
-                View Document
+                <BookOpen className="mr-2 h-4 w-4" />
+                View Scope
               </Button>
             </Link>
           </CardContent>
         </Card>
 
         {/* You can add more cards here for other service scopes as needed */}
-        {/*
-        <Card>
-          <CardHeader>
-            <CardTitle>Annual Motor Inspection</CardTitle>
-            <CardDescription>
-              The standard scope of work for the annual inspection of electric motors.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/documents/annual-motor-inspection.pdf" passHref target="_blank" rel="noopener noreferrer">
-              <Button className="w-full">
-                <Download className="mr-2 h-4 w-4" />
-                View Document
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-        */}
 
       </div>
     </div>
