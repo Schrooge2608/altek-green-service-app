@@ -48,30 +48,12 @@ export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: Main
   return (
     <div className="mt-4">
       <div className="flex justify-end mb-4">
-        {scopeDocumentUrl ? (
-            <Link href={scopeDocumentUrl} passHref>
-                <Button variant="outline">
-                    <FileText className="mr-2 h-4 w-4" />
-                    View Service Scope
-                </Button>
-            </Link>
-        ) : (
-             <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <span tabIndex={0}>
-                            <Button variant="outline" disabled>
-                                <FileText className="mr-2 h-4 w-4" />
-                                View Service Scope
-                            </Button>
-                        </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Service scope document not yet available.</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        )}
+        <Link href={scopeDocumentUrl} passHref>
+            <Button variant="outline">
+                <FileText className="mr-2 h-4 w-4" />
+                View Service Scope
+            </Button>
+        </Link>
       </div>
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">
