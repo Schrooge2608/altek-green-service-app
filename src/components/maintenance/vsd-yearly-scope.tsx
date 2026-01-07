@@ -307,6 +307,46 @@ export function VsdYearlyScopeDocument() {
                     </li>
                 </ol>
             </div>
+            
+            <div className="prose prose-sm max-w-none dark:prose-invert mt-8">
+                <h3 className="text-lg font-bold">3. Component Life-Cycle Testing</h3>
+            </div>
+            <Card className="mt-4">
+                <CardContent className="pt-6">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Component</TableHead>
+                                <TableHead>Action</TableHead>
+                                <TableHead>Critical Metric</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow>
+                                <TableCell>Cooling Fans</TableCell>
+                                <TableCell>Remove and spin by hand.</TableCell>
+                                <TableCell>If they feel "gritty" or don't spin for &gt;3 seconds, replace them. Fans usually have a 3-5 year lifespan.</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>DC Bus Capacitors</TableCell>
+                                <TableCell>Visual & ESR test.</TableCell>
+                                <TableCell>Look for bulging tops or white residue (leakage). If the drive is &gt;7 years old, consider a "Capacitor Reform" or replacement.</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>Control Battery</TableCell>
+                                <TableCell>Replace the internal battery.</TableCell>
+                                <TableCell>Some VSDs have a small coin-cell battery to keep the clock and fault history; replace it annually to prevent data loss.</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>Ribbon Cables</TableCell>
+                                <TableCell>Reseat all connectors.</TableCell>
+                                <TableCell>Unplug and replug internal ribbon cables to wipe away any micro-corrosion on the pins.</TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
 
             <footer className="mt-16 text-xs text-muted-foreground text-center">
                <p>Altek Green - Confidential</p>
@@ -315,6 +355,5 @@ export function VsdYearlyScopeDocument() {
     </div>
   );
 }
-
 
     
