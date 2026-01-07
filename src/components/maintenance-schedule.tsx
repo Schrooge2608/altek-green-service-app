@@ -23,6 +23,7 @@ interface MaintenanceScheduleProps {
   title: string;
   tasks: MaintenanceTask[] | null;
   isLoading: boolean;
+  frequency: MaintenanceTask['frequency'];
 }
 
 type StatusVariant = "default" | "secondary" | "destructive";
@@ -33,9 +34,41 @@ const statusVariantMap: Record<string, StatusVariant> = {
   overdue: 'destructive',
 };
 
-export function MaintenanceSchedule({ title, tasks, isLoading }: MaintenanceScheduleProps) {
+const scopeDocumentMap: Partial<Record<MaintenanceTask['frequency'], string>> = {
+    '6-Monthly': '/documents/6-monthly-service-scope.pdf',
+}
+
+export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: MaintenanceScheduleProps) {
+  const scopeDocumentUrl = scopeDocumentMap[frequency];
+  
   return (
     <div className="mt-4">
+      <div className="flex justify-end mb-4">
+        {scopeDocumentUrl ? (
+            <Link href={scopeDocumentUrl} passHref target="_blank" rel="noopener noreferrer">
+                <Button variant="outline">
+                    <FileText className="mr-2 h-4 w-4" />
+                    View Service Scope
+                </Button>
+            </Link>
+        ) : (
+             <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span tabIndex={0}>
+                            <Button variant="outline" disabled>
+                                <FileText className="mr-2 h-4 w-4" />
+                                View Service Scope
+                            </Button>
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Service scope document not yet available.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        )}
+      </div>
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">
           Loading {title.toLowerCase()}...

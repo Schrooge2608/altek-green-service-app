@@ -41,12 +41,6 @@ export default function MaintenancePage() {
             Generate and view maintenance tasks for all equipment.
             </p>
         </div>
-        <Link href="/maintenance/service-scopes" passHref>
-            <Button variant="outline">
-                <FileText className="mr-2 h-4 w-4" />
-                View Service Scopes
-            </Button>
-        </Link>
       </header>
       <Card>
         <CardContent className="pt-6">
@@ -59,19 +53,19 @@ export default function MaintenancePage() {
               <TabsTrigger value="yearly">Yearly</TabsTrigger>
             </TabsList>
             <TabsContent value="weekly">
-              <MaintenanceSchedule title="Weekly Tasks" tasks={weeklyTasks} isLoading={weeklyLoading} />
+              <MaintenanceSchedule title="Weekly Tasks" tasks={weeklyTasks} isLoading={weeklyLoading} frequency="Weekly"/>
             </TabsContent>
             <TabsContent value="monthly">
-              <MaintenanceSchedule title="Monthly Tasks" tasks={monthlyTasks} isLoading={monthlyLoading} />
+              <MaintenanceSchedule title="Monthly Tasks" tasks={monthlyTasks} isLoading={monthlyLoading} frequency="Monthly"/>
             </TabsContent>
             <TabsContent value="quarterly">
-              <MaintenanceSchedule title="3-Monthly Tasks" tasks={quarterlyTasks} isLoading={quarterlyLoading} />
+              <MaintenanceSchedule title="3-Monthly Tasks" tasks={quarterlyTasks} isLoading={quarterlyLoading} frequency="3-Monthly"/>
             </TabsContent>
             <TabsContent value="6-monthly">
-              <MaintenanceSchedule title="6-Monthly Tasks" tasks={sixMonthlyTasks} isLoading={sixMonthlyLoading} />
+              <MaintenanceSchedule title="6-Monthly Tasks" tasks={sixMonthlyTasks} isLoading={sixMonthlyLoading} frequency="6-Monthly"/>
             </TabsContent>
             <TabsContent value="yearly">
-              <MaintenanceSchedule title="Yearly Tasks" tasks={yearlyTasks} isLoading={yearlyLoading} />
+              <MaintenanceSchedule title="Yearly Tasks" tasks={yearlyTasks} isLoading={yearlyLoading} frequency="Yearly"/>
             </TabsContent>
           </Tabs>
         </CardContent>
