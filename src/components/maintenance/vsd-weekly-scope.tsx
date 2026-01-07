@@ -105,8 +105,8 @@ export function VsdWeeklyScopeDocument() {
         <h3 className="text-xl font-bold mb-4">Thermal Image Upload</h3>
         <Card>
             <CardContent className="pt-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                    <div className="space-y-2">
+                <div className="grid gap-6 md:grid-cols-3">
+                    <div className="space-y-2 md:col-span-1">
                         <Label htmlFor="thermal-image">Thermal Image of VSD</Label>
                         <Input id="thermal-image" type="file" className="file:text-foreground" />
                         <p className="text-xs text-muted-foreground">Upload a thermal image taken during the inspection.</p>
@@ -114,6 +114,10 @@ export function VsdWeeklyScopeDocument() {
                     <div className="space-y-2">
                         <Label htmlFor="image-date">Date of Image</Label>
                         <Input id="image-date" type="date" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="image-time">Time of Image</Label>
+                        <Input id="image-time" type="time" />
                     </div>
                 </div>
             </CardContent>
