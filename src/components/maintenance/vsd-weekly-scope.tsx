@@ -5,7 +5,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   Table,
@@ -134,7 +133,7 @@ export function VsdWeeklyScopeDocument() {
                   </TableCell>
                 </TableRow>
               ))}
-            </Body>
+            </TableBody>
           </Table>
         </Card>
 
