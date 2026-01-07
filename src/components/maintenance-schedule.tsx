@@ -40,8 +40,7 @@ export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: Main
   
   return (
     <div className="mt-4 space-y-4">
-       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-semibold">{title}</h3>
+       <div className="flex justify-end items-center">
         {frequency === 'Weekly' && (
             <Button variant="outline" disabled>
                 View Service Scope
