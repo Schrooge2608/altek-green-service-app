@@ -47,9 +47,6 @@ export default function MaintenancePage() {
                               View Service Scope
                           </Button>
                         </Link>
-                        <Button variant="secondary" disabled className="w-full">
-                            Completed Schedules
-                        </Button>
                       </CardContent>
                   </Card>
               ))}
