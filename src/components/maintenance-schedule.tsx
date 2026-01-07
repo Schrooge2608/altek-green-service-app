@@ -34,8 +34,12 @@ const statusVariantMap: Record<string, StatusVariant> = {
   overdue: 'destructive',
 };
 
-const scopeDocumentMap: Partial<Record<MaintenanceTask['frequency'], string>> = {
+const scopeDocumentMap: Record<MaintenanceTask['frequency'], string> = {
+    'Weekly': '/maintenance/service-scopes/weekly',
+    'Monthly': '/maintenance/service-scopes/monthly',
+    '3-Monthly': '/maintenance/service-scopes/3-monthly',
     '6-Monthly': '/maintenance/service-scopes/6-monthly',
+    'Yearly': '/maintenance/service-scopes/yearly',
 }
 
 export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: MaintenanceScheduleProps) {
