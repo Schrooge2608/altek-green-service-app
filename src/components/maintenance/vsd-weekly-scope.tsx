@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { SignaturePad } from '@/components/ui/signature-pad';
 
 const checklistItems = [
     { type: 'Acoustic Check', action: 'Listen for unusual noises.', lookFor: 'Grinding or clicking in cooling fans; humming or "singing" that sounds different than usual.' },
@@ -95,13 +96,13 @@ export function VsdWeeklyScopeDocument() {
                 <TableBody>
                     <TableRow>
                         <TableCell className="font-medium">Take 5</TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
+                        <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
+                        <TableCell className="w-[250px]"><SignaturePad /></TableCell>
                     </TableRow>
                      <TableRow>
                         <TableCell className="font-medium">CCC</TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
+                        <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
+                        <TableCell className="w-[250px]"><SignaturePad /></TableCell>
                     </TableRow>
                 </TableBody>
             </Table>

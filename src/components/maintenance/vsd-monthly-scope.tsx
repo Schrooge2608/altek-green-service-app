@@ -20,6 +20,7 @@ import { Printer, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SignaturePad } from '@/components/ui/signature-pad';
 
 const monthlyChecklist = [
     { task: 'Filter Inspection', action: 'If your VSD cabinet has air filters, check for clogs. A clogged filter is the #1 cause of over-temperature trips.' },
@@ -100,13 +101,13 @@ export function VsdMonthlyScopeDocument() {
                 <TableBody>
                     <TableRow>
                         <TableCell className="font-medium">Take 5</TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
+                        <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
+                        <TableCell className="w-[250px]"><SignaturePad /></TableCell>
                     </TableRow>
                      <TableRow>
                         <TableCell className="font-medium">CCC</TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
+                        <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
+                        <TableCell className="w-[250px]"><SignaturePad /></TableCell>
                     </TableRow>
                 </TableBody>
             </Table>
