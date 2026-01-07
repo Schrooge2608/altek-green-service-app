@@ -57,6 +57,7 @@ export function SidebarNav() {
   const isEquipmentPath = pathname.startsWith('/equipment');
   const [isMiningOpen, setIsMiningOpen] = React.useState(isEquipmentPath);
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(false);
+  const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -128,7 +129,7 @@ export function SidebarNav() {
                 </CollapsibleContent>
             </Collapsible>
              {userData?.role === 'Admin' && (
-              <Collapsible>
+              <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                       <SidebarMenuButton tooltip="Admin" isActive={pathname.startsWith('/admin')}>

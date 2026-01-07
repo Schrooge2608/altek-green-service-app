@@ -7,7 +7,9 @@ import type { User } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 function AccessDenied() {
     return (
@@ -43,11 +45,19 @@ export default function UserManagementPage() {
 
     return (
         <div className="flex flex-col gap-8">
-            <header>
-                <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-                <p className="text-muted-foreground">
-                    View and manage all registered users in the system.
-                </p>
+            <header className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+                    <p className="text-muted-foreground">
+                        View and manage all registered users in the system.
+                    </p>
+                </div>
+                <Link href="/auth/register" passHref>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add User
+                    </Button>
+                </Link>
             </header>
             <Card>
                  <CardHeader>
