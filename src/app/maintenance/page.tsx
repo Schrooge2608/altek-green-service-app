@@ -41,12 +41,15 @@ export default function MaintenancePage() {
                       <CardHeader>
                           <CardTitle className="text-lg">{scope.title}</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="flex flex-col gap-2">
                         <Link href={`/maintenance/${category.slug}/${scope.frequency}`} passHref>
                           <Button className="w-full">
                               View Service Scope
                           </Button>
                         </Link>
+                        <Button variant="secondary" disabled className="w-full">
+                            Completed Scheduled Maintenance
+                        </Button>
                       </CardContent>
                   </Card>
               ))}
