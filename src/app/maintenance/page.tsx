@@ -77,6 +77,24 @@ export default function MaintenancePage() {
             ))}
         </div>
       </div>
+
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight mb-4 mt-8">Pumps</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
+            {serviceScopes.map(scope => (
+                <Card key={`pumps-${scope.frequency}`}>
+                    <CardHeader>
+                        <CardTitle className="text-lg">{scope.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Button disabled className="w-full">
+                            View Service Scope
+                        </Button>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+      </div>
     </div>
   );
 }
