@@ -12,6 +12,9 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { MaintenanceSchedule } from '@/components/maintenance-schedule';
 import type { MaintenanceTask } from '@/lib/types';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
 
 export default function MaintenancePage() {
   const firestore = useFirestore();
@@ -29,11 +32,19 @@ export default function MaintenancePage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">Maintenance Schedule</h1>
-        <p className="text-muted-foreground">
-          Generate and view maintenance tasks for all equipment.
-        </p>
+      <header className="flex items-center justify-between">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Maintenance Schedule</h1>
+            <p className="text-muted-foreground">
+            Generate and view maintenance tasks for all equipment.
+            </p>
+        </div>
+        <Link href="/maintenance/service-scopes" passHref>
+            <Button variant="outline">
+                <FileText className="mr-2 h-4 w-4" />
+                View Service Scopes
+            </Button>
+        </Link>
       </header>
       <Card>
         <CardContent className="pt-6">
