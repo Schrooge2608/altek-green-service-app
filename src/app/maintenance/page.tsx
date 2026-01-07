@@ -41,6 +41,11 @@ export default function MaintenancePage() {
             ))}
         </div>
       </div>
+
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight mb-4 mt-8">Protection</h2>
+        {/* Content for the Protection section will go here */}
+      </div>
     </div>
   );
 }
