@@ -65,6 +65,31 @@ export function VsdMonthlyScopeDocument() {
             <p className="lead">Building a comprehensive maintenance strategy involves shifting from simple monitoring to deep cleaning and electrical testing. Below is a structured template for Monthly and Annual VSD maintenance.</p>
         </div>
 
+        <div className="prose prose-sm max-w-none dark:prose-invert mt-8 space-y-6">
+            <div>
+                <h3 className="text-lg font-bold">1. PURPOSE</h3>
+                <p>Mandatory inspections and services are needed to be carried out in order to identify, report and repair any unsafe conditions as well as to ensure reliable operation of electrical equipment.</p>
+            </div>
+            <div>
+                <h3 className="text-lg font-bold">2. DOCUMENTATION REQUIRED</h3>
+                <ul className="list-disc pl-5">
+                    <li>Approved Risk Assessment (JHA)</li>
+                    <li>RBM Take 5 Assessment Sheet</li>
+                    <li>Critical Control Checklists (CCC) as identified by Risk Assessment</li>
+                </ul>
+            </div>
+             <div>
+                <h3 className="text-lg font-bold">3. JOB SPECIFIC SAFETY INFORMATION</h3>
+                <ul className="list-disc pl-5">
+                    <li>Complete Take 5 and CCC’s.</li>
+                    <li>Obtain permit to work.</li>
+                    <li>Isolate units as per RBM isolation procedure.</li>
+                    <li>Carry out service/inspection/test as per Quality Control Sheet below.</li>
+                    <li>Cancel work permit after work completion.</li>
+                </ul>
+            </div>
+        </div>
+
         <Separator className="my-8" />
 
         <h3 className="text-xl font-bold mb-4">Monthly Maintenance: "The Deep Clean"</h3>
