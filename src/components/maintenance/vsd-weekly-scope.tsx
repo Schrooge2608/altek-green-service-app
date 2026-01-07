@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const checklistItems = [
     { type: 'Acoustic Check', action: 'Listen for unusual noises.', lookFor: 'Grinding or clicking in cooling fans; humming or "singing" that sounds different than usual.' },
@@ -86,6 +87,43 @@ export function VsdWeeklyScopeDocument() {
               ))}
             </TableBody>
           </Table>
+        </Card>
+
+        <Separator className="my-8" />
+
+        <h3 className="text-xl font-bold mb-4">Electrical Log</h3>
+        <Card>
+            <CardContent className="pt-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                    <div className="grid gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="dc-bus">DC Bus Voltage (V)</Label>
+                            <Input id="dc-bus" type="number" placeholder="e.g., 540" />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="output-current">Output Current (A)</Label>
+                            <Input id="output-current" type="number" placeholder="e.g., 25.5" />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="frequency">Frequency (Hz)</Label>
+                            <Input id="frequency" type="number" placeholder="e.g., 50.1" />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Reading Method</Label>
+                        <RadioGroup defaultValue="vsd-display" className="mt-2 space-y-2">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="vsd-display" id="r1" />
+                                <Label htmlFor="r1">Read from VSD Display</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="physically-measured" id="r2" />
+                                <Label htmlFor="r2">Physically Measured</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+                </div>
+            </CardContent>
         </Card>
         
         <div className="mt-8 prose prose-sm max-w-none dark:prose-invert">
