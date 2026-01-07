@@ -16,11 +16,17 @@ import {
 } from '@/components/ui/table';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { Printer, AlertTriangle } from 'lucide-react';
+import { Printer, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SignaturePad } from '@/components/ui/signature-pad';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import React from 'react';
+import { Input } from '../ui/input';
 
 const monthlyChecklist = [
     { task: 'Filter Inspection', action: 'If your VSD cabinet has air filters, check for clogs. A clogged filter is the #1 cause of over-temperature trips.' },
@@ -37,6 +43,41 @@ const annualChecklist = [
     { component: 'Software/Firmware', action: 'Check for manufacturer updates.', reason: 'Updates often include better motor control algorithms or bug fixes.' },
 ];
 
+function WorkCrewRow() {
+    const [date, setDate] = React.useState<Date | undefined>();
+    return (
+        <TableRow>
+            <TableCell><Input placeholder="Name..." /></TableCell>
+            <TableCell><Input placeholder="RTBS No..." /></TableCell>
+            <TableCell className="w-[180px]">
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+            </TableCell>
+            <TableCell className="w-[250px]"><SignaturePad /></TableCell>
+        </TableRow>
+    )
+}
+
 export function VsdMonthlyScopeDocument() {
   const title = "VSDs Monthly & Annual Service Scope";
 
@@ -51,7 +92,7 @@ export function VsdMonthlyScopeDocument() {
       <Card className="p-8 shadow-lg border-2 border-primary/20 bg-card">
         <header className="flex items-start justify-between mb-8">
           <div>
-            <AltekLogo className="h-12 w-auto" />
+            <AltekLogo className="h-12 w-auto" unoptimized />
             <p className="text-muted-foreground mt-2">VSD & Equipment Services</p>
           </div>
           <div className="text-right">
@@ -109,6 +150,25 @@ export function VsdMonthlyScopeDocument() {
                         <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
                         <TableCell className="w-[250px]"><SignaturePad /></TableCell>
                     </TableRow>
+                </TableBody>
+            </Table>
+        </div>
+
+        <div className="my-8">
+            <h3 className="text-xl font-bold mb-4">Work Crew</h3>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>WORK CREW - NAME</TableHead>
+                        <TableHead>RTBS NO.</TableHead>
+                        <TableHead>DATE</TableHead>
+                        <TableHead>SIGNATURE</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <WorkCrewRow />
+                    <WorkCrewRow />
+                    <WorkCrewRow />
                 </TableBody>
             </Table>
         </div>

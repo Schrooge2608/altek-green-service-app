@@ -14,13 +14,19 @@ import {
 } from '@/components/ui/table';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { Printer } from 'lucide-react';
+import { Printer, CalendarIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import React from 'react';
+
 
 const checklistItems = [
     { type: 'Acoustic Check', action: 'Listen for unusual noises.', lookFor: 'Grinding or clicking in cooling fans; humming or "singing" that sounds different than usual.' },
@@ -30,6 +36,41 @@ const checklistItems = [
     { type: 'Electrical Logging', action: 'Record operating data.', lookFor: 'Log the DC Bus Voltage, Output Current, and Frequency. Sudden deviations can signal motor or capacitor issues.' },
     { type: 'Ventilation Check', action: 'Inspect airflow paths.', lookFor: 'Ensure that nothing is blocking the intake or exhaust of the drive cabinet.' },
 ];
+
+function WorkCrewRow() {
+    const [date, setDate] = React.useState<Date | undefined>();
+    return (
+        <TableRow>
+            <TableCell><Input placeholder="Name..." /></TableCell>
+            <TableCell><Input placeholder="RTBS No..." /></TableCell>
+            <TableCell className="w-[180px]">
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+            </TableCell>
+            <TableCell className="w-[250px]"><SignaturePad /></TableCell>
+        </TableRow>
+    )
+}
 
 export function VsdWeeklyScopeDocument() {
   const title = "VSDs Weekly Service Scope";
@@ -45,7 +86,7 @@ export function VsdWeeklyScopeDocument() {
       <Card className="p-8 shadow-lg border-2 border-primary/20 bg-card">
         <header className="flex items-start justify-between mb-8">
           <div>
-            <AltekLogo className="h-12 w-auto" />
+            <AltekLogo className="h-12 w-auto" unoptimized/>
             <p className="text-muted-foreground mt-2">VSD & Equipment Services</p>
           </div>
           <div className="text-right">
@@ -54,11 +95,6 @@ export function VsdWeeklyScopeDocument() {
           </div>
         </header>
         
-        <div className="prose prose-sm max-w-none dark:prose-invert">
-            <p className="lead">Maintaining a Variable Speed Drive (VSD)—also known as a Variable Frequency Drive (VFD)—on a weekly basis is primarily about monitoring and data logging.</p>
-            <p>Because VSDs are sensitive electronic devices, weekly tasks focus on catching early warning signs (heat, noise, and vibration) before they lead to a system trip or component failure.</p>
-        </div>
-
         <div className="prose prose-sm max-w-none dark:prose-invert mt-8 space-y-6">
             <div>
                 <h3 className="text-lg font-bold">1. PURPOSE</h3>
@@ -104,6 +140,25 @@ export function VsdWeeklyScopeDocument() {
                         <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
                         <TableCell className="w-[250px]"><SignaturePad /></TableCell>
                     </TableRow>
+                </TableBody>
+            </Table>
+        </div>
+
+        <div className="my-8">
+            <h3 className="text-xl font-bold mb-4">Work Crew</h3>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>WORK CREW - NAME</TableHead>
+                        <TableHead>RTBS NO.</TableHead>
+                        <TableHead>DATE</TableHead>
+                        <TableHead>SIGNATURE</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <WorkCrewRow />
+                    <WorkCrewRow />
+                    <WorkCrewRow />
                 </TableBody>
             </Table>
         </div>
