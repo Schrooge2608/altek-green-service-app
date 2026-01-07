@@ -22,12 +22,14 @@ export default function MaintenancePage() {
   const weeklyTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('frequency', '==', 'Weekly')), [firestore]);
   const monthlyTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('frequency', '==', 'Monthly')), [firestore]);
   const quarterlyTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('frequency', '==', '3-Monthly')), [firestore]);
+  const sixMonthlyTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('frequency', '==', '6-Monthly')), [firestore]);
   const yearlyTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('frequency', '==', 'Yearly')), [firestore]);
 
 
   const { data: weeklyTasks, isLoading: weeklyLoading } = useCollection<MaintenanceTask>(weeklyTasksQuery);
   const { data: monthlyTasks, isLoading: monthlyLoading } = useCollection<MaintenanceTask>(monthlyTasksQuery);
   const { data: quarterlyTasks, isLoading: quarterlyLoading } = useCollection<MaintenanceTask>(quarterlyTasksQuery);
+  const { data: sixMonthlyTasks, isLoading: sixMonthlyLoading } = useCollection<MaintenanceTask>(sixMonthlyTasksQuery);
   const { data: yearlyTasks, isLoading: yearlyLoading } = useCollection<MaintenanceTask>(yearlyTasksQuery);
 
   return (
@@ -49,10 +51,11 @@ export default function MaintenancePage() {
       <Card>
         <CardContent className="pt-6">
           <Tabs defaultValue="weekly">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="weekly">Weekly</TabsTrigger>
               <TabsTrigger value="monthly">Monthly</TabsTrigger>
               <TabsTrigger value="quarterly">3-Monthly</TabsTrigger>
+              <TabsTrigger value="6-monthly">6-Monthly</TabsTrigger>
               <TabsTrigger value="yearly">Yearly</TabsTrigger>
             </TabsList>
             <TabsContent value="weekly">
@@ -63,6 +66,9 @@ export default function MaintenancePage() {
             </TabsContent>
             <TabsContent value="quarterly">
               <MaintenanceSchedule title="3-Monthly Tasks" tasks={quarterlyTasks} isLoading={quarterlyLoading} />
+            </TabsContent>
+            <TabsContent value="6-monthly">
+              <MaintenanceSchedule title="6-Monthly Tasks" tasks={sixMonthlyTasks} isLoading={sixMonthlyLoading} />
             </TabsContent>
             <TabsContent value="yearly">
               <MaintenanceSchedule title="Yearly Tasks" tasks={yearlyTasks} isLoading={yearlyLoading} />

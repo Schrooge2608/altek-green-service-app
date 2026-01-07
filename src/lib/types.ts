@@ -39,7 +39,7 @@ export interface MaintenanceTask {
   equipmentName: string;
   task: string;
   dueDate: string;
-  frequency: 'Weekly' | 'Monthly' | '3-Monthly' | 'Yearly';
+  frequency: 'Weekly' | 'Monthly' | '3-Monthly' | '6-Monthly' | 'Yearly';
   status: 'pending' | 'completed' | 'overdue';
 }
 

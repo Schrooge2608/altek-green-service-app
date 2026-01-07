@@ -55,7 +55,7 @@
         "equipmentName": { "type": "string" },
         "task": { "type": "string" },
         "dueDate": { "type": "string", "format": "date" },
-        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "Yearly"] },
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
         "status": { "type": "string", "enum": ["pending", "completed", "overdue"] }
       },
       "required": ["id", "equipmentId", "equipmentName", "task", "dueDate", "frequency", "status"]
