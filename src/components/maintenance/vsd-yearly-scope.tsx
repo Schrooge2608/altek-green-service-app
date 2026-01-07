@@ -340,7 +340,7 @@ export function VsdYearlyScopeDocument() {
                             ))}
                         </TableBody>
                     </Table>
-                </CardHeader>
+                </CardContent>
             </Card>
 
             <footer className="mt-16 text-xs text-muted-foreground text-center">
