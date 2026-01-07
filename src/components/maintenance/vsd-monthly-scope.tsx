@@ -282,7 +282,7 @@ export function VsdMonthlyScopeDocument() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[150px]">Task</TableHead>
+                <TableHead className="w-[75px]">Task</TableHead>
                 <TableHead className="w-[350px]">Action</TableHead>
                 <TableHead className="text-center w-[100px]">Not Checked</TableHead>
                 <TableHead className="text-center w-[100px]">Checked</TableHead>
