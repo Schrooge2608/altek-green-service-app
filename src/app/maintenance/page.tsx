@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +42,7 @@ export default function MaintenancePage() {
                           <CardTitle className="text-lg">{scope.title}</CardTitle>
                       </CardHeader>
                       <CardContent className="flex flex-col gap-2">
-                        <Link href={`/maintenance/${category.slug}/${scope.frequency}`} passHref legacyBehavior>
+                        <Link href={`/maintenance/${category.slug}/${scope.frequency}`}>
                           <Button className="w-full" disabled={!scope.enabled}>
                               View Service Scope
                           </Button>
