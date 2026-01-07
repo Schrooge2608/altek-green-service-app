@@ -7,7 +7,7 @@ import type { User } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ShieldAlert, PlusCircle } from 'lucide-react';
+import { ShieldAlert, PlusCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -30,13 +30,25 @@ export default function UserManagementPage() {
     const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
     const { data: userRole, isLoading: userRoleLoading } = useDoc<User>(userRoleRef);
 
-    const usersQuery = useMemoFirebase(() => (userRole?.role === 'Admin' ? collection(firestore, 'users') : null), [firestore, userRole]);
+    const usersQuery = useMemoFirebase(() => {
+        // Only create the query if we have confirmed the user is an Admin
+        if (userRole?.role === 'Admin') {
+            return collection(firestore, 'users');
+        }
+        return null; // Return null if not an admin
+    }, [firestore, userRole]);
+
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
     
     const isLoading = isUserLoading || userRoleLoading;
 
     if (isLoading) {
-        return <div className="text-center p-8">Loading user data...</div>;
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="ml-2">Loading user data...</p>
+            </div>
+        );
     }
 
     if (userRole?.role !== 'Admin') {
