@@ -305,47 +305,62 @@ export function VsdYearlyScopeDocument() {
                             <li><strong>Filter Replacement:</strong> Do not just clean them; replace all air filters with new ones to ensure maximum CFM (cubic feet per minute) of airflow.</li>
                         </ul>
                     </li>
+                     <li>
+                        <strong>Component Life-Cycle Testing</strong>
+                        <Card className="mt-4">
+                            <CardContent className="pt-6">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Component</TableHead>
+                                            <TableHead>Action</TableHead>
+                                            <TableHead>Critical Metric</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        <TableRow>
+                                            <TableCell>Cooling Fans</TableCell>
+                                            <TableCell>Remove and spin by hand.</TableCell>
+                                            <TableCell>If they feel "gritty" or don't spin for &gt;3 seconds, replace them. Fans usually have a 3-5 year lifespan.</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell>DC Bus Capacitors</TableCell>
+                                            <TableCell>Visual & ESR test.</TableCell>
+                                            <TableCell>Look for bulging tops or white residue (leakage). If the drive is &gt;7 years old, consider a "Capacitor Reform" or replacement.</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell>Control Battery</TableCell>
+                                            <TableCell>Replace the internal battery.</TableCell>
+                                            <TableCell>Some VSDs have a small coin-cell battery to keep the clock and fault history; replace it annually to prevent data loss.</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell>Ribbon Cables</TableCell>
+                                            <TableCell>Reseat all connectors.</TableCell>
+                                            <TableCell>Unplug and replug internal ribbon cables to wipe away any micro-corrosion on the pins.</TableCell>
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </li>
+                    <li>
+                        <strong>Electrical Health Audit</strong>
+                         <ul className="list-disc pl-5 mt-2 space-y-1">
+                            <li><strong>Torque Verification:</strong> Use a calibrated torque wrench to tighten all power terminals to the manufacturer’s exact specification (Nm or In-lb). Note: Overtightening is just as dangerous as under-tightening.</li>
+                            <li><strong>Insulation Resistance (Megger):</strong> Disconnect the VSD from the motor. Megger the motor and cables only. <p><strong>Warning: Never Megger the VSD itself, or you will destroy the sensitive transistors.</strong></p></li>
+                            <li><strong>Harmonic Check:</strong> If you have the tools, measure Total Harmonic Distortion (THD) on the input. Rising harmonics can indicate a failing input rectifier or line reactor.</li>
+                        </ul>
+                    </li>
                 </ol>
+
+                <h4 className="mt-6 text-md font-bold">The "Yearly Pro" Checklist</h4>
+                <p>To finish the service, perform these three high-level tasks:</p>
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                    <li><strong>Firmware Check:</strong> Check the manufacturer’s website. Newer firmware often includes better "protection algorithms" that can prevent the drive from blowing up during a power surge.</li>
+                    <li><strong>Thermal Scan (Post-Service):</strong> After powering back up and running under load for 1 hour, use a thermal camera to ensure no terminals are "glowing" (overheating).</li>
+                    <li><strong>Final Parameter Backup:</strong> Save the parameters to a laptop or the cloud. If the drive takes a lightning strike tomorrow, you can program the new one in 5 minutes.</li>
+                </ul>
             </div>
-            
-            <div className="prose prose-sm max-w-none dark:prose-invert mt-8">
-                <h3 className="text-lg font-bold">3. Component Life-Cycle Testing</h3>
-            </div>
-            <Card className="mt-4">
-                <CardContent className="pt-6">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Component</TableHead>
-                                <TableHead>Action</TableHead>
-                                <TableHead>Critical Metric</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow>
-                                <TableCell>Cooling Fans</TableCell>
-                                <TableCell>Remove and spin by hand.</TableCell>
-                                <TableCell>If they feel "gritty" or don't spin for &gt;3 seconds, replace them. Fans usually have a 3-5 year lifespan.</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>DC Bus Capacitors</TableCell>
-                                <TableCell>Visual & ESR test.</TableCell>
-                                <TableCell>Look for bulging tops or white residue (leakage). If the drive is &gt;7 years old, consider a "Capacitor Reform" or replacement.</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Control Battery</TableCell>
-                                <TableCell>Replace the internal battery.</TableCell>
-                                <TableCell>Some VSDs have a small coin-cell battery to keep the clock and fault history; replace it annually to prevent data loss.</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Ribbon Cables</TableCell>
-                                <TableCell>Reseat all connectors.</TableCell>
-                                <TableCell>Unplug and replug internal ribbon cables to wipe away any micro-corrosion on the pins.</TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
 
 
             <footer className="mt-16 text-xs text-muted-foreground text-center">
@@ -355,5 +370,3 @@ export function VsdYearlyScopeDocument() {
     </div>
   );
 }
-
-    
