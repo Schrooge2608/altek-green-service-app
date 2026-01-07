@@ -59,6 +59,10 @@ export default function MaintenancePage() {
             ))}
         </div>
       </div>
+
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight mb-4 mt-8">Motors</h2>
+      </div>
     </div>
   );
 }
