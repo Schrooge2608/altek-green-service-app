@@ -4,6 +4,7 @@
 import { useParams, notFound } from 'next/navigation';
 import { MaintenanceScopeDocument } from '@/components/maintenance-scope-document';
 import { VsdWeeklyScopeDocument } from '@/components/maintenance/vsd-weekly-scope';
+import { VsdMonthlyScopeDocument } from '@/components/maintenance/vsd-monthly-scope';
 
 const validCategories: Record<string, string> = {
   vsds: 'VSDs',
@@ -36,6 +37,11 @@ export default function MaintenanceScopePage() {
   // Specific component for VSD Weekly Scope
   if (categorySlug === 'vsds' && frequencySlug === 'weekly') {
     return <VsdWeeklyScopeDocument />;
+  }
+
+  // Specific component for VSD Monthly Scope
+  if (categorySlug === 'vsds' && frequencySlug === 'monthly') {
+    return <VsdMonthlyScopeDocument />;
   }
 
   const title = `${category} ${frequency} Service Scope`;
