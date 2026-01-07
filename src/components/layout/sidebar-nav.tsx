@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -21,11 +22,16 @@ import {
   FileText,
   TriangleAlert,
   ChevronDown,
+  Shield,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import React from 'react';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import type { User } from '@/lib/types';
+import { doc } from 'firebase/firestore';
+
 
 const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -40,6 +46,13 @@ const miningDivisions = [
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userData } = useDoc<User>(userRoleRef);
+
+
   const isEquipmentPath = pathname.startsWith('/equipment');
   const [isMiningOpen, setIsMiningOpen] = React.useState(isEquipmentPath);
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(false);
@@ -113,6 +126,30 @@ export function SidebarNav() {
                     {/* Smelter sub-items will go here */}
                 </CollapsibleContent>
             </Collapsible>
+             {userData?.role === 'Admin' && (
+              <Collapsible>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Admin" isActive={pathname.startsWith('/admin')}>
+                          <Shield />
+                          <span>Admin</span>
+                          <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                      </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                        <SidebarMenuItem>
+                            <Link href="/admin/users" passHref>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
+                                  <span>User Management</span>
+                                </SidebarMenuSubButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
