@@ -16,32 +16,29 @@ import {
 } from '@/components/ui/table';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { Printer, CalendarIcon, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { Printer, AlertTriangle, CalendarIcon, Plus, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import React from 'react';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Input } from '../ui/input';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '../ui/label';
 
-
-const checklistItems = [
-    { type: 'Acoustic Check', action: 'Listen for unusual noises.', lookFor: 'Grinding or clicking in cooling fans; humming or "singing" that sounds different than usual.' },
-    { type: 'Visual Inspection', action: 'Check the exterior and environment.', lookFor: 'Excessive dust buildup on vents, signs of moisture/condensation, or any "burnt" smells.' },
-    { type: 'Thermal Monitoring', action: 'Check the monitored temperature.', lookFor: "Ensure the internal temperature (available on the display) is within the manufacturer's spec." },
-    { type: 'Environment Log', action: 'Record ambient conditions.', lookFor: 'Note the temperature and humidity of the room where the VSD is housed.' },
-    { type: 'Electrical Logging', action: 'Record operating data.', lookFor: 'Log the DC Bus Voltage, Output Current, and Frequency. Sudden deviations can signal motor or capacitor issues.' },
-    { type: 'Ventilation Check', action: 'Inspect airflow paths.', lookFor: 'Ensure that nothing is blocking the intake or exhaust of the drive cabinet.' },
+const yearlyChecklist = [
+    { component: 'Terminal Torque', action: 'Retighten all power connections to spec.', reason: 'Vibrations over time loosen screws, leading to arcing.' },
+    { component: 'Capacitor Check', action: 'Look for bulging or leaking electrolyte.', reason: 'DC bus capacitors have a finite life (usually 5–10 years).' },
+    { component: 'Voltage Balance', action: 'Measure input voltage phase-to-phase.', reason: 'Imbalance > 2% can cause significant internal heating.' },
+    { component: 'Insulation Test', action: 'Perform a Megger test on the motor cables.', reason: 'Ensures the cable insulation hasn\'t degraded due to harmonics.' },
+    { component: 'Software/Firmware', action: 'Check for manufacturer updates.', reason: 'Updates often include better motor control algorithms or bug fixes.' },
 ];
 
 function WorkCrewRow({ onRemove }: { onRemove: () => void }) {
@@ -84,8 +81,8 @@ function WorkCrewRow({ onRemove }: { onRemove: () => void }) {
     )
 }
 
-export function VsdWeeklyScopeDocument() {
-  const title = "VSDs Weekly Service Scope";
+export function VsdYearlyScopeDocument() {
+  const title = "VSDs Yearly Service Scope";
   const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
   const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
   const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>();
@@ -114,7 +111,7 @@ export function VsdWeeklyScopeDocument() {
       <Card className="p-8 shadow-lg border-2 border-primary/20 bg-card">
         <header className="flex items-start justify-between mb-8">
           <div>
-            <AltekLogo className="h-12 w-auto" unoptimized/>
+            <AltekLogo className="h-12 w-auto" unoptimized />
             <p className="text-muted-foreground mt-2">VSD & Equipment Services</p>
           </div>
           <div className="text-right">
@@ -123,7 +120,7 @@ export function VsdWeeklyScopeDocument() {
           </div>
         </header>
 
-        <Card className="mb-8">
+         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Equipment Selection</CardTitle>
           </CardHeader>
@@ -179,6 +176,10 @@ export function VsdWeeklyScopeDocument() {
           </CardContent>
         </Card>
         
+        <div className="prose prose-sm max-w-none dark:prose-invert">
+            <p className="lead">Building a comprehensive maintenance strategy involves shifting from simple monitoring to deep cleaning and electrical testing. Below is a structured template for Yearly VSD maintenance.</p>
+        </div>
+
         <div className="prose prose-sm max-w-none dark:prose-invert mt-8 space-y-6">
             <div>
                 <h3 className="text-lg font-bold">1. PURPOSE</h3>
@@ -252,7 +253,7 @@ export function VsdWeeklyScopeDocument() {
                 </TableBody>
             </Table>
         </div>
-        
+
         <Alert variant="destructive" className="my-8">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Safety Warning</AlertTitle>
@@ -268,105 +269,59 @@ export function VsdWeeklyScopeDocument() {
             </AlertDescription>
         </Alert>
 
-        <h3 className="text-xl font-bold mb-4">Weekly Maintenance Checklist</h3>
+        <h3 className="text-xl font-bold mb-4">Yearly Maintenance: "The Technical Audit"</h3>
+        <p className="text-sm text-muted-foreground mb-4">Once a year, the drive should be powered down (following strict Lockout/Tagout procedures) for a detailed health check.</p>
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Task Type</TableHead>
-                <TableHead>Action Item</TableHead>
-                <TableHead>What to Look For</TableHead>
-                <TableHead className="text-center">Checked</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {checklistItems.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.type}</TableCell>
-                  <TableCell>{item.action}</TableCell>
-                  <TableCell>{item.lookFor}</TableCell>
-                  <TableCell className="text-center">
-                    <Checkbox aria-label={`Check task ${item.type}`} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Component</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead className="text-center">Checked</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {yearlyChecklist.map((item, index) => (
+                        <TableRow key={index}>
+                            <TableCell className="font-medium">{item.component}</TableCell>
+                            <TableCell>{item.action}</TableCell>
+                            <TableCell>{item.reason}</TableCell>
+                            <TableCell className="text-center">
+                                <Checkbox aria-label={`Check task ${item.component}`} />
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
         </Card>
 
         <Separator className="my-8" />
-
-        <h3 className="text-xl font-bold mb-4">Electrical Log</h3>
-        <Card>
-            <CardContent className="pt-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                    <div className="grid gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="dc-bus">DC Bus Voltage (V)</Label>
-                            <Input id="dc-bus" type="number" placeholder="e.g., 540" />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="output-current">Output Current (A)</Label>
-                            <Input id="output-current" type="number" placeholder="e.g., 25.5" />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="frequency">Frequency (Hz)</Label>
-                            <Input id="frequency" type="number" placeholder="e.g., 50.1" />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Reading Method</Label>
-                        <RadioGroup defaultValue="vsd-display" className="mt-2 space-y-2">
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="vsd-display" id="r1" />
-                                <Label htmlFor="r1">Read from VSD Display</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="physically-measured" id="r2" />
-                                <Label htmlFor="r2">Physically Measured</Label>
-                            </div>
-                        </RadioGroup>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
         
-        <div className="mt-8 prose prose-sm max-w-none dark:prose-invert">
-            <h3 className="text-xl font-bold mb-4">Pro-Tips for Weekly Upkeep</h3>
-            <ul>
-                <li><strong>The "Heat" Rule:</strong> For every 10°C rise in operating temperature, the lifespan of a VSD's capacitors is roughly halved. Weekly temperature logging is your best defense against premature aging.</li>
-                <li><strong>Don't Open the Door (If Possible):</strong> For weekly checks, avoid opening the cabinet while the drive is energized unless you are wearing proper PPE and it is necessary for a reading. Most data can be pulled from the digital keypad/HMI.</li>
-                <li><strong>Check the Fault History:</strong> Even if the drive hasn't tripped, check the fault log for "soft" warnings or auto-resets that happened during the week.</li>
-            </ul>
+        <div className="grid md:grid-cols-2 gap-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>The VSD Life-Cycle Logic</CardTitle>
+                </CardHeader>
+                <CardContent className="prose prose-sm dark:prose-invert">
+                    <p>To keep your drives running for 10+ years, follow this logic for your schedule:</p>
+                    <ul>
+                        <li><strong>Weekly:</strong> Monitor (Eyes and Ears)</li>
+                        <li><strong>Monthly:</strong> Clean (Airflow)</li>
+                        <li><strong>Annually:</strong> Secure (Electrical Integrity)</li>
+                    </ul>
+                </CardContent>
+            </Card>
 
-            <h3 className="text-xl font-bold mt-6 mb-4">When to do more?</h3>
-            <p>If your VSD is in a harsh environment (e.g., a sawmill with high dust or a pumping station with high humidity), you may need to move "Monthly" tasks like cleaning/replacing filters to your weekly schedule.</p>
+            <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>A Quick Warning on Safety</AlertTitle>
+                <AlertDescription>
+                   Important: VSDs contain large capacitors that hold a lethal electrical charge even after the power is turned off. Always wait the manufacturer-specified time (usually 5–15 minutes) and verify the DC bus voltage is at zero with a meter before touching any internal components.
+                </AlertDescription>
+            </Alert>
         </div>
         
-        <Separator className="my-8" />
-
-        <h3 className="text-xl font-bold mb-4">Thermal Image Upload</h3>
-        <Card>
-            <CardContent className="pt-6">
-                <div className="grid gap-6 md:grid-cols-3">
-                    <div className="space-y-2 md:col-span-1">
-                        <Label htmlFor="thermal-image">Thermal Image of VSD</Label>
-                        <Input id="thermal-image" type="file" className="file:text-foreground" />
-                        <p className="text-xs text-muted-foreground">Upload a thermal image taken during the inspection.</p>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="image-date">Date of Image</Label>
-                        <Input id="image-date" type="date" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="image-time">Time of Image</Label>
-                        <Input id="image-time" type="time" />
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-
-
         <footer className="mt-16 text-xs text-muted-foreground text-center">
           <p>Altek Green - Confidential</p>
         </footer>
