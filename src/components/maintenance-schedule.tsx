@@ -39,7 +39,16 @@ const statusVariantMap: Record<string, StatusVariant> = {
 export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: MaintenanceScheduleProps) {
   
   return (
-    <div className="mt-4">
+    <div className="mt-4 space-y-4">
+       <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold">{title}</h3>
+        {frequency === 'Weekly' && (
+            <Button variant="outline" disabled>
+                View Service Scope
+            </Button>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">
           Loading {title.toLowerCase()}...
