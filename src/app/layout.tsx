@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
@@ -31,7 +31,7 @@ export default function RootLayout({
             <Sidebar>
               <SidebarNav />
             </Sidebar>
-            <SidebarInset className="p-4 sm:p-6 lg:p-8">{children}</SidebarInset>
+            <SidebarInset>{children}</SidebarInset>
           </SidebarProvider>
           <Toaster />
         </FirebaseClientProvider>

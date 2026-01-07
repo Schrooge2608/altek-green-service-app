@@ -23,8 +23,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { UserNav } from '@/components/user-nav';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import React from 'react';
 
@@ -38,8 +37,6 @@ const mainLinks = [
 const miningDivisions = [
     { href: '/equipment/mining/boosters', label: 'Boosters' },
 ]
-
-const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
 
 export function SidebarNav() {
   const pathname = usePathname();
@@ -120,20 +117,7 @@ export function SidebarNav() {
       </SidebarContent>
       <SidebarFooter>
         <Separator className="my-1" />
-        <div className="flex items-center gap-3 p-2">
-          <Avatar>
-            {userAvatar && <AvatarImage src={userAvatar.imageUrl} data-ai-hint={userAvatar.imageHint} />}
-            <AvatarFallback>AU</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-sidebar-foreground">
-              Admin User
-            </span>
-            <span className="text-xs text-sidebar-foreground/70">
-              admin@altek.com
-            </span>
-          </div>
-        </div>
+        <UserNav />
       </SidebarFooter>
     </>
   );

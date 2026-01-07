@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { Calendar } from './ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import type { Equipment } from '@/lib/types';
+import type { Equipment, User } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Checkbox } from './ui/checkbox';
@@ -27,11 +27,24 @@ interface MaintenanceScopeDocumentProps {
   title: string;
 }
 
-function WorkCrewRow({ onRemove }: { onRemove: () => void }) {
+function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, users: User[] | null, usersLoading: boolean }) {
     const [date, setDate] = React.useState<Date | undefined>();
     return (
         <TableRow>
-            <TableCell><Input placeholder="Name..." /></TableCell>
+            <TableCell>
+                 <Select disabled={usersLoading}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select crew member..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {usersLoading ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    ) : (
+                        users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)
+                    )}
+                    </SelectContent>
+                </Select>
+            </TableCell>
             <TableCell><Input placeholder="RTBS No..." /></TableCell>
             <TableCell className="w-[180px]">
                  <Popover>
@@ -75,6 +88,9 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
 
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
+
+    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
     const addCrewMember = () => {
         setCrew(c => [...c, { id: Date.now() }]);
@@ -155,7 +171,18 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
-                        <Input id="inspected-by" placeholder="Technician Name" />
+                        <Select disabled={usersLoading}>
+                            <SelectTrigger id="inspected-by">
+                                <SelectValue placeholder="Select technician..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {usersLoading ? (
+                                <SelectItem value="loading" disabled>Loading...</SelectItem>
+                            ) : (
+                                users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)
+                            )}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardContent>
             </Card>
@@ -228,7 +255,7 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
                     </TableHeader>
                     <TableBody>
                         {crew.map((member) => (
-                            <WorkCrewRow key={member.id} onRemove={() => removeCrewMember(member.id)} />
+                            <WorkCrewRow key={member.id} onRemove={() => removeCrewMember(member.id)} users={users} usersLoading={usersLoading} />
                         ))}
                     </TableBody>
                 </Table>
@@ -299,5 +326,3 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
     </div>
   );
 }
-
-    

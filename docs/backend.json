@@ -117,6 +117,18 @@
         }
       },
       "required": ["id", "equipmentId", "equipmentName", "completionDate", "inspectedBy", "maintenanceType", "frequency"]
+    },
+    "User": {
+        "title": "User",
+        "type": "object",
+        "description": "Represents a user of the application.",
+        "properties": {
+            "id": { "type": "string", "description": "The user's unique ID, same as their Firebase Auth UID." },
+            "name": { "type": "string" },
+            "email": { "type": "string", "format": "email" },
+            "role": { "type": "string", "enum": ["Technician", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin"] }
+        },
+        "required": ["id", "name", "email", "role"]
     }
   },
   "auth": {
@@ -163,6 +175,14 @@
           "schema": { "$ref": "#/entities/CompletedSchedule" },
           "description": "Stores records of completed maintenance schedules."
         }
+      },
+      {
+          "path": "/users/{userId}",
+          "definition": {
+              "entityName": "User",
+              "schema": { "$ref": "#/entities/User" },
+              "description": "Stores user profiles and roles."
+          }
       }
     ]
   }

@@ -1,4 +1,5 @@
 
+
 export interface VSD {
   id: string;
   serialNumber: string;
@@ -81,4 +82,11 @@ export interface ChecklistItem {
   task: string;
   status: 'checked' | 'not-checked' | 'n/a';
   comments: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Technician' | 'Site Supervisor' | 'Services Manager' | 'Corporate Manager' | 'Admin';
 }

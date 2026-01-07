@@ -6,8 +6,45 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
+    // Function to get the user's role from the users collection
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    // Admin-only access to the users collection
+    match /users/{userId} {
+      allow read, write: if isRegisteredUser() && getUserRole(request.auth.uid) == 'Admin';
+    }
+    
+    // Other collections can be read by any registered user
+    match /equipment/{equipmentId} {
+      allow read: if isRegisteredUser();
+      allow write: if isRegisteredUser(); // More specific rules can be added here
+    }
+
+    match /vsds/{vsdId} {
+      allow read: if isRegisteredUser();
+      allow write: if isRegisteredUser();
+    }
+    
+    match /tasks/{taskId} {
+      allow read: if isRegisteredUser();
+      allow write: if isRegisteredUser();
+    }
+    
+    match /breakdown_reports/{reportId} {
+      allow read: if isRegisteredUser();
+      allow write: if isRegisteredUser();
+    }
+    
+    match /completed_schedules/{scheduleId} {
+      allow read: if isRegisteredUser();
+      allow write: if isRegisteredUser();
+    }
+
+    // Fallback for any other path, deny all
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
