@@ -21,7 +21,6 @@ import {
   FileText,
   TriangleAlert,
   ChevronDown,
-  CheckCircle2,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,7 +31,6 @@ import React from 'react';
 const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/maintenance', label: 'Maintenance', icon: Calendar },
-  { href: '/completed-schedules', label: 'Completed', icon: CheckCircle2 },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
 ];
