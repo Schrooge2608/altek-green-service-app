@@ -299,6 +299,9 @@ export function VsdYearlyScopeDocument() {
                                             <TableHead>Component</TableHead>
                                             <TableHead>Action</TableHead>
                                             <TableHead>Critical Metric</TableHead>
+                                            <TableHead className="text-center w-[100px]">Checked</TableHead>
+                                            <TableHead className="text-center w-[100px]">Not checked</TableHead>
+                                            <TableHead>Comments / Feedback</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -306,21 +309,33 @@ export function VsdYearlyScopeDocument() {
                                             <TableCell>Cooling Fans</TableCell>
                                             <TableCell>Remove and spin by hand.</TableCell>
                                             <TableCell>If they feel "gritty" or don't spin for &gt;3 seconds, replace them. Fans usually have a 3-5 year lifespan.</TableCell>
+                                            <TableCell className="text-center"><Checkbox /></TableCell>
+                                            <TableCell className="text-center"><Checkbox /></TableCell>
+                                            <TableCell><Input placeholder="Comments..." /></TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell>DC Bus Capacitors</TableCell>
                                             <TableCell>Visual & ESR test.</TableCell>
                                             <TableCell>Look for bulging tops or white residue (leakage). If the drive is &gt;7 years old, consider a "Capacitor Reform" or replacement.</TableCell>
+                                            <TableCell className="text-center"><Checkbox /></TableCell>
+                                            <TableCell className="text-center"><Checkbox /></TableCell>
+                                            <TableCell><Input placeholder="Comments..." /></TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell>Control Battery</TableCell>
                                             <TableCell>Replace the internal battery.</TableCell>
                                             <TableCell>Some VSDs have a small coin-cell battery to keep the clock and fault history; replace it annually to prevent data loss.</TableCell>
+                                            <TableCell className="text-center"><Checkbox /></TableCell>
+                                            <TableCell className="text-center"><Checkbox /></TableCell>
+                                            <TableCell><Input placeholder="Comments..." /></TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell>Ribbon Cables</TableCell>
                                             <TableCell>Reseat all connectors.</TableCell>
                                             <TableCell>Unplug and replug internal ribbon cables to wipe away any micro-corrosion on the pins.</TableCell>
+                                            <TableCell className="text-center"><Checkbox /></TableCell>
+                                            <TableCell className="text-center"><Checkbox /></TableCell>
+                                            <TableCell><Input placeholder="Comments..." /></TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
@@ -400,3 +415,5 @@ export function VsdYearlyScopeDocument() {
     </div>
   );
 }
+
+    
