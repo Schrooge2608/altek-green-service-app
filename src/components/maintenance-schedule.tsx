@@ -14,15 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileText } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 
 interface MaintenanceScheduleProps {
-  title: string;
   tasks: MaintenanceTask[] | null;
   isLoading: boolean;
   frequency: MaintenanceTask['frequency'];
@@ -36,7 +29,7 @@ const statusVariantMap: Record<string, StatusVariant> = {
   overdue: 'destructive',
 };
 
-export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: MaintenanceScheduleProps) {
+export function MaintenanceSchedule({ tasks, isLoading, frequency }: MaintenanceScheduleProps) {
   
   return (
     <div className="mt-4 space-y-4">
@@ -50,7 +43,7 @@ export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: Main
 
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">
-          Loading {title.toLowerCase()}...
+          Loading {frequency.toLowerCase()} tasks...
         </div>
       ) : tasks && tasks.length > 0 ? (
         <Table>
@@ -79,31 +72,18 @@ export function MaintenanceSchedule({ title, tasks, isLoading, frequency }: Main
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Link href={`/maintenance/${task.id}/document`} passHref>
-                          <Button variant="ghost" size="icon">
-                            <FileText className="h-4 w-4" />
-                            <span className="sr-only">Generate Document</span>
-                          </Button>
-                        </Link>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Generate Document</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                    <Link href={`/maintenance/${task.id}/document`} passHref>
+                      <Button variant="ghost" size="icon">
+                        <FileText className="h-4 w-4" />
+                        <span className="sr-only">Generate Document</span>
+                      </Button>
+                    </Link>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      ) : (
-        <div className="text-center py-10 text-muted-foreground">
-          No tasks for this period.
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
