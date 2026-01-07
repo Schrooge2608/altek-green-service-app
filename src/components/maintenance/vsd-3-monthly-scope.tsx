@@ -303,7 +303,7 @@ export function Vsd3MonthlyScopeDocument() {
                 <h4>4. Performance & Data Analysis</h4>
                 <ul className="list-disc pl-5">
                     <li><strong>Fault Log Review:</strong> Download the last 3 months of fault history. Look for recurring "Under-voltage" or "Over-current" warnings that didn't trip the drive but indicate a brewing problem.</li>
-                    <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically {'>'}5V AC), your capacitors are starting to fail.</li>
+                    <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically >5V AC), your capacitors are starting to fail.</li>
                     <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
                 </ul>
             </div>
