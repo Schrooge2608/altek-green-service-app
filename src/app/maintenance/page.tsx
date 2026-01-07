@@ -12,7 +12,6 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { MaintenanceSchedule } from '@/components/maintenance-schedule';
 import type { MaintenanceTask } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 
 export default function MaintenancePage() {
   const firestore = useFirestore();
@@ -51,44 +50,19 @@ export default function MaintenancePage() {
               <TabsTrigger value="yearly">Yearly</TabsTrigger>
             </TabsList>
             <TabsContent value="weekly">
-              <div className="mt-4 space-y-4">
-                  <div className="flex justify-end">
-                      <Button variant="outline" disabled>View Service Scope</Button>
-                  </div>
-                  <MaintenanceSchedule tasks={weeklyTasks} isLoading={weeklyLoading} frequency="Weekly"/>
-              </div>
+              <MaintenanceSchedule tasks={weeklyTasks} isLoading={weeklyLoading} frequency="Weekly"/>
             </TabsContent>
             <TabsContent value="monthly">
-              <div className="mt-4 space-y-4">
-                  <div className="flex justify-end">
-                      <Button variant="outline" disabled>View Service Scope</Button>
-                  </div>
-                  <MaintenanceSchedule tasks={monthlyTasks} isLoading={monthlyLoading} frequency="Monthly"/>
-              </div>
+              <MaintenanceSchedule tasks={monthlyTasks} isLoading={monthlyLoading} frequency="Monthly"/>
             </TabsContent>
             <TabsContent value="quarterly">
-                <div className="mt-4 space-y-4">
-                    <div className="flex justify-end">
-                        <Button variant="outline" disabled>View Service Scope</Button>
-                    </div>
-                    <MaintenanceSchedule tasks={quarterlyTasks} isLoading={quarterlyLoading} frequency="3-Monthly"/>
-                </div>
+              <MaintenanceSchedule tasks={quarterlyTasks} isLoading={quarterlyLoading} frequency="3-Monthly"/>
             </TabsContent>
             <TabsContent value="6-monthly">
-                <div className="mt-4 space-y-4">
-                    <div className="flex justify-end">
-                        <Button variant="outline" disabled>View Service Scope</Button>
-                    </div>
-                    <MaintenanceSchedule tasks={sixMonthlyTasks} isLoading={sixMonthlyLoading} frequency="6-Monthly"/>
-                </div>
+              <MaintenanceSchedule tasks={sixMonthlyTasks} isLoading={sixMonthlyLoading} frequency="6-Monthly"/>
             </TabsContent>
             <TabsContent value="yearly">
-                <div className="mt-4 space-y-4">
-                    <div className="flex justify-end">
-                        <Button variant="outline" disabled>View Service Scope</Button>
-                    </div>
-                    <MaintenanceSchedule tasks={yearlyTasks} isLoading={yearlyLoading} frequency="Yearly"/>
-                </div>
+              <MaintenanceSchedule tasks={yearlyTasks} isLoading={yearlyLoading} frequency="Yearly"/>
             </TabsContent>
           </Tabs>
         </CardContent>
