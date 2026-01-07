@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { MaintenanceTask } from '@/lib/types';
@@ -32,10 +33,7 @@ const statusVariantMap: Record<string, StatusVariant> = {
 export function MaintenanceSchedule({ tasks, isLoading, frequency }: MaintenanceScheduleProps) {
   
   return (
-    <div className="mt-4 space-y-4">
-      <div className="flex justify-end">
-          <Button variant="outline" disabled>View Service Scope</Button>
-      </div>
+    <>
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">
           Loading {frequency.toLowerCase()} tasks...
@@ -79,6 +77,6 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
           </TableBody>
         </Table>
       ) : null}
-    </div>
+    </>
   );
 }
