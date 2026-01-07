@@ -20,6 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const checklistItems = [
     { type: 'Acoustic Check', action: 'Listen for unusual noises.', lookFor: 'Grinding or clicking in cooling fans; humming or "singing" that sounds different than usual.' },
@@ -97,6 +99,26 @@ export function VsdWeeklyScopeDocument() {
             <h3 className="text-xl font-bold mt-6 mb-4">When to do more?</h3>
             <p>If your VSD is in a harsh environment (e.g., a sawmill with high dust or a pumping station with high humidity), you may need to move "Monthly" tasks like cleaning/replacing filters to your weekly schedule.</p>
         </div>
+        
+        <Separator className="my-8" />
+
+        <h3 className="text-xl font-bold mb-4">Thermal Image Upload</h3>
+        <Card>
+            <CardContent className="pt-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="thermal-image">Thermal Image of VSD</Label>
+                        <Input id="thermal-image" type="file" className="file:text-foreground" />
+                        <p className="text-xs text-muted-foreground">Upload a thermal image taken during the inspection.</p>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="image-date">Date of Image</Label>
+                        <Input id="image-date" type="date" />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
 
         <footer className="mt-16 text-xs text-muted-foreground text-center">
           <p>Altek Green - Confidential</p>
