@@ -278,6 +278,7 @@ export function VsdWeeklyScopeDocument() {
                 <TableHead>What to Look For</TableHead>
                 <TableHead className="text-center">Not Checked</TableHead>
                 <TableHead className="text-center">Checked</TableHead>
+                <TableHead>Comments</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -291,6 +292,9 @@ export function VsdWeeklyScopeDocument() {
                   </TableCell>
                   <TableCell className="text-center">
                     <Checkbox aria-label={`Check task ${item.type}`} />
+                  </TableCell>
+                  <TableCell>
+                    <Input placeholder="Comments..." />
                   </TableCell>
                 </TableRow>
               ))}

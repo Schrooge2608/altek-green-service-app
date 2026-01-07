@@ -286,6 +286,7 @@ export function VsdMonthlyScopeDocument() {
                 <TableHead>Action</TableHead>
                 <TableHead className="text-center">Not Checked</TableHead>
                 <TableHead className="text-center">Checked</TableHead>
+                <TableHead>Comments</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -298,6 +299,9 @@ export function VsdMonthlyScopeDocument() {
                   </TableCell>
                   <TableCell className="text-center">
                     <Checkbox aria-label={`Check task ${item.task}`} />
+                  </TableCell>
+                  <TableCell>
+                    <Input placeholder="Comments..." />
                   </TableCell>
                 </TableRow>
               ))}
@@ -318,6 +322,7 @@ export function VsdMonthlyScopeDocument() {
                         <TableHead>Reason</TableHead>
                         <TableHead className="text-center">Not Checked</TableHead>
                         <TableHead className="text-center">Checked</TableHead>
+                        <TableHead>Comments</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -331,6 +336,9 @@ export function VsdMonthlyScopeDocument() {
                             </TableCell>
                             <TableCell className="text-center">
                                 <Checkbox aria-label={`Check task ${item.component}`} />
+                            </TableCell>
+                            <TableCell>
+                                <Input placeholder="Comments..." />
                             </TableCell>
                         </TableRow>
                     ))}
