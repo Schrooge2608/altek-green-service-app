@@ -23,6 +23,7 @@ import {
   TriangleAlert,
   ChevronDown,
   Shield,
+  User as UserIcon,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
