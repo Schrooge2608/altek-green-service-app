@@ -20,10 +20,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
-import { Fan, Droplets, AirVent, PlusCircle } from 'lucide-react';
+import { Fan, Droplets, AirVent, PlusCircle, LogIn } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,7 @@ const validDivisions: Record<string, string> = {
     'boosters': 'Boosters',
 }
 
-export default function MiningDivisionPage() {
+function AuthenticatedMiningDivisionPage() {
   const params = useParams();
   const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
   
@@ -203,4 +203,36 @@ export default function MiningDivisionPage() {
         )}
     </div>
   );
+}
+
+
+function UnauthenticatedFallback() {
+    return (
+        <Card className="flex flex-col items-center justify-center text-center p-8 gap-4">
+            <CardTitle>Authentication Required</CardTitle>
+            <CardContent>
+                <p className="text-muted-foreground mb-4">Please log in to view equipment details.</p>
+                <Link href="/auth/register" passHref>
+                    <Button>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Login or Register
+                    </Button>
+                </Link>
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function MiningDivisionPage() {
+    const { user, isUserLoading } = useUser();
+
+    if (isUserLoading) {
+        return <div className="text-center p-8">Loading...</div>;
+    }
+
+    if (!user) {
+        return <UnauthenticatedFallback />;
+    }
+
+    return <AuthenticatedMiningDivisionPage />;
 }

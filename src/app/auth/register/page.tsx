@@ -5,6 +5,7 @@ import { AltekLogo } from '@/components/altek-logo';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import Link from 'next/link';
 
 export default function RegisterPage() {
     const { user, isUserLoading } = useUser();
@@ -16,8 +17,19 @@ export default function RegisterPage() {
         }
     }, [user, isUserLoading, router]);
 
+    if (isUserLoading) {
+        return null; // or a loading spinner
+    }
+
+
     return (
         <div className="container relative h-svh flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+             <Link
+                href="/"
+                className="absolute right-4 top-4 md:right-8 md:top-8"
+             >
+                Back to Home
+            </Link>
             <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
                 <div
                     className="absolute inset-0 bg-cover"
@@ -42,10 +54,10 @@ export default function RegisterPage() {
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <div className="flex flex-col space-y-2 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            Create an account
+                            Create an account or Sign In
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Enter your details below to create your account
+                            Enter your details below to create your account or sign in
                         </p>
                     </div>
                     <UserAuthForm />
