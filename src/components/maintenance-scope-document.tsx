@@ -253,7 +253,44 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
             <Separator className="my-8" />
 
             <div className="prose prose-sm max-w-none dark:prose-invert">
-              <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown.</p><p>At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
+                <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown.</p>
+                <p>At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
+                
+                <h3 className="mt-6 text-lg font-bold">3-Month VSD Service Schedule</h3>
+                <ol className="list-decimal pl-5 space-y-4">
+                    <li>
+                        <strong>Safety & Preparation</strong>
+                        <ul className="list-disc pl-5 mt-2">
+                            <li><strong>Lockout/Tagout (LOTO):</strong> Isolate power and wait for the DC bus to discharge (verify with a meter—usually 5–15 mins).</li>
+                            <li><strong>PPE:</strong> Wear appropriate arc flash protection and use insulated tools.</li>
+                            <li><strong>Backup:</strong> If the drive is still powered, export the current parameter set to a laptop or USB keypad.</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Electrical Integrity (The "Tightness" Check)</strong>
+                        <ul className="list-disc pl-5 mt-2">
+                            <li><strong>Re-Torque Terminals:</strong> Check the tightness of all power input (L1, L2, L3) and output (U, V, W) connections. Vibrations and thermal cycling naturally loosen these over 90 days.</li>
+                            <li><strong>Control Wiring:</strong> Tug-test small control wires (Start/Stop, Speed Ref) to ensure they haven't vibrated loose.</li>
+                            <li><strong>Grounding:</strong> Inspect the ground strap for corrosion or loose bolts.</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Thermal & Physical Health</strong>
+                        <ul className="list-disc pl-5 mt-2">
+                            <li><strong>Heat Sink Cleaning:</strong> Use a vacuum or dry, oil-free compressed air to blow out the heat sink fins from the bottom up.</li>
+                            <li><strong>Thermal Imaging:</strong> If the drive is running, use an IR camera to look for "hot spots" on terminal blocks or the main DC bus capacitors.</li>
+                            <li><strong>Capacitor Inspection:</strong> Visually check for "crowning" (bulging tops) or leaking fluid.</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Performance & Data Analysis</strong>
+                        <ul className="list-disc pl-5 mt-2">
+                            <li><strong>Fault Log Review:</strong> Download the last 3 months of fault history. Look for recurring "Under-voltage" or "Over-current" warnings that didn't trip the drive but indicate a brewing problem.</li>
+                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically >5V AC), your capacitors are starting to fail.</li>
+                            <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
+                        </ul>
+                    </li>
+                </ol>
             </div>
             
             <footer className="mt-16 text-xs text-muted-foreground text-center">
@@ -263,5 +300,3 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
     </div>
   );
 }
-
-    
