@@ -13,10 +13,17 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, User as UserIcon } from 'lucide-react';
+import { FileText, User as UserIcon, ChevronDown } from 'lucide-react';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import React from 'react';
 import { MaintenanceCategory } from '@/lib/task-generator';
 
@@ -48,58 +55,69 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
     
     const isSupervisor = userRole?.role === 'Site Supervisor' || userRole?.role === 'Services Manager' || userRole?.role === 'Corporate Manager' || userRole?.role === 'Admin';
     
-    const techniciansQuery = useMemoFirebase(() => {
+    const usersQuery = useMemoFirebase(() => {
         if (!user || !isSupervisor) return null;
-        return query(collection(firestore, 'users'), where('role', '==', 'Technician'));
+        return query(collection(firestore, 'users'));
     }, [firestore, user, isSupervisor]);
-    const { data: technicians, isLoading: techniciansLoading } = useCollection<User>(techniciansQuery);
+    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
     const handleAssign = (userId: string) => {
         const taskRef = doc(firestore, 'tasks', task.id);
         const dataToSet: Partial<MaintenanceTask> = {
-            ...task, // Pass the full existing task data
+            ...task,
         };
         
         if (userId === 'unassigned') {
             dataToSet.assignedToId = '';
             dataToSet.assignedToName = '';
         } else {
-            const selectedTech = technicians?.find(t => t.id === userId);
-            if (selectedTech) {
-                dataToSet.assignedToId = selectedTech.id;
-                dataToSet.assignedToName = selectedTech.name;
+            const selectedUser = users?.find(t => t.id === userId);
+            if (selectedUser) {
+                dataToSet.assignedToId = selectedUser.id;
+                dataToSet.assignedToName = selectedUser.name;
             }
         }
         setDocumentNonBlocking(taskRef, dataToSet, { merge: true });
     };
+    
+    const assignedUser = task.assignedToName || 'Unassigned';
 
     if (!user || !isSupervisor || userRoleLoading) {
         return (
             <div className="flex items-center gap-2">
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
-                <span>{task.assignedToName || 'Unassigned'}</span>
+                <span>{assignedUser}</span>
             </div>
         );
     }
     
     return (
-        <Select onValueChange={handleAssign} value={task.assignedToId || 'unassigned'} disabled={techniciansLoading}>
-            <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Assign to..." />
-            </SelectTrigger>
-            <SelectContent>
-                {techniciansLoading ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-[180px] justify-between">
+                    {assignedUser}
+                    <ChevronDown className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[180px]" align="start">
+                <DropdownMenuLabel>Assign to...</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {usersLoading ? (
+                    <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
                 ) : (
                     <>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {technicians?.map(tech => (
-                            <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
+                        <DropdownMenuItem onSelect={() => handleAssign('unassigned')}>
+                            Unassigned
+                        </DropdownMenuItem>
+                        {users?.map(tech => (
+                            <DropdownMenuItem key={tech.id} onSelect={() => handleAssign(tech.id)}>
+                                {tech.name}
+                            </DropdownMenuItem>
                         ))}
                     </>
                 )}
-            </SelectContent>
-        </Select>
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 
