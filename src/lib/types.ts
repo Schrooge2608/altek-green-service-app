@@ -51,8 +51,8 @@ export interface MaintenanceTask {
   dueDate: string;
   frequency: 'Weekly' | 'Monthly' | '3-Monthly' | '6-Monthly' | 'Yearly';
   status: 'pending' | 'completed' | 'overdue';
-  assignedToId?: string;
-  assignedToName?: string;
+  assignedToId: string;
+  assignedToName: string;
 }
 
 export interface Breakdown {
@@ -101,5 +101,3 @@ export interface User {
   email: string;
   role: 'Technician' | 'Site Supervisor' | 'Services Manager' | 'Corporate Manager' | 'Admin';
 }
-
-    

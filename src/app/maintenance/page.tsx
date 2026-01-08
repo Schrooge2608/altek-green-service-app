@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MaintenanceSchedule } from '@/components/maintenance-schedule';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import type { Equipment, MaintenanceTask } from '@/lib/types';
+import type { Equipment, MaintenanceTask, VSD } from '@/lib/types';
 import { generateTasksForEquipment, MaintenanceCategory } from '@/lib/task-generator';
 
 const maintenanceCategories: MaintenanceCategory[] = [
@@ -22,12 +22,24 @@ export default function MaintenancePage() {
   const firestore = useFirestore();
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
+
+  const vsdsQuery = useMemoFirebase(() => collection(firestore, 'vsds'), [firestore]);
+  const { data: vsds, isLoading: vsdsLoading } = useCollection<VSD>(vsdsQuery);
+
   const [activeTab, setActiveTab] = useState<MaintenanceCategory>('VSDs');
+
+  const vsdsById = useMemo(() => {
+    if (!vsds) return new Map<string, VSD>();
+    return new Map(vsds.map(v => [v.id, v]));
+  }, [vsds]);
 
   const allTasks = useMemo(() => {
     if (!equipment) return [];
-    return equipment.flatMap(eq => generateTasksForEquipment(eq));
-  }, [equipment]);
+    return equipment.flatMap(eq => {
+        const vsd = vsdsById.get(eq.vsdId);
+        return generateTasksForEquipment(eq, vsd);
+    });
+  }, [equipment, vsdsById]);
 
   const tasksByCategory = useMemo(() => {
     return maintenanceCategories.reduce((acc, category) => {
@@ -46,7 +58,7 @@ export default function MaintenancePage() {
         </p>
       </header>
 
-      {equipmentLoading ? (
+      {equipmentLoading || vsdsLoading ? (
         <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             <p className="ml-2">Generating maintenance tasks...</p>
@@ -64,7 +76,7 @@ export default function MaintenancePage() {
                 <CardContent className="pt-6">
                   <MaintenanceSchedule
                     tasks={tasksByCategory[cat]}
-                    isLoading={equipmentLoading}
+                    isLoading={equipmentLoading || vsdsLoading}
                     category={cat}
                   />
                 </CardContent>

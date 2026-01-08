@@ -1,5 +1,5 @@
 import { addDays, addMonths, differenceInDays, format, isBefore, startOfDay } from 'date-fns';
-import type { Equipment, MaintenanceTask } from './types';
+import type { Equipment, MaintenanceTask, VSD } from './types';
 
 export type MaintenanceCategory = 'VSDs' | 'Protection' | 'Motors' | 'Pumps';
 
@@ -37,16 +37,17 @@ function getNextDueDate(lastServiceDate: Date, days: number): Date {
 /**
  * Generates all potential maintenance tasks for a single piece of equipment across all categories.
  * @param equipment - The equipment to generate tasks for.
+ * @param vsd - The VSD associated with the equipment.
  * @returns An array of MaintenanceTask objects.
  */
-export function generateTasksForEquipment(equipment: Equipment): MaintenanceTask[] {
+export function generateTasksForEquipment(equipment: Equipment, vsd: VSD | undefined): MaintenanceTask[] {
   const tasks: MaintenanceTask[] = [];
   const today = startOfDay(new Date());
   
-  // Use last maintenance date if available, otherwise fall back to installation date
+  // Use last maintenance date if available, otherwise fall back to installation date from the VSD
   const baseDate = equipment.lastMaintenance 
     ? startOfDay(new Date(equipment.lastMaintenance))
-    : startOfDay(new Date(equipment.installationDate || new Date()));
+    : startOfDay(new Date(vsd?.installationDate || new Date()));
 
   // Determine which categories apply to this equipment
   const applicableCategories: MaintenanceCategory[] = ['VSDs', 'Protection', 'Motors'];
@@ -63,11 +64,35 @@ export function generateTasksForEquipment(equipment: Equipment): MaintenanceTask
         
         let status: MaintenanceTask['status'] = 'pending';
         if (daysUntilDue < 0) {
-        status = 'overdue';
+          status = 'overdue';
         }
 
         // We only generate tasks that are overdue or due within the next cycle.
         if (isBefore(nextDueDate, addDays(today, freq.days))) {
+            let assignedToId = '';
+            let assignedToName = '';
+
+            // Automatically assign based on component type
+            switch (categoryInfo.component) {
+                case 'VSD':
+                    assignedToId = vsd?.assignedToId || '';
+                    assignedToName = vsd?.assignedToName || '';
+                    break;
+                case 'Protection':
+                    assignedToId = equipment.protectionAssignedToId || '';
+                    assignedToName = equipment.protectionAssignedToName || '';
+                    break;
+                case 'Motor':
+                    assignedToId = equipment.motorAssignedToId || '';
+                    assignedToName = equipment.motorAssignedToName || '';
+                    break;
+                case 'Pump': // Assuming overall assignee handles pumps
+                default:
+                    assignedToId = equipment.assignedToId || '';
+                    assignedToName = equipment.assignedToName || '';
+                    break;
+            }
+
             tasks.push({
                 id: `${equipment.id}-${category.toLowerCase()}-${freq.name.toLowerCase()}`,
                 equipmentId: equipment.id,
@@ -77,8 +102,8 @@ export function generateTasksForEquipment(equipment: Equipment): MaintenanceTask
                 dueDate: format(nextDueDate, 'yyyy-MM-dd'),
                 frequency: freq.name,
                 status: status,
-                assignedToId: '', // Initially unassigned
-                assignedToName: '', // Initially unassigned
+                assignedToId: assignedToId,
+                assignedToName: assignedToName,
             });
         }
     });
