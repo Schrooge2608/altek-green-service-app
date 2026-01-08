@@ -29,6 +29,12 @@ const statusVariantMap: Record<string, StatusVariant> = {
   overdue: 'destructive',
 };
 
+// A helper function to get the correct path slug for the URL
+function getFrequencySlug(frequency: MaintenanceTask['frequency']): string {
+    return frequency.toLowerCase().replace(/\s+/g, '-');
+}
+
+
 export function MaintenanceSchedule({ tasks, isLoading, frequency }: MaintenanceScheduleProps) {
   
   if (isLoading) {
@@ -76,7 +82,7 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
               </Badge>
             </TableCell>
             <TableCell className="text-right">
-                <Link href={`/maintenance-docs/${task.id}`} passHref>
+                <Link href={`/maintenance/vsds/${getFrequencySlug(task.frequency)}`} passHref>
                   <Button variant="ghost" size="icon">
                     <FileText className="h-4 w-4" />
                     <span className="sr-only">Generate Document</span>
