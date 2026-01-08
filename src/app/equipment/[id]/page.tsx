@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil } from 'lucide-react';
+import { PlusCircle, Pencil, User } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -260,6 +260,24 @@ export default function EquipmentDetailPage() {
                     />
                 </Card>
             )}
+             <Card>
+                <CardHeader>
+                    <CardTitle>Personnel</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {eq.assignedToName ? (
+                         <div className="flex items-center gap-3">
+                            <User className="w-5 h-5 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm font-medium">{eq.assignedToName}</p>
+                                <p className="text-xs text-muted-foreground">Primary Technician</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">No primary technician assigned.</p>
+                    )}
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle>Performance Metrics</CardTitle>
@@ -284,5 +302,3 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
-
-    

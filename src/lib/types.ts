@@ -32,6 +32,8 @@ export interface Equipment {
   breakerModel?: string;
   breakerAmperage?: number;
   breakerLocation?: string;
+  assignedToId?: string;
+  assignedToName?: string;
 }
 
 export interface MaintenanceTask {

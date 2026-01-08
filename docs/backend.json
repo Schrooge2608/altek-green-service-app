@@ -41,7 +41,9 @@
         "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." },
         "breakerModel": { "type": "string", "description": "The model of the circuit breaker." },
         "breakerAmperage": { "type": "number", "description": "The amperage rating of the circuit breaker." },
-        "breakerLocation": { "type": "string", "description": "The location of the circuit breaker (e.g., panel name)." }
+        "breakerLocation": { "type": "string", "description": "The location of the circuit breaker (e.g., panel name)." },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the equipment." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the equipment." }
       },
       "required": ["id", "name", "type", "location", "vsdId", "plant"]
     },
