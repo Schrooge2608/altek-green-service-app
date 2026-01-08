@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { MaintenanceTask } from '@/lib/types';
@@ -32,51 +31,61 @@ const statusVariantMap: Record<string, StatusVariant> = {
 
 export function MaintenanceSchedule({ tasks, isLoading, frequency }: MaintenanceScheduleProps) {
   
-  return (
-    <>
-      {isLoading ? (
-        <div className="text-center py-10 text-muted-foreground">
-          Loading {frequency.toLowerCase()} tasks...
+  if (isLoading) {
+    return (
+      <div className="text-center py-10 text-muted-foreground">
+        Loading {frequency.toLowerCase()} tasks...
+      </div>
+    );
+  }
+
+  if (!tasks || tasks.length === 0) {
+    return (
+        <div className="text-center py-20 text-muted-foreground">
+            <h3 className="text-lg font-semibold">No {frequency.toLowerCase()} tasks due.</h3>
+            <p className="text-sm">All equipment is up to date for this maintenance cycle.</p>
         </div>
-      ) : tasks && tasks.length > 0 ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]"></TableHead>
-              <TableHead>Equipment</TableHead>
-              <TableHead>Task</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tasks.map((task) => (
-              <TableRow key={task.id}>
-                <TableCell>
-                  <Checkbox aria-label={`Mark task ${task.id} as complete`} disabled={task.status === 'completed'} checked={task.status === 'completed'}/>
-                </TableCell>
-                <TableCell className="font-medium">{task.equipmentName}</TableCell>
-                <TableCell>{task.task}</TableCell>
-                <TableCell>{task.dueDate}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariantMap[task.status]}>
-                    {task.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                    <Link href={`/maintenance-docs/${task.id}`} passHref>
-                      <Button variant="ghost" size="icon">
-                        <FileText className="h-4 w-4" />
-                        <span className="sr-only">Generate Document</span>
-                      </Button>
-                    </Link>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      ) : null}
-    </>
+    );
+  }
+
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[50px]"></TableHead>
+          <TableHead>Equipment</TableHead>
+          <TableHead>Task</TableHead>
+          <TableHead>Due Date</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {tasks.map((task) => (
+          <TableRow key={task.id}>
+            <TableCell>
+              <Checkbox aria-label={`Mark task ${task.id} as complete`} disabled={task.status === 'completed'} checked={task.status === 'completed'}/>
+            </TableCell>
+            <TableCell className="font-medium">{task.equipmentName}</TableCell>
+            <TableCell>{task.task}</TableCell>
+            <TableCell>{task.dueDate}</TableCell>
+            <TableCell>
+              <Badge variant={statusVariantMap[task.status]}>
+                {task.status}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-right">
+                <Link href={`/maintenance-docs/${task.id}`} passHref>
+                  <Button variant="ghost" size="icon">
+                    <FileText className="h-4 w-4" />
+                    <span className="sr-only">Generate Document</span>
+                  </Button>
+                </Link>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
