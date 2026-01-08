@@ -11,7 +11,9 @@
         "equipmentId": { "type": "string" },
         "model": { "type": "string" },
         "installationDate": { "type": "string", "format": "date" },
-        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] }
+        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the VSD." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the VSD." }
       },
       "required": ["id", "serialNumber", "equipmentId", "model", "installationDate", "status"]
     },

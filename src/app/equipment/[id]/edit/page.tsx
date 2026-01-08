@@ -37,6 +37,7 @@ const formSchema = z.object({
   installationDate: z.date({
     required_error: "An installation date is required.",
   }),
+  assignedToVsdId: z.string().optional(),
   equipmentName: z.string().min(1, 'Equipment name is required'),
   equipmentType: z.string().min(1, 'Equipment type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
@@ -102,6 +103,7 @@ export default function EditEquipmentPage() {
         assignedToId: 'unassigned',
         assignedToMotorId: 'unassigned',
         assignedToProtectionId: 'unassigned',
+        assignedToVsdId: 'unassigned',
     },
   });
 
@@ -111,6 +113,7 @@ export default function EditEquipmentPage() {
         serialNumber: vsd.serialNumber || '',
         model: vsd.model || '',
         installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
+        assignedToVsdId: vsd.assignedToId || 'unassigned',
         equipmentName: eq.name,
         equipmentType: eq.type,
         plant: eq.plant,
@@ -153,19 +156,23 @@ export default function EditEquipmentPage() {
         return;
     }
     
+    // Find assigned users
+    const vsdUser = users?.find(u => u.id === values.assignedToVsdId);
+    const assignedUser = users?.find(u => u.id === values.assignedToId);
+    const motorUser = users?.find(u => u.id === values.assignedToMotorId);
+    const protectionUser = users?.find(u => u.id === values.assignedToProtectionId);
+
     // Handle VSD update separately
     const vsdUpdateData: Partial<VSD> = {
         serialNumber: values.serialNumber,
         model: values.model,
         installationDate: format(values.installationDate, "yyyy-MM-dd"),
+        assignedToId: values.assignedToVsdId === 'unassigned' ? '' : values.assignedToVsdId,
+        assignedToName: values.assignedToVsdId === 'unassigned' ? '' : (vsdUser?.name || ''),
     };
     updateDocumentNonBlocking(vsdRef, vsdUpdateData);
     
     // Handle Equipment update
-    const assignedUser = users?.find(u => u.id === values.assignedToId);
-    const motorUser = users?.find(u => u.id === values.assignedToMotorId);
-    const protectionUser = users?.find(u => u.id === values.assignedToProtectionId);
-
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
       type: values.equipmentType as any,
@@ -297,6 +304,33 @@ export default function EditEquipmentPage() {
                                     />
                                 </PopoverContent>
                                 </Popover>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="assignedToVsdId"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Assigned VSD Technician</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Assign a VSD technician..." />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {usersLoading ? (
+                                            <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                        ) : (
+                                            <>
+                                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                            </>
+                                        )}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                             )}
