@@ -121,12 +121,12 @@ export default function EditEquipmentPage() {
         location: eq.location,
         imageUrl: eq.imageUrl || '',
         motorModel: eq.motorModel || '',
-        motorPower: eq.motorPower || undefined,
-        motorVoltage: eq.motorVoltage || undefined,
+        motorPower: eq.motorPower ?? undefined,
+        motorVoltage: eq.motorVoltage ?? undefined,
         motorSerialNumber: eq.motorSerialNumber || '',
         assignedToMotorId: eq.motorAssignedToId || 'unassigned',
         breakerModel: eq.breakerModel || '',
-        breakerAmperage: eq.breakerAmperage || undefined,
+        breakerAmperage: eq.breakerAmperage ?? undefined,
         breakerLocation: eq.breakerLocation || '',
         assignedToProtectionId: eq.protectionAssignedToId || 'unassigned',
         assignedToId: eq.assignedToId || 'unassigned',
@@ -364,7 +364,7 @@ export default function EditEquipmentPage() {
                     <FormItem>
                         <FormLabel>Amperage (A)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g., 63" {...field} />
+                        <Input type="number" placeholder="e.g., 63" {...field} value={field.value ?? ''} onChange={field.onChange} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -452,7 +452,7 @@ export default function EditEquipmentPage() {
                     <FormItem>
                         <FormLabel>Power (kW)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g., 75" {...field} />
+                        <Input type="number" placeholder="e.g., 75" {...field} value={field.value ?? ''} onChange={field.onChange}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -465,7 +465,7 @@ export default function EditEquipmentPage() {
                     <FormItem>
                         <FormLabel>Voltage (V)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g., 400" {...field} />
+                        <Input type="number" placeholder="e.g., 400" {...field} value={field.value ?? ''} onChange={field.onChange}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
