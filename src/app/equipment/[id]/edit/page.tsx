@@ -97,10 +97,10 @@ export default function EditEquipmentPage() {
         motorSerialNumber: '',
         breakerModel: '',
         breakerLocation: '',
-        assignedToId: '',
-        assignedToVsdId: '',
-        assignedToMotorId: '',
-        assignedToProtectionId: '',
+        assignedToId: 'unassigned',
+        assignedToVsdId: 'unassigned',
+        assignedToMotorId: 'unassigned',
+        assignedToProtectionId: 'unassigned',
     },
   });
 
@@ -159,7 +159,7 @@ export default function EditEquipmentPage() {
             model: values.model,
             installationDate: format(values.installationDate, "yyyy-MM-dd"),
             assignedToId: values.assignedToVsdId === 'unassigned' ? '' : values.assignedToVsdId,
-            assignedToName: vsdUser?.name || '',
+            assignedToName: values.assignedToVsdId === 'unassigned' ? '' : vsdUser?.name,
         };
         updateDocumentNonBlocking(vsdRef, vsdUpdateData);
     }
@@ -178,15 +178,15 @@ export default function EditEquipmentPage() {
       motorPower: values.motorPower || 0,
       motorVoltage: values.motorVoltage || 0,
       motorSerialNumber: values.motorSerialNumber || '',
-      assignedToMotorId: values.assignedToMotorId === 'unassigned' ? '' : values.assignedToMotorId,
-      motorAssignedToName: motorUser?.name || '',
+      motorAssignedToId: values.assignedToMotorId === 'unassigned' ? '' : values.assignedToMotorId,
+      motorAssignedToName: values.assignedToMotorId === 'unassigned' ? '' : motorUser?.name,
       breakerModel: values.breakerModel || '',
       breakerAmperage: values.breakerAmperage || 0,
       breakerLocation: values.breakerLocation || '',
-      assignedToProtectionId: values.assignedToProtectionId === 'unassigned' ? '' : values.assignedToProtectionId,
-      protectionAssignedToName: protectionUser?.name || '',
+      protectionAssignedToId: values.assignedToProtectionId === 'unassigned' ? '' : values.assignedToProtectionId,
+      protectionAssignedToName: values.assignedToProtectionId === 'unassigned' ? '' : protectionUser?.name,
       assignedToId: values.assignedToId === 'unassigned' ? '' : values.assignedToId,
-      assignedToName: assignedUser?.name || '',
+      assignedToName: values.assignedToId === 'unassigned' ? '' : assignedUser?.name,
     };
 
     if (values.plant === 'Mining') {
@@ -309,7 +309,7 @@ export default function EditEquipmentPage() {
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Assigned VSD Technician</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Assign a VSD technician..." />
@@ -386,7 +386,7 @@ export default function EditEquipmentPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Assigned Protection Technician</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Assign a protection technician..." />
@@ -474,7 +474,7 @@ export default function EditEquipmentPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Assigned Motor Technician</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Assign a motor technician..." />
@@ -620,7 +620,7 @@ export default function EditEquipmentPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assigned Technician (Overall)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Assign a primary technician..." />
@@ -675,5 +675,7 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
+
+    
 
     
