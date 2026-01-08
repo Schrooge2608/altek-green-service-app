@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { MaintenanceTask, User } from '@/lib/types';
@@ -55,6 +56,15 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
     const { data: technicians, isLoading: techniciansLoading } = useCollection<User>(techniciansQuery);
 
     const handleAssign = (userId: string) => {
+        if (userId === 'unassigned') {
+             const taskRef = doc(firestore, 'tasks', task.id);
+             updateDocumentNonBlocking(taskRef, {
+                assignedToId: '',
+                assignedToName: '',
+            });
+            return;
+        }
+
         const selectedTech = technicians?.find(t => t.id === userId);
         if (selectedTech) {
             const taskRef = doc(firestore, 'tasks', task.id);
@@ -68,7 +78,7 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
         }
     };
 
-    if (!isSupervisor || userRoleLoading) {
+    if (!user || !isSupervisor || userRoleLoading) {
         return (
             <div className="flex items-center gap-2">
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
@@ -78,7 +88,7 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
     }
     
     return (
-        <Select onValueChange={handleAssign} value={task.assignedToId} disabled={techniciansLoading}>
+        <Select onValueChange={handleAssign} value={task.assignedToId || 'unassigned'} disabled={techniciansLoading}>
             <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Assign to..." />
             </SelectTrigger>
@@ -87,7 +97,7 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
                     <SelectItem value="loading" disabled>Loading...</SelectItem>
                 ) : (
                     <>
-                        <SelectItem value="">Unassigned</SelectItem>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
                         {technicians?.map(tech => (
                             <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
                         ))}
