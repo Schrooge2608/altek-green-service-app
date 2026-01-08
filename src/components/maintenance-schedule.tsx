@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { MaintenanceTask, User } from '@/lib/types';
+import type { MaintenanceTask } from '@/lib/types';
 import Link from 'next/link';
 import {
   Table,
@@ -13,17 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, User as UserIcon, ChevronDown } from 'lucide-react';
-import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { FileText } from 'lucide-react';
 import React from 'react';
 import { MaintenanceCategory } from '@/lib/task-generator';
 
@@ -44,81 +34,6 @@ const statusVariantMap: Record<string, StatusVariant> = {
 // A helper function to get the correct path slug for the URL
 function getFrequencySlug(frequency: MaintenanceTask['frequency']): string {
     return frequency.toLowerCase().replace(/\s+/g, '-');
-}
-
-function AssigneeManager({ task }: { task: MaintenanceTask }) {
-    const firestore = useFirestore();
-    const { user } = useUser();
-    
-    const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-    const { data: userRole, isLoading: userRoleLoading } = useDoc<User>(userRoleRef);
-    
-    const isSupervisor = userRole?.role === 'Site Supervisor' || userRole?.role === 'Services Manager' || userRole?.role === 'Corporate Manager' || userRole?.role === 'Admin';
-    
-    const usersQuery = useMemoFirebase(() => {
-        if (!user || !isSupervisor) return null;
-        return query(collection(firestore, 'users'));
-    }, [firestore, user, isSupervisor]);
-    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
-
-    const handleAssign = (userId: string) => {
-        const taskRef = doc(firestore, 'tasks', task.id);
-        const dataToSet: Partial<MaintenanceTask> = {
-            ...task,
-        };
-        
-        if (userId === 'unassigned') {
-            dataToSet.assignedToId = '';
-            dataToSet.assignedToName = '';
-        } else {
-            const selectedUser = users?.find(t => t.id === userId);
-            if (selectedUser) {
-                dataToSet.assignedToId = selectedUser.id;
-                dataToSet.assignedToName = selectedUser.name;
-            }
-        }
-        setDocumentNonBlocking(taskRef, dataToSet, { merge: true });
-    };
-    
-    const assignedUser = task.assignedToName || 'Unassigned';
-
-    if (!user || !isSupervisor || userRoleLoading) {
-        return (
-            <div className="flex items-center gap-2">
-                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                <span>{assignedUser}</span>
-            </div>
-        );
-    }
-    
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-[180px] justify-between">
-                    {assignedUser}
-                    <ChevronDown className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-[180px]" align="start">
-                <DropdownMenuLabel>Assign to...</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {usersLoading ? (
-                    <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
-                ) : (
-                    <>
-                        <DropdownMenuItem onSelect={() => handleAssign('unassigned')}>
-                            Unassigned
-                        </DropdownMenuItem>
-                        {users?.map(tech => (
-                            <DropdownMenuItem key={tech.id} onSelect={() => handleAssign(tech.id)}>
-                                {tech.name}
-                            </DropdownMenuItem>
-                        ))}
-                    </>
-                )}
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
 }
 
 export function MaintenanceSchedule({ tasks, isLoading, category }: MaintenanceScheduleProps) {
@@ -176,7 +91,7 @@ export function MaintenanceSchedule({ tasks, isLoading, category }: MaintenanceS
               </Badge>
             </TableCell>
             <TableCell>
-                <AssigneeManager task={task} />
+                {task.assignedToName || 'Unassigned'}
             </TableCell>
             <TableCell className="text-right">
                 <Link href={`/maintenance/${categorySlug}/${getFrequencySlug(task.frequency)}`} passHref>
