@@ -20,6 +20,8 @@
         "pumpSerialNumber": { "type": "string", "description": "The serial number of the pump." },
         "pumpHead": { "type": "number" },
         "flowRate": { "type": "number" },
+        "pumpAssignedToId": { "type": "string", "description": "The UID of the user assigned to the pump." },
+        "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." },
         "lastMaintenance": { "type": "string", "format": "date" },
         "nextMaintenance": { "type": "string", "format": "date" },
         "uptime": { "type": "number" },

@@ -62,6 +62,7 @@ const formSchema = z.object({
   pumpSerialNumber: z.string().optional(),
   pumpHead: z.coerce.number().optional(),
   flowRate: z.coerce.number().optional(),
+  assignedToPumpId: z.string().optional(),
 });
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
@@ -101,6 +102,7 @@ export default function EditEquipmentPage() {
         pumpSerialNumber: '',
         pumpHead: undefined,
         flowRate: undefined,
+        assignedToPumpId: 'unassigned',
     },
   });
 
@@ -128,6 +130,7 @@ export default function EditEquipmentPage() {
         pumpSerialNumber: eq.pumpSerialNumber || '',
         pumpHead: eq.pumpHead ?? undefined,
         flowRate: eq.flowRate ?? undefined,
+        assignedToPumpId: eq.pumpAssignedToId || 'unassigned',
       });
     }
   }, [eq, form]);
@@ -156,6 +159,7 @@ export default function EditEquipmentPage() {
     
     const motorUser = users?.find(u => u.id === values.assignedToMotorId);
     const protectionUser = users?.find(u => u.id === values.assignedToProtectionId);
+    const pumpUser = users?.find(u => u.id === values.assignedToPumpId);
 
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
@@ -180,6 +184,8 @@ export default function EditEquipmentPage() {
       pumpSerialNumber: values.pumpSerialNumber || '',
       pumpHead: values.pumpHead || 0,
       flowRate: values.flowRate || 0,
+      pumpAssignedToId: values.assignedToPumpId === 'unassigned' ? '' : values.assignedToPumpId,
+      pumpAssignedToName: values.assignedToPumpId === 'unassigned' ? '' : (pumpUser?.name || ''),
     };
 
     if (values.plant === 'Mining') {
@@ -632,6 +638,33 @@ export default function EditEquipmentPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                    control={form.control}
+                    name="assignedToPumpId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assigned Pump Technician</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign a pump technician..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
             </CardContent>
           </Card>
 

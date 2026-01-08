@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, User, Shield, Wrench, Cpu } from 'lucide-react';
+import { PlusCircle, Pencil, User, Shield, Wrench, Cpu, Droplets } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -240,6 +240,15 @@ export default function EquipmentDetailPage() {
                     <CardTitle>Personnel</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {eq.pumpAssignedToName ? (
+                         <div className="flex items-center gap-3">
+                            <Droplets className="w-5 h-5 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm font-medium">{eq.pumpAssignedToName}</p>
+                                <p className="text-xs text-muted-foreground">Pump Technician</p>
+                            </div>
+                        </div>
+                    ) : null}
                     {eq.motorAssignedToName ? (
                          <div className="flex items-center gap-3">
                             <Wrench className="w-5 h-5 text-muted-foreground" />
@@ -258,7 +267,7 @@ export default function EquipmentDetailPage() {
                             </div>
                         </div>
                     ) : null}
-                    {!eq.motorAssignedToName && !eq.protectionAssignedToName && (
+                    {!eq.pumpAssignedToName && !eq.motorAssignedToName && !eq.protectionAssignedToName && (
                         <p className="text-sm text-muted-foreground">No technicians assigned.</p>
                     )}
                 </CardContent>

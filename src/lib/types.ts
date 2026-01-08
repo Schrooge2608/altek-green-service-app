@@ -15,6 +15,8 @@ export interface Equipment {
   pumpSerialNumber?: string;
   pumpHead: number;
   flowRate: number;
+  pumpAssignedToId?: string;
+  pumpAssignedToName?: string;
   lastMaintenance: string;
   nextMaintenance: string;
   uptime: number;

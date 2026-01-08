@@ -22,10 +22,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import type { User } from '@/lib/types';
+
 
 const formSchema = z.object({
   equipmentId: z.string().min(1, 'Equipment ID is required'),
@@ -47,17 +49,20 @@ const formSchema = z.object({
   motorPower: z.coerce.number().optional(),
   motorVoltage: z.coerce.number().optional(),
   motorSerialNumber: z.string().optional(),
+  assignedToMotorId: z.string().optional(),
   
   // Breaker fields
   breakerModel: z.string().optional(),
   breakerAmperage: z.coerce.number().optional(),
   breakerLocation: z.string().optional(),
+  assignedToProtectionId: z.string().optional(),
   
   // Pump fields
   pumpModel: z.string().optional(),
   pumpSerialNumber: z.string().optional(),
   pumpHead: z.coerce.number().optional(),
   flowRate: z.coerce.number().optional(),
+  assignedToPumpId: z.string().optional(),
 });
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
@@ -65,6 +70,10 @@ const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTE
 export default function NewEquipmentPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user } = useUser();
+  
+  const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
+  const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -99,6 +108,10 @@ export default function NewEquipmentPage() {
         form.setError('division', { type: 'manual', message: 'Please select a division for the Mining plant.' });
         return;
     }
+    
+    const motorUser = users?.find(u => u.id === values.assignedToMotorId);
+    const protectionUser = users?.find(u => u.id === values.assignedToProtectionId);
+    const pumpUser = users?.find(u => u.id === values.assignedToPumpId);
 
     const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
 
@@ -121,6 +134,8 @@ export default function NewEquipmentPage() {
       pumpSerialNumber: values.pumpSerialNumber || '',
       pumpHead: values.pumpHead || 0,
       flowRate: values.flowRate || 0,
+      pumpAssignedToId: values.assignedToPumpId || '',
+      pumpAssignedToName: pumpUser?.name || '',
       lastMaintenance: format(new Date(), "yyyy-MM-dd"),
       nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
       uptime: 100,
@@ -130,16 +145,20 @@ export default function NewEquipmentPage() {
       motorPower: values.motorPower || 0,
       motorVoltage: values.motorVoltage || 0,
       motorSerialNumber: values.motorSerialNumber || '',
+      motorAssignedToId: values.assignedToMotorId || '',
+      motorAssignedToName: motorUser?.name || '',
       breakerModel: values.breakerModel || '',
       breakerAmperage: values.breakerAmperage || 0,
       breakerLocation: values.breakerLocation || '',
+      protectionAssignedToId: values.assignedToProtectionId || '',
+      protectionAssignedToName: protectionUser?.name || '',
     };
 
     if (values.plant === 'Mining') {
         equipmentData.division = values.division;
     }
 
-    setDocumentNonBlocking(equipmentRef, equipmentData, {});
+    setDocumentNonBlocking(equipmentRef, equipmentData, { merge: true });
 
     toast({
       title: 'Equipment Added',
@@ -366,7 +385,7 @@ export default function NewEquipmentPage() {
                 <CardTitle>Protection Details (Circuit Breaker)</CardTitle>
                 <CardDescription>Information about the equipment's circuit breaker.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-3">
+            <CardContent className="grid gap-6 md:grid-cols-2">
                 <FormField
                     control={form.control}
                     name="breakerModel"
@@ -402,6 +421,33 @@ export default function NewEquipmentPage() {
                         <FormControl>
                         <Input placeholder="e.g., MCC-01 Panel 3" {...field} />
                         </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="assignedToProtectionId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assigned Protection Technician</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign a protection technician..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -467,6 +513,33 @@ export default function NewEquipmentPage() {
                     </FormItem>
                     )}
                 />
+                 <FormField
+                    control={form.control}
+                    name="assignedToMotorId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assigned Motor Technician</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign a motor technician..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
             </CardContent>
           </Card>
           
@@ -502,31 +575,58 @@ export default function NewEquipmentPage() {
                     </FormItem>
                   )}
                 />
+              <FormField
+                control={form.control}
+                name="pumpHead"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pump Head (m)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="flowRate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Flow Rate (m³/h)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
                <FormField
-                  control={form.control}
-                  name="pumpHead"
-                  render={({ field }) => (
+                    control={form.control}
+                    name="assignedToPumpId"
+                    render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Pump Head (m)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
+                        <FormLabel>Assigned Pump Technician</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign a pump technician..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
                     </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="flowRate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Flow Rate (m³/h)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                    )}
                 />
             </CardContent>
           </Card>

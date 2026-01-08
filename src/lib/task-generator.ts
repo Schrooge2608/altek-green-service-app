@@ -85,7 +85,10 @@ export function generateTasksForEquipment(equipment: Equipment): MaintenanceTask
                     assignedToId = equipment.motorAssignedToId || '';
                     assignedToName = equipment.motorAssignedToName || '';
                     break;
-                case 'Pump': 
+                case 'Pump':
+                    assignedToId = equipment.pumpAssignedToId || '';
+                    assignedToName = equipment.pumpAssignedToName || '';
+                    break;
                 default:
                     // Default assignment logic can go here if needed
                     break;
