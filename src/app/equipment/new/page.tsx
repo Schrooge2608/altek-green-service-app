@@ -167,12 +167,12 @@ export default function NewEquipmentPage() {
             <CardContent className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="serialNumber"
+                name="model"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>VSD Serial Number</FormLabel>
+                    <FormLabel>VSD Model</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
+                      <Input placeholder="e.g., Altek Drive 5000" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -180,12 +180,12 @@ export default function NewEquipmentPage() {
               />
               <FormField
                 control={form.control}
-                name="model"
+                name="serialNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>VSD Model</FormLabel>
+                    <FormLabel>VSD Serial Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Altek Drive 5000" {...field} />
+                      <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
