@@ -71,8 +71,8 @@ export interface CompletedSchedule {
   inspectedBy: string;
   maintenanceType: 'VSDs' | 'Protection' | 'Motors' | 'Pumps';
   frequency: 'Weekly' | 'Monthly' | '3-Monthly' | '6-Monthly' | 'Yearly';
-  workCrew: WorkCrewMember[];
-  checklist: ChecklistItem[];
+  workCrew?: WorkCrewMember[];
+  checklist?: ChecklistItem[];
 }
 
 export interface WorkCrewMember {

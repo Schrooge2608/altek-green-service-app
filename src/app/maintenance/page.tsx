@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -40,19 +41,11 @@ export default function MaintenancePage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Maintenance Schedule</h1>
-          <p className="text-muted-foreground">
-            Automatically generated maintenance tasks for all equipment.
-          </p>
-        </div>
-         <Link href={`/maintenance/completed/vsds`} passHref>
-            <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-            <FileText className="mr-2 h-4 w-4" />
-            View Completed Schedules
-            </Button>
-        </Link>
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">Maintenance Schedule</h1>
+        <p className="text-muted-foreground">
+          Automatically generated maintenance tasks for all equipment.
+        </p>
       </header>
 
       {equipmentLoading ? (

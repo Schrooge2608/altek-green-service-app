@@ -45,6 +45,13 @@ const miningDivisions = [
     { href: '/equipment/mining/boosters', label: 'Boosters' },
 ]
 
+const completedSchedulesCategories = [
+    { href: '/maintenance/completed/vsds', label: 'VSDs' },
+    { href: '/maintenance/completed/protection', label: 'Protection' },
+    { href: '/maintenance/completed/motors', label: 'Motors' },
+    { href: '/maintenance/completed/pumps', label: 'Pumps' },
+]
+
 export function SidebarNav() {
   const pathname = usePathname();
   const { user } = useUser();
@@ -58,6 +65,7 @@ export function SidebarNav() {
   const [isMiningOpen, setIsMiningOpen] = React.useState(isEquipmentPath);
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(false);
   const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin'));
+  const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -126,6 +134,30 @@ export function SidebarNav() {
                 </SidebarMenuItem>
                 <CollapsibleContent>
                     {/* Smelter sub-items will go here */}
+                </CollapsibleContent>
+            </Collapsible>
+            <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Completed Schedules" isActive={pathname.startsWith('/maintenance/completed')}>
+                            <FileText />
+                            <span>Completed Schedules</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                     <SidebarMenuSub>
+                        {completedSchedulesCategories.map((category) => (
+                            <SidebarMenuItem key={category.href}>
+                                <Link href={category.href} passHref>
+                                    <SidebarMenuSubButton asChild isActive={pathname === category.href}>
+                                    <span>{category.label}</span>
+                                    </SidebarMenuSubButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>
              {userData?.role === 'Admin' && (
