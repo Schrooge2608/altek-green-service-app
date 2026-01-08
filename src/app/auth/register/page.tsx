@@ -1,35 +1,28 @@
+
 'use client';
 
 import { UserAuthForm } from '@/components/user-auth-form';
 import { AltekLogo } from '@/components/altek-logo';
 import { useUser } from '@/firebase';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import Link from 'next/link';
 
 export default function RegisterPage() {
-    const { user, isUserLoading } = useUser();
-    const router = useRouter();
-
-    // useEffect(() => {
-    //     if (!isUserLoading && user) {
-    //         router.push('/');
-    //     }
-    // }, [user, isUserLoading, router]);
-
-    if (isUserLoading) {
-        return null; // or a loading spinner
-    }
-
+    const { user } = useUser();
+    
+    // We determine the mode based on whether an admin is logged in.
+    // The UserAuthForm component itself will handle the toggle between login/signup for public users.
+    const mode = user ? 'createUser' : 'public';
 
     return (
         <div className="container relative h-svh flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-             <Link
-                href="/admin/users"
-                className="absolute right-4 top-4 md:right-8 md:top-8"
-             >
-                Back to User Management
-            </Link>
+             {mode === 'createUser' && (
+                <Link
+                    href="/admin/users"
+                    className="absolute right-4 top-4 md:right-8 md:top-8"
+                >
+                    Back to User Management
+                </Link>
+             )}
             <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
                 <div
                     className="absolute inset-0 bg-cover"
@@ -52,15 +45,7 @@ export default function RegisterPage() {
             </div>
             <div className="lg:p-8">
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-                    <div className="flex flex-col space-y-2 text-center">
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Create a new user account
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Enter the details for the new user below.
-                        </p>
-                    </div>
-                    <UserAuthForm />
+                    <UserAuthForm mode={mode} />
                     <p className="px-8 text-center text-sm text-muted-foreground">
                         By clicking continue, you agree to our{' '}
                         <a
