@@ -12,7 +12,7 @@ export interface VSD {
 export interface Equipment {
   id: string;
   name: string;
-  type: 'Pump' | 'Fan' | 'Compressor' | 'Utility Room';
+  type: 'Pump';
   location: string;
   plant: 'Mining' | 'Smelter';
   division?: 'Boosters';

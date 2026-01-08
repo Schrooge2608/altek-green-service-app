@@ -38,7 +38,6 @@ const formSchema = z.object({
     required_error: "An installation date is required.",
   }),
   equipmentName: z.string().min(1, 'Equipment name is required'),
-  equipmentType: z.string().min(1, 'Equipment type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters"]).optional(),
   location: z.string().min(1, 'Location is required'),
@@ -91,7 +90,6 @@ export default function EditEquipmentPage() {
         serialNumber: '',
         model: '',
         equipmentName: '',
-        equipmentType: '',
         location: '',
         imageUrl: '',
         motorModel: '',
@@ -116,7 +114,6 @@ export default function EditEquipmentPage() {
         model: vsd.model || '',
         installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
         equipmentName: eq.name,
-        equipmentType: eq.type,
         plant: eq.plant,
         division: eq.division,
         location: eq.location,
@@ -172,7 +169,6 @@ export default function EditEquipmentPage() {
     
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
-      type: values.equipmentType as any,
       plant: values.plant,
       location: values.location,
       imageUrl: values.imageUrl,
@@ -247,24 +243,6 @@ export default function EditEquipmentPage() {
                         <FormControl>
                         <Input placeholder="e.g., Coolant Pump B" {...field} />
                         </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="equipmentType"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                        <FormLabel>Equipment Type</FormLabel>
-                        <Combobox
-                            options={equipmentTypes}
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="Select or create type..."
-                            searchPlaceholder='Search types...'
-                            noResultsMessage='No types found.'
-                        />
                         <FormMessage />
                     </FormItem>
                     )}

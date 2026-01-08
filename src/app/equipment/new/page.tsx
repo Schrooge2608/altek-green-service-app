@@ -37,7 +37,6 @@ const formSchema = z.object({
   }),
   equipmentId: z.string().min(1, 'Equipment ID is required'),
   equipmentName: z.string().min(1, 'Equipment name is required'),
-  equipmentType: z.string().min(1, 'Equipment type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters"]).optional(),
   location: z.string().min(1, 'Location is required'),
@@ -75,7 +74,6 @@ export default function NewEquipmentPage() {
       model: '',
       equipmentId: '',
       equipmentName: '',
-      equipmentType: '',
       location: '',
       imageUrl: '',
       motorModel: '',
@@ -116,7 +114,7 @@ export default function NewEquipmentPage() {
     const equipmentData: any = {
       id: values.equipmentId,
       name: values.equipmentName,
-      type: values.equipmentType,
+      type: 'Pump', // Defaulting to Pump as per previous structure
       plant: values.plant,
       location: values.location,
       vsdId: vsdRef.id,
@@ -189,24 +187,6 @@ export default function NewEquipmentPage() {
                     <FormControl>
                       <Input placeholder="e.g., Coolant Pump B" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="equipmentType"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Equipment Type</FormLabel>
-                    <Combobox
-                        options={equipmentTypes}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select or create type..."
-                        searchPlaceholder='Search types...'
-                        noResultsMessage='No types found.'
-                    />
                     <FormMessage />
                   </FormItem>
                 )}
