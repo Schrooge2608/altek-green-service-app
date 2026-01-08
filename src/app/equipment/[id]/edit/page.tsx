@@ -24,33 +24,40 @@ import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import React, { useMemo, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useParams, useRouter, notFound } from 'next/navigation';
-import type { Equipment, VSD, User } from '@/lib/types';
+import type { Equipment, User } from '@/lib/types';
 
 
 const formSchema = z.object({
-  serialNumber: z.string().min(1, 'Serial number is required'),
-  model: z.string().min(1, 'Model is required'),
-  installationDate: z.date({
-    required_error: "An installation date is required.",
-  }),
   equipmentName: z.string().min(1, 'Equipment name is required'),
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters"]).optional(),
   location: z.string().min(1, 'Location is required'),
   imageUrl: z.string().optional(),
+  
+  // Merged VSD fields
+  model: z.string().min(1, 'VSD Model is required'),
+  serialNumber: z.string().min(1, 'VSD Serial number is required'),
+  installationDate: z.date({
+    required_error: "An installation date is required.",
+  }),
+
+  // Motor fields
   motorModel: z.string().optional(),
   motorPower: z.coerce.number().optional(),
   motorVoltage: z.coerce.number().optional(),
   motorSerialNumber: z.string().optional(),
   assignedToMotorId: z.string().optional(),
+  
+  // Breaker fields
   breakerModel: z.string().optional(),
   breakerAmperage: z.coerce.number().optional(),
   breakerLocation: z.string().optional(),
   assignedToProtectionId: z.string().optional(),
-  assignedToVsdId: z.string().optional(),
+
+  // Pump fields
   pumpHead: z.coerce.number().optional(),
   flowRate: z.coerce.number().optional(),
 });
@@ -67,9 +74,6 @@ export default function EditEquipmentPage() {
 
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
-
-  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
-  const { data: vsd, isLoading: vsdLoading, error: vsdError } = useDoc<VSD>(vsdRef);
   
   const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
   const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
@@ -89,7 +93,6 @@ export default function EditEquipmentPage() {
         breakerModel: '',
         breakerAmperage: undefined,
         breakerLocation: '',
-        assignedToVsdId: 'unassigned',
         assignedToMotorId: 'unassigned',
         assignedToProtectionId: 'unassigned',
         pumpHead: undefined,
@@ -98,11 +101,11 @@ export default function EditEquipmentPage() {
   });
 
   useEffect(() => {
-    if (eq && vsd) {
+    if (eq) {
       form.reset({
-        serialNumber: vsd.serialNumber || '',
-        model: vsd.model || '',
-        installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
+        serialNumber: eq.serialNumber || '',
+        model: eq.model || '',
+        installationDate: eq.installationDate ? parseISO(eq.installationDate) : new Date(),
         equipmentName: eq.name,
         plant: eq.plant,
         division: eq.division,
@@ -117,12 +120,11 @@ export default function EditEquipmentPage() {
         breakerAmperage: eq.breakerAmperage ?? undefined,
         breakerLocation: eq.breakerLocation || '',
         assignedToProtectionId: eq.protectionAssignedToId || 'unassigned',
-        assignedToVsdId: vsd.assignedToId || 'unassigned',
         pumpHead: eq.pumpHead ?? undefined,
         flowRate: eq.flowRate ?? undefined,
       });
     }
-  }, [eq, vsd, form]);
+  }, [eq, form]);
 
 
   const watchedPlant = useWatch({
@@ -136,8 +138,8 @@ export default function EditEquipmentPage() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!eq || !vsdRef) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Equipment or VSD data not loaded.' });
+    if (!eqRef) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Equipment data not loaded.' });
         return;
     }
 
@@ -146,24 +148,17 @@ export default function EditEquipmentPage() {
         return;
     }
     
-    const vsdUser = users?.find(u => u.id === values.assignedToVsdId);
     const motorUser = users?.find(u => u.id === values.assignedToMotorId);
     const protectionUser = users?.find(u => u.id === values.assignedToProtectionId);
 
-    const vsdUpdateData: Partial<VSD> = {
-        serialNumber: values.serialNumber,
-        model: values.model,
-        installationDate: format(values.installationDate, "yyyy-MM-dd"),
-        assignedToId: values.assignedToVsdId === 'unassigned' ? '' : values.assignedToVsdId,
-        assignedToName: values.assignedToVsdId === 'unassigned' ? '' : (vsdUser?.name || ''),
-    };
-    updateDocumentNonBlocking(vsdRef, vsdUpdateData);
-    
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
       plant: values.plant,
       location: values.location,
       imageUrl: values.imageUrl,
+      model: values.model,
+      serialNumber: values.serialNumber,
+      installationDate: format(values.installationDate, "yyyy-MM-dd"),
       motorModel: values.motorModel || '',
       motorPower: values.motorPower || 0,
       motorVoltage: values.motorVoltage || 0,
@@ -316,7 +311,73 @@ export default function EditEquipmentPage() {
                     )}
                     />
                 )}
-                
+                 <FormField
+                    control={form.control}
+                    name="model"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>VSD Model</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Altek Drive 5000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="serialNumber"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>VSD Serial Number</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="installationDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Installation Date</FormLabel>
+                        <Popover>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                                )}
+                            >
+                                {field.value ? (
+                                format(field.value, "PPP")
+                                ) : (
+                                <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                                date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                            />
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
                 <div className="md:col-span-2">
                     <FormField
                         control={form.control}
@@ -341,112 +402,6 @@ export default function EditEquipmentPage() {
                 </div>
                 </CardContent>
             </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>VSD Information</CardTitle>
-              <CardDescription>Details of the Variable Speed Drive associated with the equipment.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-                {vsdLoading ? <p>Loading VSD data...</p> : (
-                    <>
-                        <FormField
-                            control={form.control}
-                            name="model"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>VSD Model</FormLabel>
-                                <FormControl>
-                                <Input placeholder="e.g., Altek Drive 5000" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="serialNumber"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>VSD Serial Number</FormLabel>
-                                <FormControl>
-                                <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="installationDate"
-                            render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Installation Date</FormLabel>
-                                <Popover>
-                                <PopoverTrigger asChild>
-                                    <FormControl>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                        )}
-                                    >
-                                        {field.value ? (
-                                        format(field.value, "PPP")
-                                        ) : (
-                                        <span>Pick a date</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                    </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    disabled={(date) =>
-                                        date > new Date() || date < new Date("1900-01-01")
-                                    }
-                                    initialFocus
-                                    />
-                                </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="assignedToVsdId"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Assigned VSD Technician</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Assign a VSD technician..." />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {usersLoading ? (
-                                            <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                        ) : (
-                                            <>
-                                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                            </>
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                    </>
-                )}
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader>
@@ -655,5 +610,3 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
-
-    

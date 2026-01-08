@@ -1,16 +1,4 @@
 
-
-export interface VSD {
-  id: string;
-  serialNumber: string;
-  equipmentId: string;
-  model: string;
-  installationDate: string;
-  status: 'active' | 'inactive' | 'maintenance';
-  assignedToId?: string;
-  assignedToName?: string;
-}
-
 export interface Equipment {
   id: string;
   name: string;
@@ -18,7 +6,10 @@ export interface Equipment {
   location: string;
   plant: 'Mining' | 'Smelter';
   division?: 'Boosters';
-  vsdId: string;
+  serialNumber: string;
+  model: string;
+  installationDate: string;
+  status: 'active' | 'inactive' | 'maintenance';
   pumpHead: number;
   flowRate: number;
   lastMaintenance: string;
@@ -104,4 +95,6 @@ export interface User {
   nextOfKinPhone?: string;
 }
 
+// VSD type is no longer needed as a separate interface
+// export interface VSD { ... }
     

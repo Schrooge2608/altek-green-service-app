@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
-import type { Equipment, Breakdown, VSD } from '@/lib/types';
+import type { Equipment, Breakdown } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import React, { useMemo } from 'react';
@@ -64,34 +64,6 @@ function EquipmentDetailSkeleton() {
     );
 }
 
-function VSDInfo({ vsdId }: { vsdId: string }) {
-    const firestore = useFirestore();
-    const vsdRef = useMemoFirebase(() => doc(firestore, 'vsds', vsdId), [firestore, vsdId]);
-    const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
-
-    if (vsdLoading) {
-        return (
-            <div className="mt-2 space-y-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-6 w-20" />
-            </div>
-        );
-    }
-
-    if (!vsd) {
-        return <p>VSD information not available.</p>;
-    }
-
-    return (
-         <div className="mt-2 space-y-1">
-            <p><strong>VSD ID:</strong> {vsd.id}</p>
-            <p><strong>VSD Model:</strong> {vsd.model || 'N/A'}</p>
-            <div><strong>Status:</strong> <Badge variant={vsd.status === 'active' ? 'default' : (vsd.status === 'maintenance' ? 'secondary' : 'destructive')}>{vsd.status || 'Unknown'}</Badge></div>
-        </div>
-    );
-}
-
 export default function EquipmentDetailPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
@@ -100,15 +72,12 @@ export default function EquipmentDetailPage() {
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
 
-  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
-  const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
-
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
   const uptimePercentage = useMemo(() => {
-    if (!vsd?.installationDate || !eq) return 100;
-    const installationDate = new Date(vsd.installationDate);
+    if (!eq?.installationDate) return 100;
+    const installationDate = new Date(eq.installationDate);
     const now = new Date();
     const totalHours = (now.getTime() - installationDate.getTime()) / (1000 * 60 * 60);
     if (totalHours <= 0) return 100;
@@ -118,9 +87,9 @@ export default function EquipmentDetailPage() {
     
     return Math.max(0, (uptimeHours / totalHours) * 100);
 
-  }, [eq, vsd]);
+  }, [eq]);
 
-  if (eqLoading || vsdLoading) {
+  if (eqLoading) {
     return <EquipmentDetailSkeleton />;
   }
 
@@ -164,8 +133,12 @@ export default function EquipmentDetailPage() {
                         </div>
                     </div>
                     <div>
-                        <h3 className="font-semibold text-muted-foreground">VSD Control</h3>
-                        {eq.vsdId ? <VSDInfo vsdId={eq.vsdId} /> : <p>No VSD associated.</p>}
+                        <h3 className="font-semibold text-muted-foreground">VSD Details</h3>
+                        <div className="mt-2 space-y-1">
+                            <p><strong>VSD Model:</strong> {eq.model || 'N/A'}</p>
+                            <p><strong>VSD S/N:</strong> {eq.serialNumber || 'N/A'}</p>
+                            <div><strong>Status:</strong> <Badge variant={eq.status === 'active' ? 'default' : (eq.status === 'maintenance' ? 'secondary' : 'destructive')}>{eq.status || 'Unknown'}</Badge></div>
+                        </div>
                     </div>
                      <div>
                         <h3 className="font-semibold text-muted-foreground">Pump Specifications</h3>
@@ -196,7 +169,7 @@ export default function EquipmentDetailPage() {
                          <div className="mt-2 space-y-1">
                             <p><strong>Last:</strong> {eq.lastMaintenance}</p>
                             <p><strong>Next:</strong> {eq.nextMaintenance}</p>
-                             <p><strong>Installation:</strong> {vsd?.installationDate || 'N/A'}</p>
+                             <p><strong>Installation:</strong> {eq.installationDate || 'N/A'}</p>
                         </div>
                     </div>
                 </CardContent>
@@ -265,15 +238,6 @@ export default function EquipmentDetailPage() {
                     <CardTitle>Personnel</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {vsd?.assignedToName ? (
-                         <div className="flex items-center gap-3">
-                            <Cpu className="w-5 h-5 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">{vsd.assignedToName}</p>
-                                <p className="text-xs text-muted-foreground">VSD Technician</p>
-                            </div>
-                        </div>
-                    ) : null}
                     {eq.motorAssignedToName ? (
                          <div className="flex items-center gap-3">
                             <Wrench className="w-5 h-5 text-muted-foreground" />
@@ -292,7 +256,7 @@ export default function EquipmentDetailPage() {
                             </div>
                         </div>
                     ) : null}
-                    {!vsd?.assignedToName && !eq.motorAssignedToName && !eq.protectionAssignedToName && (
+                    {!eq.motorAssignedToName && !eq.protectionAssignedToName && (
                         <p className="text-sm text-muted-foreground">No technicians assigned.</p>
                     )}
                 </CardContent>
@@ -321,5 +285,3 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
-
-    

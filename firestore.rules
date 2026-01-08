@@ -37,11 +37,6 @@ service cloud.firestore {
       allow read: if isRegisteredUser();
       allow write: if isRegisteredUser() && isSupervisorOrAdmin();
     }
-
-    match /vsds/{vsdId} {
-      allow read: if isRegisteredUser();
-      allow write: if isRegisteredUser() && isSupervisorOrAdmin();
-    }
     
     match /tasks/{taskId} {
       allow read: if isRegisteredUser();

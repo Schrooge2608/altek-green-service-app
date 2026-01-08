@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -18,8 +19,8 @@ import {
 import { Activity, AlertTriangle, Cpu, Zap, Building, Pickaxe, ExternalLink } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { PerformanceChart } from '@/components/performance-chart';
-import { collection, query, where, limit, Query, and } from 'firebase/firestore';
-import type { VSD, Equipment, MaintenanceTask } from '@/lib/types';
+import { collection, query, where, limit, Query } from 'firebase/firestore';
+import type { Equipment, MaintenanceTask } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useMemo } from 'react';
 import Link from 'next/link';
@@ -51,20 +52,10 @@ export function PlantDashboard({ plantName, divisionName }: PlantDashboardProps)
 
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
     
-    // We need all VSDs to find the ones associated with the plant's equipment
-    const vsdsQuery = useMemoFirebase(() => collection(firestore, 'vsds'), [firestore]);
-    const { data: allVsds, isLoading: vsdsLoading } = useCollection<VSD>(vsdsQuery);
-
     const maintenanceTasksQuery = useMemoFirebase(() => query(collection(firestore, 'tasks'), where('status', '==', 'pending'), limit(5)), [firestore]);
     const { data: maintenanceTasks, isLoading: tasksLoading } = useCollection<MaintenanceTask>(maintenanceTasksQuery);
 
-    const plantVSDs = useMemo(() => {
-        if (!equipment || !allVsds) return [];
-        const equipmentVsdIds = new Set(equipment.map(e => e.vsdId));
-        return allVsds.filter(vsd => equipmentVsdIds.has(vsd.id));
-    }, [equipment, allVsds]);
-
-    const activeVSDs = plantVSDs?.filter((vsd) => vsd.status === 'active').length ?? 0;
+    const activeVSDs = equipment?.filter((eq) => eq.status === 'active').length ?? 0;
     const criticalAlerts = equipment?.filter(
         (eq) => eq.uptime < 98
     ).length ?? 0;
@@ -74,7 +65,7 @@ export function PlantDashboard({ plantName, divisionName }: PlantDashboardProps)
         1000
         : 0;
 
-    const isDataLoading = equipmentLoading || vsdsLoading || tasksLoading;
+    const isDataLoading = equipmentLoading || tasksLoading;
 
     const divisionSlug = getDivisionSlug(divisionName);
     const viewEquipmentLink = divisionName ? `/equipment/mining/${divisionSlug}` : '/equipment';
@@ -103,7 +94,7 @@ export function PlantDashboard({ plantName, divisionName }: PlantDashboardProps)
                             <Cpu className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                             {isDataLoading ? <Skeleton className="h-6 w-12" /> : <div className="text-2xl font-bold">{plantVSDs?.length ?? 0}</div>}
+                             {isDataLoading ? <Skeleton className="h-6 w-12" /> : <div className="text-2xl font-bold">{equipment?.length ?? 0}</div>}
                              {isDataLoading ? <Skeleton className="h-4 w-20 mt-1" /> : <p className="text-xs text-muted-foreground">{activeVSDs} active units</p>}
                         </CardContent>
                     </Card>
