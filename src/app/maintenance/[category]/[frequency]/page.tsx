@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, notFound } from 'next/navigation';
@@ -7,6 +8,7 @@ import { VsdMonthlyScopeDocument } from '@/components/maintenance/vsd-monthly-sc
 import { Vsd3MonthlyScopeDocument } from '@/components/maintenance/vsd-3-monthly-scope';
 import { Vsd6MonthlyScopeDocument } from '@/components/maintenance/vsd-6-monthly-scope';
 import { VsdYearlyScopeDocument } from '@/components/maintenance/vsd-yearly-scope';
+import { Protection6MonthlyScopeDocument } from '@/components/maintenance/protection-6-monthly-scope';
 
 const validCategories: Record<string, string> = {
   vsds: 'VSDs',
@@ -59,6 +61,11 @@ export default function MaintenanceScopePage() {
   // Specific component for VSD Yearly Scope
   if (categorySlug === 'vsds' && frequencySlug === 'yearly') {
     return <VsdYearlyScopeDocument />;
+  }
+
+  // Specific component for Protection 6-Monthly Scope
+  if (categorySlug === 'protection' && frequencySlug === '6-monthly') {
+    return <Protection6MonthlyScopeDocument />;
   }
 
   const title = `${category} ${frequency} Service Scope`;
