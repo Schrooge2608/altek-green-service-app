@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, User as UserIcon } from 'lucide-react';
-import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import React from 'react';
@@ -56,25 +56,26 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
     const { data: technicians, isLoading: techniciansLoading } = useCollection<User>(techniciansQuery);
 
     const handleAssign = (userId: string) => {
+        const taskRef = doc(firestore, 'tasks', task.id);
+        
         if (userId === 'unassigned') {
-             const taskRef = doc(firestore, 'tasks', task.id);
-             updateDocumentNonBlocking(taskRef, {
+             setDocumentNonBlocking(taskRef, {
+                ...task, // Keep existing task data
                 assignedToId: '',
                 assignedToName: '',
-            });
+            }, { merge: true });
             return;
         }
 
         const selectedTech = technicians?.find(t => t.id === userId);
         if (selectedTech) {
-            const taskRef = doc(firestore, 'tasks', task.id);
-            // This is a temporary "fix" for generated tasks that don't exist in firestore yet.
-            // A proper solution would be to save generated tasks to firestore first.
-            // For now, we will update the document, which will fail silently if it does not exist.
-            updateDocumentNonBlocking(taskRef, {
+            // Using set with merge will create the document if it doesn't exist,
+            // or update it if it does. This fixes the permission issue.
+            setDocumentNonBlocking(taskRef, {
+                ...task, // Keep existing task data
                 assignedToId: selectedTech.id,
                 assignedToName: selectedTech.name,
-            });
+            }, { merge: true });
         }
     };
 
@@ -159,7 +160,7 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
                 <AssigneeManager task={task} />
             </TableCell>
             <TableCell className="text-right">
-                <Link href={`/maintenance-docs/${task.id}`} passHref>
+                <Link href={`/maintenance/vsds/${getFrequencySlug(frequency)}`} passHref>
                   <Button variant="ghost" size="icon">
                     <FileText className="h-4 w-4" />
                     <span className="sr-only">Generate Document</span>
