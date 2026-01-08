@@ -88,7 +88,6 @@ function VSDInfo({ vsdId }: { vsdId: string }) {
             <p><strong>VSD ID:</strong> {vsd.id}</p>
             <p><strong>VSD Model:</strong> {vsd.model || 'N/A'}</p>
             <div><strong>Status:</strong> <Badge variant={vsd.status === 'active' ? 'default' : (vsd.status === 'maintenance' ? 'secondary' : 'destructive')}>{vsd.status || 'Unknown'}</Badge></div>
-            {vsd.assignedToName && <p><strong>Technician:</strong> {vsd.assignedToName}</p>}
         </div>
     );
 }

@@ -76,9 +76,8 @@ export function generateTasksForEquipment(equipment: Equipment, vsd: VSD | undef
             // Automatically assign based on component type
             switch (categoryInfo.component) {
                 case 'VSD':
-                    // VSD technician assignment is removed
-                    assignedToId = '';
-                    assignedToName = '';
+                    assignedToId = vsd?.assignedToId || '';
+                    assignedToName = vsd?.assignedToName || '';
                     break;
                 case 'Protection':
                     assignedToId = equipment.protectionAssignedToId || '';
