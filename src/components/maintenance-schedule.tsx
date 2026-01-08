@@ -45,10 +45,14 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
     const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
     const { data: userRole, isLoading: userRoleLoading } = useDoc<User>(userRoleRef);
     
-    const techniciansQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'Technician')), [firestore]);
-    const { data: technicians, isLoading: techniciansLoading } = useCollection<User>(techniciansQuery);
-
     const isSupervisor = userRole?.role === 'Site Supervisor' || userRole?.role === 'Services Manager' || userRole?.role === 'Corporate Manager' || userRole?.role === 'Admin';
+    
+    const techniciansQuery = useMemoFirebase(() => {
+        // Only fetch technicians if the current user is a supervisor and logged in
+        if (!user || !isSupervisor) return null;
+        return query(collection(firestore, 'users'), where('role', '==', 'Technician'));
+    }, [firestore, user, isSupervisor]);
+    const { data: technicians, isLoading: techniciansLoading } = useCollection<User>(techniciansQuery);
 
     const handleAssign = (userId: string) => {
         const selectedTech = technicians?.find(t => t.id === userId);
@@ -145,7 +149,7 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
                 <AssigneeManager task={task} />
             </TableCell>
             <TableCell className="text-right">
-                <Link href={`/maintenance/vsds/${getFrequencySlug(task.frequency)}`} passHref>
+                <Link href={`/maintenance-docs/${task.id}`} passHref>
                   <Button variant="ghost" size="icon">
                     <FileText className="h-4 w-4" />
                     <span className="sr-only">Generate Document</span>

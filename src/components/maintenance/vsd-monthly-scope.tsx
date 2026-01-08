@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import React from 'react';
 import { Input } from '../ui/input';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Equipment, User } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -107,11 +107,12 @@ export function VsdMonthlyScopeDocument() {
   const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
   const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>();
   const firestore = useFirestore();
+  const { user } = useUser();
 
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
   
-  const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+  const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
   const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
   const addCrewMember = () => {
@@ -194,7 +195,7 @@ export function VsdMonthlyScopeDocument() {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="inspected-by">Inspected By</Label>
-                 <Select disabled={usersLoading}>
+                 <Select disabled={usersLoading || !user}>
                     <SelectTrigger id="inspected-by">
                         <SelectValue placeholder="Select technician..." />
                     </SelectTrigger>

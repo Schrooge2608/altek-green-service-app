@@ -26,11 +26,13 @@ function AccessDenied() {
 
 function UserList() {
     const firestore = useFirestore();
+    const { user } = useUser(); // We need user to ensure we don't query when logged out
 
     const usersQuery = useMemoFirebase(() => {
-        // We can safely create this query because this component only renders for Admins
+        // We can safely create this query because this component only renders for Admins who are logged in
+        if (!user) return null;
         return collection(firestore, 'users');
-    }, [firestore]);
+    }, [firestore, user]);
 
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
@@ -100,6 +102,10 @@ export default function UserManagementPage() {
         );
     }
     
+    // This now correctly handles the case where the user is logged out (user is null)
+    // or the user document hasn't loaded yet.
+    const isKnownAdmin = user && userRole?.role === 'Admin';
+
     return (
         <div className="flex flex-col gap-8">
             <header className="flex items-center justify-between">
@@ -109,7 +115,7 @@ export default function UserManagementPage() {
                         View and manage all registered users in the system.
                     </p>
                 </div>
-                {userRole?.role === 'Admin' && (
+                {isKnownAdmin && (
                     <Link href="/auth/register" passHref>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
@@ -119,7 +125,7 @@ export default function UserManagementPage() {
                 )}
             </header>
             
-            {userRole?.role === 'Admin' ? (
+            {isKnownAdmin ? (
                 <UserList />
             ) : (
                 <AccessDenied />
@@ -127,4 +133,3 @@ export default function UserManagementPage() {
         </div>
     );
 }
-
