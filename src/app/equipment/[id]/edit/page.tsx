@@ -37,6 +37,7 @@ const formSchema = z.object({
   installationDate: z.date({
     required_error: "An installation date is required.",
   }),
+  assignedToVsdId: z.string().optional(),
   equipmentName: z.string().min(1, 'Equipment name is required'),
   equipmentType: z.string().min(1, 'Equipment type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
@@ -47,9 +48,11 @@ const formSchema = z.object({
   motorPower: z.coerce.number().optional(),
   motorVoltage: z.coerce.number().optional(),
   motorSerialNumber: z.string().optional(),
+  assignedToMotorId: z.string().optional(),
   breakerModel: z.string().optional(),
   breakerAmperage: z.coerce.number().optional(),
   breakerLocation: z.string().optional(),
+  assignedToProtectionId: z.string().optional(),
   assignedToId: z.string().optional(),
 });
 
@@ -95,6 +98,9 @@ export default function EditEquipmentPage() {
         breakerModel: '',
         breakerLocation: '',
         assignedToId: '',
+        assignedToVsdId: '',
+        assignedToMotorId: '',
+        assignedToProtectionId: '',
     },
   });
 
@@ -104,6 +110,7 @@ export default function EditEquipmentPage() {
         serialNumber: vsd?.serialNumber || '',
         model: vsd?.model || '',
         installationDate: vsd ? parseISO(vsd.installationDate) : new Date(),
+        assignedToVsdId: vsd?.assignedToId || 'unassigned',
         equipmentName: eq.name,
         equipmentType: eq.type,
         plant: eq.plant,
@@ -114,10 +121,12 @@ export default function EditEquipmentPage() {
         motorPower: eq.motorPower || undefined,
         motorVoltage: eq.motorVoltage || undefined,
         motorSerialNumber: eq.motorSerialNumber || '',
+        assignedToMotorId: eq.motorAssignedToId || 'unassigned',
         breakerModel: eq.breakerModel || '',
         breakerAmperage: eq.breakerAmperage || undefined,
         breakerLocation: eq.breakerLocation || '',
-        assignedToId: eq.assignedToId || '',
+        assignedToProtectionId: eq.protectionAssignedToId || 'unassigned',
+        assignedToId: eq.assignedToId || 'unassigned',
       });
     }
   }, [eq, vsd, form]);
@@ -144,15 +153,20 @@ export default function EditEquipmentPage() {
     }
     
     if (vsdRef) {
-        const vsdUpdateData = {
-        serialNumber: values.serialNumber,
-        model: values.model,
-        installationDate: format(values.installationDate, "yyyy-MM-dd"),
+        const vsdUser = users?.find(u => u.id === values.assignedToVsdId);
+        const vsdUpdateData: Partial<VSD> = {
+            serialNumber: values.serialNumber,
+            model: values.model,
+            installationDate: format(values.installationDate, "yyyy-MM-dd"),
+            assignedToId: values.assignedToVsdId === 'unassigned' ? '' : values.assignedToVsdId,
+            assignedToName: vsdUser?.name || '',
         };
         updateDocumentNonBlocking(vsdRef, vsdUpdateData);
     }
     
     const assignedUser = users?.find(u => u.id === values.assignedToId);
+    const motorUser = users?.find(u => u.id === values.assignedToMotorId);
+    const protectionUser = users?.find(u => u.id === values.assignedToProtectionId);
 
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
@@ -164,9 +178,13 @@ export default function EditEquipmentPage() {
       motorPower: values.motorPower || 0,
       motorVoltage: values.motorVoltage || 0,
       motorSerialNumber: values.motorSerialNumber || '',
+      assignedToMotorId: values.assignedToMotorId === 'unassigned' ? '' : values.assignedToMotorId,
+      motorAssignedToName: motorUser?.name || '',
       breakerModel: values.breakerModel || '',
       breakerAmperage: values.breakerAmperage || 0,
       breakerLocation: values.breakerLocation || '',
+      assignedToProtectionId: values.assignedToProtectionId === 'unassigned' ? '' : values.assignedToProtectionId,
+      protectionAssignedToName: protectionUser?.name || '',
       assignedToId: values.assignedToId === 'unassigned' ? '' : values.assignedToId,
       assignedToName: assignedUser?.name || '',
     };
@@ -216,7 +234,7 @@ export default function EditEquipmentPage() {
               <CardDescription>Details of the Variable Speed Drive associated with the equipment.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-                {vsdLoading ? <p>Loading VSD data...</p> : vsd ? (
+                {vsdLoading ? <p>Loading VSD data...</p> : (
                     <>
                         <FormField
                             control={form.control}
@@ -285,9 +303,34 @@ export default function EditEquipmentPage() {
                             </FormItem>
                             )}
                         />
+                         <FormField
+                            control={form.control}
+                            name="assignedToVsdId"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Assigned VSD Technician</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Assign a VSD technician..." />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {usersLoading ? (
+                                            <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                        ) : (
+                                            <>
+                                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                            </>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                     </>
-                ) : (
-                    <p className="text-muted-foreground col-span-2">No associated VSD found or VSD data could not be loaded.</p>
                 )}
             </CardContent>
           </Card>
@@ -297,7 +340,7 @@ export default function EditEquipmentPage() {
                 <CardTitle>Protection Details (Circuit Breaker)</CardTitle>
                 <CardDescription>Information about the equipment's circuit breaker.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-3">
+            <CardContent className="grid gap-6 md:grid-cols-2">
                 <FormField
                     control={form.control}
                     name="breakerModel"
@@ -333,6 +376,33 @@ export default function EditEquipmentPage() {
                         <FormControl>
                         <Input placeholder="e.g., MCC-01 Panel 3" {...field} />
                         </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="assignedToProtectionId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assigned Protection Technician</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign a protection technician..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -394,6 +464,33 @@ export default function EditEquipmentPage() {
                         <FormControl>
                         <Input type="number" placeholder="e.g., 400" {...field} />
                         </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="assignedToMotorId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assigned Motor Technician</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign a motor technician..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -522,7 +619,7 @@ export default function EditEquipmentPage() {
                 name="assignedToId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assigned Technician</FormLabel>
+                    <FormLabel>Assigned Technician (Overall)</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                         <FormControl>
                             <SelectTrigger>
@@ -578,3 +675,5 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
+
+    

@@ -7,6 +7,8 @@ export interface VSD {
   model: string;
   installationDate: string;
   status: 'active' | 'inactive' | 'maintenance';
+  assignedToId?: string;
+  assignedToName?: string;
 }
 
 export interface Equipment {
@@ -28,10 +30,14 @@ export interface Equipment {
   motorPower?: number;
   motorVoltage?: number;
   motorSerialNumber?: string;
+  motorAssignedToId?: string;
+  motorAssignedToName?: string;
   totalDowntimeHours?: number;
   breakerModel?: string;
   breakerAmperage?: number;
   breakerLocation?: string;
+  protectionAssignedToId?: string;
+  protectionAssignedToName?: string;
   assignedToId?: string;
   assignedToName?: string;
 }
@@ -94,3 +100,5 @@ export interface User {
   email: string;
   role: 'Technician' | 'Site Supervisor' | 'Services Manager' | 'Corporate Manager' | 'Admin';
 }
+
+    

@@ -11,7 +11,9 @@
         "equipmentId": { "type": "string" },
         "model": { "type": "string" },
         "installationDate": { "type": "string", "format": "date" },
-        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] }
+        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the VSD." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the VSD." }
       },
       "required": ["id", "serialNumber", "equipmentId", "model", "installationDate", "status"]
     },
@@ -38,10 +40,14 @@
         "motorPower": { "type": "number" },
         "motorVoltage": { "type": "number" },
         "motorSerialNumber": { "type": "string" },
+        "motorAssignedToId": { "type": "string", "description": "The UID of the user assigned to the motor." },
+        "motorAssignedToName": { "type": "string", "description": "The name of the user assigned to the motor." },
         "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." },
         "breakerModel": { "type": "string", "description": "The model of the circuit breaker." },
         "breakerAmperage": { "type": "number", "description": "The amperage rating of the circuit breaker." },
         "breakerLocation": { "type": "string", "description": "The location of the circuit breaker (e.g., panel name)." },
+        "protectionAssignedToId": { "type": "string", "description": "The UID of the user assigned to the protection system." },
+        "protectionAssignedToName": { "type": "string", "description": "The name of the user assigned to the protection system." },
         "assignedToId": { "type": "string", "description": "The UID of the user assigned to the equipment." },
         "assignedToName": { "type": "string", "description": "The name of the user assigned to the equipment." }
       },
@@ -191,3 +197,5 @@
     ]
   }
 }
+
+    

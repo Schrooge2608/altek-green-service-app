@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, User } from 'lucide-react';
+import { PlusCircle, Pencil, User, Shield, Wrench } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -264,17 +264,45 @@ export default function EquipmentDetailPage() {
                 <CardHeader>
                     <CardTitle>Personnel</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                     {eq.assignedToName ? (
                          <div className="flex items-center gap-3">
                             <User className="w-5 h-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm font-medium">{eq.assignedToName}</p>
-                                <p className="text-xs text-muted-foreground">Primary Technician</p>
+                                <p className="text-xs text-muted-foreground">Overall</p>
                             </div>
                         </div>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">No primary technician assigned.</p>
+                    ) : null}
+                     {vsd?.assignedToName ? (
+                         <div className="flex items-center gap-3">
+                            <Cpu className="w-5 h-5 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm font-medium">{vsd.assignedToName}</p>
+                                <p className="text-xs text-muted-foreground">VSD Technician</p>
+                            </div>
+                        </div>
+                    ) : null}
+                    {eq.motorAssignedToName ? (
+                         <div className="flex items-center gap-3">
+                            <Wrench className="w-5 h-5 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm font-medium">{eq.motorAssignedToName}</p>
+                                <p className="text-xs text-muted-foreground">Motor Technician</p>
+                            </div>
+                        </div>
+                    ) : null}
+                    {eq.protectionAssignedToName ? (
+                         <div className="flex items-center gap-3">
+                            <Shield className="w-5 h-5 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm font-medium">{eq.protectionAssignedToName}</p>
+                                <p className="text-xs text-muted-foreground">Protection Technician</p>
+                            </div>
+                        </div>
+                    ) : null}
+                    {!eq.assignedToName && !vsd?.assignedToName && !eq.motorAssignedToName && !eq.protectionAssignedToName && (
+                        <p className="text-sm text-muted-foreground">No technicians assigned.</p>
                     )}
                 </CardContent>
             </Card>
@@ -302,3 +330,5 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
+    
