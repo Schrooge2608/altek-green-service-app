@@ -94,8 +94,11 @@ export default function EditEquipmentPage() {
         location: '',
         imageUrl: '',
         motorModel: '',
+        motorPower: undefined,
+        motorVoltage: undefined,
         motorSerialNumber: '',
         breakerModel: '',
+        breakerAmperage: undefined,
         breakerLocation: '',
         assignedToId: 'unassigned',
         assignedToVsdId: 'unassigned',
@@ -109,7 +112,7 @@ export default function EditEquipmentPage() {
       form.reset({
         serialNumber: vsd?.serialNumber || '',
         model: vsd?.model || '',
-        installationDate: vsd ? parseISO(vsd.installationDate) : new Date(),
+        installationDate: vsd?.installationDate ? parseISO(vsd.installationDate) : new Date(),
         assignedToVsdId: vsd?.assignedToId || 'unassigned',
         equipmentName: eq.name,
         equipmentType: eq.type,
@@ -159,7 +162,7 @@ export default function EditEquipmentPage() {
             model: values.model,
             installationDate: format(values.installationDate, "yyyy-MM-dd"),
             assignedToId: values.assignedToVsdId === 'unassigned' ? '' : values.assignedToVsdId,
-            assignedToName: values.assignedToVsdId === 'unassigned' ? '' : vsdUser?.name,
+            assignedToName: values.assignedToVsdId === 'unassigned' ? '' : (vsdUser?.name || ''),
         };
         updateDocumentNonBlocking(vsdRef, vsdUpdateData);
     }
@@ -179,14 +182,14 @@ export default function EditEquipmentPage() {
       motorVoltage: values.motorVoltage || 0,
       motorSerialNumber: values.motorSerialNumber || '',
       motorAssignedToId: values.assignedToMotorId === 'unassigned' ? '' : values.assignedToMotorId,
-      motorAssignedToName: values.assignedToMotorId === 'unassigned' ? '' : motorUser?.name,
+      motorAssignedToName: values.assignedToMotorId === 'unassigned' ? '' : (motorUser?.name || ''),
       breakerModel: values.breakerModel || '',
       breakerAmperage: values.breakerAmperage || 0,
       breakerLocation: values.breakerLocation || '',
       protectionAssignedToId: values.assignedToProtectionId === 'unassigned' ? '' : values.assignedToProtectionId,
-      protectionAssignedToName: values.assignedToProtectionId === 'unassigned' ? '' : protectionUser?.name,
+      protectionAssignedToName: values.assignedToProtectionId === 'unassigned' ? '' : (protectionUser?.name || ''),
       assignedToId: values.assignedToId === 'unassigned' ? '' : values.assignedToId,
-      assignedToName: values.assignedToId === 'unassigned' ? '' : assignedUser?.name,
+      assignedToName: values.assignedToId === 'unassigned' ? '' : (assignedUser?.name || ''),
     };
 
     if (values.plant === 'Mining') {
@@ -675,7 +678,3 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
-
-    
-
-    
