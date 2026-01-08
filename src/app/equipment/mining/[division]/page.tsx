@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -23,7 +24,7 @@ import {
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
-import { Fan, Droplets, AirVent, PlusCircle, LogIn } from 'lucide-react';
+import { Fan, Droplets, AirVent, PlusCircle, LogIn, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ const validDivisions: Record<string, string> = {
 function AuthenticatedMiningDivisionPage() {
   const params = useParams();
   const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
+  const { user } = useUser();
   
   const memoizedDivisionName = useMemo(() => {
     if (!divisionSlug || !validDivisions[divisionSlug]) {
@@ -52,13 +54,13 @@ function AuthenticatedMiningDivisionPage() {
   const firestore = useFirestore();
   
   const equipmentQuery = useMemoFirebase(() => {
-    if (!memoizedDivisionName) return null;
+    if (!memoizedDivisionName || !user) return null; // Do not query if user is not logged in
     return query(
         collection(firestore, 'equipment'), 
         where('plant', '==', 'Mining'),
         where('division', '==', memoizedDivisionName)
     );
-  }, [firestore, memoizedDivisionName]);
+  }, [firestore, memoizedDivisionName, user]);
   
   const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
   
@@ -227,7 +229,11 @@ export default function MiningDivisionPage() {
     const { user, isUserLoading } = useUser();
 
     if (isUserLoading) {
-        return <div className="text-center p-8">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        );
     }
 
     if (!user) {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -18,7 +19,7 @@ import {
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
-import { Fan, Droplets, AirVent, PlusCircle, LogIn } from 'lucide-react';
+import { Fan, Droplets, AirVent, PlusCircle, LogIn, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -31,7 +32,13 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 
 function AuthenticatedEquipmentPage() {
   const firestore = useFirestore();
-  const equipmentQuery = useMemoFirebase(() => query(collection(firestore, 'equipment'), where('plant', '==', 'Mining')), [firestore]);
+  const { user } = useUser();
+
+  const equipmentQuery = useMemoFirebase(() => {
+    if (!user) return null; // Do not query if user is not logged in
+    return query(collection(firestore, 'equipment'), where('plant', '==', 'Mining'));
+  }, [firestore, user]);
+
   const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
 
   return (
@@ -127,7 +134,11 @@ export default function EquipmentPage() {
     const { user, isUserLoading } = useUser();
 
     if (isUserLoading) {
-        return <div className="text-center p-8">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        );
     }
 
     if (!user) {
