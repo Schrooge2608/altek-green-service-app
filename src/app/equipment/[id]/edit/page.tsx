@@ -167,7 +167,7 @@ export default function EditEquipmentPage() {
       breakerModel: values.breakerModel || '',
       breakerAmperage: values.breakerAmperage || 0,
       breakerLocation: values.breakerLocation || '',
-      assignedToId: values.assignedToId || '',
+      assignedToId: values.assignedToId === 'unassigned' ? '' : values.assignedToId,
       assignedToName: assignedUser?.name || '',
     };
 
@@ -523,7 +523,7 @@ export default function EditEquipmentPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assigned Technician</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                         <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Assign a primary technician..." />
@@ -534,7 +534,7 @@ export default function EditEquipmentPage() {
                                 <SelectItem value="loading" disabled>Loading users...</SelectItem>
                             ) : (
                                 <>
-                                    <SelectItem value="">Unassigned</SelectItem>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
                                     {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
                                 </>
                             )}
