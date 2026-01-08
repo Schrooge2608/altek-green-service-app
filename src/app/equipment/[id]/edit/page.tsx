@@ -37,7 +37,6 @@ const formSchema = z.object({
   installationDate: z.date({
     required_error: "An installation date is required.",
   }),
-  assignedToVsdId: z.string().optional(),
   equipmentName: z.string().min(1, 'Equipment name is required'),
   equipmentType: z.string().min(1, 'Equipment type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
@@ -101,7 +100,6 @@ export default function EditEquipmentPage() {
         breakerAmperage: undefined,
         breakerLocation: '',
         assignedToId: 'unassigned',
-        assignedToVsdId: 'unassigned',
         assignedToMotorId: 'unassigned',
         assignedToProtectionId: 'unassigned',
     },
@@ -113,7 +111,6 @@ export default function EditEquipmentPage() {
         serialNumber: vsd.serialNumber || '',
         model: vsd.model || '',
         installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
-        assignedToVsdId: vsd.assignedToId || 'unassigned',
         equipmentName: eq.name,
         equipmentType: eq.type,
         plant: eq.plant,
@@ -121,12 +118,12 @@ export default function EditEquipmentPage() {
         location: eq.location,
         imageUrl: eq.imageUrl || '',
         motorModel: eq.motorModel || '',
-        motorPower: eq.motorPower,
-        motorVoltage: eq.motorVoltage,
+        motorPower: eq.motorPower ?? undefined,
+        motorVoltage: eq.motorVoltage ?? undefined,
         motorSerialNumber: eq.motorSerialNumber || '',
         assignedToMotorId: eq.motorAssignedToId || 'unassigned',
         breakerModel: eq.breakerModel || '',
-        breakerAmperage: eq.breakerAmperage,
+        breakerAmperage: eq.breakerAmperage ?? undefined,
         breakerLocation: eq.breakerLocation || '',
         assignedToProtectionId: eq.protectionAssignedToId || 'unassigned',
         assignedToId: eq.assignedToId || 'unassigned',
@@ -157,13 +154,10 @@ export default function EditEquipmentPage() {
     }
     
     // Handle VSD update separately
-    const vsdUser = users?.find(u => u.id === values.assignedToVsdId);
     const vsdUpdateData: Partial<VSD> = {
         serialNumber: values.serialNumber,
         model: values.model,
         installationDate: format(values.installationDate, "yyyy-MM-dd"),
-        assignedToId: values.assignedToVsdId === 'unassigned' ? '' : values.assignedToVsdId,
-        assignedToName: values.assignedToVsdId === 'unassigned' ? '' : (vsdUser?.name || ''),
     };
     updateDocumentNonBlocking(vsdRef, vsdUpdateData);
     
@@ -303,33 +297,6 @@ export default function EditEquipmentPage() {
                                     />
                                 </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="assignedToVsdId"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Assigned VSD Technician</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Assign a VSD technician..." />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {usersLoading ? (
-                                            <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                        ) : (
-                                            <>
-                                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                            </>
-                                        )}
-                                    </SelectContent>
-                                </Select>
                                 <FormMessage />
                             </FormItem>
                             )}

@@ -1,3 +1,4 @@
+
 import { addDays, addMonths, differenceInDays, format, isBefore, startOfDay } from 'date-fns';
 import type { Equipment, MaintenanceTask, VSD } from './types';
 
@@ -75,8 +76,9 @@ export function generateTasksForEquipment(equipment: Equipment, vsd: VSD | undef
             // Automatically assign based on component type
             switch (categoryInfo.component) {
                 case 'VSD':
-                    assignedToId = vsd?.assignedToId || '';
-                    assignedToName = vsd?.assignedToName || '';
+                    // VSD technician assignment is removed
+                    assignedToId = '';
+                    assignedToName = '';
                     break;
                 case 'Protection':
                     assignedToId = equipment.protectionAssignedToId || '';

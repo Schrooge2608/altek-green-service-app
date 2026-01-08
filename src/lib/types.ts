@@ -1,6 +1,5 @@
 
 
-
 export interface VSD {
   id: string;
   serialNumber: string;
@@ -8,8 +7,6 @@ export interface VSD {
   model: string;
   installationDate: string;
   status: 'active' | 'inactive' | 'maintenance';
-  assignedToId?: string;
-  assignedToName?: string;
 }
 
 export interface Equipment {

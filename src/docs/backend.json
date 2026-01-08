@@ -1,0 +1,202 @@
+
+{
+  "entities": {
+    "VSD": {
+      "title": "VSD",
+      "type": "object",
+      "description": "Represents a Variable Speed Drive.",
+      "properties": {
+        "id": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "model": { "type": "string" },
+        "installationDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] }
+      },
+      "required": ["id", "serialNumber", "equipmentId", "model", "installationDate", "status"]
+    },
+    "Equipment": {
+      "title": "Equipment",
+      "type": "object",
+      "description": "Represents a piece of equipment.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Pump", "Fan", "Compressor", "Utility Room"] },
+        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "TAILS BOOSTERS","CONS BOOSTERS","MPC DRY MINING", "HLABANE", "RETURN WATER BOOSTER STATION", "Dredge 1", "Dredge 2", "Smelter Area 1", "Smelter Area 2"] },
+        "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
+        "division": { "type": "string", "enum": ["Boosters"], "description": "The specific division within the Mining plant." },
+        "vsdId": { "type": "string" },
+        "pumpHead": { "type": "number" },
+        "flowRate": { "type": "number" },
+        "lastMaintenance": { "type": "string", "format": "date" },
+        "nextMaintenance": { "type": "string", "format": "date" },
+        "uptime": { "type": "number" },
+        "powerConsumption": { "type": "number" },
+        "imageUrl": { "type": "string", "description": "URL of the equipment image." },
+        "motorModel": { "type": "string" },
+        "motorPower": { "type": "number" },
+        "motorVoltage": { "type": "number" },
+        "motorSerialNumber": { "type": "string" },
+        "motorAssignedToId": { "type": "string", "description": "The UID of the user assigned to the motor." },
+        "motorAssignedToName": { "type": "string", "description": "The name of the user assigned to the motor." },
+        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." },
+        "breakerModel": { "type": "string", "description": "The model of the circuit breaker." },
+        "breakerAmperage": { "type": "number", "description": "The amperage rating of the circuit breaker." },
+        "breakerLocation": { "type": "string", "description": "The location of the circuit breaker (e.g., panel name)." },
+        "protectionAssignedToId": { "type": "string", "description": "The UID of the user assigned to the protection system." },
+        "protectionAssignedToName": { "type": "string", "description": "The name of the user assigned to the protection system." },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the equipment." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the equipment." }
+      },
+      "required": ["id", "name", "type", "location", "vsdId", "plant"]
+    },
+    "MaintenanceTask": {
+      "title": "MaintenanceTask",
+      "type": "object",
+      "description": "Represents a maintenance task.",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump"] },
+        "task": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date" },
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
+        "status": { "type": "string", "enum": ["pending", "completed", "overdue"] },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the task." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the task." }
+      },
+      "required": ["id", "equipmentId", "equipmentName", "component", "task", "dueDate", "frequency", "status"]
+    },
+    "BreakdownReport": {
+      "title": "BreakdownReport",
+      "type": "object",
+      "description": "Represents a breakdown report.",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "description": { "type": "string" },
+        "resolved": { "type": "boolean" },
+        "resolution": { "type": "string" },
+        "normalHours": { "type": "number" },
+        "overtimeHours": { "type": "number" },
+        "timeReported": { "type": "string", "format": "date-time" },
+        "timeBackInService": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "equipmentId", "equipmentName", "date", "description", "resolved", "timeReported"]
+    },
+     "CompletedSchedule": {
+      "title": "CompletedSchedule",
+      "type": "object",
+      "description": "Represents a completed maintenance schedule document.",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "area": { "type": "string" },
+        "completionDate": { "type": "string", "format": "date" },
+        "inspectedBy": { "type": "string" },
+        "maintenanceType": { "type": "string", "enum": ["VSDs", "Protection", "Motors", "Pumps"]},
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
+        "workCrew": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "rtbsNo": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "signature": { "type": "string", "description": "Base64 encoded signature image." }
+            }
+          }
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "task": { "type": "string" },
+              "status": { "type": "string", "enum": ["checked", "not-checked", "n/a"] },
+              "comments": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["id", "equipmentId", "equipmentName", "completionDate", "inspectedBy", "maintenanceType", "frequency"]
+    },
+    "User": {
+        "title": "User",
+        "type": "object",
+        "description": "Represents a user of the application.",
+        "properties": {
+            "id": { "type": "string", "description": "The user's unique ID, same as their Firebase Auth UID." },
+            "name": { "type": "string" },
+            "email": { "type": "string", "format": "email" },
+            "role": { "type": "string", "enum": ["Technician", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin"] },
+            "phoneNumber": { "type": "string" },
+            "address": { "type": "string" },
+            "nextOfKinName": { "type": "string" },
+            "nextOfKinPhone": { "type": "string" }
+        },
+        "required": ["id", "name", "email", "role"]
+    }
+  },
+  "auth": {
+    "providers": ["password", "anonymous"]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/vsds/{vsdId}",
+        "definition": {
+          "entityName": "VSD",
+          "schema": { "$ref": "#/entities/VSD" },
+          "description": "Stores VSD records."
+        }
+      },
+      {
+        "path": "/equipment/{equipmentId}",
+        "definition": {
+          "entityName": "Equipment",
+          "schema": { "$ref": "#/entities/Equipment" },
+          "description": "Stores equipment details."
+        }
+      },
+      {
+        "path": "/tasks/{taskId}",
+        "definition": {
+          "entityName": "MaintenanceTask",
+          "schema": { "$ref": "#/entities/MaintenanceTask" },
+          "description": "Stores maintenance tasks."
+        }
+      },
+      {
+        "path": "/breakdown_reports/{breakdownReportId}",
+        "definition": {
+          "entityName": "BreakdownReport",
+          "schema": { "$ref": "#/entities/BreakdownReport" },
+          "description": "Stores breakdown reports."
+        }
+      },
+      {
+        "path": "/completed_schedules/{scheduleId}",
+        "definition": {
+          "entityName": "CompletedSchedule",
+          "schema": { "$ref": "#/entities/CompletedSchedule" },
+          "description": "Stores records of completed maintenance schedules."
+        }
+      },
+      {
+          "path": "/users/{userId}",
+          "definition": {
+              "entityName": "User",
+              "schema": { "$ref": "#/entities/User" },
+              "description": "Stores user profiles and roles."
+          }
+      }
+    ]
+  }
+}
