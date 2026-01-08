@@ -65,7 +65,7 @@ export interface CompletedSchedule {
   area: string;
   completionDate: string;
   inspectedBy: string;
-  maintenanceType: string;
+  maintenanceType: 'VSDs' | 'Protection' | 'Motors' | 'Pumps';
   frequency: 'Weekly' | 'Monthly' | '3-Monthly' | '6-Monthly' | 'Yearly';
   workCrew: WorkCrewMember[];
   checklist: ChecklistItem[];

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, notFound } from 'next/navigation';
@@ -18,7 +19,7 @@ import Link from 'next/link';
 import { FileText } from 'lucide-react';
 import React, { useMemo } from 'react';
 
-const validCategories: Record<string, string> = {
+const validCategories: Record<string, CompletedSchedule['maintenanceType']> = {
   vsds: 'VSDs',
   protection: 'Protection',
   motors: 'Motors',
@@ -27,7 +28,7 @@ const validCategories: Record<string, string> = {
 
 const frequencies: CompletedSchedule['frequency'][] = ['Weekly', 'Monthly', '3-Monthly', '6-Monthly', 'Yearly'];
 
-function CompletedSchedulesTable({ schedules, isLoading, frequency }: { schedules: CompletedSchedule[] | null, isLoading: boolean, frequency: string }) {
+function CompletedSchedulesTable({ schedules, isLoading }: { schedules: CompletedSchedule[] | null, isLoading: boolean }) {
     const hasSchedules = !isLoading && schedules && schedules.length > 0;
     
     if (isLoading) {
@@ -125,7 +126,6 @@ export default function CompletedSchedulesByCategoryPage() {
                     <CompletedSchedulesTable
                         schedules={schedulesByFrequency[freq] || []}
                         isLoading={isLoading}
-                        frequency={freq}
                     />
                 </CardContent>
             </Card>

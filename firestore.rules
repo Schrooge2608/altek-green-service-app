@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -48,8 +49,7 @@ service cloud.firestore {
     }
     
     match /completed_schedules/{scheduleId} {
-      allow read: if isRegisteredUser();
-      allow write: if isRegisteredUser();
+      allow read, write: if isRegisteredUser();
     }
 
     // Fallback for any other path, deny all
