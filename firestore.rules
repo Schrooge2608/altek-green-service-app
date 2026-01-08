@@ -13,6 +13,9 @@ service cloud.firestore {
 
     // Rules for the users collection
     match /users/{userId} {
+      // Allow any authenticated user to list users, which is needed for dropdowns.
+      // The fields they can read are still controlled by the 'get' rule.
+      allow list: if isRegisteredUser();
       // Allow users to read their own document
       allow get: if isRegisteredUser() && request.auth.uid == userId;
       // Allow supervisors and above to read all user documents
