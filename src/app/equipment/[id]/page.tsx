@@ -143,6 +143,8 @@ export default function EquipmentDetailPage() {
                      <div>
                         <h3 className="font-semibold text-muted-foreground">Pump Specifications</h3>
                          <div className="mt-2 space-y-1">
+                            <p><strong>Pump Model:</strong> {eq.pumpModel || 'N/A'}</p>
+                            <p><strong>Pump S/N:</strong> {eq.pumpSerialNumber || 'N/A'}</p>
                             <p><strong>Pump Head:</strong> {eq.pumpHead > 0 ? `${eq.pumpHead}m` : 'N/A'}</p>
                             <p><strong>Flow Rate:</strong> {eq.flowRate > 0 ? `${eq.flowRate} m³/h`: 'N/A'}</p>
                         </div>

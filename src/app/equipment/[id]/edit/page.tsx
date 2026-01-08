@@ -58,6 +58,8 @@ const formSchema = z.object({
   assignedToProtectionId: z.string().optional(),
 
   // Pump fields
+  pumpModel: z.string().optional(),
+  pumpSerialNumber: z.string().optional(),
   pumpHead: z.coerce.number().optional(),
   flowRate: z.coerce.number().optional(),
 });
@@ -95,6 +97,8 @@ export default function EditEquipmentPage() {
         breakerLocation: '',
         assignedToMotorId: 'unassigned',
         assignedToProtectionId: 'unassigned',
+        pumpModel: '',
+        pumpSerialNumber: '',
         pumpHead: undefined,
         flowRate: undefined,
     },
@@ -120,6 +124,8 @@ export default function EditEquipmentPage() {
         breakerAmperage: eq.breakerAmperage ?? undefined,
         breakerLocation: eq.breakerLocation || '',
         assignedToProtectionId: eq.protectionAssignedToId || 'unassigned',
+        pumpModel: eq.pumpModel || '',
+        pumpSerialNumber: eq.pumpSerialNumber || '',
         pumpHead: eq.pumpHead ?? undefined,
         flowRate: eq.flowRate ?? undefined,
       });
@@ -170,6 +176,8 @@ export default function EditEquipmentPage() {
       breakerLocation: values.breakerLocation || '',
       protectionAssignedToId: values.assignedToProtectionId === 'unassigned' ? '' : values.assignedToProtectionId,
       protectionAssignedToName: values.assignedToProtectionId === 'unassigned' ? '' : (protectionUser?.name || ''),
+      pumpModel: values.pumpModel || '',
+      pumpSerialNumber: values.pumpSerialNumber || '',
       pumpHead: values.pumpHead || 0,
       flowRate: values.flowRate || 0,
     };
@@ -572,6 +580,32 @@ export default function EditEquipmentPage() {
               <CardDescription>Specific details for the pump component.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="pumpModel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pump Model</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., KSB Omega 200" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="pumpSerialNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pump Serial Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., PMP-SN-67890" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <FormField
                 control={form.control}
                 name="pumpHead"

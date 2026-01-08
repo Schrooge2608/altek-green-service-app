@@ -16,6 +16,8 @@
         "model": { "type": "string", "description": "Model of the integrated VSD." },
         "installationDate": { "type": "string", "format": "date", "description": "Installation date of the integrated VSD." },
         "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
+        "pumpModel": { "type": "string", "description": "The model of the pump." },
+        "pumpSerialNumber": { "type": "string", "description": "The serial number of the pump." },
         "pumpHead": { "type": "number" },
         "flowRate": { "type": "number" },
         "lastMaintenance": { "type": "string", "format": "date" },

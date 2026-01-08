@@ -54,6 +54,8 @@ const formSchema = z.object({
   breakerLocation: z.string().optional(),
   
   // Pump fields
+  pumpModel: z.string().optional(),
+  pumpSerialNumber: z.string().optional(),
   pumpHead: z.coerce.number().optional(),
   flowRate: z.coerce.number().optional(),
 });
@@ -77,6 +79,8 @@ export default function NewEquipmentPage() {
       motorSerialNumber: '',
       breakerModel: '',
       breakerLocation: '',
+      pumpModel: '',
+      pumpSerialNumber: '',
     },
   });
 
@@ -113,6 +117,8 @@ export default function NewEquipmentPage() {
       status: 'active',
       
       // Other fields
+      pumpModel: values.pumpModel || '',
+      pumpSerialNumber: values.pumpSerialNumber || '',
       pumpHead: values.pumpHead || 0,
       flowRate: values.flowRate || 0,
       lastMaintenance: format(new Date(), "yyyy-MM-dd"),
@@ -470,6 +476,32 @@ export default function NewEquipmentPage() {
               <CardDescription>Specific details for the pump component.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="pumpModel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pump Model</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., KSB Omega 200" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="pumpSerialNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pump Serial Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., PMP-SN-67890" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                <FormField
                   control={form.control}
                   name="pumpHead"

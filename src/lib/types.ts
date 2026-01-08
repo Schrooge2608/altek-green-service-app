@@ -1,4 +1,5 @@
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -10,6 +11,8 @@ export interface Equipment {
   model: string;
   installationDate: string;
   status: 'active' | 'inactive' | 'maintenance';
+  pumpModel?: string;
+  pumpSerialNumber?: string;
   pumpHead: number;
   flowRate: number;
   lastMaintenance: string;
