@@ -108,7 +108,7 @@ export default function EditEquipmentPage() {
   });
 
   useEffect(() => {
-    if (eq) {
+    if (eq && vsd) {
       form.reset({
         serialNumber: vsd?.serialNumber || '',
         model: vsd?.model || '',
@@ -145,8 +145,8 @@ export default function EditEquipmentPage() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!eq) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Equipment data not loaded.' });
+    if (!eq || !vsdRef) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Equipment or VSD data not loaded.' });
         return;
     }
 
@@ -155,18 +155,18 @@ export default function EditEquipmentPage() {
         return;
     }
     
-    if (vsdRef) {
-        const vsdUser = users?.find(u => u.id === values.assignedToVsdId);
-        const vsdUpdateData: Partial<VSD> = {
-            serialNumber: values.serialNumber,
-            model: values.model,
-            installationDate: format(values.installationDate, "yyyy-MM-dd"),
-            assignedToId: values.assignedToVsdId === 'unassigned' ? '' : values.assignedToVsdId,
-            assignedToName: values.assignedToVsdId === 'unassigned' ? '' : (vsdUser?.name || ''),
-        };
-        updateDocumentNonBlocking(vsdRef, vsdUpdateData);
-    }
+    // Handle VSD update separately
+    const vsdUser = users?.find(u => u.id === values.assignedToVsdId);
+    const vsdUpdateData: Partial<VSD> = {
+        serialNumber: values.serialNumber,
+        model: values.model,
+        installationDate: format(values.installationDate, "yyyy-MM-dd"),
+        assignedToId: values.assignedToVsdId === 'unassigned' ? '' : values.assignedToVsdId,
+        assignedToName: values.assignedToVsdId === 'unassigned' ? '' : (vsdUser?.name || ''),
+    };
+    updateDocumentNonBlocking(vsdRef, vsdUpdateData);
     
+    // Handle Equipment update
     const assignedUser = users?.find(u => u.id === values.assignedToId);
     const motorUser = users?.find(u => u.id === values.assignedToMotorId);
     const protectionUser = users?.find(u => u.id === values.assignedToProtectionId);
@@ -678,3 +678,5 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
+
+    
