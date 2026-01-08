@@ -11,7 +11,9 @@
         "equipmentId": { "type": "string" },
         "model": { "type": "string" },
         "installationDate": { "type": "string", "format": "date" },
-        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] }
+        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the VSD." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the VSD." }
       },
       "required": ["id", "serialNumber", "equipmentId", "model", "installationDate", "status"]
     },
@@ -22,7 +24,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["Pump"] },
+        "type": { "type": "string", "enum": ["Pump", "Fan", "Compressor", "Utility Room"] },
         "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "TAILS BOOSTERS","CONS BOOSTERS","MPC DRY MINING", "HLABANE", "RETURN WATER BOOSTER STATION", "Dredge 1", "Dredge 2", "Smelter Area 1", "Smelter Area 2"] },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
         "division": { "type": "string", "enum": ["Boosters"], "description": "The specific division within the Mining plant." },

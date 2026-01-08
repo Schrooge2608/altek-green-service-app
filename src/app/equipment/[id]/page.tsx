@@ -265,15 +265,6 @@ export default function EquipmentDetailPage() {
                     <CardTitle>Personnel</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {eq.assignedToName ? (
-                         <div className="flex items-center gap-3">
-                            <User className="w-5 h-5 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">{eq.assignedToName}</p>
-                                <p className="text-xs text-muted-foreground">Overall</p>
-                            </div>
-                        </div>
-                    ) : null}
                     {vsd?.assignedToName ? (
                          <div className="flex items-center gap-3">
                             <Cpu className="w-5 h-5 text-muted-foreground" />
@@ -301,7 +292,7 @@ export default function EquipmentDetailPage() {
                             </div>
                         </div>
                     ) : null}
-                    {!eq.assignedToName && !vsd?.assignedToName && !eq.motorAssignedToName && !eq.protectionAssignedToName && (
+                    {!vsd?.assignedToName && !eq.motorAssignedToName && !eq.protectionAssignedToName && (
                         <p className="text-sm text-muted-foreground">No technicians assigned.</p>
                     )}
                 </CardContent>

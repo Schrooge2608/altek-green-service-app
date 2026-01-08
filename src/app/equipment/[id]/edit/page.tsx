@@ -24,7 +24,6 @@ import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { Combobox } from '@/components/ui/combobox';
 import React, { useMemo, useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useParams, useRouter, notFound } from 'next/navigation';
@@ -51,7 +50,7 @@ const formSchema = z.object({
   breakerAmperage: z.coerce.number().optional(),
   breakerLocation: z.string().optional(),
   assignedToProtectionId: z.string().optional(),
-  assignedToId: z.string().optional(),
+  assignedToVsdId: z.string().optional(),
   pumpHead: z.coerce.number().optional(),
   flowRate: z.coerce.number().optional(),
 });
@@ -99,7 +98,7 @@ export default function EditEquipmentPage() {
         breakerModel: '',
         breakerAmperage: undefined,
         breakerLocation: '',
-        assignedToId: 'unassigned',
+        assignedToVsdId: 'unassigned',
         assignedToMotorId: 'unassigned',
         assignedToProtectionId: 'unassigned',
         pumpHead: undefined,
@@ -127,7 +126,7 @@ export default function EditEquipmentPage() {
         breakerAmperage: eq.breakerAmperage ?? undefined,
         breakerLocation: eq.breakerLocation || '',
         assignedToProtectionId: eq.protectionAssignedToId || 'unassigned',
-        assignedToId: eq.assignedToId || 'unassigned',
+        assignedToVsdId: vsd.assignedToId || 'unassigned',
         pumpHead: eq.pumpHead ?? undefined,
         flowRate: eq.flowRate ?? undefined,
       });
@@ -156,7 +155,7 @@ export default function EditEquipmentPage() {
         return;
     }
     
-    const assignedUser = users?.find(u => u.id === values.assignedToId);
+    const vsdUser = users?.find(u => u.id === values.assignedToVsdId);
     const motorUser = users?.find(u => u.id === values.assignedToMotorId);
     const protectionUser = users?.find(u => u.id === values.assignedToProtectionId);
 
@@ -164,6 +163,8 @@ export default function EditEquipmentPage() {
         serialNumber: values.serialNumber,
         model: values.model,
         installationDate: format(values.installationDate, "yyyy-MM-dd"),
+        assignedToId: values.assignedToVsdId === 'unassigned' ? '' : values.assignedToVsdId,
+        assignedToName: values.assignedToVsdId === 'unassigned' ? '' : (vsdUser?.name || ''),
     };
     updateDocumentNonBlocking(vsdRef, vsdUpdateData);
     
@@ -183,8 +184,6 @@ export default function EditEquipmentPage() {
       breakerLocation: values.breakerLocation || '',
       protectionAssignedToId: values.assignedToProtectionId === 'unassigned' ? '' : values.assignedToProtectionId,
       protectionAssignedToName: values.assignedToProtectionId === 'unassigned' ? '' : (protectionUser?.name || ''),
-      assignedToId: values.assignedToId === 'unassigned' ? '' : values.assignedToId,
-      assignedToName: values.assignedToId === 'unassigned' ? '' : (assignedUser?.name || ''),
       pumpHead: values.pumpHead || 0,
       flowRate: values.flowRate || 0,
     };
@@ -326,33 +325,7 @@ export default function EditEquipmentPage() {
                     )}
                     />
                 )}
-                <FormField
-                    control={form.control}
-                    name="assignedToId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Assigned Technician (Overall)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Assign a primary technician..." />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {usersLoading ? (
-                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                ) : (
-                                    <>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                    </>
-                                )}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
+                
                 <div className="md:col-span-2">
                     <FormField
                         control={form.control}
@@ -448,6 +421,33 @@ export default function EditEquipmentPage() {
                                     />
                                 </PopoverContent>
                                 </Popover>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="assignedToVsdId"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Assigned VSD Technician</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Assign a VSD technician..." />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {usersLoading ? (
+                                            <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                        ) : (
+                                            <>
+                                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                            </>
+                                        )}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                             )}
