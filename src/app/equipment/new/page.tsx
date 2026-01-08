@@ -49,6 +49,8 @@ const formSchema = z.object({
   breakerModel: z.string().optional(),
   breakerAmperage: z.coerce.number().optional(),
   breakerLocation: z.string().optional(),
+  pumpHead: z.coerce.number().optional(),
+  flowRate: z.coerce.number().optional(),
 });
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
@@ -118,8 +120,8 @@ export default function NewEquipmentPage() {
       plant: values.plant,
       location: values.location,
       vsdId: vsdRef.id,
-      pumpHead: 0, // Default values
-      flowRate: 0, // Default values
+      pumpHead: values.pumpHead || 0,
+      flowRate: values.flowRate || 0,
       lastMaintenance: format(new Date(), "yyyy-MM-dd"),
       nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
       uptime: 100,
@@ -159,6 +161,159 @@ export default function NewEquipmentPage() {
       </header>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+           <Card>
+            <CardHeader>
+              <CardTitle>Equipment Cluster Details</CardTitle>
+              <CardDescription>Information about the equipment this VSD controls.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="equipmentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Equipment ID</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., pump-003" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="equipmentName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Equipment Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Coolant Pump B" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="equipmentType"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Equipment Type</FormLabel>
+                    <Combobox
+                        options={equipmentTypes}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select or create type..."
+                        searchPlaceholder='Search types...'
+                        noResultsMessage='No types found.'
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="plant"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Plant</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a plant" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Mining">Mining</SelectItem>
+                        <SelectItem value="Smelter">Smelter</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {watchedPlant === 'Mining' && (
+                <FormField
+                  control={form.control}
+                  name="division"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Division</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a division" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Boosters">Boosters</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+               {watchedPlant === 'Mining' && (watchedDivision === 'Boosters') ? (
+                 <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location (Plant Heading)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a location" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {boosterLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+               ) : (
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Sector C, Line 2" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              <div className="md:col-span-2">
+                <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Image</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select an image for the equipment" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {PlaceHolderImages.map(img => <SelectItem key={img.id} value={img.imageUrl}>{img.description}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle>VSD Information</CardTitle>
@@ -346,155 +501,36 @@ export default function NewEquipmentPage() {
           
           <Card>
             <CardHeader>
-              <CardTitle>Driven Equipment Details</CardTitle>
-              <CardDescription>Information about the equipment this VSD controls.</CardDescription>
+              <CardTitle>Pump Details</CardTitle>
+              <CardDescription>Specific details for the pump component.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="equipmentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Equipment ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., pump-003" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="equipmentName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Equipment Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Coolant Pump B" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
                <FormField
-                control={form.control}
-                name="equipmentType"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Equipment Type</FormLabel>
-                    <Combobox
-                        options={equipmentTypes}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select or create type..."
-                        searchPlaceholder='Search types...'
-                        noResultsMessage='No types found.'
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="plant"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Plant</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  control={form.control}
+                  name="pumpHead"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pump Head (m)</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a plant" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Mining">Mining</SelectItem>
-                        <SelectItem value="Smelter">Smelter</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {watchedPlant === 'Mining' && (
-                <FormField
-                  control={form.control}
-                  name="division"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Division</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a division" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Boosters">Boosters</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-               {watchedPlant === 'Mining' && (watchedDivision === 'Boosters') ? (
-                 <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location (Plant Heading)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a location" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {boosterLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-               ) : (
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Sector C, Line 2" {...field} />
+                        <Input type="number" placeholder="e.g., 50" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
-              <div className="md:col-span-2">
                 <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
+                  control={form.control}
+                  name="flowRate"
+                  render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Image</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                <SelectValue placeholder="Select an image for the equipment" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {PlaceHolderImages.map(img => <SelectItem key={img.id} value={img.imageUrl}>{img.description}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
+                      <FormLabel>Flow Rate (m³/h)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 120" {...field} />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
-                    )}
+                  )}
                 />
-              </div>
             </CardContent>
           </Card>
 
