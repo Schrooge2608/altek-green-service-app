@@ -1,13 +1,23 @@
 import { addDays, addMonths, differenceInDays, format, isBefore, startOfDay } from 'date-fns';
 import type { Equipment, MaintenanceTask } from './types';
 
-const frequencies: { name: MaintenanceTask['frequency']; days: number; task: string }[] = [
-  { name: 'Weekly', days: 7, task: 'Perform weekly inspection' },
-  { name: 'Monthly', days: 30, task: 'Perform monthly service' },
-  { name: '3-Monthly', days: 90, task: 'Perform 3-monthly checks' },
-  { name: '6-Monthly', days: 180, task: 'Perform 6-monthly overhaul' },
-  { name: 'Yearly', days: 365, task: 'Perform annual major service' },
+export type MaintenanceCategory = 'VSDs' | 'Protection' | 'Motors' | 'Pumps';
+
+const frequencies: { name: MaintenanceTask['frequency']; days: number }[] = [
+  { name: 'Weekly', days: 7 },
+  { name: 'Monthly', days: 30 },
+  { name: '3-Monthly', days: 90 },
+  { name: '6-Monthly', days: 180 },
+  { name: 'Yearly', days: 365 },
 ];
+
+const tasksByCategory: Record<MaintenanceCategory, { task: string, component: MaintenanceTask['component'] }> = {
+    'VSDs': { task: 'Perform VSD inspection', component: 'VSD' },
+    'Protection': { task: 'Perform protection system check', component: 'Protection' },
+    'Motors': { task: 'Perform motor inspection', component: 'Motor' },
+    'Pumps': { task: 'Perform pump service', component: 'Pump' },
+};
+
 
 /**
  * Calculates the next due date for a task.
@@ -25,7 +35,7 @@ function getNextDueDate(lastServiceDate: Date, days: number): Date {
 }
 
 /**
- * Generates all potential maintenance tasks for a single piece of equipment.
+ * Generates all potential maintenance tasks for a single piece of equipment across all categories.
  * @param equipment - The equipment to generate tasks for.
  * @returns An array of MaintenanceTask objects.
  */
@@ -38,32 +48,40 @@ export function generateTasksForEquipment(equipment: Equipment): MaintenanceTask
     ? startOfDay(new Date(equipment.lastMaintenance))
     : startOfDay(new Date(equipment.installationDate || new Date()));
 
-  frequencies.forEach(freq => {
-    const nextDueDate = getNextDueDate(baseDate, freq.days);
-    const daysUntilDue = differenceInDays(nextDueDate, today);
-    
-    let status: MaintenanceTask['status'] = 'pending';
-    if (daysUntilDue < 0) {
-      status = 'overdue';
-    } else if (daysUntilDue <= 7) {
-      status = 'pending'; // Highlight tasks due within a week
-    }
+  // Determine which categories apply to this equipment
+  const applicableCategories: MaintenanceCategory[] = ['VSDs', 'Protection', 'Motors'];
+  if (equipment.type === 'Pump') {
+      applicableCategories.push('Pumps');
+  }
 
-    // We only generate tasks that are overdue or due within the next cycle.
-    // This prevents the UI from being cluttered with tasks far in the future.
-    if (isBefore(nextDueDate, addDays(today, freq.days))) {
-       tasks.push({
-        id: `${equipment.id}-${freq.name.toLowerCase()}`,
-        equipmentId: equipment.id,
-        equipmentName: equipment.name,
-        task: freq.task,
-        dueDate: format(nextDueDate, 'yyyy-MM-dd'),
-        frequency: freq.name,
-        status: status,
-        assignedToId: '', // Initially unassigned
-        assignedToName: '', // Initially unassigned
-      });
-    }
+  applicableCategories.forEach(category => {
+    const categoryInfo = tasksByCategory[category];
+    
+    frequencies.forEach(freq => {
+        const nextDueDate = getNextDueDate(baseDate, freq.days);
+        const daysUntilDue = differenceInDays(nextDueDate, today);
+        
+        let status: MaintenanceTask['status'] = 'pending';
+        if (daysUntilDue < 0) {
+        status = 'overdue';
+        }
+
+        // We only generate tasks that are overdue or due within the next cycle.
+        if (isBefore(nextDueDate, addDays(today, freq.days))) {
+            tasks.push({
+                id: `${equipment.id}-${category.toLowerCase()}-${freq.name.toLowerCase()}`,
+                equipmentId: equipment.id,
+                equipmentName: equipment.name,
+                component: categoryInfo.component,
+                task: `${categoryInfo.task} (${freq.name})`,
+                dueDate: format(nextDueDate, 'yyyy-MM-dd'),
+                frequency: freq.name,
+                status: status,
+                assignedToId: '', // Initially unassigned
+                assignedToName: '', // Initially unassigned
+            });
+        }
+    });
   });
 
   return tasks;

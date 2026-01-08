@@ -13,17 +13,17 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, User as UserIcon } from 'lucide-react';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import React from 'react';
+import { MaintenanceCategory } from '@/lib/task-generator';
 
 interface MaintenanceScheduleProps {
   tasks: MaintenanceTask[] | null;
   isLoading: boolean;
-  frequency: MaintenanceTask['frequency'];
+  category: MaintenanceCategory;
 }
 
 type StatusVariant = "default" | "secondary" | "destructive";
@@ -49,7 +49,6 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
     const isSupervisor = userRole?.role === 'Site Supervisor' || userRole?.role === 'Services Manager' || userRole?.role === 'Corporate Manager' || userRole?.role === 'Admin';
     
     const techniciansQuery = useMemoFirebase(() => {
-        // Only fetch technicians if the current user is a supervisor and logged in
         if (!user || !isSupervisor) return null;
         return query(collection(firestore, 'users'), where('role', '==', 'Technician'));
     }, [firestore, user, isSupervisor]);
@@ -57,26 +56,21 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
 
     const handleAssign = (userId: string) => {
         const taskRef = doc(firestore, 'tasks', task.id);
+        const dataToSet: Partial<MaintenanceTask> = {
+            ...task, // Pass the full existing task data
+        };
         
         if (userId === 'unassigned') {
-             setDocumentNonBlocking(taskRef, {
-                ...task, // Keep existing task data
-                assignedToId: '',
-                assignedToName: '',
-            }, { merge: true });
-            return;
+            dataToSet.assignedToId = '';
+            dataToSet.assignedToName = '';
+        } else {
+            const selectedTech = technicians?.find(t => t.id === userId);
+            if (selectedTech) {
+                dataToSet.assignedToId = selectedTech.id;
+                dataToSet.assignedToName = selectedTech.name;
+            }
         }
-
-        const selectedTech = technicians?.find(t => t.id === userId);
-        if (selectedTech) {
-            // Using set with merge will create the document if it doesn't exist,
-            // or update it if it does. This fixes the permission issue.
-            setDocumentNonBlocking(taskRef, {
-                ...task, // Keep existing task data
-                assignedToId: selectedTech.id,
-                assignedToName: selectedTech.name,
-            }, { merge: true });
-        }
+        setDocumentNonBlocking(taskRef, dataToSet, { merge: true });
     };
 
     if (!user || !isSupervisor || userRoleLoading) {
@@ -109,12 +103,12 @@ function AssigneeManager({ task }: { task: MaintenanceTask }) {
     );
 }
 
-export function MaintenanceSchedule({ tasks, isLoading, frequency }: MaintenanceScheduleProps) {
+export function MaintenanceSchedule({ tasks, isLoading, category }: MaintenanceScheduleProps) {
   
   if (isLoading) {
     return (
       <div className="text-center py-10 text-muted-foreground">
-        Loading {frequency.toLowerCase()} tasks...
+        Loading {category.toLowerCase()} tasks...
       </div>
     );
   }
@@ -122,20 +116,22 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
   if (!tasks || tasks.length === 0) {
     return (
         <div className="text-center py-20 text-muted-foreground">
-            <h3 className="text-lg font-semibold">No {frequency.toLowerCase()} tasks due.</h3>
+            <h3 className="text-lg font-semibold">No {category.toLowerCase()} tasks due.</h3>
             <p className="text-sm">All equipment is up to date for this maintenance cycle.</p>
         </div>
     );
   }
 
+  const categorySlug = category.toLowerCase();
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[50px]"></TableHead>
           <TableHead>Equipment</TableHead>
+          <TableHead>Component</TableHead>
           <TableHead>Task</TableHead>
+          <TableHead>Frequency</TableHead>
           <TableHead>Due Date</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Assigned To</TableHead>
@@ -145,11 +141,16 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
       <TableBody>
         {tasks.map((task) => (
           <TableRow key={task.id}>
-            <TableCell>
-              <Checkbox aria-label={`Mark task ${task.id} as complete`} disabled={task.status === 'completed'} checked={task.status === 'completed'}/>
+            <TableCell className="font-medium">
+                <Link href={`/equipment/${task.equipmentId}`} className="hover:underline text-primary">
+                    {task.equipmentName}
+                </Link>
             </TableCell>
-            <TableCell className="font-medium">{task.equipmentName}</TableCell>
+            <TableCell>{task.component}</TableCell>
             <TableCell>{task.task}</TableCell>
+            <TableCell>
+                <Badge variant="secondary">{task.frequency}</Badge>
+            </TableCell>
             <TableCell>{task.dueDate}</TableCell>
             <TableCell>
               <Badge variant={statusVariantMap[task.status]}>
@@ -160,7 +161,7 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
                 <AssigneeManager task={task} />
             </TableCell>
             <TableCell className="text-right">
-                <Link href={`/maintenance/vsds/${getFrequencySlug(frequency)}`} passHref>
+                <Link href={`/maintenance/${categorySlug}/${getFrequencySlug(task.frequency)}`} passHref>
                   <Button variant="ghost" size="icon">
                     <FileText className="h-4 w-4" />
                     <span className="sr-only">Generate Document</span>
