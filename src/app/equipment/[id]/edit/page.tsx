@@ -364,7 +364,7 @@ export default function EditEquipmentPage() {
                     <FormItem>
                         <FormLabel>Amperage (A)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g., 63" {...field} value={field.value ?? ''} onChange={field.onChange} />
+                        <Input type="number" placeholder="e.g., 63" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -452,7 +452,7 @@ export default function EditEquipmentPage() {
                     <FormItem>
                         <FormLabel>Power (kW)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g., 75" {...field} value={field.value ?? ''} onChange={field.onChange}/>
+                        <Input type="number" placeholder="e.g., 75" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -465,7 +465,7 @@ export default function EditEquipmentPage() {
                     <FormItem>
                         <FormLabel>Voltage (V)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g., 400" {...field} value={field.value ?? ''} onChange={field.onChange}/>
+                        <Input type="number" placeholder="e.g., 400" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
