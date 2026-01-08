@@ -110,10 +110,10 @@ export default function EditEquipmentPage() {
   useEffect(() => {
     if (eq && vsd) {
       form.reset({
-        serialNumber: vsd?.serialNumber || '',
-        model: vsd?.model || '',
-        installationDate: vsd?.installationDate ? parseISO(vsd.installationDate) : new Date(),
-        assignedToVsdId: vsd?.assignedToId || 'unassigned',
+        serialNumber: vsd.serialNumber || '',
+        model: vsd.model || '',
+        installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
+        assignedToVsdId: vsd.assignedToId || 'unassigned',
         equipmentName: eq.name,
         equipmentType: eq.type,
         plant: eq.plant,
@@ -121,18 +121,19 @@ export default function EditEquipmentPage() {
         location: eq.location,
         imageUrl: eq.imageUrl || '',
         motorModel: eq.motorModel || '',
-        motorPower: eq.motorPower ?? undefined,
-        motorVoltage: eq.motorVoltage ?? undefined,
+        motorPower: eq.motorPower,
+        motorVoltage: eq.motorVoltage,
         motorSerialNumber: eq.motorSerialNumber || '',
         assignedToMotorId: eq.motorAssignedToId || 'unassigned',
         breakerModel: eq.breakerModel || '',
-        breakerAmperage: eq.breakerAmperage ?? undefined,
+        breakerAmperage: eq.breakerAmperage,
         breakerLocation: eq.breakerLocation || '',
         assignedToProtectionId: eq.protectionAssignedToId || 'unassigned',
         assignedToId: eq.assignedToId || 'unassigned',
       });
     }
   }, [eq, vsd, form]);
+
 
   const watchedPlant = useWatch({
     control: form.control,
@@ -678,5 +679,3 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
-
-    
