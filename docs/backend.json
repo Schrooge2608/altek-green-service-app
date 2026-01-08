@@ -56,7 +56,9 @@
         "task": { "type": "string" },
         "dueDate": { "type": "string", "format": "date" },
         "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
-        "status": { "type": "string", "enum": ["pending", "completed", "overdue"] }
+        "status": { "type": "string", "enum": ["pending", "completed", "overdue"] },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the task." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the task." }
       },
       "required": ["id", "equipmentId", "equipmentName", "task", "dueDate", "frequency", "status"]
     },

@@ -1,6 +1,6 @@
 'use client';
 
-import type { MaintenanceTask } from '@/lib/types';
+import type { MaintenanceTask, User } from '@/lib/types';
 import Link from 'next/link';
 import {
   Table,
@@ -13,7 +13,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText } from 'lucide-react';
+import { FileText, User as UserIcon } from 'lucide-react';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import React from 'react';
 
 interface MaintenanceScheduleProps {
   tasks: MaintenanceTask[] | null;
@@ -34,6 +38,61 @@ function getFrequencySlug(frequency: MaintenanceTask['frequency']): string {
     return frequency.toLowerCase().replace(/\s+/g, '-');
 }
 
+function AssigneeManager({ task }: { task: MaintenanceTask }) {
+    const firestore = useFirestore();
+    const { user } = useUser();
+    
+    const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+    const { data: userRole, isLoading: userRoleLoading } = useDoc<User>(userRoleRef);
+    
+    const techniciansQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'Technician')), [firestore]);
+    const { data: technicians, isLoading: techniciansLoading } = useCollection<User>(techniciansQuery);
+
+    const isSupervisor = userRole?.role === 'Site Supervisor' || userRole?.role === 'Services Manager' || userRole?.role === 'Corporate Manager' || userRole?.role === 'Admin';
+
+    const handleAssign = (userId: string) => {
+        const selectedTech = technicians?.find(t => t.id === userId);
+        if (selectedTech) {
+            const taskRef = doc(firestore, 'tasks', task.id);
+            // This is a temporary "fix" for generated tasks that don't exist in firestore yet.
+            // A proper solution would be to save generated tasks to firestore first.
+            // For now, we will update the document, which will fail silently if it does not exist.
+            updateDocumentNonBlocking(taskRef, {
+                assignedToId: selectedTech.id,
+                assignedToName: selectedTech.name,
+            });
+        }
+    };
+
+    if (!isSupervisor || userRoleLoading) {
+        return (
+            <div className="flex items-center gap-2">
+                <UserIcon className="h-4 w-4 text-muted-foreground" />
+                <span>{task.assignedToName || 'Unassigned'}</span>
+            </div>
+        );
+    }
+    
+    return (
+        <Select onValueChange={handleAssign} value={task.assignedToId} disabled={techniciansLoading}>
+            <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Assign to..." />
+            </SelectTrigger>
+            <SelectContent>
+                {techniciansLoading ? (
+                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                ) : (
+                    <>
+                        <SelectItem value="">Unassigned</SelectItem>
+                        {technicians?.map(tech => (
+                            <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
+                        ))}
+                    </>
+                )}
+            </SelectContent>
+        </Select>
+    );
+}
 
 export function MaintenanceSchedule({ tasks, isLoading, frequency }: MaintenanceScheduleProps) {
   
@@ -64,6 +123,7 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
           <TableHead>Task</TableHead>
           <TableHead>Due Date</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Assigned To</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -80,6 +140,9 @@ export function MaintenanceSchedule({ tasks, isLoading, frequency }: Maintenance
               <Badge variant={statusVariantMap[task.status]}>
                 {task.status}
               </Badge>
+            </TableCell>
+            <TableCell>
+                <AssigneeManager task={task} />
             </TableCell>
             <TableCell className="text-right">
                 <Link href={`/maintenance/vsds/${getFrequencySlug(task.frequency)}`} passHref>

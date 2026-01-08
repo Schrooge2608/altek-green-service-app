@@ -60,6 +60,8 @@ export function generateTasksForEquipment(equipment: Equipment): MaintenanceTask
         dueDate: format(nextDueDate, 'yyyy-MM-dd'),
         frequency: freq.name,
         status: status,
+        assignedToId: '', // Initially unassigned
+        assignedToName: '', // Initially unassigned
       });
     }
   });

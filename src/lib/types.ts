@@ -42,6 +42,8 @@ export interface MaintenanceTask {
   dueDate: string;
   frequency: 'Weekly' | 'Monthly' | '3-Monthly' | '6-Monthly' | 'Yearly';
   status: 'pending' | 'completed' | 'overdue';
+  assignedToId?: string;
+  assignedToName?: string;
 }
 
 export interface Breakdown {
