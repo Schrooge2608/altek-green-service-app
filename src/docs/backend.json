@@ -47,9 +47,7 @@
         "breakerAmperage": { "type": "number", "description": "The amperage rating of the circuit breaker." },
         "breakerLocation": { "type": "string", "description": "The location of the circuit breaker (e.g., panel name)." },
         "protectionAssignedToId": { "type": "string", "description": "The UID of the user assigned to the protection system." },
-        "protectionAssignedToName": { "type": "string", "description": "The name of the user assigned to the protection system." },
-        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the equipment." },
-        "assignedToName": { "type": "string", "description": "The name of the user assigned to the equipment." }
+        "protectionAssignedToName": { "type": "string", "description": "The name of the user assigned to the protection system." }
       },
       "required": ["id", "name", "type", "location", "vsdId", "plant"]
     },
@@ -202,3 +200,5 @@
     ]
   }
 }
+
+    

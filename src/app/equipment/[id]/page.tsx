@@ -152,7 +152,7 @@ export default function EquipmentDetailPage() {
         <div className="lg:col-span-2 space-y-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Equipment Details</CardTitle>
+                    <CardTitle>Equipment Cluster Details</CardTitle>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
                     <div>
@@ -168,7 +168,7 @@ export default function EquipmentDetailPage() {
                         {eq.vsdId ? <VSDInfo vsdId={eq.vsdId} /> : <p>No VSD associated.</p>}
                     </div>
                      <div>
-                        <h3 className="font-semibold text-muted-foreground">Equipment Specifications</h3>
+                        <h3 className="font-semibold text-muted-foreground">Pump Specifications</h3>
                          <div className="mt-2 space-y-1">
                             <p><strong>Pump Head:</strong> {eq.pumpHead > 0 ? `${eq.pumpHead}m` : 'N/A'}</p>
                             <p><strong>Flow Rate:</strong> {eq.flowRate > 0 ? `${eq.flowRate} m³/h`: 'N/A'}</p>
@@ -321,3 +321,5 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
+    

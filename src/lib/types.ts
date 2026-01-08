@@ -1,6 +1,5 @@
 
 
-
 export interface VSD {
   id: string;
   serialNumber: string;
@@ -15,7 +14,7 @@ export interface VSD {
 export interface Equipment {
   id: string;
   name: string;
-  type: 'Pump';
+  type: 'Pump' | 'Fan' | 'Compressor' | 'Utility Room';
   location: string;
   plant: 'Mining' | 'Smelter';
   division?: 'Boosters';
@@ -39,8 +38,6 @@ export interface Equipment {
   breakerLocation?: string;
   protectionAssignedToId?: string;
   protectionAssignedToName?: string;
-  assignedToId?: string;
-  assignedToName?: string;
 }
 
 export interface MaintenanceTask {
@@ -106,3 +103,5 @@ export interface User {
   nextOfKinName?: string;
   nextOfKinPhone?: string;
 }
+
+    

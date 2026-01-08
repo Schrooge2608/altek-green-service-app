@@ -57,13 +57,6 @@ const formSchema = z.object({
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
 
-const initialEquipmentTypes = [
-  { value: "Pump", label: "Pump" },
-  { value: "Fan", label: "Fan" },
-  { value: "Compressor", label: "Compressor" },
-  { value: "Utility Room", label: "Utility Room" },
-];
-
 export default function EditEquipmentPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -80,8 +73,6 @@ export default function EditEquipmentPage() {
   
   const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
   const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
-
-  const equipmentTypes = useMemo(() => initialEquipmentTypes, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -664,3 +655,5 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
+
+    
