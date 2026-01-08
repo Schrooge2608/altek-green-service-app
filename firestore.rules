@@ -11,6 +11,11 @@ service cloud.firestore {
     function getUserRole(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
+    
+    function isSupervisorOrAdmin() {
+        let userRole = getUserRole(request.auth.uid);
+        return userRole in ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin'];
+    }
 
     // Rules for the users collection
     match /users/{userId} {
@@ -20,7 +25,7 @@ service cloud.firestore {
       // Allow users to read their own document
       allow get: if isRegisteredUser() && request.auth.uid == userId;
       // Allow supervisors and above to read all user documents
-      allow read: if isRegisteredUser() && getUserRole(request.auth.uid) in ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin'];
+      allow read: if isRegisteredUser() && isSupervisorOrAdmin();
       // Allow a user to create their own user document
       allow create: if request.auth.uid == userId;
       // Only Admins can update or delete users
@@ -30,17 +35,18 @@ service cloud.firestore {
     // Other collections can be read by any registered user
     match /equipment/{equipmentId} {
       allow read: if isRegisteredUser();
-      allow write: if isRegisteredUser(); // More specific rules can be added here
+      allow write: if isRegisteredUser() && isSupervisorOrAdmin();
     }
 
     match /vsds/{vsdId} {
       allow read: if isRegisteredUser();
-      allow write: if isRegisteredUser();
+      allow write: if isRegisteredUser() && isSupervisorOrAdmin();
     }
     
     match /tasks/{taskId} {
       allow read: if isRegisteredUser();
-      allow write: if isRegisteredUser();
+      // Allow supervisors and admins to create or update tasks
+      allow create, update: if isRegisteredUser() && isSupervisorOrAdmin();
     }
     
     match /breakdown_reports/{reportId} {
