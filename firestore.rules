@@ -15,8 +15,8 @@ service cloud.firestore {
     match /users/{userId} {
       // Allow users to read their own document
       allow get: if isRegisteredUser() && request.auth.uid == userId;
-      // Allow supervisors and above to read all user documents (for dropdowns)
-      allow list: if isRegisteredUser() && getUserRole(request.auth.uid) in ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin'];
+      // Allow supervisors and above to read all user documents
+      allow read: if isRegisteredUser() && getUserRole(request.auth.uid) in ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin'];
       // Allow a user to create their own user document
       allow create: if request.auth.uid == userId;
       // Only Admins can update or delete users
