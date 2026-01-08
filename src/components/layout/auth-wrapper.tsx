@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser } from '@/firebase';
@@ -19,14 +20,20 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // If the user is not logged in and the current route is not public
+    // If the user is logged in and is on the public registration page, redirect them to the dashboard.
+    if (user && publicRoutes.includes(pathname)) {
+      router.push('/');
+      return; // Stop further execution in this effect run
+    }
+
+    // If the user is not logged in and the current route is not public, redirect to the login page.
     if (!user && !publicRoutes.includes(pathname)) {
       router.push('/auth/register');
     }
   }, [user, isUserLoading, router, pathname]);
 
   // While checking auth status, show a full-page loader to prevent
-  // any of the child components from attempting to fetch data.
+  // any of the child components from attempting to fetch data, unless on a public route.
   if (isUserLoading && !publicRoutes.includes(pathname)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
