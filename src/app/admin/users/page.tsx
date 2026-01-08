@@ -7,7 +7,7 @@ import type { User } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ShieldAlert, PlusCircle, Loader2 } from 'lucide-react';
+import { ShieldAlert, PlusCircle, Loader2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import React from 'react';
@@ -58,6 +58,7 @@ function UserList() {
                             <TableHead>Name</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>Role</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -69,11 +70,19 @@ function UserList() {
                                     <TableCell>
                                         <Badge variant={u.role === 'Admin' ? 'destructive' : 'secondary'}>{u.role}</Badge>
                                     </TableCell>
+                                    <TableCell className="text-right">
+                                        <Link href={`/admin/users/${u.id}/edit`} passHref>
+                                            <Button variant="ghost" size="icon">
+                                                <Pencil className="h-4 w-4" />
+                                                <span className="sr-only">Edit User</span>
+                                            </Button>
+                                        </Link>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={3} className="text-center h-24">No users found.</TableCell>
+                                <TableCell colSpan={4} className="text-center h-24">No users found.</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
