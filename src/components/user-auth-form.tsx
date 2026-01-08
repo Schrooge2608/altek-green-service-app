@@ -53,7 +53,7 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
       return formSchema.required({ name: true, role: true }); // Admin creating user
     }
     if (isPublicSignUp) {
-      return formSchema.required({ name: true, role: true }); // Public user signing up
+      return formSchema.required({ name: true }); // Public user signing up, role is defaulted
     }
     return formSchema.pick({ email: true, password: true }); // Public login
   };
@@ -167,14 +167,14 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
                 </FormItem>
               )}
             />
-             {(isCreateUserMode || isPublicSignUp) && (
+             {isCreateUserMode && (
                 <FormField
                 control={form.control}
                 name="role"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isCreateUserMode}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a role" />
@@ -182,14 +182,10 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
                         </FormControl>
                         <SelectContent>
                             <SelectItem value="Technician">Technician</SelectItem>
-                            {isCreateUserMode && (
-                                <>
-                                    <SelectItem value="Site Supervisor">Site Supervisor</SelectItem>
-                                    <SelectItem value="Services Manager">Services Manager</SelectItem>
-                                    <SelectItem value="Corporate Manager">Corporate Manager</SelectItem>
-                                    <SelectItem value="Admin">Admin</SelectItem>
-                                </>
-                            )}
+                            <SelectItem value="Site Supervisor">Site Supervisor</SelectItem>
+                            <SelectItem value="Services Manager">Services Manager</SelectItem>
+                            <SelectItem value="Corporate Manager">Corporate Manager</SelectItem>
+                            <SelectItem value="Admin">Admin</SelectItem>
                         </SelectContent>
                     </Select>
                     <FormMessage />
