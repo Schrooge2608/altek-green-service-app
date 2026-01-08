@@ -23,11 +23,17 @@ import React, { useEffect } from 'react';
 import { useParams, useRouter, notFound } from 'next/navigation';
 import type { User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
+  email: z.string().email('Please provide a valid email.'),
   role: z.enum(['Technician', 'Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin']),
+  phoneNumber: z.string().optional(),
+  address: z.string().optional(),
+  nextOfKinName: z.string().optional(),
+  nextOfKinPhone: z.string().optional(),
 });
 
 export default function EditUserPage() {
@@ -45,7 +51,12 @@ export default function EditUserPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
+      email: '',
       role: 'Technician',
+      phoneNumber: '',
+      address: '',
+      nextOfKinName: '',
+      nextOfKinPhone: '',
     },
   });
 
@@ -53,24 +64,35 @@ export default function EditUserPage() {
     if (user) {
       form.reset({
         name: user.name,
+        email: user.email,
         role: user.role,
+        phoneNumber: user.phoneNumber || '',
+        address: user.address || '',
+        nextOfKinName: user.nextOfKinName || '',
+        nextOfKinPhone: user.nextOfKinPhone || '',
       });
     }
   }, [user, form]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
+    if (!userRef) {
         toast({ variant: 'destructive', title: 'Error', description: 'User data not loaded.' });
         return;
     }
     
-    const userUpdateData = {
-      name: values.name,
-      role: values.role,
-    };
+    // Note: Updating email in Firestore does not update it in Firebase Auth.
+    // This requires a backend function for security reasons. For this UI,
+    // we'll show a toast to remind the admin of this.
+    if (values.email !== user?.email) {
+      toast({
+        title: 'Email Change Notice',
+        description: "The user's sign-in email has not been changed. This must be done via the Firebase console for security.",
+        duration: 7000,
+      });
+    }
 
-    updateDocumentNonBlocking(userRef, userUpdateData);
+    updateDocumentNonBlocking(userRef, values);
 
     toast({
       title: 'User Updated',
@@ -106,7 +128,7 @@ export default function EditUserPage() {
           <Card>
             <CardHeader>
               <CardTitle>User Profile</CardTitle>
-              <CardDescription>You can change the user's name and role here.</CardDescription>
+              <CardDescription>You can change the user's name, role, and contact information here.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
               <FormField
@@ -122,7 +144,20 @@ export default function EditUserPage() {
                   </FormItem>
                 )}
               />
-                <FormField
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., john.doe@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
                 control={form.control}
                 name="role"
                 render={({ field }) => (
@@ -146,6 +181,69 @@ export default function EditUserPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., +27 12 345 6789" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="md:col-span-2">
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Home Address</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="e.g., 123 Industrial Way, Factory Town" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>Emergency Contact</CardTitle>
+                <CardDescription>Next of kin information.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                 <FormField
+                    control={form.control}
+                    name="nextOfKinName"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Next of Kin Name</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Jane Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="nextOfKinPhone"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Next of Kin Phone</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., +27 98 765 4321" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
             </CardContent>
           </Card>
 

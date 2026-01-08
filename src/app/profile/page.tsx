@@ -17,8 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import type { User } from '@/lib/types';
-import { doc, setDoc } from 'firebase/firestore';
-import { updatePassword, sendPasswordResetEmail } from 'firebase/auth';
+import { doc } from 'firebase/firestore';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { Input } from '@/components/ui/input';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { useDoc } from '@/firebase/firestore/use-doc';
@@ -47,18 +47,11 @@ function UserProfileSkeleton() {
                     <Skeleton className="h-4 w-1/2 mt-1" />
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                        <Skeleton className="h-5 w-20" />
-                        <Skeleton className="h-5 w-40" />
-                    </div>
-                     <div className="flex items-center space-x-4">
-                        <Skeleton className="h-5 w-20" />
-                        <Skeleton className="h-5 w-48" />
-                    </div>
-                     <div className="flex items-center space-x-4">
-                        <Skeleton className="h-5 w-20" />
-                        <Skeleton className="h-6 w-24" />
-                    </div>
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-6 w-24" />
                 </CardContent>
             </Card>
              <Card>
@@ -85,6 +78,15 @@ function NotAuthenticated() {
             </CardContent>
         </Card>
     );
+}
+
+function ProfileDetailRow({ label, value }: { label: string, value?: string | React.ReactNode }) {
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm py-2 border-b">
+            <span className="font-semibold text-muted-foreground w-40">{label}:</span>
+            <span className="flex-1">{value || <span className="text-muted-foreground/70">Not set</span>}</span>
+        </div>
+    )
 }
 
 export default function ProfilePage() {
@@ -122,24 +124,8 @@ export default function ProfilePage() {
     }
   }
 
-  async function onSubmit(values: z.infer<typeof passwordFormSchema>) {
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Not authenticated' });
-        return;
-    }
-
-    try {
-        await updatePassword(user, values.newPassword);
-        toast({ title: 'Password Updated', description: 'Your password has been changed successfully.' });
-        form.reset();
-    } catch (error: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Error updating password',
-            description: error.message,
-        });
-    }
-  }
+  // The password change logic has been removed as per the new design.
+  // The form and onSubmit function are kept for future use if needed, but are not active.
   
   const isLoading = isUserLoading || userDataLoading;
 
@@ -163,71 +149,39 @@ export default function ProfilePage() {
       <Card>
         <CardHeader>
             <CardTitle>Account Information</CardTitle>
-            <CardDescription>This is your personal information as it appears in the system.</CardDescription>
+            <CardDescription>This is your personal information as it appears in the system. Please contact an admin to update it.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-            <div className="flex items-center space-x-4 text-sm">
-                <span className="font-semibold text-muted-foreground w-20">Name:</span>
-                <span>{userData?.name}</span>
-            </div>
-             <div className="flex items-center space-x-4 text-sm">
-                <span className="font-semibold text-muted-foreground w-20">Email:</span>
-                <span>{userData?.email}</span>
-            </div>
-             <div className="flex items-center space-x-4 text-sm">
-                <span className="font-semibold text-muted-foreground w-20">Role:</span>
-                {userData && <Badge variant={userData.role === 'Admin' ? 'destructive' : 'secondary'}>{userData.role}</Badge>}
-            </div>
+        <CardContent className="space-y-2">
+            <ProfileDetailRow label="Name" value={userData?.name} />
+            <ProfileDetailRow label="Email" value={userData?.email} />
+            <ProfileDetailRow label="Role" value={userData && <Badge variant={userData.role === 'Admin' ? 'destructive' : 'secondary'}>{userData.role}</Badge>} />
+            <ProfileDetailRow label="Phone Number" value={userData?.phoneNumber} />
+            <ProfileDetailRow label="Address" value={userData?.address} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Emergency Contact</CardTitle>
+            <CardDescription>Next of kin information on file.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+            <ProfileDetailRow label="Next of Kin Name" value={userData?.nextOfKinName} />
+            <ProfileDetailRow label="Next of Kin Phone" value={userData?.nextOfKinPhone} />
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader>
-            <CardTitle>Change Password</CardTitle>
+            <CardTitle>Security</CardTitle>
         </CardHeader>
-        <CardContent>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <FormField
-                        control={form.control}
-                        name="newPassword"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>New Password</FormLabel>
-                            <FormControl>
-                            <Input type="password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                     <FormField
-                        control={form.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Confirm New Password</FormLabel>
-                            <FormControl>
-                            <Input type="password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <div className="flex justify-between items-center">
-                        <Button type="submit" disabled={form.formState.isSubmitting}>
-                            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Update Password
-                        </Button>
-                         <Button type="button" variant="link" onClick={handlePasswordReset}>
-                            Forgot password?
-                        </Button>
-                    </div>
-                </form>
-            </Form>
+        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">If you've forgotten your password or wish to change it, you can request a reset link to be sent to your registered email address.</p>
+            <Button type="button" variant="outline" onClick={handlePasswordReset}>
+                Send Password Reset Email
+            </Button>
         </CardContent>
       </Card>
     </div>
   );
 }
-

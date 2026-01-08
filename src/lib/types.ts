@@ -1,5 +1,6 @@
 
 
+
 export interface VSD {
   id: string;
   serialNumber: string;
@@ -100,4 +101,8 @@ export interface User {
   name: string;
   email: string;
   role: 'Technician' | 'Site Supervisor' | 'Services Manager' | 'Corporate Manager' | 'Admin';
+  phoneNumber?: string;
+  address?: string;
+  nextOfKinName?: string;
+  nextOfKinPhone?: string;
 }

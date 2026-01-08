@@ -61,6 +61,7 @@
         "id": { "type": "string" },
         "equipmentId": { "type": "string" },
         "equipmentName": { "type": "string" },
+        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump"] },
         "task": { "type": "string" },
         "dueDate": { "type": "string", "format": "date" },
         "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
@@ -68,7 +69,7 @@
         "assignedToId": { "type": "string", "description": "The UID of the user assigned to the task." },
         "assignedToName": { "type": "string", "description": "The name of the user assigned to the task." }
       },
-      "required": ["id", "equipmentId", "equipmentName", "task", "dueDate", "frequency", "status"]
+      "required": ["id", "equipmentId", "equipmentName", "component", "task", "dueDate", "frequency", "status"]
     },
     "BreakdownReport": {
       "title": "BreakdownReport",
@@ -136,7 +137,11 @@
             "id": { "type": "string", "description": "The user's unique ID, same as their Firebase Auth UID." },
             "name": { "type": "string" },
             "email": { "type": "string", "format": "email" },
-            "role": { "type": "string", "enum": ["Technician", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin"] }
+            "role": { "type": "string", "enum": ["Technician", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin"] },
+            "phoneNumber": { "type": "string" },
+            "address": { "type": "string" },
+            "nextOfKinName": { "type": "string" },
+            "nextOfKinPhone": { "type": "string" }
         },
         "required": ["id", "name", "email", "role"]
     }
@@ -197,5 +202,3 @@
     ]
   }
 }
-
-    
