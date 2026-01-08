@@ -1,5 +1,16 @@
 
 
+export interface VSD {
+  id: string;
+  serialNumber: string;
+  equipmentId: string;
+  model: string;
+  installationDate: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  assignedToId: string;
+  assignedToName: string;
+}
+
 export interface Equipment {
   id: string;
   name: string;
@@ -7,33 +18,14 @@ export interface Equipment {
   location: string;
   plant: 'Mining' | 'Smelter';
   division?: 'Boosters';
-  serialNumber: string;
-  model: string;
-  installationDate: string;
-  status: 'active' | 'inactive' | 'maintenance';
-  pumpModel?: string;
-  pumpSerialNumber?: string;
+  vsdId: string;
   pumpHead: number;
   flowRate: number;
-  pumpAssignedToId?: string;
-  pumpAssignedToName?: string;
   lastMaintenance: string;
   nextMaintenance: string;
   uptime: number;
   powerConsumption: number;
   imageUrl?: string;
-  motorModel?: string;
-  motorPower?: number;
-  motorVoltage?: number;
-  motorSerialNumber?: string;
-  motorAssignedToId?: string;
-  motorAssignedToName?: string;
-  totalDowntimeHours?: number;
-  breakerModel?: string;
-  breakerAmperage?: number;
-  breakerLocation?: string;
-  protectionAssignedToId?: string;
-  protectionAssignedToName?: string;
 }
 
 export interface MaintenanceTask {
@@ -99,7 +91,3 @@ export interface User {
   nextOfKinName?: string;
   nextOfKinPhone?: string;
 }
-
-// VSD type is no longer needed as a separate interface
-// export interface VSD { ... }
-    

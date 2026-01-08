@@ -1,10 +1,26 @@
 
 {
   "entities": {
+    "VSD": {
+      "title": "VSD",
+      "type": "object",
+      "description": "Represents a Variable Speed Drive.",
+      "properties": {
+        "id": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "model": { "type": "string" },
+        "installationDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the VSD." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the VSD." }
+      },
+      "required": ["id", "serialNumber", "equipmentId", "model", "installationDate", "status"]
+    },
     "Equipment": {
       "title": "Equipment",
       "type": "object",
-      "description": "Represents a piece of equipment, now including its integrated VSD details.",
+      "description": "Represents a piece of equipment.",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
@@ -12,35 +28,16 @@
         "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "TAILS BOOSTERS","CONS BOOSTERS","MPC DRY MINING", "HLABANE", "RETURN WATER BOOSTER STATION", "Dredge 1", "Dredge 2", "Smelter Area 1", "Smelter Area 2"] },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
         "division": { "type": "string", "enum": ["Boosters"], "description": "The specific division within the Mining plant." },
-        "serialNumber": { "type": "string", "description": "Serial number of the integrated VSD." },
-        "model": { "type": "string", "description": "Model of the integrated VSD." },
-        "installationDate": { "type": "string", "format": "date", "description": "Installation date of the integrated VSD." },
-        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
-        "pumpModel": { "type": "string", "description": "The model of the pump." },
-        "pumpSerialNumber": { "type": "string", "description": "The serial number of the pump." },
+        "vsdId": { "type": "string" },
         "pumpHead": { "type": "number" },
         "flowRate": { "type": "number" },
-        "pumpAssignedToId": { "type": "string", "description": "The UID of the user assigned to the pump." },
-        "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." },
         "lastMaintenance": { "type": "string", "format": "date" },
         "nextMaintenance": { "type": "string", "format": "date" },
         "uptime": { "type": "number" },
         "powerConsumption": { "type": "number" },
-        "imageUrl": { "type": "string", "description": "URL of the equipment image." },
-        "motorModel": { "type": "string" },
-        "motorPower": { "type": "number" },
-        "motorVoltage": { "type": "number" },
-        "motorSerialNumber": { "type": "string" },
-        "motorAssignedToId": { "type": "string", "description": "The UID of the user assigned to the motor." },
-        "motorAssignedToName": { "type": "string", "description": "The name of the user assigned to the motor." },
-        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." },
-        "breakerModel": { "type": "string", "description": "The model of the circuit breaker." },
-        "breakerAmperage": { "type": "number", "description": "The amperage rating of the circuit breaker." },
-        "breakerLocation": { "type": "string", "description": "The location of the circuit breaker (e.g., panel name)." },
-        "protectionAssignedToId": { "type": "string", "description": "The UID of the user assigned to the protection system." },
-        "protectionAssignedToName": { "type": "string", "description": "The name of the user assigned to the protection system." }
+        "imageUrl": { "type": "string", "description": "URL of the equipment image." }
       },
-      "required": ["id", "name", "type", "location", "plant", "serialNumber", "model", "installationDate", "status"]
+      "required": ["id", "name", "type", "location", "vsdId", "plant"]
     },
     "MaintenanceTask": {
       "title": "MaintenanceTask",
@@ -141,11 +138,19 @@
   "firestore": {
     "structure": [
       {
+        "path": "/vsds/{vsdId}",
+        "definition": {
+          "entityName": "VSD",
+          "schema": { "$ref": "#/entities/VSD" },
+          "description": "Stores VSD records."
+        }
+      },
+      {
         "path": "/equipment/{equipmentId}",
         "definition": {
           "entityName": "Equipment",
           "schema": { "$ref": "#/entities/Equipment" },
-          "description": "Stores equipment details, including integrated VSD info."
+          "description": "Stores equipment details."
         }
       },
       {

@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
-import type { Equipment, Breakdown } from '@/lib/types';
+import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import React, { useMemo } from 'react';
@@ -71,25 +71,29 @@ export default function EquipmentDetailPage() {
   
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
+  
+  const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
+  const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
 
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
   const uptimePercentage = useMemo(() => {
-    if (!eq?.installationDate) return 100;
-    const installationDate = new Date(eq.installationDate);
+    if (!vsd?.installationDate) return 100;
+    const installationDate = new Date(vsd.installationDate);
     const now = new Date();
     const totalHours = (now.getTime() - installationDate.getTime()) / (1000 * 60 * 60);
     if (totalHours <= 0) return 100;
 
-    const downtimeHours = eq.totalDowntimeHours || 0;
+    // Downtime needs to be tracked on the equipment or VSD object to be used here
+    const downtimeHours = 0; // Placeholder
     const uptimeHours = totalHours - downtimeHours;
     
     return Math.max(0, (uptimeHours / totalHours) * 100);
 
-  }, [eq]);
+  }, [vsd]);
 
-  if (eqLoading) {
+  if (eqLoading || vsdLoading) {
     return <EquipmentDetailSkeleton />;
   }
 
@@ -121,7 +125,7 @@ export default function EquipmentDetailPage() {
         <div className="lg:col-span-2 space-y-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Equipment Cluster Details</CardTitle>
+                    <CardTitle>Equipment Details</CardTitle>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
                     <div>
@@ -130,40 +134,40 @@ export default function EquipmentDetailPage() {
                             <p><strong>ID:</strong> {eq.id}</p>
                             <p><strong>Type:</strong> {eq.type}</p>
                             <p><strong>Location:</strong> {eq.location}</p>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-muted-foreground">VSD Details</h3>
-                        <div className="mt-2 space-y-1">
-                            <p><strong>VSD Model:</strong> {eq.model || 'N/A'}</p>
-                            <p><strong>VSD S/N:</strong> {eq.serialNumber || 'N/A'}</p>
-                            <div><strong>Status:</strong> <Badge variant={eq.status === 'active' ? 'default' : (eq.status === 'maintenance' ? 'secondary' : 'destructive')}>{eq.status || 'Unknown'}</Badge></div>
+                            <p><strong>Plant:</strong> {eq.plant} {eq.division && `> ${eq.division}`}</p>
                         </div>
                     </div>
                      <div>
                         <h3 className="font-semibold text-muted-foreground">Pump Specifications</h3>
                          <div className="mt-2 space-y-1">
-                            <p><strong>Pump Model:</strong> {eq.pumpModel || 'N/A'}</p>
-                            <p><strong>Pump S/N:</strong> {eq.pumpSerialNumber || 'N/A'}</p>
                             <p><strong>Pump Head:</strong> {eq.pumpHead > 0 ? `${eq.pumpHead}m` : 'N/A'}</p>
                             <p><strong>Flow Rate:</strong> {eq.flowRate > 0 ? `${eq.flowRate} m³/h`: 'N/A'}</p>
                         </div>
                     </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>VSD Information</CardTitle>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
                     <div>
-                        <h3 className="font-semibold text-muted-foreground">Motor Specifications</h3>
-                         <div className="mt-2 space-y-1">
-                            <p><strong>Motor Model:</strong> {eq.motorModel || 'N/A'}</p>
-                            <p><strong>Motor Power:</strong> {eq.motorPower > 0 ? `${eq.motorPower} kW`: 'N/A'}</p>
-                            <p><strong>Motor Voltage:</strong> {eq.motorVoltage > 0 ? `${eq.motorVoltage}V` : 'N/A'}</p>
-                            <p><strong>Motor S/N:</strong> {eq.motorSerialNumber || 'N/A'}</p>
+                        <h3 className="font-semibold text-muted-foreground">VSD Details</h3>
+                        <div className="mt-2 space-y-1">
+                            <p><strong>VSD Model:</strong> {vsd?.model || 'N/A'}</p>
+                            <p><strong>VSD S/N:</strong> {vsd?.serialNumber || 'N/A'}</p>
+                            <div><strong>Status:</strong> <Badge variant={vsd?.status === 'active' ? 'default' : (vsd?.status === 'maintenance' ? 'secondary' : 'destructive')}>{vsd?.status || 'Unknown'}</Badge></div>
                         </div>
                     </div>
                     <div>
-                        <h3 className="font-semibold text-muted-foreground">Protection</h3>
-                         <div className="mt-2 space-y-1">
-                            <p><strong>Breaker Model:</strong> {eq.breakerModel || 'N/A'}</p>
-                            <p><strong>Breaker Amperage:</strong> {eq.breakerAmperage > 0 ? `${eq.breakerAmperage}A` : 'N/A'}</p>
-                            <p><strong>Breaker Location:</strong> {eq.breakerLocation || 'N/A'}</p>
+                        <h3 className="font-semibold text-muted-foreground">Assigned Technician</h3>
+                        <div className="mt-2 flex items-center gap-3">
+                            <User className="w-5 h-5 text-muted-foreground" />
+                            <div>
+                                <p className="font-medium">{vsd?.assignedToName || 'Unassigned'}</p>
+                                <p className="text-xs text-muted-foreground">VSD Technician</p>
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -171,7 +175,7 @@ export default function EquipmentDetailPage() {
                          <div className="mt-2 space-y-1">
                             <p><strong>Last:</strong> {eq.lastMaintenance}</p>
                             <p><strong>Next:</strong> {eq.nextMaintenance}</p>
-                             <p><strong>Installation:</strong> {eq.installationDate || 'N/A'}</p>
+                             <p><strong>Installation:</strong> {vsd?.installationDate || 'N/A'}</p>
                         </div>
                     </div>
                 </CardContent>
@@ -235,43 +239,6 @@ export default function EquipmentDetailPage() {
                     />
                 </Card>
             )}
-             <Card>
-                <CardHeader>
-                    <CardTitle>Personnel</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {eq.pumpAssignedToName ? (
-                         <div className="flex items-center gap-3">
-                            <Droplets className="w-5 h-5 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">{eq.pumpAssignedToName}</p>
-                                <p className="text-xs text-muted-foreground">Pump Technician</p>
-                            </div>
-                        </div>
-                    ) : null}
-                    {eq.motorAssignedToName ? (
-                         <div className="flex items-center gap-3">
-                            <Wrench className="w-5 h-5 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">{eq.motorAssignedToName}</p>
-                                <p className="text-xs text-muted-foreground">Motor Technician</p>
-                            </div>
-                        </div>
-                    ) : null}
-                    {eq.protectionAssignedToName ? (
-                         <div className="flex items-center gap-3">
-                            <Shield className="w-5 h-5 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">{eq.protectionAssignedToName}</p>
-                                <p className="text-xs text-muted-foreground">Protection Technician</p>
-                            </div>
-                        </div>
-                    ) : null}
-                    {!eq.pumpAssignedToName && !eq.motorAssignedToName && !eq.protectionAssignedToName && (
-                        <p className="text-sm text-muted-foreground">No technicians assigned.</p>
-                    )}
-                </CardContent>
-            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle>Performance Metrics</CardTitle>
@@ -283,7 +250,7 @@ export default function EquipmentDetailPage() {
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Total Downtime</span>
-                        <span className="font-bold">{(eq.totalDowntimeHours || 0).toFixed(2)} hours</span>
+                        <span className="font-bold">0 hours</span>
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Power Consumption</span>

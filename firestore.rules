@@ -38,6 +38,11 @@ service cloud.firestore {
       allow write: if isRegisteredUser() && isSupervisorOrAdmin();
     }
     
+    match /vsds/{vsdId} {
+      allow read: if isRegisteredUser();
+      allow write: if isRegisteredUser() && isSupervisorOrAdmin();
+    }
+    
     match /tasks/{taskId} {
       allow read: if isRegisteredUser();
       // Allow supervisors and admins to create or update tasks

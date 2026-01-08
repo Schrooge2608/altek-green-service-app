@@ -26,7 +26,7 @@ import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebas
 import { doc, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import type { User } from '@/lib/types';
+import type { User, Equipment, VSD } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -36,33 +36,17 @@ const formSchema = z.object({
   division: z.enum(["Boosters"]).optional(),
   location: z.string().min(1, 'Location is required'),
   imageUrl: z.string().optional(),
-  
-  // Merged VSD fields
+  pumpHead: z.coerce.number().optional(),
+  flowRate: z.coerce.number().optional(),
+
+  // VSD fields
+  vsdId: z.string().min(1, 'VSD ID is required'),
   model: z.string().min(1, 'VSD Model is required'),
   serialNumber: z.string().min(1, 'VSD Serial number is required'),
   installationDate: z.date({
     required_error: "An installation date is required.",
   }),
-
-  // Motor fields
-  motorModel: z.string().optional(),
-  motorPower: z.coerce.number().optional(),
-  motorVoltage: z.coerce.number().optional(),
-  motorSerialNumber: z.string().optional(),
-  assignedToMotorId: z.string().optional(),
-  
-  // Breaker fields
-  breakerModel: z.string().optional(),
-  breakerAmperage: z.coerce.number().optional(),
-  breakerLocation: z.string().optional(),
-  assignedToProtectionId: z.string().optional(),
-  
-  // Pump fields
-  pumpModel: z.string().optional(),
-  pumpSerialNumber: z.string().optional(),
-  pumpHead: z.coerce.number().optional(),
-  flowRate: z.coerce.number().optional(),
-  assignedToPumpId: z.string().optional(),
+  assignedToId: z.string().optional(),
 });
 
 const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
@@ -82,14 +66,9 @@ export default function NewEquipmentPage() {
       equipmentName: '',
       location: '',
       imageUrl: '',
+      vsdId: '',
       serialNumber: '',
       model: '',
-      motorModel: '',
-      motorSerialNumber: '',
-      breakerModel: '',
-      breakerLocation: '',
-      pumpModel: '',
-      pumpSerialNumber: '',
     },
   });
 
@@ -109,56 +88,44 @@ export default function NewEquipmentPage() {
         return;
     }
     
-    const motorUser = users?.find(u => u.id === values.assignedToMotorId);
-    const protectionUser = users?.find(u => u.id === values.assignedToProtectionId);
-    const pumpUser = users?.find(u => u.id === values.assignedToPumpId);
+    const assignedUser = users?.find(u => u.id === values.assignedToId);
 
     const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
+    const vsdRef = doc(firestore, 'vsds', values.vsdId);
 
-    const equipmentData: any = {
+    const equipmentData: Equipment = {
       id: values.equipmentId,
       name: values.equipmentName,
       type: 'Pump', // Defaulting to Pump
       plant: values.plant,
+      vsdId: values.vsdId,
       location: values.location,
       imageUrl: values.imageUrl,
-      
-      // VSD fields now part of equipment
-      model: values.model,
-      serialNumber: values.serialNumber,
-      installationDate: format(values.installationDate, "yyyy-MM-dd"),
-      status: 'active',
-      
-      // Other fields
-      pumpModel: values.pumpModel || '',
-      pumpSerialNumber: values.pumpSerialNumber || '',
       pumpHead: values.pumpHead || 0,
       flowRate: values.flowRate || 0,
-      pumpAssignedToId: values.assignedToPumpId || '',
-      pumpAssignedToName: pumpUser?.name || '',
       lastMaintenance: format(new Date(), "yyyy-MM-dd"),
       nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
       uptime: 100,
       powerConsumption: 0,
-      totalDowntimeHours: 0,
-      motorModel: values.motorModel || '',
-      motorPower: values.motorPower || 0,
-      motorVoltage: values.motorVoltage || 0,
-      motorSerialNumber: values.motorSerialNumber || '',
-      motorAssignedToId: values.assignedToMotorId || '',
-      motorAssignedToName: motorUser?.name || '',
-      breakerModel: values.breakerModel || '',
-      breakerAmperage: values.breakerAmperage || 0,
-      breakerLocation: values.breakerLocation || '',
-      protectionAssignedToId: values.assignedToProtectionId || '',
-      protectionAssignedToName: protectionUser?.name || '',
     };
 
     if (values.plant === 'Mining') {
         equipmentData.division = values.division;
     }
 
+    const vsdData: VSD = {
+        id: values.vsdId,
+        equipmentId: values.equipmentId,
+        model: values.model,
+        serialNumber: values.serialNumber,
+        installationDate: format(values.installationDate, "yyyy-MM-dd"),
+        status: 'active',
+        assignedToId: values.assignedToId || '',
+        assignedToName: assignedUser?.name || '',
+    };
+
     setDocumentNonBlocking(equipmentRef, equipmentData, { merge: true });
+    setDocumentNonBlocking(vsdRef, vsdData, { merge: true });
 
     toast({
       title: 'Equipment Added',
@@ -179,8 +146,8 @@ export default function NewEquipmentPage() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
            <Card>
             <CardHeader>
-              <CardTitle>Equipment Cluster Details</CardTitle>
-              <CardDescription>Information about the equipment cluster and its integrated VSD.</CardDescription>
+              <CardTitle>Equipment Details</CardTitle>
+              <CardDescription>Information about the main equipment unit.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
               <FormField
@@ -288,73 +255,32 @@ export default function NewEquipmentPage() {
                   )}
                 />
               )}
-              <FormField
-                control={form.control}
-                name="model"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>VSD Model</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Altek Drive 5000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="serialNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>VSD Serial Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="installationDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Installation Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+                <FormField
+                    control={form.control}
+                    name="pumpHead"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Pump Head (m)</FormLabel>
                         <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                        <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} />
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="flowRate"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Flow Rate (m³/h)</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
               <div className="md:col-span-2">
                 <FormField
                     control={form.control}
@@ -382,44 +308,18 @@ export default function NewEquipmentPage() {
 
           <Card>
             <CardHeader>
-                <CardTitle>Protection Details (Circuit Breaker)</CardTitle>
-                <CardDescription>Information about the equipment's circuit breaker.</CardDescription>
+                <CardTitle>VSD Information</CardTitle>
+                <CardDescription>Details for the Variable Speed Drive controlling this equipment.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
                 <FormField
                     control={form.control}
-                    name="breakerModel"
+                    name="vsdId"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Breaker Model</FormLabel>
+                        <FormLabel>VSD ID</FormLabel>
                         <FormControl>
-                        <Input placeholder="e.g., Schneider GV2ME" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="breakerAmperage"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Amperage (A)</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="e.g., 63" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="breakerLocation"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Breaker Location</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., MCC-01 Panel 3" {...field} />
+                        <Input placeholder="e.g., vsd-001" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -427,14 +327,14 @@ export default function NewEquipmentPage() {
                 />
                  <FormField
                     control={form.control}
-                    name="assignedToProtectionId"
+                    name="assignedToId"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Assigned Protection Technician</FormLabel>
+                        <FormLabel>Assigned VSD Technician</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Assign a protection technician..." />
+                                    <SelectValue placeholder="Assign a technician..." />
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -452,23 +352,14 @@ export default function NewEquipmentPage() {
                     </FormItem>
                     )}
                 />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-                <CardTitle>Motor Details</CardTitle>
-                <CardDescription>Information about the motor driven by the VSD.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
                 <FormField
                     control={form.control}
-                    name="motorModel"
+                    name="model"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Motor Model</FormLabel>
+                        <FormLabel>VSD Model</FormLabel>
                         <FormControl>
-                        <Input placeholder="e.g., WEG W22" {...field} />
+                        <Input placeholder="e.g., Altek Drive 5000" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -476,12 +367,12 @@ export default function NewEquipmentPage() {
                 />
                 <FormField
                     control={form.control}
-                    name="motorSerialNumber"
+                    name="serialNumber"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Motor Serial Number</FormLabel>
+                        <FormLabel>VSD Serial Number</FormLabel>
                         <FormControl>
-                        <Input placeholder="e.g., MOT-SN-12345" {...field} />
+                        <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -489,53 +380,41 @@ export default function NewEquipmentPage() {
                 />
                 <FormField
                     control={form.control}
-                    name="motorPower"
+                    name="installationDate"
                     render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Power (kW)</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="e.g., 75" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="motorVoltage"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Voltage (V)</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="e.g., 400" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="assignedToMotorId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Assigned Motor Technician</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Installation Date</FormLabel>
+                        <Popover>
+                        <PopoverTrigger asChild>
                             <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Assign a motor technician..." />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {usersLoading ? (
-                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                ) : (
-                                    <>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                    </>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
                                 )}
-                            </SelectContent>
-                        </Select>
+                            >
+                                {field.value ? (
+                                format(field.value, "PPP")
+                                ) : (
+                                <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                                date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                            />
+                        </PopoverContent>
+                        </Popover>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -543,94 +422,6 @@ export default function NewEquipmentPage() {
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Pump Details</CardTitle>
-              <CardDescription>Specific details for the pump component.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="pumpModel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pump Model</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., KSB Omega 200" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="pumpSerialNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pump Serial Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., PMP-SN-67890" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              <FormField
-                control={form.control}
-                name="pumpHead"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pump Head (m)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="flowRate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Flow Rate (m³/h)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                    control={form.control}
-                    name="assignedToPumpId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Assigned Pump Technician</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Assign a pump technician..." />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {usersLoading ? (
-                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                ) : (
-                                    <>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                    </>
-                                )}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-            </CardContent>
-          </Card>
-
           <div className="flex justify-end">
             <Button type="submit">Save Equipment</Button>
           </div>
