@@ -107,6 +107,11 @@ export default function NewEquipmentPage() {
       nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
       uptime: 100,
       powerConsumption: 0,
+      // Defaulting status and installation date for simplicity
+      status: 'active',
+      model: values.model,
+      serialNumber: values.serialNumber,
+      installationDate: format(values.installationDate, "yyyy-MM-dd"),
     };
 
     if (values.plant === 'Mining') {
@@ -221,7 +226,7 @@ export default function NewEquipmentPage() {
                   )}
                 />
               )}
-               {watchedPlant === 'Mining' && (watchedDivision === 'Dredgers') ? (
+               {watchedPlant === 'Mining' && watchedDivision === 'Dredgers' ? (
                  <FormField
                   control={form.control}
                   name="location"
@@ -432,3 +437,5 @@ export default function NewEquipmentPage() {
     </div>
   );
 }
+
+    

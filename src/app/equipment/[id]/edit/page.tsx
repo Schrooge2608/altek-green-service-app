@@ -245,7 +245,7 @@ export default function EditEquipmentPage() {
                     )}
                     />
                 )}
-                {watchedPlant === 'Mining' && (watchedDivision === 'Dredgers') ? (
+                {watchedPlant === 'Mining' && watchedDivision === 'Dredgers' ? (
                     <FormField
                     control={form.control}
                     name="location"
@@ -444,3 +444,5 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
+
+    
