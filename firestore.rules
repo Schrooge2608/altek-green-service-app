@@ -29,8 +29,20 @@ service cloud.firestore {
         isSupervisorOrAdmin() ||
         (
           isOwner(userId) &&
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['phoneNumber', 'address', 'nextOfKinName', 'nextOfKinPhone'])
+          request.resource.data.keys().hasOnly(['phoneNumber', 'address', 'nextOfKinName', 'nextOfKinPhone', 'name', 'email', 'role', 'sapNumber', 'qualifications', 'designatedLeaderName', 'responsibleGenManager', 'department', 'section', 'purchaseOrderNo', 'startingDate', 'endDate', 'justification', 'id']) &&
+          request.resource.data.name == resource.data.name &&
+          request.resource.data.email == resource.data.email &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.sapNumber == resource.data.sapNumber &&
+          request.resource.data.qualifications == resource.data.qualifications &&
+          request.resource.data.designatedLeaderName == resource.data.designatedLeaderName &&
+          request.resource.data.responsibleGenManager == resource.data.responsibleGenManager &&
+          request.resource.data.department == resource.data.department &&
+          request.resource.data.section == resource.data.section &&
+          request.resource.data.purchaseOrderNo == resource.data.purchaseOrderNo &&
+          request.resource.data.startingDate == resource.data.startingDate &&
+          request.resource.data.endDate == resource.data.endDate &&
+          request.resource.data.justification == resource.data.justification
         )
       );
       
