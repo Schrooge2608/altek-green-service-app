@@ -52,14 +52,13 @@ const mainLinks = [
 ];
 
 const miningDivisions = [
-    { href: '/equipment/mining/boosters', label: 'Boosters' },
     { href: '/equipment/mining/dredgers', label: 'Dredgers' },
     { href: '/equipment/mining/pump-stations', label: 'Pump Stations' },
 ]
 
-const dredgersSubMenu = [
-    { href: '/equipment/mining/dredgers', label: 'Overview' },
-    { href: '/equipment/mining/dredgers/dry-mining', label: 'Dry Mining' },
+const boosterDivisions = [
+    { href: '/equipment/mining/boosters', label: 'Tails Boosters' },
+    { href: '/equipment/mining/cons-boosters', label: 'Cons Boosters' },
 ]
 
 const completedSchedulesCategories = [
@@ -106,6 +105,7 @@ export function SidebarNav() {
   const isEquipmentPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter');
   const [isAssetsOpen, setIsAssetsOpen] = React.useState(isEquipmentPath);
   const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment/mining'));
+  const [isBoostersOpen, setIsBoostersOpen] = React.useState(pathname.startsWith('/equipment/mining/boosters') || pathname.startsWith('/equipment/mining/cons-boosters'));
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(pathname.startsWith('/smelter'));
   const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin'));
   const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
@@ -113,7 +113,6 @@ export function SidebarNav() {
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
   const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library'));
   const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance'));
-  const [isDredgersOpen, setIsDredgersOpen] = React.useState(pathname.startsWith('/equipment/mining/dredgers'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -196,44 +195,39 @@ export function SidebarNav() {
                             </SidebarMenuItem>
                             <CollapsibleContent>
                                 <SidebarMenuSub>
-                                    {miningDivisions.map((division) => {
-                                        if (division.label === 'Dredgers') {
-                                            return (
-                                                <Collapsible open={isDredgersOpen} onOpenChange={setIsDredgersOpen} key={division.href}>
-                                                    <SidebarMenuItem>
-                                                        <CollapsibleTrigger asChild>
-                                                            <SidebarMenuButton tooltip="Dredgers" isActive={pathname.startsWith('/equipment/mining/dredgers')}>
-                                                                <span>Dredgers</span>
-                                                                <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                                                            </SidebarMenuButton>
-                                                        </CollapsibleTrigger>
+                                    {miningDivisions.map((division) => (
+                                        <SidebarMenuItem key={division.href}>
+                                            <Link href={division.href} passHref>
+                                                <SidebarMenuSubButton asChild isActive={pathname === division.href}>
+                                                <span>{division.label}</span>
+                                                </SidebarMenuSubButton>
+                                            </Link>
+                                        </SidebarMenuItem>
+                                    ))}
+                                     <Collapsible open={isBoostersOpen} onOpenChange={setIsBoostersOpen}>
+                                        <SidebarMenuItem>
+                                            <CollapsibleTrigger asChild>
+                                                <SidebarMenuButton tooltip="Boosters" isActive={isBoostersOpen}>
+                                                    <Wrench />
+                                                    <span>Boosters</span>
+                                                    <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                                </SidebarMenuButton>
+                                            </CollapsibleTrigger>
+                                        </SidebarMenuItem>
+                                        <CollapsibleContent>
+                                             <SidebarMenuSub>
+                                                {boosterDivisions.map((division) => (
+                                                    <SidebarMenuItem key={division.href}>
+                                                        <Link href={division.href} passHref>
+                                                            <SidebarMenuSubButton asChild isActive={pathname === division.href}>
+                                                            <span>{division.label}</span>
+                                                            </SidebarMenuSubButton>
+                                                        </Link>
                                                     </SidebarMenuItem>
-                                                    <CollapsibleContent>
-                                                        <SidebarMenuSub>
-                                                            {dredgersSubMenu.map((item) => (
-                                                                <SidebarMenuItem key={item.href}>
-                                                                    <Link href={item.href} passHref>
-                                                                        <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                                                        <span>{item.label}</span>
-                                                                        </SidebarMenuSubButton>
-                                                                    </Link>
-                                                                </SidebarMenuItem>
-                                                            ))}
-                                                        </SidebarMenuSub>
-                                                    </CollapsibleContent>
-                                                </Collapsible>
-                                            )
-                                        }
-                                        return (
-                                            <SidebarMenuItem key={division.href}>
-                                                <Link href={division.href} passHref>
-                                                    <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                                    <span>{division.label}</span>
-                                                    </SidebarMenuSubButton>
-                                                </Link>
-                                            </SidebarMenuItem>
-                                        )
-                                    })}
+                                                ))}
+                                            </SidebarMenuSub>
+                                        </CollapsibleContent>
+                                    </Collapsible>
                                 </SidebarMenuSub>
                             </CollapsibleContent>
                         </Collapsible>
