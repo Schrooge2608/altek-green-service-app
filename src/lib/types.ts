@@ -1,16 +1,5 @@
 
 
-export interface VSD {
-  id: string;
-  serialNumber: string;
-  equipmentId: string;
-  model: string;
-  installationDate: string;
-  status: 'active' | 'inactive' | 'maintenance';
-  assignedToId: string;
-  assignedToName: string;
-}
-
 export interface Equipment {
   id: string;
   name: string;
@@ -18,14 +7,31 @@ export interface Equipment {
   location: string;
   plant: 'Mining' | 'Smelter';
   division?: 'Boosters';
-  vsdId: string;
-  pumpHead: number;
-  flowRate: number;
   lastMaintenance: string;
   nextMaintenance: string;
   uptime: number;
   powerConsumption: number;
   imageUrl?: string;
+  // VSD Fields
+  model: string;
+  serialNumber: string;
+  installationDate: string;
+  assignedToId?: string;
+  assignedToName?: string;
+  // Motor fields
+  motorModel?: string;
+  motorPower?: number;
+  motorVoltage?: number;
+  motorSerialNumber?: string;
+  // Protection fields
+  breakerModel?: string;
+  breakerAmperage?: number;
+  breakerLocation?: string;
+  // Pump fields
+  pumpHead?: number;
+  flowRate?: number;
+  pumpModel?: string;
+  pumpSerialNumber?: string;
 }
 
 export interface MaintenanceTask {

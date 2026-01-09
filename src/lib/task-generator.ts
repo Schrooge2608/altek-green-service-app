@@ -1,6 +1,6 @@
 
 import { addDays, addMonths, differenceInDays, format, isBefore, startOfDay } from 'date-fns';
-import type { Equipment, MaintenanceTask, VSD } from './types';
+import type { Equipment, MaintenanceTask } from './types';
 
 export type MaintenanceCategory = 'VSDs' | 'Protection' | 'Motors' | 'Pumps';
 
@@ -38,22 +38,21 @@ function getNextDueDate(lastServiceDate: Date, days: number): Date {
 /**
  * Generates all potential maintenance tasks for a single piece of equipment across all categories.
  * @param equipment - The equipment to generate tasks for.
- * @param vsd - The VSD associated with the equipment.
  * @returns An array of MaintenanceTask objects.
  */
-export function generateTasksForEquipment(equipment: Equipment, vsd: VSD): MaintenanceTask[] {
+export function generateTasksForEquipment(equipment: Equipment): MaintenanceTask[] {
   const tasks: MaintenanceTask[] = [];
   const today = startOfDay(new Date());
   
   const baseDate = equipment.lastMaintenance 
     ? startOfDay(new Date(equipment.lastMaintenance))
-    : startOfDay(new Date(vsd.installationDate || new Date()));
+    : startOfDay(new Date(equipment.installationDate || new Date()));
 
   // Determine which categories apply to this equipment
   const applicableCategories: MaintenanceCategory[] = ['VSDs'];
-  if (equipment.type === 'Pump') {
-      applicableCategories.push('Pumps');
-  }
+  
+  // Add other categories based on equipment properties if needed in the future
+  // For now, we are generating for the main VSD component.
 
   applicableCategories.forEach(category => {
     const categoryInfo = tasksByCategory[category];
@@ -77,8 +76,8 @@ export function generateTasksForEquipment(equipment: Equipment, vsd: VSD): Maint
                 dueDate: format(nextDueDate, 'yyyy-MM-dd'),
                 frequency: freq.name,
                 status: status,
-                assignedToId: vsd.assignedToId || '',
-                assignedToName: vsd.assignedToName || '',
+                assignedToId: equipment.assignedToId || '',
+                assignedToName: equipment.assignedToName || '',
             });
         }
     });
