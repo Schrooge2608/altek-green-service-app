@@ -12,14 +12,31 @@ import {
 } from '@/components/ui/card';
 import { Database, ShieldAlert } from 'lucide-react';
 import React from 'react';
-import { seedDatabase } from '@/lib/seed-data';
+
+// Conditionally import the seed function
+let seedDatabase: ((firestore: any) => void) | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const seedModule = require('@/lib/seed-data');
+  if (seedModule && typeof seedModule.seedDatabase === 'function') {
+    seedDatabase = seedModule.seedDatabase;
+  }
+} catch (error) {
+  // This is expected when the file doesn't exist.
+  console.log('No seed-data file found. Seeding will be disabled.');
+}
+
 
 export default function SeedDataPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
   const handleSeed = () => {
-    seedDatabase(firestore);
+    if (seedDatabase && firestore) {
+      seedDatabase(firestore);
+    } else {
+        alert("No seed data is available to load.");
+    }
   };
 
   // For simplicity, we assume anyone who can access this page is an admin.
@@ -38,6 +55,8 @@ export default function SeedDataPage() {
     );
   }
 
+  const isSeedDataAvailable = seedDatabase !== null;
+
   return (
     <div className="flex flex-col gap-8">
       <header>
@@ -52,15 +71,17 @@ export default function SeedDataPage() {
         <CardHeader>
           <CardTitle>Seed Equipment Data</CardTitle>
           <CardDescription>
-            This action will add a predefined list of equipment and VSDs to your
-            database. This should only be done once on a new project.
-            Running it again may overwrite existing data if IDs match.
+            {isSeedDataAvailable 
+              ? "A new data file is ready to be loaded. This action will add its contents to your database."
+              : "No new data is available to seed. Please provide a new equipment list to continue."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-start gap-4">
-            <p>Click the button below to start the seeding process.</p>
-            <Button onClick={handleSeed}>
+             {isSeedDataAvailable 
+              ? <p>Click the button below to start the seeding process.</p>
+              : <p className="text-muted-foreground">The seed button is disabled because no data file was found.</p>}
+            <Button onClick={handleSeed} disabled={!isSeedDataAvailable}>
               <Database className="mr-2 h-4 w-4" />
               Seed Database
             </Button>
