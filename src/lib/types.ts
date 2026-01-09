@@ -103,7 +103,6 @@ export interface User {
   department?: string;
   section?: string;
   purchaseOrderNo?: string;
-  startingDate?: string;
   endDate?: string;
   justification?: string;
 }

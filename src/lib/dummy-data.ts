@@ -7,7 +7,6 @@ const rbmInfo = {
   department: "RBM Department",
   section: "RBM Section",
   purchaseOrderNo: "PO-12345",
-  startingDate: "2024-09-01",
   endDate: "2028-08-31",
   justification: "Standard RBM contract.",
 };
@@ -46,4 +45,3 @@ export const dummyUsers: Omit<User, 'id'>[] = [
   // Admin
   { name: 'Admin User', email: 'admin@altek.com', role: 'Admin', ...rbmInfo },
 ];
-
