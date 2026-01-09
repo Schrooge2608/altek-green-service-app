@@ -29,6 +29,7 @@ import {
   Mail,
   Archive,
   Library,
+  Gauge,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -46,6 +47,7 @@ const mainLinks = [
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
   { href: '/messages', label: 'Messages', icon: Mail },
   { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+  { href: '/meters', label: 'Meters', icon: Gauge },
 ];
 
 const miningDivisions = [
