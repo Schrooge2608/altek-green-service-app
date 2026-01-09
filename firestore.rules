@@ -19,17 +19,12 @@ service cloud.firestore {
 
     // Rules for the users collection
     match /users/{userId} {
-      // Allow any authenticated user to list users, which is needed for dropdowns.
-      // The fields they can read are still controlled by the 'get' rule.
-      allow list: if isRegisteredUser();
-      // Allow users to read their own document
-      allow get: if isRegisteredUser() && request.auth.uid == userId;
-      // Allow supervisors and above to read all user documents
-      allow read: if isRegisteredUser() && isSupervisorOrAdmin();
+      // Allow any authenticated user to list and read all user documents temporarily.
+      allow read: if isRegisteredUser();
       // Allow a user to create their own user document
       allow create: if request.auth.uid == userId;
-      // Only Admins can update or delete users
-      allow update, delete: if isRegisteredUser() && getUserRole(request.auth.uid) == 'Admin';
+      // Allow any registered user to update for now to set the admin
+      allow update, delete: if isRegisteredUser();
     }
     
     // Other collections can be read by any registered user
