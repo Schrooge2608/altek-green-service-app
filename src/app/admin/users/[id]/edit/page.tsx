@@ -46,7 +46,6 @@ const formSchema = z.object({
   department: z.string().optional(),
   section: z.string().optional(),
   purchaseOrderNo: z.string().optional(),
-  startingDate: z.date().optional(),
   endDate: z.date().optional(),
   justification: z.string().optional(),
 });
@@ -106,7 +105,6 @@ export default function EditUserPage() {
         department: user.department || '',
         section: user.section || '',
         purchaseOrderNo: user.purchaseOrderNo || '',
-        startingDate: user.startingDate ? parseISO(user.startingDate) : undefined,
         endDate: user.endDate ? parseISO(user.endDate) : undefined,
         justification: user.justification || '',
       });
@@ -133,7 +131,7 @@ export default function EditUserPage() {
 
     const updateData = {
         ...values,
-        startingDate: values.startingDate ? format(values.startingDate, "yyyy-MM-dd") : '',
+        startingDate: '2024-09-01',
         endDate: values.endDate ? format(values.endDate, "yyyy-MM-dd") : '',
     };
 
@@ -295,7 +293,13 @@ export default function EditUserPage() {
                  <FormField control={form.control} name="department" render={({ field }) => (<FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="section" render={({ field }) => (<FormItem><FormLabel>Section</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="purchaseOrderNo" render={({ field }) => (<FormItem><FormLabel>Purchase Order No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="startingDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Starting Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                <FormItem>
+                  <FormLabel>Starting Date</FormLabel>
+                  <FormControl>
+                    <Input readOnly value="1st September 2024" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
                 <FormField control={form.control} name="endDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>End Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                 <div className="md:col-span-2">
                     <FormField control={form.control} name="justification" render={({ field }) => (<FormItem><FormLabel>Justification</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
