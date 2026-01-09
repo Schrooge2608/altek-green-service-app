@@ -82,7 +82,7 @@ function AuthenticatedMiningDivisionPage() {
     return null;
   }
 
-  const isGroupedByLocation = ['Boosters', 'Dredgers'].includes(memoizedDivisionName);
+  const isGroupedByLocation = ['Dredgers'].includes(memoizedDivisionName);
   const locations = Object.keys(equipmentByLocation);
 
   return (
