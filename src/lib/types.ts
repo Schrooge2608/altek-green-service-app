@@ -7,17 +7,12 @@ export interface Equipment {
   location: string;
   plant: 'Mining' | 'Smelter';
   division?: 'Boosters';
+  vsdId: string;
   lastMaintenance: string;
   nextMaintenance: string;
   uptime: number;
   powerConsumption: number;
   imageUrl?: string;
-  // VSD Fields
-  model: string;
-  serialNumber: string;
-  installationDate: string;
-  assignedToId?: string;
-  assignedToName?: string;
   // Motor fields
   motorModel?: string;
   motorPower?: number;
@@ -32,6 +27,26 @@ export interface Equipment {
   flowRate?: number;
   pumpModel?: string;
   pumpSerialNumber?: string;
+  // Downtime
+  totalDowntimeHours?: number;
+  // VSD is not a separate type but its fields are on Equipment
+  status: 'active' | 'inactive' | 'maintenance';
+  model: string;
+  serialNumber: string;
+  installationDate: string;
+  assignedToId?: string;
+  assignedToName?: string;
+}
+
+export interface VSD {
+  id: string;
+  serialNumber: string;
+  equipmentId: string;
+  model: string;
+  installationDate: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  assignedToId?: string;
+  assignedToName?: string;
 }
 
 export interface MaintenanceTask {
@@ -103,6 +118,16 @@ export interface User {
   department?: string;
   section?: string;
   purchaseOrderNo?: string;
-  endDate?: string;
   justification?: string;
+}
+
+export interface Message {
+  id: string;
+  senderId: string;
+  senderName: string;
+  recipientIds: string[];
+  subject: string;
+  body: string;
+  timestamp: string;
+  readBy: string[];
 }

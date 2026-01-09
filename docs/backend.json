@@ -149,11 +149,31 @@
             "department": { "type": "string", "description": "RBM Information: Department." },
             "section": { "type": "string", "description": "RBM Information: Section." },
             "purchaseOrderNo": { "type": "string", "description": "RBM Information: Purchase Order No." },
-            "startingDate": { "type": "string", "format": "date", "description": "RBM Information: Starting Date." },
-            "endDate": { "type": "string", "format": "date", "description": "RBM Information: End Date." },
             "justification": { "type": "string", "description": "RBM Information: Justification." }
         },
         "required": ["id", "name", "email", "role"]
+    },
+    "Message": {
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a message sent between users.",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "recipientIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "subject": { "type": "string" },
+        "body": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "readBy": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "senderId", "senderName", "recipientIds", "subject", "body", "timestamp"]
     }
   },
   "auth": {
@@ -208,6 +228,14 @@
               "schema": { "$ref": "#/entities/User" },
               "description": "Stores user profiles and roles."
           }
+      },
+      {
+        "path": "/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": { "$ref": "#/entities/Message" },
+          "description": "Stores user messages."
+        }
       }
     ]
   }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -26,6 +25,7 @@ import {
   User as UserIcon,
   Users,
   ShoppingCart,
+  Mail,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -41,6 +41,7 @@ const mainLinks = [
   { href: '/maintenance', label: 'Maintenance', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
+  { href: '/messages', label: 'Messages', icon: Mail },
   { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
 ];
 
