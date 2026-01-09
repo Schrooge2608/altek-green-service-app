@@ -54,16 +54,6 @@ service cloud.firestore {
       allow read, write: if isRegisteredUser();
     }
     
-    match /messages/{messageId} {
-      allow get: if isRegisteredUser() && (request.auth.uid == resource.data.senderId || request.auth.uid in resource.data.recipientIds);
-      allow create: if isRegisteredUser() && request.auth.uid == request.resource.data.senderId;
-      allow update: if isRegisteredUser() && request.auth.uid in resource.data.recipientIds; // For marking as read
-      // Allow users to list messages where they are the sender OR a recipient
-      allow list: if isRegisteredUser() && 
-                    (request.query.get("senderId") == request.auth.uid || 
-                     request.query.get("recipientIds")['array-contains'] == request.auth.uid);
-    }
-
     // Fallback for any other path, deny all
     match /{document=**} {
       allow read, write: if false;

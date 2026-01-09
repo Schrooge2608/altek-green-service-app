@@ -120,14 +120,3 @@ export interface User {
   purchaseOrderNo?: string;
   justification?: string;
 }
-
-export interface Message {
-  id: string;
-  senderId: string;
-  senderName: string;
-  recipientIds: string[];
-  subject: string;
-  body: string;
-  timestamp: string;
-  readBy: string[];
-}
