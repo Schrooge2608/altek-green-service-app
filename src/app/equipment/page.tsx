@@ -16,12 +16,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import type { Equipment } from '@/lib/types';
-import { Fan, Droplets, AirVent, PlusCircle, LogIn, Loader2 } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import type { Equipment, User } from '@/lib/types';
+import { Fan, Droplets, AirVent, PlusCircle, LogIn, Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
+import React from 'react';
 
 
 const equipmentIcons: Record<string, React.ReactNode> = {
@@ -33,6 +46,7 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 function AuthenticatedEquipmentPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { toast } = useToast();
 
   const equipmentQuery = useMemoFirebase(() => {
     if (!user) return null; // Do not query if user is not logged in
@@ -40,6 +54,27 @@ function AuthenticatedEquipmentPage() {
   }, [firestore, user]);
 
   const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
+
+  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userData } = useDoc<User>(userRoleRef);
+  const isKnownAdmin = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin'));
+
+  const handleDeleteEquipment = (item: Equipment) => {
+    if (!item.id || !item.vsdId) {
+        toast({ variant: "destructive", title: "Error", description: "Cannot delete equipment without an ID or VSD ID." });
+        return;
+    }
+    const eqRef = doc(firestore, 'equipment', item.id);
+    const vsdRef = doc(firestore, 'vsds', item.vsdId);
+
+    deleteDocumentNonBlocking(eqRef);
+    deleteDocumentNonBlocking(vsdRef);
+
+    toast({
+        title: 'Equipment Deleted',
+        description: `${item.name} and its associated VSD have been removed.`,
+    });
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -68,12 +103,13 @@ function AuthenticatedEquipmentPage() {
                 <TableHead>Location</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
                 <TableHead className="text-right">Power (kWh)</TableHead>
+                {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">Loading equipment...</TableCell>
+                  <TableCell colSpan={isKnownAdmin ? 7 : 6} className="text-center h-24">Loading equipment...</TableCell>
                 </TableRow>
               ) : equipment && equipment.length > 0 ? (
                 equipment.map((eq) => (
@@ -97,11 +133,34 @@ function AuthenticatedEquipmentPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
+                    {isKnownAdmin && (
+                        <TableCell className="text-right">
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will permanently delete the equipment <strong>{eq.name}</strong> and its associated VSD. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteEquipment(eq)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </TableCell>
+                    )}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">No mining equipment found.</TableCell>
+                  <TableCell colSpan={isKnownAdmin ? 7 : 6} className="text-center h-24">No mining equipment found.</TableCell>
                 </TableRow>
               )}
             </TableBody>

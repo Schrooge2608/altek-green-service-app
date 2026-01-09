@@ -21,13 +21,25 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import type { Equipment } from '@/lib/types';
-import { Fan, Droplets, AirVent, PlusCircle, LogIn, Loader2 } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import type { Equipment, User } from '@/lib/types';
+import { Fan, Droplets, AirVent, PlusCircle, LogIn, Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast';
 
 const equipmentIcons: Record<string, React.ReactNode> = {
     Pump: <Droplets className="h-4 w-4 text-muted-foreground" />,
@@ -39,12 +51,14 @@ const validDivisions: Record<string, string> = {
     'boosters': 'Boosters',
     'dredgers': 'Dredgers',
     'pump-stations': 'Pump Stations',
+    'cons-boosters': 'Cons Boosters',
 }
 
 function AuthenticatedMiningDivisionPage() {
   const params = useParams();
   const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
   const { user } = useUser();
+  const { toast } = useToast();
   
   const memoizedDivisionName = useMemo(() => {
     if (!divisionSlug || !validDivisions[divisionSlug]) {
@@ -56,15 +70,19 @@ function AuthenticatedMiningDivisionPage() {
   const firestore = useFirestore();
   
   const equipmentQuery = useMemoFirebase(() => {
-    if (!memoizedDivisionName || !user) return null; // Do not query if user is not logged in
+    if (!memoizedDivisionName || !user) return null;
     return query(
         collection(firestore, 'equipment'), 
         where('plant', '==', 'Mining'),
         where('division', '==', memoizedDivisionName)
     );
   }, [firestore, memoizedDivisionName, user]);
-  
+
   const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
+
+  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userData } = useDoc<User>(userRoleRef);
+  const isKnownAdmin = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin'));
   
   const equipmentByLocation = useMemo(() => {
     if (!equipment) return {};
@@ -78,12 +96,29 @@ function AuthenticatedMiningDivisionPage() {
     }, {} as Record<string, Equipment[]>);
   }, [equipment]);
 
+    const handleDeleteEquipment = (item: Equipment) => {
+        if (!item.id || !item.vsdId) {
+            toast({ variant: "destructive", title: "Error", description: "Cannot delete equipment without an ID or VSD ID." });
+            return;
+        }
+        const eqRef = doc(firestore, 'equipment', item.id);
+        const vsdRef = doc(firestore, 'vsds', item.vsdId);
+
+        deleteDocumentNonBlocking(eqRef);
+        deleteDocumentNonBlocking(vsdRef);
+
+        toast({
+            title: 'Equipment Deleted',
+            description: `${item.name} and its associated VSD have been removed.`,
+        });
+    };
+
   if (!memoizedDivisionName) {
     return null;
   }
 
   const isGroupedByLocation = ['Dredgers'].includes(memoizedDivisionName);
-  const locations = Object.keys(equipmentByLocation);
+  const locations = Object.keys(equipmentByLocation).sort();
 
   return (
     <div className="flex flex-col gap-8">
@@ -125,6 +160,7 @@ function AuthenticatedMiningDivisionPage() {
                                                     <TableHead>Type</TableHead>
                                                     <TableHead className="text-right">Uptime</TableHead>
                                                     <TableHead className="text-right">Power (kWh)</TableHead>
+                                                    {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -147,6 +183,29 @@ function AuthenticatedMiningDivisionPage() {
                                                       </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
+                                                    {isKnownAdmin && (
+                                                        <TableCell className="text-right">
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            This will permanently delete the equipment <strong>{eq.name}</strong> and its associated VSD. This action cannot be undone.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDeleteEquipment(eq)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </TableCell>
+                                                    )}
                                                   </TableRow>
                                                 ))}
                                             </TableBody>
@@ -169,6 +228,7 @@ function AuthenticatedMiningDivisionPage() {
                     <TableHead>Location</TableHead>
                     <TableHead className="text-right">Uptime</TableHead>
                     <TableHead className="text-right">Power (kWh)</TableHead>
+                    {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -193,11 +253,34 @@ function AuthenticatedMiningDivisionPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
+                         {isKnownAdmin && (
+                            <TableCell className="text-right">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete the equipment <strong>{eq.name}</strong> and its associated VSD. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteEquipment(eq)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24">No equipment found for this division.</TableCell>
+                      <TableCell colSpan={isKnownAdmin ? 6 : 5} className="text-center h-24">No equipment found for this division.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>

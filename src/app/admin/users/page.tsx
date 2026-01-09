@@ -169,7 +169,7 @@ export default function UserManagementPage() {
         );
     }
     
-    const isKnownAdmin = user && userRole?.role && (userRole.role.includes('Admin') || userRole.role.includes('Super'));
+    const isKnownAdmin = user && userRole?.role && (userRole.role.includes('Admin') || userRole.role.includes('Superadmin'));
 
     return (
         <div className="flex flex-col gap-8">

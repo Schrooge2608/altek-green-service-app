@@ -15,6 +15,11 @@ service cloud.firestore {
         let userRole = getUserRole(request.auth.uid);
         return userRole in ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin', 'Superadmin', 'Data Admin'];
     }
+
+    function isSuperAdmin() {
+        let userRole = getUserRole(request.auth.uid);
+        return userRole in ['Admin', 'Superadmin'];
+    }
     
     function isOwner(userId) {
       return request.auth.uid == userId;
@@ -32,11 +37,13 @@ service cloud.firestore {
     match /equipment/{equipmentId} {
       allow read: if isRegisteredUser();
       allow write: if isRegisteredUser() && isSupervisorOrAdmin();
+      allow delete: if isSuperAdmin();
     }
     
     match /vsds/{vsdId} {
       allow read: if isRegisteredUser();
       allow write: if isRegisteredUser() && isSupervisorOrAdmin();
+      allow delete: if isSuperAdmin();
     }
     
     match /tasks/{taskId} {
