@@ -43,7 +43,6 @@ import { collection, doc } from 'firebase/firestore';
 
 const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/maintenance', label: 'Maintenance', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
   { href: '/messages', label: 'Messages', icon: Mail },
@@ -78,6 +77,11 @@ const librarySubMenu = [
     { href: '/library/procedures', label: 'Procedures' },
 ]
 
+const maintenanceSubMenu = [
+    { href: '/maintenance', label: 'Schedule' },
+    { href: '/maintenance/work-orders', label: 'Work Orders' },
+];
+
 export function SidebarNav() {
   const pathname = usePathname();
   const { user } = useUser();
@@ -101,6 +105,7 @@ export function SidebarNav() {
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
   const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library'));
+  const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -133,6 +138,30 @@ export function SidebarNav() {
               </Link>
             </SidebarMenuItem>
           ))}
+           <Collapsible open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Maintenance" isActive={pathname.startsWith('/maintenance')}>
+                            <Calendar />
+                            <span>Maintenance</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                        {maintenanceSubMenu.map((item) => (
+                            <SidebarMenuItem key={item.href}>
+                                <Link href={item.href} passHref>
+                                    <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                    <span>{item.label}</span>
+                                    </SidebarMenuSubButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+           </Collapsible>
            <Collapsible open={isAssetsOpen} onOpenChange={setIsAssetsOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
@@ -318,5 +347,3 @@ export function SidebarNav() {
     </>
   );
 }
-
-    
