@@ -14,11 +14,11 @@ import { Skeleton } from './ui/skeleton';
 const chartConfig = {
   uptime: {
     label: 'Uptime (%)',
-    color: 'hsl(var(--primary))',
+    color: 'hsl(var(--accent))',
   },
   power: {
     label: 'Power (MWh)',
-    color: 'hsl(var(--accent))',
+    color: 'hsl(var(--primary))',
   },
 };
 
