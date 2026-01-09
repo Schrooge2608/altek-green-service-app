@@ -91,7 +91,7 @@ export const seedVsds: VSD[] = seedEquipment.map(eq => ({
 
 
 export async function seedDatabase(firestore: any) {
-  const { collection, writeBatch } = await import('firebase/firestore');
+  const { collection, writeBatch, doc } = await import('firebase/firestore');
 
   const batch = writeBatch(firestore);
 

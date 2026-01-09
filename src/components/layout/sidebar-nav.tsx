@@ -195,15 +195,6 @@ export function SidebarNav() {
                             </SidebarMenuItem>
                             <CollapsibleContent>
                                 <SidebarMenuSub>
-                                    {miningDivisions.map((division) => (
-                                        <SidebarMenuItem key={division.href}>
-                                            <Link href={division.href} passHref>
-                                                <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                                <span>{division.label}</span>
-                                                </SidebarMenuSubButton>
-                                            </Link>
-                                        </SidebarMenuItem>
-                                    ))}
                                      <Collapsible open={isBoostersOpen} onOpenChange={setIsBoostersOpen}>
                                         <SidebarMenuItem>
                                             <CollapsibleTrigger asChild>
@@ -228,6 +219,15 @@ export function SidebarNav() {
                                             </SidebarMenuSub>
                                         </CollapsibleContent>
                                     </Collapsible>
+                                    {miningDivisions.map((division) => (
+                                        <SidebarMenuItem key={division.href}>
+                                            <Link href={division.href} passHref>
+                                                <SidebarMenuSubButton asChild isActive={pathname === division.href}>
+                                                <span>{division.label}</span>
+                                                </SidebarMenuSubButton>
+                                            </Link>
+                                        </SidebarMenuItem>
+                                    ))}
                                 </SidebarMenuSub>
                             </CollapsibleContent>
                         </Collapsible>
