@@ -23,31 +23,9 @@ service cloud.firestore {
     // Rules for the users collection
     match /users/{userId} {
       allow read: if isRegisteredUser();
-      allow create: if isOwner(userId) || isSupervisorOrAdmin();
-      
-      allow update: if isRegisteredUser() && (
-        isSupervisorOrAdmin() ||
-        (
-          isOwner(userId) &&
-          // The user is only allowed to change these fields. All other fields must match their existing values.
-          request.resource.data.name == resource.data.name &&
-          request.resource.data.email == resource.data.email &&
-          request.resource.data.role == resource.data.role &&
-          request.resource.data.id == resource.data.id &&
-          request.resource.data.sapNumber == resource.data.sapNumber &&
-          request.resource.data.qualifications == resource.data.qualifications &&
-          request.resource.data.designatedLeaderName == resource.data.designatedLeaderName &&
-          request.resource.data.responsibleGenManager == resource.data.responsibleGenManager &&
-          request.resource.data.department == resource.data.department &&
-          request.resource.data.section == resource.data.section &&
-          request.resource.data.purchaseOrderNo == resource.data.purchaseOrderNo &&
-          request.resource.data.startingDate == resource.data.startingDate &&
-          request.resource.data.endDate == resource.data.endDate &&
-          request.resource.data.justification == resource.data.justification
-        )
-      );
-      
-      allow delete: if isRegisteredUser() && isSupervisorOrAdmin();
+      allow create: if isSupervisorOrAdmin();
+      allow update: if isSupervisorOrAdmin();
+      allow delete: if isSupervisorOrAdmin();
     }
     
     // Other collections can be read by any registered user
