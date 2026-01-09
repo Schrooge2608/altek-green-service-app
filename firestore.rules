@@ -27,7 +27,11 @@ service cloud.firestore {
       
       allow update: if isRegisteredUser() && (
         isSupervisorOrAdmin() ||
-        (isOwner(userId) && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'phoneNumber', 'address', 'nextOfKinName', 'nextOfKinPhone', 'sapNumber', 'qualifications', 'designatedLeaderName', 'responsibleGenManager', 'department', 'section', 'purchaseOrderNo', 'startingDate', 'endDate', 'justification', 'id']))
+        (
+          isOwner(userId) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['phoneNumber', 'address', 'nextOfKinName', 'nextOfKinPhone'])
+        )
       );
       
       allow delete: if isRegisteredUser() && isSupervisorOrAdmin();
