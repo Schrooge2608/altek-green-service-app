@@ -1,16 +1,28 @@
 
 'use client';
 
-import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ShieldAlert, PlusCircle, Loader2, Pencil } from 'lucide-react';
+import { ShieldAlert, PlusCircle, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import React from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast';
 
 function AccessDenied() {
     return (
@@ -27,6 +39,7 @@ function AccessDenied() {
 function UserList() {
     const firestore = useFirestore();
     const { user } = useUser(); // We need user to ensure we don't query when logged out
+    const { toast } = useToast();
 
     const usersQuery = useMemoFirebase(() => {
         // We can safely create this query because this component only renders for Admins who are logged in
@@ -35,6 +48,15 @@ function UserList() {
     }, [firestore, user]);
 
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
+
+    const handleDeleteUser = (userToDelete: User) => {
+        const userRef = doc(firestore, 'users', userToDelete.id);
+        deleteDocumentNonBlocking(userRef);
+        toast({
+            title: 'User Deleted',
+            description: `${userToDelete.name} has been removed from the database. Note: This does not remove them from Firebase Authentication.`,
+        });
+    }
 
     if (usersLoading) {
         return (
@@ -68,7 +90,7 @@ function UserList() {
                                     <TableCell className="font-medium">{u.name}</TableCell>
                                     <TableCell>{u.email}</TableCell>
                                     <TableCell>
-                                        <Badge variant={u.role === 'Admin' ? 'destructive' : 'secondary'}>{u.role}</Badge>
+                                        <Badge variant={u.role?.includes('Admin') || u.role?.includes('Super') ? 'destructive' : 'secondary'}>{u.role}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Link href={`/admin/users/${u.id}/edit`} passHref>
@@ -77,6 +99,32 @@ function UserList() {
                                                 <span className="sr-only">Edit User</span>
                                             </Button>
                                         </Link>
+                                         <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Delete User</span>
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action will permanently delete the user record for <strong>{u.name}</strong> from the database. 
+                                                        It will not remove the user from Firebase Authentication. This cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                                        onClick={() => handleDeleteUser(u)}
+                                                    >
+                                                        Yes, delete user
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -111,9 +159,7 @@ export default function UserManagementPage() {
         );
     }
     
-    // This now correctly handles the case where the user is logged out (user is null)
-    // or the user document hasn't loaded yet.
-    const isKnownAdmin = user && userRole?.role === 'Admin';
+    const isKnownAdmin = user && userRole?.role && (userRole.role.includes('Admin') || userRole.role.includes('Super'));
 
     return (
         <div className="flex flex-col gap-8">

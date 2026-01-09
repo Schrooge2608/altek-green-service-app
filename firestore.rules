@@ -19,14 +19,14 @@ service cloud.firestore {
 
     // Rules for the users collection
     match /users/{userId} {
-      // Temporarily allow any logged-in user to read all user data to fix admin lockout.
       allow read: if request.auth != null;
       
       // Allow a user to create their own user document
       allow create: if request.auth.uid == userId;
 
-      // Allow admins to update any user, and users to update their own non-role info
-      allow update, delete: if isRegisteredUser();
+      // Allow admins to update or delete any user.
+      // Allow a user to update their own non-role info.
+      allow update, delete: if isRegisteredUser() && isSupervisorOrAdmin();
     }
     
     // Other collections can be read by any registered user
