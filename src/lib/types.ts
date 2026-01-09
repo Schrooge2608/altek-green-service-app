@@ -1,12 +1,13 @@
 
 
+
 export interface Equipment {
   id: string;
   name: string;
   type: 'Pump' | 'Fan' | 'Compressor' | 'Utility Room';
   location: string;
   plant: 'Mining' | 'Smelter';
-  division?: 'Boosters' | 'Dredgers';
+  division?: 'Boosters' | 'Dredgers' | 'Pump Stations';
   vsdId: string;
   lastMaintenance: string;
   nextMaintenance: string;
@@ -120,3 +121,5 @@ export interface User {
   purchaseOrderNo?: string;
   justification?: string;
 }
+
+    

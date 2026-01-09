@@ -54,6 +54,7 @@ const mainLinks = [
 const miningDivisions = [
     { href: '/equipment/mining/boosters', label: 'Boosters' },
     { href: '/equipment/mining/dredgers', label: 'Dredgers' },
+    { href: '/equipment/mining/pump-stations', label: 'Pump Stations' },
 ]
 
 const completedSchedulesCategories = [
@@ -348,3 +349,5 @@ export function SidebarNav() {
     </>
   );
 }
+
+    

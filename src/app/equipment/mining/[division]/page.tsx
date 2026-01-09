@@ -38,6 +38,7 @@ const equipmentIcons: Record<string, React.ReactNode> = {
 const validDivisions: Record<string, string> = {
     'boosters': 'Boosters',
     'dredgers': 'Dredgers',
+    'pump-stations': 'Pump Stations',
 }
 
 function AuthenticatedMiningDivisionPage() {
@@ -243,3 +244,5 @@ export default function MiningDivisionPage() {
 
     return <AuthenticatedMiningDivisionPage />;
 }
+
+    
