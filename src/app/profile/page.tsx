@@ -8,16 +8,14 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import type { User } from '@/lib/types';
 import { doc } from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { redirect } from 'next/navigation';
 
 function UserProfileSkeleton() {
   return (
@@ -86,144 +84,15 @@ function ProfileDetailRow({
 }
 
 export default function ProfilePage() {
-  const { toast } = useToast();
-  const auth = useAuth();
   const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
 
-  const userRef = useMemoFirebase(
-    () => (user ? doc(firestore, 'users', user.uid) : null),
-    [firestore, user]
-  );
-  const { data: userData, isLoading: userDataLoading } = useDoc<User>(userRef);
-
-  const handlePasswordReset = async () => {
-    if (user?.email) {
-      try {
-        await sendPasswordResetEmail(auth, user.email);
-        toast({
-          title: 'Password Reset Email Sent',
-          description: `A password reset link has been sent to ${user.email}.`,
-        });
-      } catch (error: any) {
-        toast({
-          variant: 'destructive',
-          title: 'Error Sending Reset Email',
-          description: error.message,
-        });
-      }
-    }
-  };
-
-  const isLoading = isUserLoading || userDataLoading;
-
-  if (isLoading) {
-    return <UserProfileSkeleton />;
+  if (isUserLoading) {
+      return <UserProfileSkeleton />
   }
 
-  if (!user) {
-    return <NotAuthenticated />;
+  if (user) {
+    redirect(`/profile/${user.uid}`);
   }
 
-  return (
-    <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
-        <p className="text-muted-foreground">
-          View your account details. Contact an administrator to make changes.
-        </p>
-      </header>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Official Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <ProfileDetailRow label="Name" value={userData?.name} />
-          <ProfileDetailRow
-            label="Email"
-            value={userData?.email}
-          />
-          <ProfileDetailRow
-            label="Role"
-            value={
-              userData && (
-                <Badge
-                  variant={
-                    userData.role?.includes('Admin') ||
-                    userData.role?.includes('Super')
-                      ? 'destructive'
-                      : 'secondary'
-                  }
-                >
-                  {userData.role}
-                </Badge>
-              )
-            }
-          />
-          <ProfileDetailRow label="SAP Number" value={userData?.sapNumber} />
-          <ProfileDetailRow
-            label="Qualifications"
-            value={userData?.qualifications}
-          />
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Contact &amp; Emergency Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-            <ProfileDetailRow label="Phone Number" value={userData?.phoneNumber} />
-            <ProfileDetailRow label="Home Address" value={userData?.address} />
-            <ProfileDetailRow label="Next of Kin Name" value={userData?.nextOfKinName} />
-            <ProfileDetailRow label="Next of Kin Phone" value={userData?.nextOfKinPhone} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>RBM Information</CardTitle>
-          <CardDescription>
-            Contract Start Date: 1 September 2025 | Contract End Date: 31 August 2028
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <ProfileDetailRow
-            label="Designated Leader"
-            value={userData?.designatedLeaderName}
-          />
-          <ProfileDetailRow
-            label="Responsible Gen Manager"
-            value={userData?.responsibleGenManager}
-          />
-          <ProfileDetailRow label="Department" value={userData?.department} />
-          <ProfileDetailRow label="Section" value={userData?.section} />
-          <ProfileDetailRow
-            label="Purchase Order No."
-            value={userData?.purchaseOrderNo}
-          />
-          <ProfileDetailRow
-            label="Justification"
-            value={userData?.justification}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Security</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            If you've forgotten your password or wish to change it, you can
-            request a reset link to be sent to your registered email address.
-          </p>
-          <Button type="button" variant="outline" onClick={handlePasswordReset}>
-            Send Password Reset Email
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <NotAuthenticated />;
 }

@@ -24,14 +24,15 @@ import {
   ChevronDown,
   Shield,
   User as UserIcon,
+  Users,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import React from 'react';
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import type { User } from '@/lib/types';
-import { doc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 
 
 const mainLinks = [
@@ -59,6 +60,11 @@ export function SidebarNav() {
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
+  
+  const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
+  const { data: allUsers } = useCollection<User>(usersQuery);
+
+  const isManager = userData?.role && ['Site Supervisor', 'Services Manager', 'Corporate Manager'].includes(userData.role);
 
 
   const isEquipmentPath = pathname.startsWith('/equipment');
@@ -66,6 +72,7 @@ export function SidebarNav() {
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(false);
   const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin'));
   const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
+  const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -180,6 +187,32 @@ export function SidebarNav() {
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+             {isManager && (
+              <Collapsible open={isTeamOpen} onOpenChange={setIsTeamOpen}>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Team/Users" isActive={pathname.startsWith('/team')}>
+                          <Users />
+                          <span>Team/Users</span>
+                          <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                      </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                         {allUsers?.map((u) => (
+                            <SidebarMenuItem key={u.id}>
+                                <Link href={`/profile/${u.id}`} passHref>
+                                    <SidebarMenuSubButton asChild isActive={pathname === `/profile/${u.id}`}>
+                                        <span>{u.name}</span>
+                                    </SidebarMenuSubButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        ))}
                     </SidebarMenuSub>
                 </CollapsibleContent>
               </Collapsible>
