@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -26,6 +27,7 @@ import {
   Users,
   ShoppingCart,
   Mail,
+  Archive,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -56,6 +58,16 @@ const completedSchedulesCategories = [
     { href: '/maintenance/completed/pumps', label: 'Pumps' },
 ]
 
+const inventorySubMenu = [
+    { href: '/inventory/parts', label: 'Parts' },
+    { href: '/inventory/needs-restock', label: 'Needs Restock' },
+    { href: '/inventory/part-types', label: 'Part Types' },
+    { href: '/inventory/location', label: 'Location' },
+    { href: '/inventory/asset', label: 'Asset' },
+    { href: '/inventory/vendor', label: 'Vendor' },
+    { href: '/inventory/area', label: 'Area' },
+]
+
 export function SidebarNav() {
   const pathname = usePathname();
   const { user } = useUser();
@@ -76,6 +88,7 @@ export function SidebarNav() {
   const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin'));
   const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
+  const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -170,6 +183,30 @@ export function SidebarNav() {
                     </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>
+            <Collapsible open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Parts Inventory" isActive={pathname.startsWith('/inventory')}>
+                            <Archive />
+                            <span>Parts Inventory</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                        {inventorySubMenu.map((item) => (
+                            <SidebarMenuItem key={item.href}>
+                                <Link href={item.href} passHref>
+                                    <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                    <span>{item.label}</span>
+                                    </SidebarMenuSubButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+            </Collapsible>
              {userData?.role === 'Admin' && (
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                 <SidebarMenuItem>
@@ -229,3 +266,5 @@ export function SidebarNav() {
     </>
   );
 }
+
+    
