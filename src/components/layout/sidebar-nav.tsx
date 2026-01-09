@@ -82,9 +82,10 @@ export function SidebarNav() {
   const isManager = userData?.role && ['Site Supervisor', 'Services Manager', 'Corporate Manager'].includes(userData.role);
 
 
-  const isEquipmentPath = pathname.startsWith('/equipment');
-  const [isMiningOpen, setIsMiningOpen] = React.useState(isEquipmentPath);
-  const [isSmelterOpen, setIsSmelterOpen] = React.useState(false);
+  const isEquipmentPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter');
+  const [isAssetsOpen, setIsAssetsOpen] = React.useState(isEquipmentPath);
+  const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment/mining'));
+  const [isSmelterOpen, setIsSmelterOpen] = React.useState(pathname.startsWith('/smelter'));
   const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin'));
   const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
@@ -92,7 +93,7 @@ export function SidebarNav() {
 
   React.useEffect(() => {
     if (isEquipmentPath) {
-      setIsMiningOpen(true);
+      setIsAssetsOpen(true);
     }
   }, [isEquipmentPath]);
 
@@ -121,44 +122,60 @@ export function SidebarNav() {
               </Link>
             </SidebarMenuItem>
           ))}
-           <Collapsible open={isMiningOpen} onOpenChange={setIsMiningOpen}>
-            <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip="Mining Equipment" isActive={pathname.startsWith('/equipment/mining')}>
-                        <Wrench />
-                        <span>Mining Equipment</span>
-                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                    </SidebarMenuButton>
-                </CollapsibleTrigger>
-            </SidebarMenuItem>
-            <CollapsibleContent>
-                <SidebarMenuSub>
-                    {miningDivisions.map((division) => (
-                         <SidebarMenuItem key={division.href}>
-                            <Link href={division.href} passHref>
-                                <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                  <span>{division.label}</span>
-                                </SidebarMenuSubButton>
-                            </Link>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenuSub>
-            </CollapsibleContent>
-           </Collapsible>
-            <Collapsible open={isSmelterOpen} onOpenChange={setIsSmelterOpen}>
+           <Collapsible open={isAssetsOpen} onOpenChange={setIsAssetsOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Smelter Equipment" isActive={pathname.startsWith('/smelter')}>
-                            <Wrench />
-                            <span>Smelter Equipment</span>
+                        <SidebarMenuButton tooltip="Assets" isActive={isEquipmentPath}>
+                            <Archive />
+                            <span>Assets</span>
                             <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
                         </SidebarMenuButton>
                     </CollapsibleTrigger>
                 </SidebarMenuItem>
                 <CollapsibleContent>
-                    {/* Smelter sub-items will go here */}
+                    <SidebarMenuSub>
+                        <Collapsible open={isMiningOpen} onOpenChange={setIsMiningOpen}>
+                            <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton tooltip="Mining Equipment" isActive={pathname.startsWith('/equipment/mining')}>
+                                        <Wrench />
+                                        <span>Mining Equipment</span>
+                                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                    </SidebarMenuButton>
+                                </CollapsibleTrigger>
+                            </SidebarMenuItem>
+                            <CollapsibleContent>
+                                <SidebarMenuSub>
+                                    {miningDivisions.map((division) => (
+                                        <SidebarMenuItem key={division.href}>
+                                            <Link href={division.href} passHref>
+                                                <SidebarMenuSubButton asChild isActive={pathname === division.href}>
+                                                <span>{division.label}</span>
+                                                </SidebarMenuSubButton>
+                                            </Link>
+                                        </SidebarMenuItem>
+                                    ))}
+                                </SidebarMenuSub>
+                            </CollapsibleContent>
+                        </Collapsible>
+                        <Collapsible open={isSmelterOpen} onOpenChange={setIsSmelterOpen}>
+                            <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton tooltip="Smelter Equipment" isActive={pathname.startsWith('/smelter')}>
+                                        <Wrench />
+                                        <span>Smelter Equipment</span>
+                                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                    </SidebarMenuButton>
+                                </CollapsibleTrigger>
+                            </SidebarMenuItem>
+                            <CollapsibleContent>
+                                {/* Smelter sub-items will go here */}
+                            </CollapsibleContent>
+                        </Collapsible>
+                    </SidebarMenuSub>
                 </CollapsibleContent>
-            </Collapsible>
+           </Collapsible>
+
             <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
