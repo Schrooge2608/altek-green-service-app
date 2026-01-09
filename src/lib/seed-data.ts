@@ -5,7 +5,7 @@ import {
   CollectionReference,
   doc,
   writeBatch,
-  WriteBatch,
+  collection,
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
