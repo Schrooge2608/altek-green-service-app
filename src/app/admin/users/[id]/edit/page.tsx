@@ -277,7 +277,10 @@ export default function EditUserPage() {
 
           <Card>
             <CardHeader>
-                <CardTitle>RBM Information</CardTitle>
+              <CardTitle>RBM Information</CardTitle>
+              <CardDescription>
+                Contract Start Date: 1 September 2025 | Contract End Date: 31 August 2028
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
                  <FormField control={form.control} name="designatedLeaderName" render={({ field }) => (<FormItem><FormLabel>Designated Leader Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />

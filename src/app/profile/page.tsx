@@ -184,6 +184,9 @@ export default function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle>RBM Information</CardTitle>
+          <CardDescription>
+            Contract Start Date: 1 September 2025 | Contract End Date: 31 August 2028
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <ProfileDetailRow
