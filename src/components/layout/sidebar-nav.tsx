@@ -28,6 +28,7 @@ import {
   ShoppingCart,
   Mail,
   Archive,
+  Library,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -68,6 +69,11 @@ const inventorySubMenu = [
     { href: '/inventory/area', label: 'Area' },
 ]
 
+const librarySubMenu = [
+    { href: '/library/work-orders', label: 'Works Orders' },
+    { href: '/library/procedures', label: 'Procedures' },
+]
+
 export function SidebarNav() {
   const pathname = usePathname();
   const { user } = useUser();
@@ -90,6 +96,7 @@ export function SidebarNav() {
   const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
+  const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -224,6 +231,30 @@ export function SidebarNav() {
                     </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>
+             <Collapsible open={isLibraryOpen} onOpenChange={setIsLibraryOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Library" isActive={pathname.startsWith('/library')}>
+                            <Library />
+                            <span>Library</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                        {librarySubMenu.map((item) => (
+                            <SidebarMenuItem key={item.href}>
+                                <Link href={item.href} passHref>
+                                    <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                    <span>{item.label}</span>
+                                    </SidebarMenuSubButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+            </Collapsible>
              {userData?.role === 'Admin' && (
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                 <SidebarMenuItem>
@@ -283,5 +314,3 @@ export function SidebarNav() {
     </>
   );
 }
-
-    
