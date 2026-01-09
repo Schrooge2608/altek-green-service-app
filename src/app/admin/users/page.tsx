@@ -87,6 +87,7 @@ function UserList() {
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Email</TableHead>
+                            <TableHead>Phone Number</TableHead>
                             <TableHead>Role</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -97,6 +98,7 @@ function UserList() {
                                 <TableRow key={u.id}>
                                     <TableCell className="font-medium">{u.name}</TableCell>
                                     <TableCell>{u.email}</TableCell>
+                                    <TableCell>{u.phoneNumber || 'N/A'}</TableCell>
                                     <TableCell>
                                         <Badge variant={u.role?.includes('Admin') || u.role?.includes('Super') ? 'destructive' : 'secondary'}>{u.role}</Badge>
                                     </TableCell>
@@ -138,7 +140,7 @@ function UserList() {
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center h-24">No users found.</TableCell>
+                                <TableCell colSpan={5} className="text-center h-24">No users found.</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
