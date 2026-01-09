@@ -55,9 +55,13 @@ service cloud.firestore {
     }
     
     match /messages/{messageId} {
-      allow read: if isRegisteredUser() && (request.auth.uid == resource.data.senderId || request.auth.uid in resource.data.recipientIds);
+      allow get: if isRegisteredUser() && (request.auth.uid == resource.data.senderId || request.auth.uid in resource.data.recipientIds);
       allow create: if isRegisteredUser() && request.auth.uid == request.resource.data.senderId;
       allow update: if isRegisteredUser() && request.auth.uid in resource.data.recipientIds; // For marking as read
+    }
+
+    match /messages/{messageId} {
+        allow list: if isRegisteredUser() && (request.query.where.senderId == request.auth.uid || request.auth.uid in request.query.where.recipientIds);
     }
 
     // Fallback for any other path, deny all
