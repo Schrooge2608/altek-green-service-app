@@ -25,6 +25,7 @@ import {
   Shield,
   User as UserIcon,
   Users,
+  ShoppingCart,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -40,6 +41,7 @@ const mainLinks = [
   { href: '/maintenance', label: 'Maintenance', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
+  { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
 ];
 
 const miningDivisions = [
