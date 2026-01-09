@@ -120,7 +120,9 @@ export function SidebarNav() {
     <>
       <SidebarHeader>
         <div className="flex items-center gap-2">
-          <AltekLogo className="w-auto h-9" />
+          <div className="border-2 border-accent rounded-md p-1">
+            <AltekLogo className="w-auto h-9" />
+          </div>
           <div className="flex-1" />
           <SidebarTrigger />
         </div>
@@ -350,4 +352,3 @@ export function SidebarNav() {
   );
 }
 
-    
