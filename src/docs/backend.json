@@ -149,7 +149,6 @@
             "department": { "type": "string", "description": "RBM Information: Department." },
             "section": { "type": "string", "description": "RBM Information: Section." },
             "purchaseOrderNo": { "type": "string", "description": "RBM Information: Purchase Order No." },
-            "endDate": { "type": "string", "format": "date", "description": "RBM Information: End Date." },
             "justification": { "type": "string", "description": "RBM Information: Justification." }
         },
         "required": ["id", "name", "email", "role"]

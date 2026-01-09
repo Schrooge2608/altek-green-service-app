@@ -200,7 +200,6 @@ export default function ProfilePage() {
             label="Purchase Order No."
             value={userData?.purchaseOrderNo}
           />
-          <ProfileDetailRow label="End Date" value={userData?.endDate} />
           <ProfileDetailRow
             label="Justification"
             value={userData?.justification}

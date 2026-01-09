@@ -7,7 +7,6 @@ const rbmInfo = {
   department: "RBM Department",
   section: "RBM Section",
   purchaseOrderNo: "PO-12345",
-  endDate: "2028-08-31",
   justification: "Standard RBM contract.",
 };
 
