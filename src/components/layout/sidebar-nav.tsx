@@ -30,6 +30,7 @@ import {
   Archive,
   Library,
   Gauge,
+  Store,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -48,6 +49,7 @@ const mainLinks = [
   { href: '/messages', label: 'Messages', icon: Mail },
   { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
   { href: '/meters', label: 'Meters', icon: Gauge },
+  { href: '/vendors', label: 'Vendors', icon: Store },
 ];
 
 const miningDivisions = [
@@ -316,3 +318,5 @@ export function SidebarNav() {
     </>
   );
 }
+
+    
