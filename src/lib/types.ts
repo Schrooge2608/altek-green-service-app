@@ -91,9 +91,19 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Technician' | 'Site Supervisor' | 'Services Manager' | 'Corporate Manager' | 'Admin';
+  role: 'Technician' | 'Junior Technician' | 'Technologist' | 'Power systems engineer' | 'HVAC product specialist' | 'Site Supervisor' | 'Services Manager' | 'Corporate Manager' | 'Admin' | 'Data Admin' | 'Superadmin';
   phoneNumber?: string;
   address?: string;
   nextOfKinName?: string;
   nextOfKinPhone?: string;
+  sapNumber?: string;
+  qualifications?: string;
+  designatedLeaderName?: string;
+  responsibleGenManager?: string;
+  department?: string;
+  section?: string;
+  purchaseOrderNo?: string;
+  startingDate?: string;
+  endDate?: string;
+  justification?: string;
 }

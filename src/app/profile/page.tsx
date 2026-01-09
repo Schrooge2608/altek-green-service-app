@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import type { User } from '@/lib/types';
 import { doc } from 'firebase/firestore';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -24,13 +24,14 @@ import { Loader2, ShieldAlert } from 'lucide-react';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect } from 'react';
+import { Textarea } from '@/components/ui/textarea';
 
-const passwordFormSchema = z.object({
-  newPassword: z.string().min(6, 'Password must be at least 6 characters.'),
-  confirmPassword: z.string(),
-}).refine(data => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
+const profileFormSchema = z.object({
+  phoneNumber: z.string().optional(),
+  address: z.string().optional(),
+  nextOfKinName: z.string().optional(),
+  nextOfKinPhone: z.string().optional(),
 });
 
 
@@ -83,7 +84,7 @@ function NotAuthenticated() {
 function ProfileDetailRow({ label, value }: { label: string, value?: string | React.ReactNode }) {
     return (
         <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm py-2 border-b">
-            <span className="font-semibold text-muted-foreground w-40">{label}:</span>
+            <span className="font-semibold text-muted-foreground w-48">{label}:</span>
             <span className="flex-1">{value || <span className="text-muted-foreground/70">Not set</span>}</span>
         </div>
     )
@@ -98,13 +99,26 @@ export default function ProfilePage() {
   const userRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData, isLoading: userDataLoading } = useDoc<User>(userRef);
 
-  const form = useForm<z.infer<typeof passwordFormSchema>>({
-    resolver: zodResolver(passwordFormSchema),
+  const form = useForm<z.infer<typeof profileFormSchema>>({
+    resolver: zodResolver(profileFormSchema),
     defaultValues: {
-        newPassword: '',
-        confirmPassword: '',
+      phoneNumber: '',
+      address: '',
+      nextOfKinName: '',
+      nextOfKinPhone: '',
     },
   });
+
+  useEffect(() => {
+    if (userData) {
+      form.reset({
+        phoneNumber: userData.phoneNumber || '',
+        address: userData.address || '',
+        nextOfKinName: userData.nextOfKinName || '',
+        nextOfKinPhone: userData.nextOfKinPhone || '',
+      });
+    }
+  }, [userData, form]);
   
   const handlePasswordReset = async () => {
     if (user?.email) {
@@ -124,8 +138,15 @@ export default function ProfilePage() {
     }
   }
 
-  // The password change logic has been removed as per the new design.
-  // The form and onSubmit function are kept for future use if needed, but are not active.
+  function onSubmit(values: z.infer<typeof profileFormSchema>) {
+    if (!userRef) return;
+    updateDocumentNonBlocking(userRef, values);
+    toast({
+      title: 'Profile Updated',
+      description: 'Your contact and emergency information has been saved.',
+    });
+    form.reset(values); // Keep form values after successful submission
+  }
   
   const isLoading = isUserLoading || userDataLoading;
 
@@ -142,34 +163,122 @@ export default function ProfilePage() {
       <header>
         <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
         <p className="text-muted-foreground">
-          View and manage your account details.
+          View your account details and update your contact information.
         </p>
       </header>
         
       <Card>
         <CardHeader>
-            <CardTitle>Account Information</CardTitle>
-            <CardDescription>This is your personal information as it appears in the system. Please contact an admin to update it.</CardDescription>
+            <CardTitle>Official Information</CardTitle>
+            <CardDescription>This information is managed by your administrator and cannot be changed here.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
             <ProfileDetailRow label="Name" value={userData?.name} />
             <ProfileDetailRow label="Email" value={userData?.email} />
-            <ProfileDetailRow label="Role" value={userData && <Badge variant={userData.role === 'Admin' ? 'destructive' : 'secondary'}>{userData.role}</Badge>} />
-            <ProfileDetailRow label="Phone Number" value={userData?.phoneNumber} />
-            <ProfileDetailRow label="Address" value={userData?.address} />
+            <ProfileDetailRow label="Role" value={userData && <Badge variant={userData.role?.includes('Admin') || userData.role?.includes('Super') ? 'destructive' : 'secondary'}>{userData.role}</Badge>} />
+            <ProfileDetailRow label="SAP Number" value={userData?.sapNumber} />
+            <ProfileDetailRow label="Qualifications" value={userData?.qualifications} />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>RBM Information</CardTitle>
+          <CardDescription>This information is managed by your administrator.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <ProfileDetailRow label="Designated Leader" value={userData?.designatedLeaderName} />
+          <ProfileDetailRow label="Responsible Gen Manager" value={userData?.responsibleGenManager} />
+          <ProfileDetailRow label="Department" value={userData?.department} />
+          <ProfileDetailRow label="Section" value={userData?.section} />
+          <ProfileDetailRow label="Purchase Order No." value={userData?.purchaseOrderNo} />
+          <ProfileDetailRow label="Starting Date" value={userData?.startingDate} />
+          <ProfileDetailRow label="End Date" value={userData?.endDate} />
+          <ProfileDetailRow label="Justification" value={userData?.justification} />
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-            <CardTitle>Emergency Contact</CardTitle>
-            <CardDescription>Next of kin information on file.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-            <ProfileDetailRow label="Next of Kin Name" value={userData?.nextOfKinName} />
-            <ProfileDetailRow label="Next of Kin Phone" value={userData?.nextOfKinPhone} />
-        </CardContent>
-      </Card>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>My Contact Information</CardTitle>
+                    <CardDescription>You can update your personal contact details here.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-6 md:grid-cols-2">
+                    <FormField
+                        control={form.control}
+                        name="phoneNumber"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Phone Number</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., +27 12 345 6789" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <div className="md:col-span-2">
+                        <FormField
+                        control={form.control}
+                        name="address"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Home Address</FormLabel>
+                            <FormControl>
+                                <Textarea placeholder="e.g., 123 Industrial Way, Factory Town" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Emergency Contact</CardTitle>
+                    <CardDescription>Update your next of kin information.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-6 md:grid-cols-2">
+                     <FormField
+                        control={form.control}
+                        name="nextOfKinName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Next of Kin Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., Jane Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="nextOfKinPhone"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Next of Kin Phone</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., +27 98 765 4321" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </CardContent>
+            </Card>
+
+            <div className="flex justify-end gap-2">
+                <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isDirty}>
+                    {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save My Info
+                </Button>
+            </div>
+        </form>
+      </Form>
       
       <Card>
         <CardHeader>

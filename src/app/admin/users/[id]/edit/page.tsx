@@ -22,9 +22,13 @@ import { doc } from 'firebase/firestore';
 import React, { useEffect } from 'react';
 import { useParams, useRouter, notFound } from 'next/navigation';
 import type { User } from '@/lib/types';
-import { Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import backendConfig from '@/docs/backend.json';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
 
 
 const formSchema = z.object({
@@ -35,6 +39,16 @@ const formSchema = z.object({
   address: z.string().optional(),
   nextOfKinName: z.string().optional(),
   nextOfKinPhone: z.string().optional(),
+  sapNumber: z.string().optional(),
+  qualifications: z.string().optional(),
+  designatedLeaderName: z.string().optional(),
+  responsibleGenManager: z.string().optional(),
+  department: z.string().optional(),
+  section: z.string().optional(),
+  purchaseOrderNo: z.string().optional(),
+  startingDate: z.date().optional(),
+  endDate: z.date().optional(),
+  justification: z.string().optional(),
 });
 
 const roleOptions = (backendConfig.entities.User.properties.role.enum || []).map(role => ({
@@ -64,6 +78,14 @@ export default function EditUserPage() {
       address: '',
       nextOfKinName: '',
       nextOfKinPhone: '',
+      sapNumber: '',
+      qualifications: '',
+      designatedLeaderName: '',
+      responsibleGenManager: '',
+      department: '',
+      section: '',
+      purchaseOrderNo: '',
+      justification: '',
     },
   });
 
@@ -77,6 +99,16 @@ export default function EditUserPage() {
         address: user.address || '',
         nextOfKinName: user.nextOfKinName || '',
         nextOfKinPhone: user.nextOfKinPhone || '',
+        sapNumber: user.sapNumber || '',
+        qualifications: user.qualifications || '',
+        designatedLeaderName: user.designatedLeaderName || '',
+        responsibleGenManager: user.responsibleGenManager || '',
+        department: user.department || '',
+        section: user.section || '',
+        purchaseOrderNo: user.purchaseOrderNo || '',
+        startingDate: user.startingDate ? parseISO(user.startingDate) : undefined,
+        endDate: user.endDate ? parseISO(user.endDate) : undefined,
+        justification: user.justification || '',
       });
     }
   }, [user, form]);
@@ -99,7 +131,13 @@ export default function EditUserPage() {
       });
     }
 
-    updateDocumentNonBlocking(userRef, values);
+    const updateData = {
+        ...values,
+        startingDate: values.startingDate ? format(values.startingDate, "yyyy-MM-dd") : '',
+        endDate: values.endDate ? format(values.endDate, "yyyy-MM-dd") : '',
+    };
+
+    updateDocumentNonBlocking(userRef, updateData);
 
     toast({
       title: 'User Updated',
@@ -210,6 +248,58 @@ export default function EditUserPage() {
                   )}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+           <Card>
+            <CardHeader>
+                <CardTitle>SAP &amp; Qualifications</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                 <FormField
+                    control={form.control}
+                    name="sapNumber"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>SAP Number</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Enter SAP number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="qualifications"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Qualifications</FormLabel>
+                        <FormControl>
+                        <Textarea placeholder="List qualifications" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>RBM Information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                 <FormField control={form.control} name="designatedLeaderName" render={({ field }) => (<FormItem><FormLabel>Designated Leader Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="responsibleGenManager" render={({ field }) => (<FormItem><FormLabel>Responsible Gen Manager</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="department" render={({ field }) => (<FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="section" render={({ field }) => (<FormItem><FormLabel>Section</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="purchaseOrderNo" render={({ field }) => (<FormItem><FormLabel>Purchase Order No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="startingDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Starting Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="endDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>End Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                <div className="md:col-span-2">
+                    <FormField control={form.control} name="justification" render={({ field }) => (<FormItem><FormLabel>Justification</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                </div>
             </CardContent>
           </Card>
 
