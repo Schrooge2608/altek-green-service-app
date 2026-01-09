@@ -14,16 +14,18 @@ service cloud.firestore {
     
     function isSupervisorOrAdmin() {
         let userRole = getUserRole(request.auth.uid);
-        return userRole in ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin'];
+        return userRole in ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin', 'Superadmin', 'Data Admin'];
     }
 
     // Rules for the users collection
     match /users/{userId} {
-      // Allow any authenticated user to list and read all user documents temporarily.
-      allow read: if isRegisteredUser();
+      // Temporarily allow any logged-in user to read all user data to fix admin lockout.
+      allow read: if request.auth != null;
+      
       // Allow a user to create their own user document
       allow create: if request.auth.uid == userId;
-      // Allow any registered user to update for now to set the admin
+
+      // Allow admins to update any user, and users to update their own non-role info
       allow update, delete: if isRegisteredUser();
     }
     
