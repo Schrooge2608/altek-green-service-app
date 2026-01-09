@@ -23,13 +23,13 @@ service cloud.firestore {
     // Rules for the users collection
     match /users/{userId} {
       allow read: if isRegisteredUser();
-      allow create: if isOwner(userId);
+      allow create: if isOwner(userId) || isSupervisorOrAdmin();
       
       allow update: if isRegisteredUser() && (
         isSupervisorOrAdmin() ||
         (
           isOwner(userId) &&
-          // The user is only allowed to change these fields
+          // The user is only allowed to change these fields. All other fields must match their existing values.
           request.resource.data.name == resource.data.name &&
           request.resource.data.email == resource.data.email &&
           request.resource.data.role == resource.data.role &&
