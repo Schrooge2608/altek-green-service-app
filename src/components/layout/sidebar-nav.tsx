@@ -53,6 +53,7 @@ const mainLinks = [
 
 const miningDivisions = [
     { href: '/equipment/mining/boosters', label: 'Boosters' },
+    { href: '/equipment/mining/dredgers', label: 'Dredgers' },
 ]
 
 const completedSchedulesCategories = [

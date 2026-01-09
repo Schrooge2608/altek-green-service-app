@@ -6,7 +6,7 @@ export interface Equipment {
   type: 'Pump' | 'Fan' | 'Compressor' | 'Utility Room';
   location: string;
   plant: 'Mining' | 'Smelter';
-  division?: 'Boosters';
+  division?: 'Boosters' | 'Dredgers';
   vsdId: string;
   lastMaintenance: string;
   nextMaintenance: string;
