@@ -48,7 +48,7 @@ const formSchema = z.object({
   assignedToId: z.string().optional(),
 });
 
-const boosterLocations = ['MPA','MPC','MPD','MPE', 'TAILS BOOSTERS','CONS BOOSTERS','MPC DRY MINING', 'HLABANE', 'RETURN WATER BOOSTER STATION'];
+const dredgerLocations = ['MPA','MPC','MPD','MPE'];
 
 export default function EditEquipmentPage() {
   const { toast } = useToast();
@@ -245,7 +245,7 @@ export default function EditEquipmentPage() {
                     )}
                     />
                 )}
-                {watchedPlant === 'Mining' && (watchedDivision === 'Boosters') ? (
+                {watchedPlant === 'Mining' && (watchedDivision === 'Dredgers') ? (
                     <FormField
                     control={form.control}
                     name="location"
@@ -259,7 +259,7 @@ export default function EditEquipmentPage() {
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            {boosterLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                            {dredgerLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <FormMessage />
@@ -444,5 +444,3 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
-
-    
