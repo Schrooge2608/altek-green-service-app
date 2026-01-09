@@ -141,7 +141,17 @@
             "phoneNumber": { "type": "string" },
             "address": { "type": "string" },
             "nextOfKinName": { "type": "string" },
-            "nextOfKinPhone": { "type": "string" }
+            "nextOfKinPhone": { "type": "string" },
+            "sapNumber": { "type": "string", "description": "Existing SAP number." },
+            "qualifications": { "type": "string", "description": "User's qualifications." },
+            "designatedLeaderName": { "type": "string", "description": "RBM Information: Designated Leader name." },
+            "responsibleGenManager": { "type": "string", "description": "RBM Information: Responsible General Manager." },
+            "department": { "type": "string", "description": "RBM Information: Department." },
+            "section": { "type": "string", "description": "RBM Information: Section." },
+            "purchaseOrderNo": { "type": "string", "description": "RBM Information: Purchase Order No." },
+            "startingDate": { "type": "string", "format": "date", "description": "RBM Information: Starting Date." },
+            "endDate": { "type": "string", "format": "date", "description": "RBM Information: End Date." },
+            "justification": { "type": "string", "description": "RBM Information: Justification." }
         },
         "required": ["id", "name", "email", "role"]
     }
@@ -202,5 +212,3 @@
     ]
   }
 }
-
-    

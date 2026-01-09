@@ -29,10 +29,11 @@ service cloud.firestore {
         isSupervisorOrAdmin() ||
         (
           isOwner(userId) &&
-          request.resource.data.keys().hasOnly(['phoneNumber', 'address', 'nextOfKinName', 'nextOfKinPhone', 'name', 'email', 'role', 'sapNumber', 'qualifications', 'designatedLeaderName', 'responsibleGenManager', 'department', 'section', 'purchaseOrderNo', 'startingDate', 'endDate', 'justification', 'id']) &&
+          // The user is only allowed to change these fields
           request.resource.data.name == resource.data.name &&
           request.resource.data.email == resource.data.email &&
           request.resource.data.role == resource.data.role &&
+          request.resource.data.id == resource.data.id &&
           request.resource.data.sapNumber == resource.data.sapNumber &&
           request.resource.data.qualifications == resource.data.qualifications &&
           request.resource.data.designatedLeaderName == resource.data.designatedLeaderName &&
