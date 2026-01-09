@@ -52,13 +52,9 @@ const mainLinks = [
 ];
 
 const miningDivisions = [
+    { href: '/equipment/mining/boosters', label: 'Boosters' },
     { href: '/equipment/mining/dredgers', label: 'Dredgers' },
     { href: '/equipment/mining/pump-stations', label: 'Pump Stations' },
-]
-
-const boosterDivisions = [
-    { href: '/equipment/mining/boosters', label: 'Tails Boosters' },
-    { href: '/equipment/mining/cons-boosters', label: 'Cons Boosters' },
 ]
 
 const completedSchedulesCategories = [
@@ -105,7 +101,6 @@ export function SidebarNav() {
   const isEquipmentPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter');
   const [isAssetsOpen, setIsAssetsOpen] = React.useState(isEquipmentPath);
   const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment/mining'));
-  const [isBoostersOpen, setIsBoostersOpen] = React.useState(pathname.startsWith('/equipment/mining/boosters') || pathname.startsWith('/equipment/mining/cons-boosters'));
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(pathname.startsWith('/smelter'));
   const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin'));
   const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
@@ -195,30 +190,6 @@ export function SidebarNav() {
                             </SidebarMenuItem>
                             <CollapsibleContent>
                                 <SidebarMenuSub>
-                                     <Collapsible open={isBoostersOpen} onOpenChange={setIsBoostersOpen}>
-                                        <SidebarMenuItem>
-                                            <CollapsibleTrigger asChild>
-                                                <SidebarMenuButton tooltip="Boosters" isActive={isBoostersOpen}>
-                                                    <Wrench />
-                                                    <span>Boosters</span>
-                                                    <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                                                </SidebarMenuButton>
-                                            </CollapsibleTrigger>
-                                        </SidebarMenuItem>
-                                        <CollapsibleContent>
-                                             <SidebarMenuSub>
-                                                {boosterDivisions.map((division) => (
-                                                    <SidebarMenuItem key={division.href}>
-                                                        <Link href={division.href} passHref>
-                                                            <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                                            <span>{division.label}</span>
-                                                            </SidebarMenuSubButton>
-                                                        </Link>
-                                                    </SidebarMenuItem>
-                                                ))}
-                                            </SidebarMenuSub>
-                                        </CollapsibleContent>
-                                    </Collapsible>
                                     {miningDivisions.map((division) => (
                                         <SidebarMenuItem key={division.href}>
                                             <Link href={division.href} passHref>
