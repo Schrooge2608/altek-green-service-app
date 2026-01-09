@@ -58,10 +58,10 @@ service cloud.firestore {
       allow get: if isRegisteredUser() && (request.auth.uid == resource.data.senderId || request.auth.uid in resource.data.recipientIds);
       allow create: if isRegisteredUser() && request.auth.uid == request.resource.data.senderId;
       allow update: if isRegisteredUser() && request.auth.uid in resource.data.recipientIds; // For marking as read
-    }
-
-    match /messages/{messageId} {
-        allow list: if isRegisteredUser() && (request.query.where.senderId == request.auth.uid || request.auth.uid in request.query.where.recipientIds);
+      // Allow users to list messages where they are the sender OR a recipient
+      allow list: if isRegisteredUser() && 
+                    (request.query.get("senderId") == request.auth.uid || 
+                     request.query.get("recipientIds")['array-contains'] == request.auth.uid);
     }
 
     // Fallback for any other path, deny all
