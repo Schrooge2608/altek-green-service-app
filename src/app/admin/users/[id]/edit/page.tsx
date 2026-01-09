@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -24,17 +24,24 @@ import { useParams, useRouter, notFound } from 'next/navigation';
 import type { User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import backendConfig from '@/docs/backend.json';
 
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   email: z.string().email('Please provide a valid email.'),
-  role: z.enum(['Technician', 'Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin']),
+  role: z.string().min(1, 'Role is required.'),
   phoneNumber: z.string().optional(),
   address: z.string().optional(),
   nextOfKinName: z.string().optional(),
   nextOfKinPhone: z.string().optional(),
 });
+
+const roleOptions = (backendConfig.entities.User.properties.role.enum || []).map(role => ({
+    label: role,
+    value: role,
+}));
+
 
 export default function EditUserPage() {
   const { toast } = useToast();
@@ -163,20 +170,14 @@ export default function EditUserPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a role" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            <SelectItem value="Technician">Technician</SelectItem>
-                            <SelectItem value="Site Supervisor">Site Supervisor</SelectItem>
-                            <SelectItem value="Services Manager">Services Manager</SelectItem>
-                            <SelectItem value="Corporate Manager">Corporate Manager</SelectItem>
-                            <SelectItem value="Admin">Admin</SelectItem>
-                        </SelectContent>
-                    </Select>
+                     <Combobox
+                        options={roleOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select or create a role..."
+                        searchPlaceholder="Search roles..."
+                        noResultsMessage="No roles found."
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

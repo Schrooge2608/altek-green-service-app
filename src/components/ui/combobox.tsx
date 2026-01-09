@@ -37,18 +37,6 @@ export function Combobox({
     noResultsMessage = "No results found."
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [inputValue, setInputValue] = React.useState(value)
-
-  React.useEffect(() => {
-    setInputValue(value)
-  }, [value])
-
-  const handleSelect = (currentValue: string) => {
-    const newValue = currentValue === value ? "" : currentValue
-    onChange(newValue)
-    setInputValue(newValue)
-    setOpen(false)
-  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -60,7 +48,7 @@ export function Combobox({
           className="w-full justify-between"
         >
           {value
-            ? options.find((option) => option.value.toLowerCase() === value.toLowerCase())?.label
+            ? options.find((option) => option.value.toLowerCase() === value.toLowerCase())?.label ?? value
             : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -69,22 +57,18 @@ export function Combobox({
         <Command>
           <CommandInput 
             placeholder={searchPlaceholder}
-            value={inputValue}
-            onValueChange={setInputValue}
           />
           <CommandList>
-            <CommandEmpty
-                onSelect={() => handleSelect(inputValue)}
-                className="py-6 text-center text-sm"
-            >
-                {noResultsMessage}
-            </CommandEmpty>
+            <CommandEmpty>{noResultsMessage}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.value}
-                  onSelect={handleSelect}
+                  onSelect={(currentValue) => {
+                    onChange(currentValue === value ? "" : currentValue)
+                    setOpen(false)
+                  }}
                 >
                   <Check
                     className={cn(
