@@ -7,7 +7,7 @@ import type { User } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ShieldAlert, PlusCircle, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { ShieldAlert, PlusCircle, Loader2, Pencil, Trash2, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import React from 'react';
@@ -179,12 +179,20 @@ export default function UserManagementPage() {
                     </p>
                 </div>
                 {isKnownAdmin && (
-                    <Link href="/admin/users/new" passHref>
-                        <Button>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add User
-                        </Button>
-                    </Link>
+                    <div className='flex items-center gap-2'>
+                        <Link href="/admin/seed" passHref>
+                            <Button variant="outline">
+                                <Database className="mr-2 h-4 w-4" />
+                                Seed Data
+                            </Button>
+                        </Link>
+                        <Link href="/admin/users/new" passHref>
+                            <Button>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add User
+                            </Button>
+                        </Link>
+                    </div>
                 )}
             </header>
             
