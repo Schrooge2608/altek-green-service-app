@@ -1,6 +1,7 @@
 
 import type { Equipment, VSD } from './types';
 import { format } from 'date-fns';
+import { doc } from 'firebase/firestore';
 
 const today = new Date();
 const installationDate = format(new Date('2023-01-01'), "yyyy-MM-dd");
@@ -44,7 +45,7 @@ export const seedEquipment: Equipment[] = [
         id: "dm-mpe-wbp-01",
         name: "MPE Water Booster Pump",
         type: "Pump",
-        location: "MPC DRY MINING", // Assuming this should also be MPC DRY MINING as per image context, can be changed.
+        location: "MPC DRY MINING", 
         plant: "Mining",
         division: "Dredgers",
         vsdId: "vsd-dm-mpe-wbp-01",
@@ -61,7 +62,7 @@ export const seedEquipment: Equipment[] = [
         id: "dm-mpe-sp-01",
         name: "MPE Slurry Pump",
         type: "Pump",
-        location: "MPC DRY MINING", // Assuming this should also be MPC DRY MINING as per image context, can be changed.
+        location: "MPC DRY MINING",
         plant: "Mining",
         division: "Dredgers",
         vsdId: "vsd-dm-mpe-sp-01",
