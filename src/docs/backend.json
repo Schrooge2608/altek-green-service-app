@@ -137,7 +137,7 @@
             "id": { "type": "string", "description": "The user's unique ID, same as their Firebase Auth UID." },
             "name": { "type": "string" },
             "email": { "type": "string", "format": "email" },
-            "role": { "type": "string", "enum": ["Technician", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin"] },
+            "role": { "type": "string", "enum": ["Technician", "Junior Technician", "Technologist", "Power systems engineer", "HVAC product specialist", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin", "Data Admin", "Superadmin"] },
             "phoneNumber": { "type": "string" },
             "address": { "type": "string" },
             "nextOfKinName": { "type": "string" },
@@ -202,3 +202,5 @@
     ]
   }
 }
+
+    
