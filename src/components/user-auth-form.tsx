@@ -23,39 +23,40 @@ import { doc, setDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { User } from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import backendConfig from '@/docs/backend.json';
 
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.').optional(),
   email: z.string().email('Please enter a valid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
-  role: z.enum(['Technician', 'Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin']).optional(),
+  role: z.string().min(1, 'Role is required.').optional(),
 });
 
 type UserFormValue = z.infer<typeof formSchema>;
 
 interface UserAuthFormProps {
-    mode: 'public' | 'createUser';
+    mode: 'login' | 'createUser';
+    onSuccess?: () => void;
 }
 
-export function UserAuthForm({ mode }: UserAuthFormProps) {
+export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
   const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
-  const [isLogin, setIsLogin] = React.useState(true); // State to toggle between login and sign up for public users
-
-  const isCreateUserMode = mode === 'createUser';
-  const isPublicSignUp = mode === 'public' && !isLogin;
+  
+  const roleOptions = (backendConfig.entities.User.properties.role.enum || []).map(role => ({
+    label: role,
+    value: role,
+  }));
 
   const getFormSchema = () => {
-    if (isCreateUserMode) {
-      return formSchema.required({ name: true, role: true }); // Admin creating user
+    if (mode === 'createUser') {
+      return formSchema.required({ name: true, role: true });
     }
-    if (isPublicSignUp) {
-      return formSchema.required({ name: true }); // Public user signing up, role is defaulted
-    }
-    return formSchema.pick({ email: true, password: true }); // Public login
+    return formSchema.pick({ email: true, password: true }); // Login mode
   };
 
   const form = useForm<UserFormValue>({
@@ -71,12 +72,11 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
   const onSubmit = async (data: UserFormValue) => {
     setIsLoading(true);
     try {
-      if (isLogin && !isCreateUserMode) {
-        // Public login
+      if (mode === 'login') {
         await signInWithEmailAndPassword(auth, data.email, data.password);
         toast({ title: 'Login Successful', description: 'Welcome back!' });
-      } else {
-        // Create user (either by admin or public sign-up)
+        if(onSuccess) onSuccess();
+      } else { // createUser mode
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const newUser = userCredential.user;
 
@@ -84,22 +84,20 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
             id: newUser.uid,
             name: data.name!,
             email: data.email,
-            // For public sign up, default to Technician. Admin can set the role.
-            role: isCreateUserMode ? data.role! : 'Technician',
+            role: data.role as User['role'],
         };
 
         await setDoc(doc(firestore, 'users', newUser.uid), userData);
 
         toast({
-            title: 'Account Created Successfully',
+            title: 'User Created Successfully',
             description: `The account for ${data.name} has been created.`,
         });
-        form.reset();
         
-        if (isPublicSignUp) {
-            // After public signup, you might want to log them in automatically (which firebase does)
-            // and perhaps redirect them. For now, just show a success message.
-            setIsLogin(true); // Switch back to login view
+        if (onSuccess) {
+            onSuccess();
+        } else {
+            form.reset();
         }
       }
     } catch (error: any) {
@@ -113,9 +111,9 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
     }
   };
   
-  const title = isCreateUserMode ? 'Create a new user account' : (isLogin ? 'Sign in to your account' : 'Create a new account');
-  const description = isCreateUserMode ? 'Enter the details for the new user below.' : (isLogin ? 'Enter your credentials to access your dashboard.' : 'Enter your details to get started.');
-  const buttonText = isCreateUserMode ? 'Create User' : (isLogin ? 'Sign In' : 'Sign Up');
+  const title = mode === 'createUser' ? 'Create a new user account' : 'Sign in to your account';
+  const description = mode === 'createUser' ? 'Enter the details for the new user below.' : 'Enter your credentials to access your dashboard.';
+  const buttonText = mode === 'createUser' ? 'Create User' : 'Sign In';
 
   return (
     <>
@@ -126,7 +124,7 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
       <div className={cn('grid gap-6')}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {(isCreateUserMode || isPublicSignUp) && (
+            {mode === 'createUser' && (
                 <FormField
                 control={form.control}
                 name="name"
@@ -167,7 +165,7 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
                 </FormItem>
               )}
             />
-             {isCreateUserMode && (
+             {mode === 'createUser' && (
                 <FormField
                 control={form.control}
                 name="role"
@@ -181,11 +179,9 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="Technician">Technician</SelectItem>
-                            <SelectItem value="Site Supervisor">Site Supervisor</SelectItem>
-                            <SelectItem value="Services Manager">Services Manager</SelectItem>
-                            <SelectItem value="Corporate Manager">Corporate Manager</SelectItem>
-                            <SelectItem value="Admin">Admin</SelectItem>
+                            {roleOptions.map(option => (
+                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -199,28 +195,6 @@ export function UserAuthForm({ mode }: UserAuthFormProps) {
             </Button>
           </form>
         </Form>
-        {!isCreateUserMode && (
-             <>
-                <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                    Or
-                    </span>
-                </div>
-                </div>
-                <Button
-                    variant="outline"
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => setIsLogin(!isLogin)}
-                >
-                    {isLogin ? 'Switch to Sign Up' : 'Switch to Sign In'}
-                </Button>
-            </>
-        )}
       </div>
     </>
   );

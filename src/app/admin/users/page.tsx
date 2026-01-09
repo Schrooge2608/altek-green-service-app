@@ -50,6 +50,14 @@ function UserList() {
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
     const handleDeleteUser = (userToDelete: User) => {
+        if (!userToDelete.id) {
+            toast({
+                variant: "destructive",
+                title: 'Error',
+                description: `User ID is missing, cannot delete.`,
+            });
+            return;
+        }
         const userRef = doc(firestore, 'users', userToDelete.id);
         deleteDocumentNonBlocking(userRef);
         toast({
@@ -101,7 +109,7 @@ function UserList() {
                                         </Link>
                                          <AlertDialog>
                                             <AlertDialogTrigger asChild>
-                                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
+                                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80" disabled={!u.id}>
                                                     <Trash2 className="h-4 w-4" />
                                                     <span className="sr-only">Delete User</span>
                                                 </Button>
@@ -171,7 +179,7 @@ export default function UserManagementPage() {
                     </p>
                 </div>
                 {isKnownAdmin && (
-                    <Link href="/auth/register" passHref>
+                    <Link href="/admin/users/new" passHref>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add User

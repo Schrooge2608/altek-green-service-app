@@ -20,10 +20,14 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // If the user is logged in and is on the public registration page, redirect them to the dashboard.
+    // If a logged-in user tries to access a public-only page, redirect them.
     if (user && publicRoutes.includes(pathname)) {
-      router.push('/');
-      return; // Stop further execution in this effect run
+        // Exception: admins can access /auth/register to see the form, even if it redirects for them.
+        // We handle the "Add User" flow on a different page now, but this is a safeguard.
+      if (!pathname.startsWith('/admin')) {
+        router.push('/');
+        return;
+      }
     }
 
     // If the user is not logged in and the current route is not public, redirect to the login page.
