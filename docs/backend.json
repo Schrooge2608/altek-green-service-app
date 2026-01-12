@@ -25,11 +25,9 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS"] },
-        "plant": { "type": "string", "enum": ["Mining"] },
+        "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
         "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations"], "description": "The specific division within the Mining plant." },
         "vsdId": { "type": "string" },
-        "pumpHead": { "type": "number" },
-        "flowRate": { "type": "number" },
         "lastMaintenance": { "type": "string", "format": "date" },
         "nextMaintenance": { "type": "string", "format": "date" },
         "uptime": { "type": "number" },
@@ -209,3 +207,5 @@
     ]
   }
 }
+
+    

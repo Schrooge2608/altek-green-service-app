@@ -20,11 +20,6 @@ export interface Equipment {
   breakerModel?: string;
   breakerAmperage?: number;
   breakerLocation?: string;
-  // Pump fields
-  pumpHead?: number;
-  flowRate?: number;
-  pumpModel?: string;
-  pumpSerialNumber?: string;
   // Downtime
   totalDowntimeHours?: number;
   // VSD is not a separate type but its fields are on Equipment
@@ -34,6 +29,8 @@ export interface Equipment {
   installationDate: string;
   assignedToId?: string;
   assignedToName?: string;
+  protectionAssignedToId?: string;
+  protectionAssignedToName?: string;
 }
 
 export interface VSD {

@@ -38,9 +38,7 @@ const formSchema = z.object({
   division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
   location: z.string().min(1, 'Location is required'),
   imageUrl: z.string().optional(),
-  pumpHead: z.coerce.number().optional(),
-  flowRate: z.coerce.number().optional(),
-
+  
   // VSD fields
   vsdId: z.string().min(1, 'VSD ID is required'),
   model: z.string().min(1, 'VSD Model is required'),
@@ -49,6 +47,12 @@ const formSchema = z.object({
     required_error: "An installation date is required.",
   }),
   assignedToId: z.string().optional(),
+
+  // Protection fields
+  breakerModel: z.string().optional(),
+  breakerAmperage: z.coerce.number().optional(),
+  breakerLocation: z.string().optional(),
+  protectionAssignedToId: z.string().optional(),
 });
 
 const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
@@ -91,6 +95,7 @@ export default function NewEquipmentPage() {
     }
     
     const assignedUser = users?.find(u => u.id === values.assignedToId);
+    const protectionAssignedUser = users?.find(u => u.id === values.protectionAssignedToId);
 
     const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
     const vsdRef = doc(firestore, 'vsds', values.vsdId);
@@ -102,13 +107,16 @@ export default function NewEquipmentPage() {
       vsdId: values.vsdId,
       location: values.location,
       imageUrl: values.imageUrl,
-      pumpHead: values.pumpHead || 0,
-      flowRate: values.flowRate || 0,
       lastMaintenance: format(new Date(), "yyyy-MM-dd"),
       nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
       uptime: 100,
       powerConsumption: 0,
       totalDowntimeHours: 0,
+      breakerModel: values.breakerModel,
+      breakerAmperage: values.breakerAmperage,
+      breakerLocation: values.breakerLocation,
+      protectionAssignedToId: values.protectionAssignedToId,
+      protectionAssignedToName: protectionAssignedUser?.name,
     };
 
     if (values.plant === 'Mining') {
@@ -259,32 +267,6 @@ export default function NewEquipmentPage() {
                   )}
                 />
               )}
-                <FormField
-                    control={form.control}
-                    name="pumpHead"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Pump Head (m)</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="flowRate"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Flow Rate (m³/h)</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
               <div className="md:col-span-2">
                 <FormField
                     control={form.control}
@@ -419,6 +401,81 @@ export default function NewEquipmentPage() {
                             />
                         </PopoverContent>
                         </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>Protection Details</CardTitle>
+                <CardDescription>Circuit breaker or vacuum breaker information.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                <FormField
+                    control={form.control}
+                    name="breakerModel"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Breaker Model</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Siemens 3RV" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="breakerAmperage"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Breaker Amperage (A)</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="breakerLocation"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Breaker Location</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Panel PP-01" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="protectionAssignedToId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assigned Protection Technician</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign a technician..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
                     </FormItem>
                     )}
