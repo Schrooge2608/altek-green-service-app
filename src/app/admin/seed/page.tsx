@@ -16,6 +16,8 @@ export default function SeedPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSeeded, setIsSeeded] = useState(false);
 
+  const hasDataToSeed = pumpStations.length > 0;
+
   async function seedDatabase() {
     if (!firestore) {
         toast({
@@ -25,26 +27,29 @@ export default function SeedPage() {
         });
         return;
     }
+    if (!hasDataToSeed) {
+        toast({
+            variant: 'secondary',
+            title: 'No Data',
+            description: 'There is no data in the seed file to upload.'
+        });
+        return;
+    }
+
     setIsLoading(true);
     const batch = writeBatch(firestore);
 
     pumpStations.forEach((pump, index) => {
-        const equipmentId = `pump-station-${String(index + 1).padStart(3, '0')}`;
-        const vsdId = `vsd-ps-${String(index + 1).padStart(3, '0')}`;
+        // Use a more generic ID generation or ensure IDs are provided in the data
+        const equipmentId = `ps-${pump.location.slice(0,3).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
+        const vsdId = `vsd-ps-${pump.location.slice(0,3).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
         
         const { model, serialNumber, installationDate, ...baseEq } = pump;
 
-        const equipmentDoc: Equipment = {
+        const equipmentDoc: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> = {
             ...baseEq,
             id: equipmentId,
             vsdId: vsdId,
-            // These fields below now correctly live on the VSD record, 
-            // but the type still expects them. We set them to placeholder values
-            // that reflect the VSD details for type consistency.
-            model: model, 
-            serialNumber: serialNumber,
-            installationDate: installationDate,
-            status: 'active',
         };
         
         const vsdDoc: VSD = {
@@ -57,17 +62,17 @@ export default function SeedPage() {
         };
 
         const equipmentRef = doc(firestore, 'equipment', equipmentId);
-        batch.set(equipmentRef, equipmentDoc);
+        batch.set(equipmentRef, equipmentDoc, { merge: true });
 
         const vsdRef = doc(firestore, 'vsds', vsdId);
-        batch.set(vsdRef, vsdDoc);
+        batch.set(vsdRef, vsdDoc, { merge: true });
     });
 
     try {
       await batch.commit();
       toast({
         title: 'Database Seeded Successfully!',
-        description: `${pumpStations.length} pump stations have been added to the database.`,
+        description: `${pumpStations.length} records have been added to the database.`,
       });
       setIsSeeded(true);
     } catch (error: any) {
@@ -92,22 +97,24 @@ export default function SeedPage() {
       </header>
       <Card>
         <CardHeader>
-          <CardTitle>Seed Pump Stations</CardTitle>
+          <CardTitle>Upload Seed Data</CardTitle>
           <CardDescription>
-            This action will add {pumpStations.length} pump station records to the 'equipment' and 'vsds' collections. This should only be run once.
+            This action will add all records from the `src/lib/seed-data.ts` file to the database. 
+            Add data to the file and click the button to upload.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-4">
-            <Button onClick={seedDatabase} disabled={isLoading || isSeeded}>
+            <Button onClick={seedDatabase} disabled={isLoading || isSeeded || !hasDataToSeed}>
               {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Database className="mr-2 h-4 w-4" />
               )}
-              {isSeeded ? 'Database Already Seeded' : 'Seed Database'}
+              {isSeeded ? 'Data Uploaded' : (hasDataToSeed ? `Upload ${pumpStations.length} Records` : 'No Data to Upload')}
             </Button>
-            {isSeeded && <p className="text-sm text-green-600">Seeding complete. You can now request to remove this page.</p>}
+            {isSeeded && <p className="text-sm text-green-600">Seeding complete. You can clear the seed file now.</p>}
+            {!hasDataToSeed && !isSeeded && <p className="text-sm text-muted-foreground">The seed file is currently empty.</p>}
           </div>
         </CardContent>
       </Card>
