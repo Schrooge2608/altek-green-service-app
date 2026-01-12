@@ -242,6 +242,7 @@ export default function BreakdownsPage() {
               <TableRow>
                 <TableHead>Time Reported</TableHead>
                 <TableHead>Equipment</TableHead>
+                <TableHead>Component</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Time Back in Service</TableHead>
@@ -254,7 +255,7 @@ export default function BreakdownsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center h-24">Loading breakdowns...</TableCell>
+                  <TableCell colSpan={10} className="text-center h-24">Loading breakdowns...</TableCell>
                 </TableRow>
               ) : breakdowns && breakdowns.length > 0 ? (
                 breakdowns.map((b) => {
@@ -267,6 +268,7 @@ export default function BreakdownsPage() {
                             {b.equipmentName}
                         </Link>
                       </TableCell>
+                      <TableCell>{b.component}</TableCell>
                       <TableCell>{b.description}</TableCell>
                       <TableCell>
                         <Badge variant={b.resolved ? 'default' : 'destructive'}>
@@ -292,13 +294,13 @@ export default function BreakdownsPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center h-24">No breakdowns found.</TableCell>
+                  <TableCell colSpan={10} className="text-center h-24">No breakdowns found.</TableCell>
                 </TableRow>
               )}
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={7} className="font-semibold text-right">Total Hours Spent</TableCell>
+                    <TableCell colSpan={8} className="font-semibold text-right">Total Hours Spent</TableCell>
                     <TableCell className="text-right font-bold">{totalHoursSum}</TableCell>
                     <TableCell></TableCell>
                 </TableRow>
@@ -309,3 +311,5 @@ export default function BreakdownsPage() {
     </div>
   );
 }
+
+    

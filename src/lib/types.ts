@@ -107,6 +107,7 @@ export interface Breakdown {
   id: string;
   equipmentId: string;
   equipmentName: string;
+  component: 'VSD' | 'Motor' | 'Pump' | 'Protection' | 'UPS' | 'Other';
   date: string;
   description: string;
   resolved: boolean;
@@ -161,3 +162,5 @@ export interface User {
   purchaseOrderNo?: string;
   justification?: string;
 }
+
+    

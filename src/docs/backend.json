@@ -42,9 +42,26 @@
         "motorAssignedToId": { "type": "string", "description": "The UID of the user assigned to the motor." },
         "motorAssignedToName": { "type": "string", "description": "The name of the user assigned to the motor." },
         "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." },
-        "breakerModel": { "type": "string", "description": "The model of the circuit breaker." },
-        "breakerAmperage": { "type": "number", "description": "The amperage rating of the circuit breaker." },
-        "breakerLocation": { "type": "string", "description": "The location of the circuit breaker (e.g., panel name)." },
+        "breakerAssetNumber": { "type": "string", "description": "The unique asset number or tag ID for the breaker." },
+        "breakerLocationHierarchy": { "type": "string", "description": "e.g., Substation > DB > Cubicle" },
+        "breakerServiceDescription": { "type": "string", "description": "What the breaker feeds." },
+        "breakerManufacturer": { "type": "string" },
+        "breakerModelRange": { "type": "string" },
+        "breakerType": { "type": "string", "enum": ["MCB", "MCCB", "ACB", "VCB"] },
+        "breakerRatedVoltage": { "type": "number", "description": "Rated Voltage (Ue) in Volts." },
+        "breakerFrameSize": { "type": "number", "description": "Frame Size (In or Iu) in Amps." },
+        "breakerBreakingCapacity": { "type": "number", "description": "Breaking Capacity (Icu) in kA." },
+        "breakerNumberOfPoles": { "type": "number", "enum": [3, 4] },
+        "breakerTripUnitType": { "type": "string", "enum": ["Thermal-Magnetic", "Electronic"] },
+        "breakerOverloadSetting": { "type": "number", "description": "Overload Setting (Ir or L) in Amps." },
+        "breakerShortCircuitSetting": { "type": "number", "description": "Short Circuit Setting (Isd or S)." },
+        "breakerInstantaneousSetting": { "type": "number", "description": "Instantaneous Setting (Ii)." },
+        "breakerGroundFaultSetting": { "type": "string", "description": "Ground Fault Setting (Ig)." },
+        "breakerOperationMechanism": { "type": "string", "enum": ["Manual", "Motorized"] },
+        "breakerMotorVoltage": { "type": "number", "description": "Voltage for motorized operation." },
+        "breakerShuntTripVoltage": { "type": "number", "description": "Voltage for shunt trip coil." },
+        "breakerUndervoltageRelease": { "type": "string", "enum": ["Yes", "No"] },
+        "breakerAuxiliaryContacts": { "type": "string", "description": "e.g., 2NO+2NC" },
         "protectionInstallationDate": { "type": "string", "format": "date" },
         "protectionAssignedToId": { "type": "string", "description": "The UID of the user assigned to the protection system." },
         "protectionAssignedToName": { "type": "string", "description": "The name of the user assigned to the protection system." },
@@ -100,6 +117,7 @@
         "id": { "type": "string" },
         "equipmentId": { "type": "string" },
         "equipmentName": { "type": "string" },
+        "component": { "type": "string", "enum": ["VSD", "Motor", "Pump", "Protection", "UPS", "Other"], "description": "The specific component that failed." },
         "date": { "type": "string", "format": "date" },
         "description": { "type": "string" },
         "resolved": { "type": "boolean" },
@@ -109,7 +127,7 @@
         "timeReported": { "type": "string", "format": "date-time" },
         "timeBackInService": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "equipmentId", "equipmentName", "date", "description", "resolved", "timeReported"]
+      "required": ["id", "equipmentId", "equipmentName", "component", "date", "description", "resolved", "timeReported"]
     },
      "CompletedSchedule": {
       "title": "CompletedSchedule",
@@ -231,6 +249,5 @@
     ]
   }
 }
-    
 
     

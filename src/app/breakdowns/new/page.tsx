@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import {
   Form,
@@ -20,15 +20,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import type { Equipment } from '@/lib/types';
+import type { Equipment, VSD } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
+import React from 'react';
 
 
 const formSchema = z.object({
-  equipmentId: z.string().min(1, 'Please select a piece of equipment.'),
+  equipmentId: z.string().min(1, 'Please select an equipment cluster.'),
+  component: z.string().min(1, 'Please select the failed component.'),
   date: z.date({
     required_error: "A breakdown date is required.",
   }),
@@ -41,7 +43,7 @@ export default function NewBreakdownPage() {
   const firestore = useFirestore();
   
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
-  const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
+  const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,9 +52,33 @@ export default function NewBreakdownPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    const selectedEquipment = equipment?.find(e => e.id === values.equipmentId);
+  const watchedEquipmentId = useWatch({
+    control: form.control,
+    name: 'equipmentId',
+  });
 
+  const selectedEquipment = React.useMemo(() => {
+    return equipmentList?.find(e => e.id === watchedEquipmentId);
+  }, [watchedEquipmentId, equipmentList]);
+
+  const vsdRef = useMemoFirebase(() => (selectedEquipment ? doc(firestore, 'vsds', selectedEquipment.vsdId) : null), [firestore, selectedEquipment]);
+  const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
+
+  const componentOptions = React.useMemo(() => {
+    if (!selectedEquipment || !vsd) return [];
+    
+    const options = [];
+    if (vsd.model) options.push({ value: `VSD::${vsd.model}::${vsd.serialNumber}`, label: `VSD: ${vsd.model} (SN: ${vsd.serialNumber})`});
+    if (selectedEquipment.breakerAssetNumber) options.push({ value: `Protection::${selectedEquipment.breakerType || 'Breaker'}::${selectedEquipment.breakerAssetNumber}`, label: `Protection: ${selectedEquipment.breakerAssetNumber}` });
+    if (selectedEquipment.motorModel) options.push({ value: `Motor::${selectedEquipment.motorModel}::${selectedEquipment.motorSerialNumber}`, label: `Motor: ${selectedEquipment.motorModel} (SN: ${selectedEquipment.motorSerialNumber})` });
+    if (selectedEquipment.pumpBrand) options.push({ value: `Pump::${selectedEquipment.pumpBrand}::${selectedEquipment.pumpSerialNumber}`, label: `Pump: ${selectedEquipment.pumpBrand} (SN: ${selectedEquipment.pumpSerialNumber})` });
+    if (selectedEquipment.upsModel) options.push({ value: `UPS::${selectedEquipment.upsModel}::${selectedEquipment.upsSerialNumber}`, label: `UPS: ${selectedEquipment.upsModel} (SN: ${selectedEquipment.upsSerialNumber})` });
+    options.push({ value: 'Other', label: 'Other/Not Listed' });
+
+    return options;
+  }, [selectedEquipment, vsd]);
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
     if (!selectedEquipment) {
         toast({
           variant: "destructive",
@@ -67,6 +93,7 @@ export default function NewBreakdownPage() {
     const breakdownData = {
       equipmentId: values.equipmentId,
       equipmentName: selectedEquipment.name,
+      component: values.component,
       date: format(values.date, "yyyy-MM-dd"),
       description: values.description,
       resolved: false,
@@ -77,7 +104,7 @@ export default function NewBreakdownPage() {
 
     toast({
       title: 'Breakdown Reported',
-      description: `The issue for ${selectedEquipment.name} has been logged.`,
+      description: `The issue for ${selectedEquipment.name} (${values.component}) has been logged.`,
     });
     form.reset();
   }
@@ -95,7 +122,7 @@ export default function NewBreakdownPage() {
           <Card>
             <CardHeader>
               <CardTitle>Breakdown Details</CardTitle>
-              <CardDescription>Select the equipment and describe the issue.</CardDescription>
+              <CardDescription>Select the equipment cluster, then pinpoint the failed component.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
               <FormField
@@ -103,18 +130,44 @@ export default function NewBreakdownPage() {
                 name="equipmentId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Equipment</FormLabel>
+                    <FormLabel>Equipment Cluster</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={equipmentLoading}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select the affected equipment" />
+                          <SelectValue placeholder="Select the equipment cluster..." />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {equipmentLoading ? (
                             <SelectItem value="loading" disabled>Loading equipment...</SelectItem>
                         ) : (
-                            equipment?.map(eq => <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.id})</SelectItem>)
+                            equipmentList?.map(eq => <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.location})</SelectItem>)
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="component"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Failed Component</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!watchedEquipmentId || vsdLoading}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select the specific component..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {vsdLoading ? (
+                             <SelectItem value="loading" disabled>Loading components...</SelectItem>
+                        ) : componentOptions.length > 0 ? (
+                            componentOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)
+                        ) : (
+                            <SelectItem value="none" disabled>Select an equipment cluster first</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
@@ -127,7 +180,7 @@ export default function NewBreakdownPage() {
                 name="date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Date & Time of Breakdown</FormLabel>
+                    <FormLabel>Date of Breakdown</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -193,3 +246,5 @@ export default function NewBreakdownPage() {
     </div>
   );
 }
+
+    
