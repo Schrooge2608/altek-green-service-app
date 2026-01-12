@@ -33,7 +33,6 @@ import type { Equipment, User } from '@/lib/types';
 import { Loader2, Pencil } from 'lucide-react';
 import React, { useState } from 'react';
 import { Separator } from '../ui/separator';
-import { Textarea } from '../ui/textarea';
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
@@ -44,7 +43,6 @@ import { CalendarIcon } from 'lucide-react';
 const formSchema = z.object({
   breakerAssetNumber: z.string().optional(),
   breakerLocationHierarchy: z.string().optional(),
-  breakerServiceDescription: z.string().optional(),
   breakerManufacturer: z.string().optional(),
   breakerModelRange: z.string().optional(),
   breakerType: z.enum(['MCB', 'MCCB', 'ACB', 'VCB']).optional(),
@@ -88,7 +86,6 @@ export function EditProtectionForm({ equipment }: EditProtectionFormProps) {
     defaultValues: {
         breakerAssetNumber: equipment.breakerAssetNumber,
         breakerLocationHierarchy: equipment.breakerLocationHierarchy,
-        breakerServiceDescription: equipment.breakerServiceDescription,
         breakerManufacturer: equipment.breakerManufacturer,
         breakerModelRange: equipment.breakerModelRange,
         breakerType: equipment.breakerType,
@@ -117,6 +114,7 @@ export function EditProtectionForm({ equipment }: EditProtectionFormProps) {
 
     const processedValues = {
         ...values,
+        breakerServiceDescription: equipment.name, // Hardcode the service description
         breakerNumberOfPoles: values.breakerNumberOfPoles ? parseInt(values.breakerNumberOfPoles, 10) as 3 | 4 : undefined,
         protectionInstallationDate: values.protectionInstallationDate ? format(values.protectionInstallationDate, "yyyy-MM-dd") : undefined,
         protectionAssignedToName: assignedUser?.name,
@@ -156,7 +154,13 @@ export function EditProtectionForm({ equipment }: EditProtectionFormProps) {
                         <div className="grid gap-4">
                             <FormField control={form.control} name="breakerAssetNumber" render={({ field }) => (<FormItem><FormLabel>Asset Number / Tag ID</FormLabel><FormControl><Input placeholder="e.g., CB-SUB01-F03" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                             <FormField control={form.control} name="breakerLocationHierarchy" render={({ field }) => (<FormItem><FormLabel>Location / Hierarchy</FormLabel><FormControl><Input placeholder="Substation > DB > Cubicle" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name="breakerServiceDescription" render={({ field }) => (<FormItem><FormLabel>Service / Description</FormLabel><FormControl><Textarea placeholder="What does it feed? e.g., Conveyor 3 Main Drive" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormItem>
+                                <FormLabel>Service / Description</FormLabel>
+                                <FormControl>
+                                    <Input value={equipment.name} disabled />
+                                </FormControl>
+                                <FormDescription>This is automatically set to the equipment name.</FormDescription>
+                            </FormItem>
                             <FormField control={form.control} name="breakerManufacturer" render={({ field }) => (<FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g., Schneider, ABB" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                             <FormField control={form.control} name="breakerModelRange" render={({ field }) => (<FormItem><FormLabel>Model Range</FormLabel><FormControl><Input placeholder="e.g., Masterpact NW" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                             <FormField control={form.control} name="breakerType" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="MCB">MCB (Miniature)</SelectItem><SelectItem value="MCCB">MCCB (Moulded Case)</SelectItem><SelectItem value="ACB">ACB (Air)</SelectItem><SelectItem value="VCB">VCB (Vacuum)</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
@@ -274,5 +278,3 @@ export function EditProtectionForm({ equipment }: EditProtectionFormProps) {
     </Dialog>
   );
 }
-
-    
