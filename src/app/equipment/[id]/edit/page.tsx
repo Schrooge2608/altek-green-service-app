@@ -102,7 +102,7 @@ export default function EditEquipmentPage() {
         assignedToId: vsd.assignedToId || 'unassigned',
       });
     }
-  }, [eq, vsd, form]);
+  }, [eq, vsd, form.reset]);
 
 
   const watchedPlant = useWatch({
@@ -189,269 +189,268 @@ export default function EditEquipmentPage() {
         </Button>
       </header>
         
-      {eq && vsd && (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <Card>
-                    <CardHeader>
-                    <CardTitle>Equipment Details</CardTitle>
-                    <CardDescription>This VSD controls the equipment with the ID: <strong>{id}</strong>.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-6 md:grid-cols-2">
-                    <FormField
-                        control={form.control}
-                        name="equipmentName"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Equipment Name</FormLabel>
-                            <FormControl>
-                            <Input placeholder="e.g., Coolant Pump B" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="plant"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Plant</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                <SelectValue placeholder="Select a plant" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                <SelectItem value="Mining">Mining</SelectItem>
-                            </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    {watchedPlant === 'Mining' && (
-                        <FormField
-                        control={form.control}
-                        name="division"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Division</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a division" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                <SelectItem value="Boosters">Boosters</SelectItem>
-                                <SelectItem value="Dredgers">Dredgers</SelectItem>
-                                <SelectItem value="Pump Stations">Pump Stations</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    )}
-                    {watchedPlant === 'Mining' && watchedDivision ? (
-                        <FormField
-                        control={form.control}
-                        name="location"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Location (Plant Heading)</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a location" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                {dredgerLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    ) : (
-                        <FormField
-                        control={form.control}
-                        name="location"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Location</FormLabel>
-                            <FormControl>
-                                <Input placeholder="e.g., Sector C, Line 2" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    )}
-                    <FormField
-                        control={form.control}
-                        name="pumpHead"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Pump Head (m)</FormLabel>
-                            <FormControl>
-                            <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? 0} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="flowRate"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Flow Rate (m³/h)</FormLabel>
-                            <FormControl>
-                            <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? 0} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <div className="md:col-span-2">
-                        <FormField
-                            control={form.control}
-                            name="imageUrl"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Image</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                        <SelectValue placeholder="Select an image for the equipment" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {PlaceHolderImages.map(img => <SelectItem key={img.id} value={img.imageUrl}>{img.description}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                    </div>
-                    </CardContent>
-                </Card>
+      <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <Card>
+                  <CardHeader>
+                  <CardTitle>Equipment Details</CardTitle>
+                  <CardDescription>This VSD controls the equipment with the ID: <strong>{id}</strong>.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-6 md:grid-cols-2">
+                  <FormField
+                      control={form.control}
+                      name="equipmentName"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Equipment Name</FormLabel>
+                          <FormControl>
+                          <Input placeholder="e.g., Coolant Pump B" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="plant"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Plant</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled>
+                          <FormControl>
+                              <SelectTrigger>
+                              <SelectValue placeholder="Select a plant" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              <SelectItem value="Mining">Mining</SelectItem>
+                          </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  {watchedPlant === 'Mining' && (
+                      <FormField
+                      control={form.control}
+                      name="division"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Division</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select a division" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              <SelectItem value="Boosters">Boosters</SelectItem>
+                              <SelectItem value="Dredgers">Dredgers</SelectItem>
+                              <SelectItem value="Pump Stations">Pump Stations</SelectItem>
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                  )}
+                  {watchedPlant === 'Mining' && watchedDivision ? (
+                      <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Location (Plant Heading)</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select a location" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              {dredgerLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                  ) : (
+                      <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Location</FormLabel>
+                          <FormControl>
+                              <Input placeholder="e.g., Sector C, Line 2" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                  )}
+                  <FormField
+                      control={form.control}
+                      name="pumpHead"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Pump Head (m)</FormLabel>
+                          <FormControl>
+                          <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? 0} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="flowRate"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Flow Rate (m³/h)</FormLabel>
+                          <FormControl>
+                          <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? 0} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <div className="md:col-span-2">
+                      <FormField
+                          control={form.control}
+                          name="imageUrl"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Image</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                      <SelectTrigger>
+                                      <SelectValue placeholder="Select an image for the equipment" />
+                                      </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                      {PlaceHolderImages.map(img => <SelectItem key={img.id} value={img.imageUrl}>{img.description}</SelectItem>)}
+                                  </SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                  </div>
+                  </CardContent>
+              </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>VSD Information</CardTitle>
-                        <CardDescription>Details for the Variable Speed Drive controlling this equipment.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-6 md:grid-cols-2">
-                        <FormField
-                            control={form.control}
-                            name="model"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>VSD Model</FormLabel>
-                                <FormControl>
-                                <Input placeholder="e.g., Altek Drive 5000" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="serialNumber"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>VSD Serial Number</FormLabel>
-                                <FormControl>
-                                <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="installationDate"
-                            render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Installation Date</FormLabel>
-                                <Popover>
-                                <PopoverTrigger asChild>
-                                    <FormControl>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                        )}
-                                    >
-                                        {field.value ? (
-                                        format(field.value, "PPP")
-                                        ) : (
-                                        <span>Pick a date</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                    </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    disabled={(date) =>
-                                        date > new Date() || date < new Date("1900-01-01")
-                                    }
-                                    initialFocus
-                                    />
-                                </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="assignedToId"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Assigned VSD Technician</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Assign a technician..." />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {usersLoading ? (
-                                            <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                        ) : (
-                                            <>
-                                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                            </>
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                    </CardContent>
-            </Card>
+              <Card>
+                  <CardHeader>
+                      <CardTitle>VSD Information</CardTitle>
+                      <CardDescription>Details for the Variable Speed Drive controlling this equipment.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-6 md:grid-cols-2">
+                      <FormField
+                          control={form.control}
+                          name="model"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>VSD Model</FormLabel>
+                              <FormControl>
+                              <Input placeholder="e.g., Altek Drive 5000" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name="serialNumber"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>VSD Serial Number</FormLabel>
+                              <FormControl>
+                              <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name="installationDate"
+                          render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                              <FormLabel>Installation Date</FormLabel>
+                              <Popover>
+                              <PopoverTrigger asChild>
+                                  <FormControl>
+                                  <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                      "w-full pl-3 text-left font-normal",
+                                      !field.value && "text-muted-foreground"
+                                      )}
+                                  >
+                                      {field.value ? (
+                                      format(field.value, "PPP")
+                                      ) : (
+                                      <span>Pick a date</span>
+                                      )}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                  </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) =>
+                                      date > new Date() || date < new Date("1900-01-01")
+                                  }
+                                  initialFocus
+                                  />
+                              </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name="assignedToId"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Assigned VSD Technician</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                      <SelectTrigger>
+                                          <SelectValue placeholder="Assign a technician..." />
+                                      </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                      {usersLoading ? (
+                                          <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                      ) : (
+                                          <>
+                                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                                              {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                          </>
+                                      )}
+                                  </SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                  </CardContent>
+          </Card>
 
-            <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => router.back()}>Back</Button>
-                <Button type="submit">Save Changes</Button>
-            </div>
-            </form>
-        </Form>
-      )}
+          <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => router.back()}>Back</Button>
+              <Button type="submit">Save Changes</Button>
+          </div>
+          </form>
+      </Form>
     </div>
   );
-}
+
+    
