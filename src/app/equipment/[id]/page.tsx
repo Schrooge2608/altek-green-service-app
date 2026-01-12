@@ -248,7 +248,6 @@ export default function EquipmentDetailPage() {
                     </div>
                 </CardContent>
             </Card>
-
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Cog className="text-primary" /> Motor Information</CardTitle>
@@ -262,65 +261,6 @@ export default function EquipmentDetailPage() {
                     <DetailRow label="Motor Frame Type" value={eq.motorFrameType} />
                     <DetailRow label="Installation Date" value={eq.motorInstallationDate} />
                     <DetailRow label="Assigned Technician" value={eq.motorAssignedToName} />
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Droplets className="text-primary" /> Pump Information</CardTitle>
-                    <CardDescription>Details for the pump connected to the motor.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                    <DetailRow label="Pump Type" value={eq.pumpType} />
-                    <DetailRow label="Pump Brand" value={eq.pumpBrand} />
-                    <DetailRow label="Pump S/N" value={eq.pumpSerialNumber} />
-                    <DetailRow label="Manufacturer" value={eq.pumpManufacturer} />
-                    <Separator className="md:col-span-2 my-2"/>
-                    <DetailRow label="Pump Head" value={eq.pumpHead ? `${eq.pumpHead} m` : null} />
-                    <DetailRow label="Flow Rate" value={eq.flowRate ? `${eq.flowRate} m³/h` : null} />
-                    <DetailRow label="Impeller Diameter" value={eq.pumpImpellerDiameter ? `${eq.pumpImpellerDiameter} mm` : null} />
-                    <DetailRow label="Date Commissioned" value={eq.pumpCommissionDate} />
-                    <Separator className="md:col-span-2 my-2"/>
-                    <DetailRow label="Flange Size In" value={eq.pumpFlangeSizeIn ? `${eq.pumpFlangeSizeIn} mm` : null} />
-                    <DetailRow label="Flange Size Outlet" value={eq.pumpFlangeSizeOutlet ? `${eq.pumpFlangeSizeOutlet} mm` : null} />
-                    <DetailRow label="Frame Size" value={eq.pumpFrameSize} />
-                    <DetailRow label="Frame Type" value={eq.pumpFrameType} />
-                    <Separator className="md:col-span-2 my-2"/>
-                    <DetailRow label="Assigned Technician" value={eq.pumpAssignedToName} />
-                </CardContent>
-            </Card>
-        </div>
-
-        <div className="space-y-8">
-            {imageUrl && (
-                <Card className="overflow-hidden">
-                    <Image 
-                        src={imageUrl}
-                        alt={eq.name}
-                        width={600}
-                        height={400}
-                        className="w-full h-auto object-cover"
-                        data-ai-hint={imageHint}
-                    />
-                </Card>
-            )}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Performance Metrics</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm">
-                    <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Uptime</span>
-                        <span className="font-bold">{uptimePercentage.toFixed(2)}%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Total Downtime</span>
-                        <span className="font-bold">{(eq.totalDowntimeHours || 0).toFixed(2)} hours</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Power Consumption</span>
-                        <span className="font-bold">{eq.powerConsumption} kWh</span>
-                    </div>
                 </CardContent>
             </Card>
             <Card>
@@ -366,6 +306,64 @@ export default function EquipmentDetailPage() {
                     </Table>
                 </CardContent>
             </Card>
+        </div>
+
+        <div className="space-y-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Performance Metrics</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                    <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Uptime</span>
+                        <span className="font-bold">{uptimePercentage.toFixed(2)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Total Downtime</span>
+                        <span className="font-bold">{(eq.totalDowntimeHours || 0).toFixed(2)} hours</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Power Consumption</span>
+                        <span className="font-bold">{eq.powerConsumption} kWh</span>
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Droplets className="text-primary" /> Pump Information</CardTitle>
+                    <CardDescription>Details for the pump connected to the motor.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                    <DetailRow label="Pump Type" value={eq.pumpType} />
+                    <DetailRow label="Pump Brand" value={eq.pumpBrand} />
+                    <DetailRow label="Pump S/N" value={eq.pumpSerialNumber} />
+                    <DetailRow label="Manufacturer" value={eq.pumpManufacturer} />
+                    <Separator className="md:col-span-2 my-2"/>
+                    <DetailRow label="Pump Head" value={eq.pumpHead ? `${eq.pumpHead} m` : null} />
+                    <DetailRow label="Flow Rate" value={eq.flowRate ? `${eq.flowRate} m³/h` : null} />
+                    <DetailRow label="Impeller Diameter" value={eq.pumpImpellerDiameter ? `${eq.pumpImpellerDiameter} mm` : null} />
+                    <DetailRow label="Date Commissioned" value={eq.pumpCommissionDate} />
+                    <Separator className="md:col-span-2 my-2"/>
+                    <DetailRow label="Flange Size In" value={eq.pumpFlangeSizeIn ? `${eq.pumpFlangeSizeIn} mm` : null} />
+                    <DetailRow label="Flange Size Outlet" value={eq.pumpFlangeSizeOutlet ? `${eq.pumpFlangeSizeOutlet} mm` : null} />
+                    <DetailRow label="Frame Size" value={eq.pumpFrameSize} />
+                    <DetailRow label="Frame Type" value={eq.pumpFrameType} />
+                    <Separator className="md:col-span-2 my-2"/>
+                    <DetailRow label="Assigned Technician" value={eq.pumpAssignedToName} />
+                </CardContent>
+            </Card>
+            {imageUrl && (
+                <div className="overflow-hidden rounded-lg border">
+                    <Image 
+                        src={imageUrl}
+                        alt={eq.name}
+                        width={600}
+                        height={400}
+                        className="w-full h-auto object-cover"
+                        data-ai-hint={imageHint}
+                    />
+                </div>
+            )}
         </div>
       </div>
     </div>
