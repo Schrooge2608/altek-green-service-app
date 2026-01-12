@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { notFound, useParams, useRouter } from 'next/navigation';
@@ -15,6 +16,7 @@ import type { Equipment, Breakdown, VSD } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import React, { useMemo } from 'react';
+import { Separator } from '@/components/ui/separator';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -26,6 +28,15 @@ const imageMap: { [key: string]: string } = {
 function getDivisionSlug(divisionName?: string) {
     if (!divisionName) return '';
     return divisionName.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
+}
+
+function DetailRow({ label, value }: { label: string, value?: string | number | null }) {
+    return (
+        <div className="flex justify-between py-1.5 border-b border-dashed">
+            <span className="text-muted-foreground">{label}:</span>
+            <span className="font-medium text-right">{value || 'N/A'}</span>
+        </div>
+    );
 }
 
 function EquipmentDetailSkeleton() {
@@ -169,6 +180,56 @@ export default function EquipmentDetailPage() {
 
             <Card>
                 <CardHeader>
+                    <CardTitle>Protection Details</CardTitle>
+                    <CardDescription>Circuit breaker identification, ratings, and settings.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm space-y-6">
+                    <div>
+                        <h4 className="font-semibold mb-2 text-muted-foreground">Identification & Location</h4>
+                        <DetailRow label="Asset Number / Tag ID" value={eq.breakerAssetNumber} />
+                        <DetailRow label="Location / Hierarchy" value={eq.breakerLocationHierarchy} />
+                        <DetailRow label="Service / Description" value={eq.breakerServiceDescription} />
+                        <DetailRow label="Manufacturer" value={eq.breakerManufacturer} />
+                        <DetailRow label="Model Range" value={eq.breakerModelRange} />
+                        <DetailRow label="Type" value={eq.breakerType} />
+                    </div>
+                    <Separator />
+                    <div>
+                        <h4 className="font-semibold mb-2 text-muted-foreground">Electrical Ratings (Hard Limits)</h4>
+                        <DetailRow label="Rated Voltage (Ue)" value={eq.breakerRatedVoltage ? `${eq.breakerRatedVoltage}V` : null} />
+                        <DetailRow label="Frame Size (In)" value={eq.breakerFrameSize ? `${eq.breakerFrameSize}A` : null} />
+                        <DetailRow label="Breaking Capacity (Icu)" value={eq.breakerBreakingCapacity ? `${eq.breakerBreakingCapacity}kA` : null} />
+                        <DetailRow label="Number of Poles" value={eq.breakerNumberOfPoles} />
+                    </div>
+                    <Separator />
+                    <div>
+                        <h4 className="font-semibold mb-2 text-muted-foreground">Protection Settings (Soft Limits)</h4>
+                        <DetailRow label="Trip Unit Type" value={eq.breakerTripUnitType} />
+                        <DetailRow label="Overload (Ir)" value={eq.breakerOverloadSetting ? `${eq.breakerOverloadSetting}A` : null} />
+                        <DetailRow label="Short-Circuit (Isd)" value={eq.breakerShortCircuitSetting} />
+                        <DetailRow label="Instantaneous (Ii)" value={eq.breakerInstantaneousSetting} />
+                        <DetailRow label="Ground Fault (Ig)" value={eq.breakerGroundFaultSetting} />
+                    </div>
+                    <Separator />
+                    <div>
+                        <h4 className="font-semibold mb-2 text-muted-foreground">Accessories & Control</h4>
+                        <DetailRow label="Operation Mechanism" value={eq.breakerOperationMechanism} />
+                        <DetailRow label="Motor Voltage" value={eq.breakerMotorVoltage ? `${eq.breakerMotorVoltage}V` : null} />
+                        <DetailRow label="Shunt Trip Voltage" value={eq.breakerShuntTripVoltage ? `${eq.breakerShuntTripVoltage}V` : null} />
+                        <DetailRow label="Undervoltage Release" value={eq.breakerUndervoltageRelease} />
+                        <DetailRow label="Auxiliary Contacts" value={eq.breakerAuxiliaryContacts} />
+                    </div>
+                     <Separator />
+                     <div>
+                        <h4 className="font-semibold mb-2 text-muted-foreground">Maintenance & Assignment</h4>
+                        <DetailRow label="Installation Date" value={eq.protectionInstallationDate} />
+                        <DetailRow label="Assigned Technician" value={eq.protectionAssignedToName} />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
                     <CardTitle>VSD Information</CardTitle>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
@@ -283,5 +344,3 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
-
-    
