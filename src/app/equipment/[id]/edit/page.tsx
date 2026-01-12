@@ -7,24 +7,19 @@ import { doc } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
+import { Badge } from '@/components/ui/badge';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Equipment name is required'),
-  plant: z.enum(['Mining', 'Smelter']),
-  division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
-  location: z.string().min(1, 'Location is required'),
 });
-
-const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
 
 export default function EditEquipmentPage() {
   const params = useParams();
@@ -40,7 +35,6 @@ export default function EditEquipmentPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      location: '',
     },
   });
 
@@ -48,29 +42,15 @@ export default function EditEquipmentPage() {
     if (eq) {
       form.reset({
         name: eq.name,
-        plant: eq.plant,
-        division: eq.division,
-        location: eq.location,
       });
     }
   }, [eq, form]);
 
-  const watchedPlant = useWatch({ control: form.control, name: 'plant' });
-  const watchedDivision = useWatch({ control: form.control, name: 'division' });
-
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!eqRef) return;
     
-    if (values.plant === 'Mining' && !values.division) {
-        form.setError('division', { type: 'manual', message: 'Please select a division for the Mining plant.' });
-        return;
-    }
-
     const updateData: Partial<Equipment> = {
         name: values.name,
-        plant: values.plant,
-        location: values.location,
-        division: values.plant === 'Mining' ? values.division : undefined,
     };
 
     updateDocumentNonBlocking(eqRef, updateData);
@@ -130,87 +110,20 @@ export default function EditEquipmentPage() {
                     <FormLabel>Equipment ID (Read-only)</FormLabel>
                     <Input readOnly disabled value={eq.id} />
                 </FormItem>
-                 <FormField
-                    control={form.control}
-                    name="plant"
-                    render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Plant</FormLabel>
+                    <Input readOnly disabled value={eq.plant} />
+                </FormItem>
+                 {eq.division && (
                     <FormItem>
-                        <FormLabel>Plant</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select a plant" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            <SelectItem value="Mining">Mining</SelectItem>
-                            <SelectItem value="Smelter">Smelter</SelectItem>
-                        </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                {watchedPlant === 'Mining' && (
-                    <FormField
-                    control={form.control}
-                    name="division"
-                    render={({ field }) => (
-                        <FormItem>
                         <FormLabel>Division</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a division" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="Boosters">Boosters</SelectItem>
-                            <SelectItem value="Dredgers">Dredgers</SelectItem>
-                            <SelectItem value="Pump Stations">Pump Stations</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                )}
-                 {watchedPlant === 'Mining' && watchedDivision === 'Dredgers' ? (
-                    <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Location (Plant Heading)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a location" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {dredgerLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                ) : (
-                    <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., Sector C, Line 2" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                )}
+                        <Input readOnly disabled value={eq.division} />
+                    </FormItem>
+                 )}
+                 <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <Input readOnly disabled value={eq.location} />
+                </FormItem>
             </CardContent>
           </Card>
 
