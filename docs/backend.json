@@ -25,7 +25,7 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "type": { "type": "string", "enum": ["Pump", "Fan", "Compressor", "Utility Room"] },
-        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "HLABANE", "RETURN WATER BOOSTER STATION", "Dredge 1", "Dredge 2", "Smelter Area 1", "Smelter Area 2", "Mposa Pump Station", "Monzi Pump Station"] },
+        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "HLABANE", "RETURN WATER BOOSTER STATION", "Mposa Pump Station", "Monzi Pump Station", "Smelter Area 1", "Smelter Area 2"] },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
         "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations"], "description": "The specific division within the Mining plant." },
         "vsdId": { "type": "string" },
@@ -210,5 +210,3 @@
     ]
   }
 }
-
-    
