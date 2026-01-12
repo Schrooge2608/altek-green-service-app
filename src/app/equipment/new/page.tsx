@@ -27,12 +27,14 @@ import { doc, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import type { User, Equipment, VSD } from '@/lib/types';
+import backendConfig from '@/docs/backend.json';
+import { Combobox } from '@/components/ui/combobox';
 
 
 const formSchema = z.object({
   equipmentId: z.string().min(1, 'Equipment ID is required'),
   equipmentName: z.string().min(1, 'Equipment name is required'),
-  type: z.enum(['Pump', 'Fan', 'Compressor', 'Utility Room', 'Winch', 'Motor']),
+  type: z.string().min(1, 'Type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
   location: z.string().min(1, 'Location is required'),
@@ -51,6 +53,10 @@ const formSchema = z.object({
 });
 
 const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
+const equipmentTypeOptions = (backendConfig.entities.Equipment.properties.type.enum || []).map(type => ({
+    label: type,
+    value: type,
+}));
 
 export default function NewEquipmentPage() {
   const { toast } = useToast();
@@ -95,7 +101,7 @@ export default function NewEquipmentPage() {
     const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
     const vsdRef = doc(firestore, 'vsds', values.vsdId);
 
-    const equipmentData: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> & {totalDowntimeHours: number, powerConsumption: number} = {
+    const equipmentData: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> = {
       id: values.equipmentId,
       name: values.equipmentName,
       type: values.type,
@@ -185,21 +191,15 @@ export default function NewEquipmentPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Equipment Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an equipment type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Pump">Pump</SelectItem>
-                        <SelectItem value="Fan">Fan</SelectItem>
-                        <SelectItem value="Compressor">Compressor</SelectItem>
-                        <SelectItem value="Winch">Winch</SelectItem>
-                        <SelectItem value="Motor">Motor</SelectItem>
-                        <SelectItem value="Utility Room">Utility Room</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Combobox
+                        options={equipmentTypeOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select or create a type..."
+                        searchPlaceholder="Search types..."
+                        noResultsMessage="No types found."
+                        creatable
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

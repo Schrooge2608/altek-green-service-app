@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, PlusCircle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,7 @@ interface ComboboxProps {
     placeholder?: string;
     searchPlaceholder?: string;
     noResultsMessage?: string;
+    creatable?: boolean;
 }
 
 export function Combobox({ 
@@ -34,9 +36,26 @@ export function Combobox({
     onChange, 
     placeholder = "Select option...",
     searchPlaceholder = "Search...",
-    noResultsMessage = "No results found."
+    noResultsMessage = "No results found.",
+    creatable = false
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
+  const [inputValue, setInputValue] = React.useState("")
+
+  const handleSelect = (currentValue: string) => {
+    const finalValue = currentValue === value ? "" : currentValue;
+    onChange(finalValue);
+    setOpen(false);
+  };
+
+  const handleCreate = () => {
+    if (inputValue) {
+      onChange(inputValue);
+      setOpen(false);
+    }
+  };
+  
+  const currentSelection = options.find((option) => option.value.toLowerCase() === value?.toLowerCase())?.label ?? value;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -47,9 +66,9 @@ export function Combobox({
           aria-expanded={open}
           className="w-full justify-between"
         >
-          {value
-            ? options.find((option) => option.value.toLowerCase() === value.toLowerCase())?.label ?? value
-            : placeholder}
+          <span className="truncate">
+            {value ? currentSelection : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -57,18 +76,31 @@ export function Combobox({
         <Command>
           <CommandInput 
             placeholder={searchPlaceholder}
+            onValueChange={setInputValue}
           />
           <CommandList>
-            <CommandEmpty>{noResultsMessage}</CommandEmpty>
+            <CommandEmpty>
+                {creatable && inputValue ? (
+                    <div className="p-2">
+                        <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={handleCreate}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Create "{inputValue}"
+                        </Button>
+                    </div>
+                ) : (
+                    noResultsMessage
+                )}
+            </CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.value}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue)
-                    setOpen(false)
-                  }}
+                  onSelect={handleSelect}
                 >
                   <Check
                     className={cn(

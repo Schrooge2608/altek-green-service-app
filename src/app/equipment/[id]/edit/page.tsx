@@ -28,11 +28,13 @@ import React, { useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useParams, useRouter, notFound } from 'next/navigation';
 import type { Equipment, User, VSD } from '@/lib/types';
+import backendConfig from '@/docs/backend.json';
+import { Combobox } from '@/components/ui/combobox';
 
 
 const formSchema = z.object({
   equipmentName: z.string().min(1, 'Equipment name is required'),
-  type: z.enum(['Pump', 'Fan', 'Compressor', 'Utility Room', 'Winch', 'Motor']),
+  type: z.string().min(1, 'Type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
   location: z.string().min(1, 'Location is required'),
@@ -50,6 +52,10 @@ const formSchema = z.object({
 });
 
 const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
+const equipmentTypeOptions = (backendConfig.entities.Equipment.properties.type.enum || []).map(type => ({
+    label: type,
+    value: type,
+}));
 
 export default function EditEquipmentPage() {
   const { toast } = useToast();
@@ -208,25 +214,19 @@ export default function EditEquipmentPage() {
                     control={form.control}
                     name="type"
                     render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Equipment Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select an equipment type" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            <SelectItem value="Pump">Pump</SelectItem>
-                            <SelectItem value="Fan">Fan</SelectItem>
-                            <SelectItem value="Compressor">Compressor</SelectItem>
-                            <SelectItem value="Winch">Winch</SelectItem>
-                            <SelectItem value="Motor">Motor</SelectItem>
-                            <SelectItem value="Utility Room">Utility Room</SelectItem>
-                        </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
+                        <FormItem>
+                            <FormLabel>Equipment Type</FormLabel>
+                            <Combobox
+                                options={equipmentTypeOptions}
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Select or create a type..."
+                                searchPlaceholder="Search types..."
+                                noResultsMessage="No types found."
+                                creatable
+                            />
+                            <FormMessage />
+                        </FormItem>
                     )}
                 />
                 <FormField
