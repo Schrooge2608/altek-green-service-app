@@ -1,4 +1,5 @@
 
+
 {
   "entities": {
     "VSD": {
@@ -46,7 +47,13 @@
         "protectionAssignedToId": { "type": "string", "description": "The UID of the user assigned to the protection system." },
         "protectionAssignedToName": { "type": "string", "description": "The name of the user assigned to the protection system." },
         "assignedToId": { "type": "string", "description": "The UID of the user assigned to the equipment." },
-        "assignedToName": { "type": "string", "description": "The name of the user assigned to the equipment." }
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the equipment." },
+        "upsModel": { "type": "string", "description": "The model of the UPS." },
+        "upsSerialNumber": { "type": "string", "description": "The serial number of the UPS." },
+        "batteryType": { "type": "string", "description": "The type of batteries used in the UPS." },
+        "lastBatteryReplacement": { "type": "string", "format": "date", "description": "The date the UPS batteries were last replaced." },
+        "upsAssignedToId": { "type": "string", "description": "The UID of the user assigned to the UPS." },
+        "upsAssignedToName": { "type": "string", "description": "The name of the user assigned to the UPS." }
       },
       "required": ["id", "name", "location", "vsdId", "plant"]
     },

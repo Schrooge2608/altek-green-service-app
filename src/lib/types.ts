@@ -31,6 +31,13 @@ export interface Equipment {
   assignedToName?: string;
   protectionAssignedToId?: string;
   protectionAssignedToName?: string;
+  // UPS/BTU fields
+  upsModel?: string;
+  upsSerialNumber?: string;
+  batteryType?: string;
+  lastBatteryReplacement?: string;
+  upsAssignedToId?: string;
+  upsAssignedToName?: string;
 }
 
 export interface VSD {

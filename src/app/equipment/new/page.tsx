@@ -53,6 +53,13 @@ const formSchema = z.object({
   breakerAmperage: z.coerce.number().optional(),
   breakerLocation: z.string().optional(),
   protectionAssignedToId: z.string().optional(),
+
+  // UPS/BTU fields
+  upsModel: z.string().optional(),
+  upsSerialNumber: z.string().optional(),
+  batteryType: z.string().optional(),
+  lastBatteryReplacement: z.date().optional(),
+  upsAssignedToId: z.string().optional(),
 });
 
 const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
@@ -96,11 +103,12 @@ export default function NewEquipmentPage() {
     
     const assignedUser = users?.find(u => u.id === values.assignedToId);
     const protectionAssignedUser = users?.find(u => u.id === values.protectionAssignedToId);
+    const upsAssignedUser = users?.find(u => u.id === values.upsAssignedToId);
 
     const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
     const vsdRef = doc(firestore, 'vsds', values.vsdId);
 
-    const equipmentData: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> = {
+    const equipmentData: Partial<Equipment> = {
       id: values.equipmentId,
       name: values.equipmentName,
       plant: values.plant,
@@ -117,6 +125,12 @@ export default function NewEquipmentPage() {
       breakerLocation: values.breakerLocation,
       protectionAssignedToId: values.protectionAssignedToId,
       protectionAssignedToName: protectionAssignedUser?.name,
+      upsModel: values.upsModel,
+      upsSerialNumber: values.upsSerialNumber,
+      batteryType: values.batteryType,
+      lastBatteryReplacement: values.lastBatteryReplacement ? format(values.lastBatteryReplacement, "yyyy-MM-dd") : undefined,
+      upsAssignedToId: values.upsAssignedToId,
+      upsAssignedToName: upsAssignedUser?.name,
     };
 
     if (values.plant === 'Mining') {
@@ -343,6 +357,107 @@ export default function NewEquipmentPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Assigned Protection Technician</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign a technician..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>UPS/BTU Details</CardTitle>
+                <CardDescription>UPS system or battery backup unit information.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                <FormField
+                    control={form.control}
+                    name="upsModel"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>UPS Model</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Eaton 9PX" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="upsSerialNumber"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>UPS Serial Number</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., SN-UPS-123" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="batteryType"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Battery Type</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Lead-Acid, Li-Ion" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="lastBatteryReplacement"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Last Battery Replacement</FormLabel>
+                        <Popover>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button
+                                variant={"outline"}
+                                className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                            >
+                                {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="upsAssignedToId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assigned UPS Technician</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                                 <SelectTrigger>
