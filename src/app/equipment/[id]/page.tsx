@@ -276,6 +276,22 @@ export default function EquipmentDetailPage() {
                     </div>
                 </CardContent>
             </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Motor Information</CardTitle>
+                    <CardDescription>Details for the motor driven by the VSD.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                    <DetailRow label="Motor Model" value={eq.motorModel} />
+                    <DetailRow label="Motor Power" value={eq.motorPower ? `${eq.motorPower} kW` : null} />
+                    <DetailRow label="Motor Voltage" value={eq.motorVoltage ? `${eq.motorVoltage} V` : null} />
+                    <DetailRow label="Motor Serial Number" value={eq.motorSerialNumber} />
+                    <DetailRow label="Motor Frame Type" value={eq.motorFrameType} />
+                    <DetailRow label="Installation Date" value={eq.motorInstallationDate} />
+                    <DetailRow label="Assigned Technician" value={eq.motorAssignedToName} />
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -359,3 +375,4 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
