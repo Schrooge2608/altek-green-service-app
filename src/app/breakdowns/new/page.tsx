@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,6 +27,7 @@ import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Equipment, VSD } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 
 
 const formSchema = z.object({
@@ -41,6 +43,7 @@ const formSchema = z.object({
 export default function NewBreakdownPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const router = useRouter();
   
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -93,7 +96,7 @@ export default function NewBreakdownPage() {
     const breakdownData = {
       equipmentId: values.equipmentId,
       equipmentName: selectedEquipment.name,
-      component: values.component,
+      component: values.component.split('::')[0] as Breakdown['component'], // Store only component type
       date: format(values.date, "yyyy-MM-dd"),
       description: values.description,
       resolved: false,
@@ -238,7 +241,8 @@ export default function NewBreakdownPage() {
             </CardContent>
           </Card>
           
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
             <Button type="submit" variant="destructive">Submit Report</Button>
           </div>
         </form>
