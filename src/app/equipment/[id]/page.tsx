@@ -149,20 +149,21 @@ export default function EquipmentDetailPage() {
                     Back
                 </Button>
             </Link>
-            {isKnownAdmin && (
-              <Link href={`/equipment/${id}/edit`} passHref>
-                  <Button>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit Equipment
-                  </Button>
-              </Link>
-            )}
         </div>
       </header>
 
        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Info className="text-primary" /> General Information</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Info className="text-primary" /> 
+                    <CardTitle>General Information</CardTitle>
+                </div>
+                 {isKnownAdmin && (
+                    <Button variant="outline" size="sm">
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                    </Button>
+                )}
             </CardHeader>
             <CardContent className="grid md:grid-cols-3 gap-6 text-sm">
                 <DetailRow label="ID" value={eq.id} />
