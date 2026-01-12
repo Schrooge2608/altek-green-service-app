@@ -34,7 +34,6 @@ import { Combobox } from '@/components/ui/combobox';
 const formSchema = z.object({
   equipmentId: z.string().min(1, 'Equipment ID is required'),
   equipmentName: z.string().min(1, 'Equipment name is required'),
-  type: z.string().min(1, 'Type is required.'),
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
   location: z.string().min(1, 'Location is required'),
@@ -53,10 +52,6 @@ const formSchema = z.object({
 });
 
 const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
-const equipmentTypeOptions = (backendConfig.entities.Equipment.properties.type.enum || []).map(type => ({
-    label: type,
-    value: type,
-}));
 
 export default function NewEquipmentPage() {
   const { toast } = useToast();
@@ -71,7 +66,6 @@ export default function NewEquipmentPage() {
     defaultValues: {
       equipmentId: '',
       equipmentName: '',
-      type: 'Pump',
       location: '',
       imageUrl: '',
       vsdId: '',
@@ -104,7 +98,6 @@ export default function NewEquipmentPage() {
     const equipmentData: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> = {
       id: values.equipmentId,
       name: values.equipmentName,
-      type: values.type,
       plant: values.plant,
       vsdId: values.vsdId,
       location: values.location,
@@ -181,25 +174,6 @@ export default function NewEquipmentPage() {
                     <FormControl>
                       <Input placeholder="e.g., Coolant Pump B" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Equipment Type</FormLabel>
-                    <Combobox
-                        options={equipmentTypeOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select or create a type..."
-                        searchPlaceholder="Search types..."
-                        noResultsMessage="No types found."
-                        creatable
-                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -461,3 +435,4 @@ export default function NewEquipmentPage() {
   );
 }
 
+    

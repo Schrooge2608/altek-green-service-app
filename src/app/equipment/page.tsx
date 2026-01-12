@@ -36,20 +36,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import React from 'react';
 
-
-const equipmentIcons: Record<string, React.ReactNode> = {
-    Pump: <Droplets className="h-4 w-4 text-muted-foreground" />,
-    Fan: <Fan className="h-4 w-4 text-muted-foreground" />,
-    Compressor: <AirVent className="h-4 w-4 text-muted-foreground" />,
-    Winch: <Cable className="h-4 w-4 text-muted-foreground" />,
-    Motor: <Cog className="h-4 w-4 text-muted-foreground" />,
-    'Hydraulic Motors': <Cog className="h-4 w-4 text-muted-foreground" />,
-    Densifiers: <Cog className="h-4 w-4 text-muted-foreground" />,
-    Mids: <Cog className="h-4 w-4 text-muted-foreground" />,
-    Feeds: <Cog className="h-4 w-4 text-muted-foreground" />,
-    Transfers: <Cog className="h-4 w-4 text-muted-foreground" />,
-}
-
 function AuthenticatedEquipmentPage() {
   const firestore = useFirestore();
   const { user } = useUser();
@@ -105,7 +91,6 @@ function AuthenticatedEquipmentPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Division</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
@@ -116,7 +101,7 @@ function AuthenticatedEquipmentPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={isKnownAdmin ? 7 : 6} className="text-center h-24">Loading equipment...</TableCell>
+                  <TableCell colSpan={isKnownAdmin ? 6 : 5} className="text-center h-24">Loading equipment...</TableCell>
                 </TableRow>
               ) : equipment && equipment.length > 0 ? (
                 equipment.map((eq) => (
@@ -125,12 +110,6 @@ function AuthenticatedEquipmentPage() {
                       <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
                         {eq.name}
                       </Link>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                          {equipmentIcons[eq.type] || null}
-                          {eq.type}
-                      </div>
                     </TableCell>
                     <TableCell>{eq.division || 'N/A'}</TableCell>
                     <TableCell>{eq.location}</TableCell>
@@ -167,7 +146,7 @@ function AuthenticatedEquipmentPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isKnownAdmin ? 7 : 6} className="text-center h-24">No mining equipment found.</TableCell>
+                  <TableCell colSpan={isKnownAdmin ? 6 : 5} className="text-center h-24">No mining equipment found.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -213,3 +192,5 @@ export default function EquipmentPage() {
 
     return <AuthenticatedEquipmentPage />;
 }
+
+    

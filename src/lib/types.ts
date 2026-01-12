@@ -1,13 +1,7 @@
 
-
-
-
-
-
 export interface Equipment {
   id: string;
   name: string;
-  type: string;
   location: string;
   plant: 'Mining' | 'Smelter';
   division?: 'Boosters' | 'Dredgers' | 'Pump Stations';

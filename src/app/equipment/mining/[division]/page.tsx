@@ -41,19 +41,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 
-const equipmentIcons: Record<string, React.ReactNode> = {
-    Pump: <Droplets className="h-4 w-4 text-muted-foreground" />,
-    Fan: <Fan className="h-4 w-4 text-muted-foreground" />,
-    Compressor: <AirVent className="h-4 w-4 text-muted-foreground" />,
-    Winch: <Cable className="h-4 w-4 text-muted-foreground" />,
-    Motor: <Cog className="h-4 w-4 text-muted-foreground" />,
-    'Hydraulic Motors': <Cog className="h-4 w-4 text-muted-foreground" />,
-    Densifiers: <Cog className="h-4 w-4 text-muted-foreground" />,
-    Mids: <Cog className="h-4 w-4 text-muted-foreground" />,
-    Feeds: <Cog className="h-4 w-4 text-muted-foreground" />,
-    Transfers: <Cog className="h-4 w-4 text-muted-foreground" />,
-}
-
 const validDivisions: Record<string, string> = {
     'boosters': 'Boosters',
     'dredgers': 'Dredgers',
@@ -164,7 +151,6 @@ function AuthenticatedMiningDivisionPage() {
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Name</TableHead>
-                                                    <TableHead>Type</TableHead>
                                                     <TableHead className="text-right">Uptime</TableHead>
                                                     <TableHead className="text-right">Power (kWh)</TableHead>
                                                     {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
@@ -177,12 +163,6 @@ function AuthenticatedMiningDivisionPage() {
                                                       <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
                                                         {eq.name}
                                                       </Link>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                      <div className="flex items-center gap-2">
-                                                          {equipmentIcons[eq.type] || null}
-                                                          {eq.type}
-                                                      </div>
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                       <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
@@ -231,7 +211,6 @@ function AuthenticatedMiningDivisionPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead className="text-right">Uptime</TableHead>
                     <TableHead className="text-right">Power (kWh)</TableHead>
@@ -246,12 +225,6 @@ function AuthenticatedMiningDivisionPage() {
                           <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
                             {eq.name}
                           </Link>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                              {equipmentIcons[eq.type] || null}
-                              {eq.type}
-                          </div>
                         </TableCell>
                         <TableCell>{eq.location}</TableCell>
                         <TableCell className="text-right">
@@ -287,7 +260,7 @@ function AuthenticatedMiningDivisionPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={isKnownAdmin ? 6 : 5} className="text-center h-24">No equipment found for this division.</TableCell>
+                      <TableCell colSpan={isKnownAdmin ? 5 : 4} className="text-center h-24">No equipment found for this division.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -334,3 +307,5 @@ export default function MiningDivisionPage() {
 
     return <AuthenticatedMiningDivisionPage />;
 }
+
+    

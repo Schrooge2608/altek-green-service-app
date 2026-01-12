@@ -24,7 +24,6 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["Pump", "Fan", "Compressor", "Utility Room", "Winch", "Motor", "Hydraulic Motors", "Densifiers", "Mids", "Feeds", "Transfers"] },
         "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS"] },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
         "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations"], "description": "The specific division within the Mining plant." },
@@ -51,7 +50,7 @@
         "assignedToId": { "type": "string", "description": "The UID of the user assigned to the equipment." },
         "assignedToName": { "type": "string", "description": "The name of the user assigned to the equipment." }
       },
-      "required": ["id", "name", "type", "location", "vsdId", "plant"]
+      "required": ["id", "name", "location", "vsdId", "plant"]
     },
     "MaintenanceTask": {
       "title": "MaintenanceTask",
@@ -210,3 +209,5 @@
     ]
   }
 }
+
+    

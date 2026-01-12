@@ -115,7 +115,7 @@ export default function EquipmentDetailPage() {
     return null; // notFound() throws an error, but this is needed for type safety
   }
   
-  const defaultPlaceholder = eq.type && imageMap[eq.type] ? PlaceHolderImages.find(p => p.id === imageMap[eq.type]) : PlaceHolderImages.find(p => p.id === 'dashboard-hero');
+  const defaultPlaceholder = PlaceHolderImages.find(p => p.id === 'dashboard-hero');
   const imageUrl = eq.imageUrl || defaultPlaceholder?.imageUrl;
   const imageHint = defaultPlaceholder?.imageHint || 'industrial equipment';
   
@@ -153,7 +153,6 @@ export default function EquipmentDetailPage() {
                         <h3 className="font-semibold text-muted-foreground">Information</h3>
                         <div className="mt-2 space-y-1">
                             <p><strong>ID:</strong> {eq.id}</p>
-                            <p><strong>Type:</strong> {eq.type}</p>
                             <p><strong>Location:</strong> {eq.location}</p>
                             <p><strong>Plant:</strong> {eq.plant} {eq.division && `> ${eq.division}`}</p>
                         </div>
@@ -284,3 +283,5 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
+    
