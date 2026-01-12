@@ -23,6 +23,8 @@ export const seedEquipment: Equipment[] = [
         nextMaintenance: format(new Date(new Date().setMonth(today.getMonth() + 3)), "yyyy-MM-dd"),
         uptime: 99.8,
         powerConsumption: 45000,
+        assignedToId: '',
+        assignedToName: '',
     },
     {
         id: "dm-mpc-sp-01",
@@ -40,6 +42,8 @@ export const seedEquipment: Equipment[] = [
         nextMaintenance: format(new Date(new Date().setMonth(today.getMonth() + 3)), "yyyy-MM-dd"),
         uptime: 99.5,
         powerConsumption: 52000,
+        assignedToId: '',
+        assignedToName: '',
     },
     {
         id: "dm-mpe-wbp-01",
@@ -57,6 +61,8 @@ export const seedEquipment: Equipment[] = [
         nextMaintenance: format(new Date(new Date().setMonth(today.getMonth() + 3)), "yyyy-MM-dd"),
         uptime: 99.7,
         powerConsumption: 46000,
+        assignedToId: '',
+        assignedToName: '',
     },
     {
         id: "dm-mpe-sp-01",
@@ -74,6 +80,8 @@ export const seedEquipment: Equipment[] = [
         nextMaintenance: format(new Date(new Date().setMonth(today.getMonth() + 3)), "yyyy-MM-dd"),
         uptime: 99.6,
         powerConsumption: 53000,
+        assignedToId: '',
+        assignedToName: '',
     },
 ];
 
