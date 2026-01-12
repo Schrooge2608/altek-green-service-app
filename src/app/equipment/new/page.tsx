@@ -700,16 +700,10 @@ export default function NewEquipmentPage() {
                 <CardDescription>Details for the pump connected to the motor.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-                <FormField control={form.control} name="pumpHead" render={({ field }) => (
-                    <FormItem><FormLabel>Pump Head (m)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="flowRate" render={({ field }) => (
-                    <FormItem><FormLabel>Flow Rate (m³/h)</FormLabel><FormControl><Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
                 <FormField control={form.control} name="pumpType" render={({ field }) => (
                     <FormItem><FormLabel>Pump Type</FormLabel><FormControl><Input placeholder="e.g., Centrifugal" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
-                 <FormField control={form.control} name="pumpBrand" render={({ field }) => (
+                <FormField control={form.control} name="pumpBrand" render={({ field }) => (
                     <FormItem><FormLabel>Pump Brand</FormLabel><FormControl><Input placeholder="e.g., KSB" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="pumpSerialNumber" render={({ field }) => (
@@ -717,6 +711,13 @@ export default function NewEquipmentPage() {
                 )} />
                 <FormField control={form.control} name="pumpManufacturer" render={({ field }) => (
                     <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g., KSB Group" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+
+                <FormField control={form.control} name="pumpHead" render={({ field }) => (
+                    <FormItem><FormLabel>Pump Head (m)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="flowRate" render={({ field }) => (
+                    <FormItem><FormLabel>Flow Rate (m³/h)</FormLabel><FormControl><Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="pumpImpellerDiameter" render={({ field }) => (
                     <FormItem><FormLabel>Impeller Diameter (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 250" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
@@ -777,6 +778,3 @@ export default function NewEquipmentPage() {
   );
 }
 
-    
-
-    
