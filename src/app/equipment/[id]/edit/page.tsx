@@ -5,7 +5,7 @@ import { notFound, useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Equipment, User as AppUser } from '@/lib/types';
-import { Loader2, Pencil, ShieldAlert } from 'lucide-react';
+import { Loader2, Pencil, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import React, { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Link from 'next/link';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Equipment name is required'),
@@ -32,7 +33,7 @@ function AccessDenied() {
             <ShieldAlert className="h-16 w-16 text-destructive" />
             <CardTitle>Access Denied</CardTitle>
             <CardContent>
-                <p className="text-muted-foreground">You do not have permission to edit this page. Please contact an administrator.</p>
+                <p className="text-muted-foreground">You do not have permission to view this page. Please contact an administrator.</p>
             </CardContent>
         </Card>
     );
@@ -44,7 +45,7 @@ export default function EditEquipmentPage() {
   const { toast } = useToast();
   const id = typeof params.id === 'string' ? params.id : '';
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   
   const [isEditing, setIsEditing] = useState(false);
 
@@ -101,7 +102,7 @@ export default function EditEquipmentPage() {
     setIsEditing(false);
   }
   
-  const isLoading = eqLoading || userLoading;
+  const isLoading = eqLoading || userLoading || isUserLoading;
 
   if (isLoading) {
     return (
@@ -123,11 +124,19 @@ export default function EditEquipmentPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Equipment: {eq.name}</h1>
-        <p className="text-muted-foreground">
-          Update the details for the selected equipment cluster.
-        </p>
+      <header className="flex items-center justify-between">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Edit Equipment: {eq.name}</h1>
+            <p className="text-muted-foreground">
+            Update the details for the selected equipment cluster.
+            </p>
+        </div>
+        <Link href={`/equipment/${id}`} passHref>
+            <Button variant="outline">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+            </Button>
+        </Link>
       </header>
 
       <Form {...form}>
