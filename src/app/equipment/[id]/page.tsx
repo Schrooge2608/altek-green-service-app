@@ -153,20 +153,20 @@ export default function EquipmentDetailPage() {
         </div>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Info className="text-primary" /> General Information</CardTitle>
-                </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
-                    <DetailRow label="ID" value={eq.id} />
-                    <DetailRow label="Location" value={eq.location} />
-                    <DetailRow label="Plant" value={`${eq.plant} ${eq.division ? `> ${eq.division}` : ''}`} />
-                </CardContent>
-            </Card>
+       <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Info className="text-primary" /> General Information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid md:grid-cols-3 gap-6 text-sm">
+                <DetailRow label="ID" value={eq.id} />
+                <DetailRow label="Location" value={eq.location} />
+                <DetailRow label="Plant" value={`${eq.plant} ${eq.division ? `> ${eq.division}` : ''}`} />
+            </CardContent>
+        </Card>
 
-            <Card>
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="space-y-8">
+             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Shield className="text-primary" /> Protection Details</CardTitle>
                     <CardDescription>Circuit breaker identification, ratings, and settings.</CardDescription>
@@ -215,22 +215,8 @@ export default function EquipmentDetailPage() {
                     </div>
                 </CardContent>
             </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Power className="text-primary" /> UPS/BTU Details</CardTitle>
-                    <CardDescription>Battery backup unit information.</CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm space-y-2">
-                    <DetailRow label="UPS Model" value={eq.upsModel} />
-                    <DetailRow label="UPS Serial Number" value={eq.upsSerialNumber} />
-                    <DetailRow label="Battery Type" value={eq.batteryType} />
-                    <DetailRow label="Installation Date" value={eq.upsInstallationDate} />
-                    <DetailRow label="Last Battery Replacement" value={eq.lastBatteryReplacement} />
-                    <DetailRow label="Assigned Technician" value={eq.upsAssignedToName} />
-                </CardContent>
-            </Card>
-
+        </div>
+        <div className="space-y-8">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Cpu className="text-primary" /> VSD Information</CardTitle>
@@ -248,7 +234,7 @@ export default function EquipmentDetailPage() {
                     </div>
                 </CardContent>
             </Card>
-            
+
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Cog className="text-primary" /> Motor Information</CardTitle>
@@ -290,6 +276,54 @@ export default function EquipmentDetailPage() {
                 </CardContent>
             </Card>
 
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Power className="text-primary" /> UPS/BTU Details</CardTitle>
+                    <CardDescription>Battery backup unit information.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                    <DetailRow label="UPS Model" value={eq.upsModel} />
+                    <DetailRow label="UPS Serial Number" value={eq.upsSerialNumber} />
+                    <DetailRow label="Battery Type" value={eq.batteryType} />
+                    <DetailRow label="Installation Date" value={eq.upsInstallationDate} />
+                    <DetailRow label="Last Battery Replacement" value={eq.lastBatteryReplacement} />
+                    <DetailRow label="Assigned Technician" value={eq.upsAssignedToName} />
+                </CardContent>
+            </Card>
+        </div>
+
+        <div className="space-y-8">
+            {imageUrl && (
+                <Card className="overflow-hidden">
+                    <Image 
+                        src={imageUrl}
+                        alt={eq.name}
+                        width={600}
+                        height={400}
+                        className="w-full h-auto object-cover"
+                        data-ai-hint={imageHint}
+                    />
+                </Card>
+            )}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Performance Metrics</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                    <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Uptime</span>
+                        <span className="font-bold">{uptimePercentage.toFixed(2)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Total Downtime</span>
+                        <span className="font-bold">{(eq.totalDowntimeHours || 0).toFixed(2)} hours</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Power Consumption</span>
+                        <span className="font-bold">{eq.powerConsumption} kWh</span>
+                    </div>
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
@@ -334,41 +368,8 @@ export default function EquipmentDetailPage() {
                 </CardContent>
             </Card>
         </div>
-
-        <div className="space-y-8">
-            {imageUrl && (
-                <Card className="overflow-hidden">
-                    <Image 
-                        src={imageUrl}
-                        alt={eq.name}
-                        width={600}
-                        height={400}
-                        className="w-full h-auto object-cover"
-                        data-ai-hint={imageHint}
-                    />
-                </Card>
-            )}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Performance Metrics</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm">
-                    <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Uptime</span>
-                        <span className="font-bold">{uptimePercentage.toFixed(2)}%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Total Downtime</span>
-                        <span className="font-bold">{(eq.totalDowntimeHours || 0).toFixed(2)} hours</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Power Consumption</span>
-                        <span className="font-bold">{eq.powerConsumption} kWh</span>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
       </div>
     </div>
   );
 }
+
