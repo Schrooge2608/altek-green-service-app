@@ -40,6 +40,11 @@ export interface Equipment {
   lastBatteryReplacement?: string;
   upsAssignedToId?: string;
   upsAssignedToName?: string;
+  // Pump fields
+  pumpHead?: number;
+  flowRate?: number;
+  pumpAssignedToId?: string;
+  pumpAssignedToName?: string;
 }
 
 export interface VSD {

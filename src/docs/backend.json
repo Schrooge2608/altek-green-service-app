@@ -52,7 +52,11 @@
         "batteryType": { "type": "string", "description": "The type of batteries used in the UPS." },
         "lastBatteryReplacement": { "type": "string", "format": "date", "description": "The date the UPS batteries were last replaced." },
         "upsAssignedToId": { "type": "string", "description": "The UID of the user assigned to the UPS." },
-        "upsAssignedToName": { "type": "string", "description": "The name of the user assigned to the UPS." }
+        "upsAssignedToName": { "type": "string", "description": "The name of the user assigned to the UPS." },
+        "pumpHead": { "type": "number", "description": "The head of the pump in meters." },
+        "flowRate": { "type": "number", "description": "The flow rate of the pump in m³/h." },
+        "pumpAssignedToId": { "type": "string", "description": "The UID of the user assigned to the pump." },
+        "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." }
       },
       "required": ["id", "name", "location", "vsdId", "plant"]
     },

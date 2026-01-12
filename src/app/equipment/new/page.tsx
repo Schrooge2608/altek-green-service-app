@@ -67,6 +67,11 @@ const formSchema = z.object({
   batteryType: z.string().optional(),
   lastBatteryReplacement: z.date().optional(),
   upsAssignedToId: z.string().optional(),
+
+  // Pump fields
+  pumpHead: z.coerce.number().optional(),
+  flowRate: z.coerce.number().optional(),
+  pumpAssignedToId: z.string().optional(),
 });
 
 const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
@@ -112,6 +117,7 @@ export default function NewEquipmentPage() {
     const protectionAssignedUser = users?.find(u => u.id === values.protectionAssignedToId);
     const upsAssignedUser = users?.find(u => u.id === values.upsAssignedToId);
     const motorAssignedUser = users?.find(u => u.id === values.motorAssignedToId);
+    const pumpAssignedUser = users?.find(u => u.id === values.pumpAssignedToId);
 
     const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
     const vsdRef = doc(firestore, 'vsds', values.vsdId);
@@ -145,6 +151,10 @@ export default function NewEquipmentPage() {
       motorSerialNumber: values.motorSerialNumber,
       motorAssignedToId: values.motorAssignedToId,
       motorAssignedToName: motorAssignedUser?.name,
+      pumpHead: values.pumpHead,
+      flowRate: values.flowRate,
+      pumpAssignedToId: values.pumpAssignedToId,
+      pumpAssignedToName: pumpAssignedUser?.name,
     };
 
     if (values.plant === 'Mining') {
@@ -658,6 +668,42 @@ export default function NewEquipmentPage() {
             </Card>
           </div>
           
+          <Card>
+            <CardHeader>
+                <CardTitle>Pump Information</CardTitle>
+                <CardDescription>Details for the pump connected to the motor.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                <FormField control={form.control} name="pumpHead" render={({ field }) => (
+                    <FormItem><FormLabel>Pump Head (m)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="flowRate" render={({ field }) => (
+                    <FormItem><FormLabel>Flow Rate (m³/h)</FormLabel><FormControl><Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="pumpAssignedToId" render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                        <FormLabel>Assigned Pump Technician</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger><SelectValue placeholder="Assign a technician..." /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end">
             <Button type="submit">Save Equipment</Button>
           </div>
@@ -667,3 +713,4 @@ export default function NewEquipmentPage() {
   );
 }
 
+    
