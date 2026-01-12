@@ -24,6 +24,11 @@ const imageMap: { [key: string]: string } = {
     Winch: "winch-1"
 };
 
+function getDivisionSlug(divisionName?: string) {
+    if (!divisionName) return '';
+    return divisionName.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
+}
+
 function EquipmentDetailSkeleton() {
     return (
         <div className="flex flex-col gap-8">
@@ -67,7 +72,6 @@ function EquipmentDetailSkeleton() {
 
 export default function EquipmentDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = typeof params.id === 'string' ? params.id : '';
   const firestore = useFirestore();
   
@@ -94,6 +98,15 @@ export default function EquipmentDetailPage() {
 
   }, [vsd, eq]);
 
+  const backLink = useMemo(() => {
+    if (!eq) return '/equipment';
+    if (eq.plant === 'Mining' && eq.division) {
+      return `/equipment/mining/${getDivisionSlug(eq.division)}`;
+    }
+    // Fallback for Smelter or equipment without a division
+    return '/equipment'; 
+  }, [eq]);
+
   if (eqLoading || vsdLoading) {
     return <EquipmentDetailSkeleton />;
   }
@@ -115,10 +128,12 @@ export default function EquipmentDetailPage() {
             <p className="text-muted-foreground">Detailed view of equipment ID: {eq.id}</p>
         </div>
         <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => router.back()}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-            </Button>
+            <Link href={backLink} passHref>
+                <Button variant="outline">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                </Button>
+            </Link>
             <Link href={`/equipment/${id}/edit`} passHref>
                 <Button>
                     <Pencil className="mr-2 h-4 w-4" />
