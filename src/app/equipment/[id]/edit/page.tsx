@@ -80,6 +80,7 @@ export default function EditEquipmentPage() {
         pumpHead: undefined,
         flowRate: undefined,
         assignedToId: 'unassigned',
+        plant: 'Mining', // Set a default to avoid uncontrolled component warning
     },
   });
 
@@ -452,5 +453,3 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
-
-    
