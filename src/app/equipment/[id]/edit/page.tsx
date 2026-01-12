@@ -48,7 +48,7 @@ const formSchema = z.object({
   assignedToId: z.string().optional(),
 });
 
-const dredgerLocations = ['MPA','MPC','MPD','MPE'];
+const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
 
 export default function EditEquipmentPage() {
   const { toast } = useToast();

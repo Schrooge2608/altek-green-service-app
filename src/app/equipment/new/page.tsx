@@ -49,7 +49,7 @@ const formSchema = z.object({
   assignedToId: z.string().optional(),
 });
 
-const dredgerLocations = ['MPA','MPC','MPD','MPE'];
+const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
 
 export default function NewEquipmentPage() {
   const { toast } = useToast();
@@ -93,7 +93,7 @@ export default function NewEquipmentPage() {
     const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
     const vsdRef = doc(firestore, 'vsds', values.vsdId);
 
-    const equipmentData: Equipment = {
+    const equipmentData: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> & {totalDowntimeHours: number, powerConsumption: number} = {
       id: values.equipmentId,
       name: values.equipmentName,
       type: 'Pump', // Defaulting to Pump
@@ -107,11 +107,7 @@ export default function NewEquipmentPage() {
       nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
       uptime: 100,
       powerConsumption: 0,
-      // Defaulting status and installation date for simplicity
-      status: 'active',
-      model: values.model,
-      serialNumber: values.serialNumber,
-      installationDate: format(values.installationDate, "yyyy-MM-dd"),
+      totalDowntimeHours: 0,
     };
 
     if (values.plant === 'Mining') {
