@@ -80,7 +80,7 @@ export default function EditEquipmentPage() {
         pumpHead: undefined,
         flowRate: undefined,
         assignedToId: 'unassigned',
-        plant: undefined,
+        plant: 'Mining',
         division: undefined,
     },
   });
@@ -136,13 +136,9 @@ export default function EditEquipmentPage() {
       flowRate: values.flowRate || 0,
     };
     
-    // This is the critical fix.
-    // Conditionally add the division, but never set it to undefined if the plant is not 'Mining',
-    // as that would erase existing data. We only modify what's in the form.
     if (values.plant === 'Mining') {
         equipmentUpdateData.division = values.division;
     } else {
-        // If the plant is Smelter, we can explicitly clear the division.
         equipmentUpdateData.division = undefined;
     }
 
