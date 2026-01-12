@@ -50,7 +50,7 @@ const formSchema = z.object({
   assignedToId: z.string().optional(),
 });
 
-const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING", "Tailings Booster Pumps", "Concentrator Booster Pumps", "Smelter Area 1", "Smelter Area 2", "RWBS"];
+const dredgerLocations = ['MPA','MPC','MPD','MPE', "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS"];
 
 export default function EditEquipmentPage() {
   const { toast } = useToast();
@@ -71,7 +71,6 @@ export default function EditEquipmentPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    // Default values are set here, but will be overwritten by the useEffect below
     defaultValues: {
         plant: 'Mining',
         division: undefined,
@@ -79,12 +78,11 @@ export default function EditEquipmentPage() {
   });
 
   useEffect(() => {
-    // This effect now correctly populates the entire form once data is loaded.
     if (eq && vsd) {
       form.reset({
         equipmentName: eq.name,
         plant: eq.plant,
-        division: eq.division, // This is the crucial line for division
+        division: eq.division,
         location: eq.location,
         imageUrl: eq.imageUrl || '',
         pumpHead: eq.pumpHead ?? undefined,
@@ -95,7 +93,7 @@ export default function EditEquipmentPage() {
         assignedToId: vsd.assignedToId || 'unassigned',
       });
     }
-  }, [eq, vsd, form]);
+  }, [eq, vsd]);
 
 
   const watchedPlant = useWatch({
@@ -121,11 +119,10 @@ export default function EditEquipmentPage() {
     
     const assignedUser = users?.find(u => u.id === values.assignedToId);
 
-    // This data object now correctly includes all fields from the form
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
       plant: values.plant,
-      division: values.division, // This ensures the division is saved
+      division: values.division,
       location: values.location,
       imageUrl: values.imageUrl,
       pumpHead: values.pumpHead || 0,
