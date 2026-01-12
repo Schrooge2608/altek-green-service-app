@@ -507,321 +507,325 @@ export default function NewEquipmentPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                  <CardTitle>UPS/BTU Details</CardTitle>
-                  <CardDescription>Battery backup unit information.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-6">
-                  <FormField
-                      control={form.control}
-                      name="upsModel"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>UPS Model</FormLabel>
-                          <FormControl>
-                          <Input placeholder="e.g., Eaton 9PX" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="upsSerialNumber"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>UPS Serial Number</FormLabel>
-                          <FormControl>
-                          <Input placeholder="e.g., SN-UPS-123" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="batteryType"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Battery Type</FormLabel>
-                          <FormControl>
-                          <Input placeholder="e.g., Lead-Acid, Li-Ion" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="upsInstallationDate"
-                      render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                          <FormLabel>Installation Date</FormLabel>
-                          <Popover>
-                          <PopoverTrigger asChild>
-                              <FormControl>
-                              <Button
-                                  variant={"outline"}
-                                  className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                              >
-                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                              </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
-                          </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="lastBatteryReplacement"
-                      render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                          <FormLabel>Last Battery Replacement</FormLabel>
-                          <Popover>
-                          <PopoverTrigger asChild>
-                              <FormControl>
-                              <Button
-                                  variant={"outline"}
-                                  className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                              >
-                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                              </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
-                          </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="upsAssignedToId"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Assigned UPS Technician</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Assign a technician..." />
-                                  </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  {usersLoading ? (
-                                      <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                  ) : (
-                                      <>
-                                          <SelectItem value="unassigned">Unassigned</SelectItem>
-                                          {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                      </>
-                                  )}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card>
-              <CardHeader>
-                  <CardTitle>VSD Information</CardTitle>
-                  <CardDescription>Details for the Variable Speed Drive controlling this equipment.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-6">
-                  <FormField
-                      control={form.control}
-                      name="vsdId"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>VSD ID</FormLabel>
-                          <FormControl>
-                          <Input placeholder="e.g., vsd-001" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="model"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>VSD Model</FormLabel>
-                          <FormControl>
-                          <Input placeholder="e.g., Altek Drive 5000" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="serialNumber"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>VSD Serial Number</FormLabel>
-                          <FormControl>
-                          <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="installationDate"
-                      render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                          <FormLabel>Installation Date</FormLabel>
-                          <Popover>
-                          <PopoverTrigger asChild>
-                              <FormControl>
-                              <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                  )}
-                              >
-                                  {field.value ? (
-                                  format(field.value, "PPP")
-                                  ) : (
-                                  <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                              </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                  date > new Date() || date < new Date("1900-01-01")
-                              }
-                              initialFocus
-                              />
-                          </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                   <FormField
-                      control={form.control}
-                      name="assignedToId"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Assigned VSD Technician</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Assign a technician..." />
-                                  </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  {usersLoading ? (
-                                      <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                  ) : (
-                                      <>
-                                          <SelectItem value="unassigned">Unassigned</SelectItem>
-                                          {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                      </>
-                                  )}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-              </CardContent>
-            </Card>
-
-            <Card>
+            <div className="space-y-8">
+              <Card>
                 <CardHeader>
-                    <CardTitle>Motor Information</CardTitle>
-                    <CardDescription>Details for the motor driven by the VSD.</CardDescription>
+                    <CardTitle>UPS/BTU Details</CardTitle>
+                    <CardDescription>Battery backup unit information.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-6">
-                    <FormField control={form.control} name="motorModel" render={({ field }) => (
-                        <FormItem><FormLabel>Motor Model</FormLabel><FormControl><Input placeholder="e.g., WEG W22" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                     <FormField control={form.control} name="motorPower" render={({ field }) => (
-                        <FormItem><FormLabel>Motor Power (kW)</FormLabel><FormControl><Input type="number" placeholder="e.g., 75" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                     <FormField control={form.control} name="motorVoltage" render={({ field }) => (
-                        <FormItem><FormLabel>Motor Voltage (V)</FormLabel><FormControl><Input type="number" placeholder="e.g., 400" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="motorSerialNumber" render={({ field }) => (
-                        <FormItem><FormLabel>Motor Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-MOTOR-456" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="motorFrameType" render={({ field }) => (
-                        <FormItem><FormLabel>Motor Frame Type</FormLabel><FormControl><Input placeholder="e.g., IEC 132" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                    )} />
                     <FormField
-                      control={form.control}
-                      name="motorInstallationDate"
-                      render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                          <FormLabel>Installation Date</FormLabel>
-                          <Popover>
-                          <PopoverTrigger asChild>
-                              <FormControl>
-                              <Button
-                                  variant={"outline"}
-                                  className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                              >
-                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                              </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
-                          </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                    />
-                     <FormField control={form.control} name="motorAssignedToId" render={({ field }) => (
+                        control={form.control}
+                        name="upsModel"
+                        render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Assigned Motor Technician</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                  <SelectTrigger><SelectValue placeholder="Assign a technician..." /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  {usersLoading ? (
-                                      <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                  ) : (
-                                      <>
-                                          <SelectItem value="unassigned">Unassigned</SelectItem>
-                                          {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                      </>
-                                  )}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                      </FormItem>
-                     )} />
+                            <FormLabel>UPS Model</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., Eaton 9PX" {...field} value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="upsSerialNumber"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>UPS Serial Number</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., SN-UPS-123" {...field} value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="batteryType"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Battery Type</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., Lead-Acid, Li-Ion" {...field} value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="upsInstallationDate"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Installation Date</FormLabel>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                >
+                                    {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="lastBatteryReplacement"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Last Battery Replacement</FormLabel>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                >
+                                    {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="upsAssignedToId"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Assigned UPS Technician</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Assign a technician..." />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {usersLoading ? (
+                                        <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                    ) : (
+                                        <>
+                                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                                            {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                        </>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                 </CardContent>
-            </Card>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                    <CardTitle>VSD Information</CardTitle>
+                    <CardDescription>Details for the Variable Speed Drive controlling this equipment.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-6">
+                    <FormField
+                        control={form.control}
+                        name="vsdId"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>VSD ID</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., vsd-001" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="model"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>VSD Model</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., Altek Drive 5000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="serialNumber"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>VSD Serial Number</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="installationDate"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Installation Date</FormLabel>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                >
+                                    {field.value ? (
+                                    format(field.value, "PPP")
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                    date > new Date() || date < new Date("1900-01-01")
+                                }
+                                initialFocus
+                                />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="assignedToId"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Assigned VSD Technician</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Assign a technician..." />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {usersLoading ? (
+                                        <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                    ) : (
+                                        <>
+                                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                                            {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                        </>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className='md:col-start-2'>
+              <Card>
+                  <CardHeader>
+                      <CardTitle>Motor Information</CardTitle>
+                      <CardDescription>Details for the motor driven by the VSD.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-6">
+                      <FormField control={form.control} name="motorModel" render={({ field }) => (
+                          <FormItem><FormLabel>Motor Model</FormLabel><FormControl><Input placeholder="e.g., WEG W22" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="motorPower" render={({ field }) => (
+                          <FormItem><FormLabel>Motor Power (kW)</FormLabel><FormControl><Input type="number" placeholder="e.g., 75" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="motorVoltage" render={({ field }) => (
+                          <FormItem><FormLabel>Motor Voltage (V)</FormLabel><FormControl><Input type="number" placeholder="e.g., 400" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="motorSerialNumber" render={({ field }) => (
+                          <FormItem><FormLabel>Motor Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-MOTOR-456" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="motorFrameType" render={({ field }) => (
+                          <FormItem><FormLabel>Motor Frame Type</FormLabel><FormControl><Input placeholder="e.g., IEC 132" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField
+                        control={form.control}
+                        name="motorInstallationDate"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Installation Date</FormLabel>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                >
+                                    {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                      />
+                      <FormField control={form.control} name="motorAssignedToId" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Assigned Motor Technician</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger><SelectValue placeholder="Assign a technician..." /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {usersLoading ? (
+                                        <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                    ) : (
+                                        <>
+                                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                                            {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                        </>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                      )} />
+                  </CardContent>
+              </Card>
+            </div>
           </div>
           
           <Card>
@@ -830,50 +834,59 @@ export default function NewEquipmentPage() {
                 <CardDescription>Details for the pump connected to the motor.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-                <FormField control={form.control} name="pumpType" render={({ field }) => (
-                    <FormItem><FormLabel>Pump Type</FormLabel><FormControl><Input placeholder="e.g., Centrifugal" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpBrand" render={({ field }) => (
-                    <FormItem><FormLabel>Pump Brand</FormLabel><FormControl><Input placeholder="e.g., KSB" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpSerialNumber" render={({ field }) => (
-                    <FormItem><FormLabel>Pump Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-PUMP-789" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpManufacturer" render={({ field }) => (
-                    <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g., KSB Group" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpFrameSize" render={({ field }) => (
-                    <FormItem><FormLabel>Frame Size</FormLabel><FormControl><Input placeholder="e.g., 160M" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpFrameType" render={({ field }) => (
-                    <FormItem><FormLabel>Frame Type</FormLabel><FormControl><Input placeholder="e.g., Cast Iron" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpHead" render={({ field }) => (
-                    <FormItem><FormLabel>Pump Head (m)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="flowRate" render={({ field }) => (
-                    <FormItem><FormLabel>Flow Rate (m³/h)</FormLabel><FormControl><Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpImpellerDiameter" render={({ field }) => (
-                    <FormItem><FormLabel>Impeller Diameter (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 250" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpFlangeSizeIn" render={({ field }) => (
-                    <FormItem><FormLabel>Flange Size In (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpFlangeSizeOutlet" render={({ field }) => (
-                    <FormItem><FormLabel>Flange Size Outlet (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 80" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                 <FormField control={form.control} name="pumpCommissionDate" render={({ field }) => (
-                    <FormItem className="flex flex-col"><FormLabel>Date Commissioned</FormLabel><Popover>
-                        <PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl></PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus /></PopoverContent>
-                    </Popover><FormMessage /></FormItem>
-                )} />
+                <div className="space-y-6">
+                    <FormField control={form.control} name="pumpType" render={({ field }) => (
+                        <FormItem><FormLabel>Pump Type</FormLabel><FormControl><Input placeholder="e.g., Centrifugal" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="pumpBrand" render={({ field }) => (
+                        <FormItem><FormLabel>Pump Brand</FormLabel><FormControl><Input placeholder="e.g., KSB" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="pumpSerialNumber" render={({ field }) => (
+                        <FormItem><FormLabel>Pump Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-PUMP-789" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="pumpManufacturer" render={({ field }) => (
+                        <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g., KSB Group" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </div>
+                 <div className="space-y-6">
+                    <FormField control={form.control} name="pumpHead" render={({ field }) => (
+                        <FormItem><FormLabel>Pump Head (m)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="flowRate" render={({ field }) => (
+                        <FormItem><FormLabel>Flow Rate (m³/h)</FormLabel><FormControl><Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="pumpImpellerDiameter" render={({ field }) => (
+                        <FormItem><FormLabel>Impeller Diameter (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 250" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="pumpCommissionDate" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Date Commissioned</FormLabel><Popover>
+                            <PopoverTrigger asChild><FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl></PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus /></PopoverContent>
+                        </Popover><FormMessage /></FormItem>
+                    )} />
+                </div>
+                 <div className="space-y-6">
+                    <FormField control={form.control} name="pumpFlangeSizeIn" render={({ field }) => (
+                        <FormItem><FormLabel>Flange Size In (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="pumpFlangeSizeOutlet" render={({ field }) => (
+                        <FormItem><FormLabel>Flange Size Outlet (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 80" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </div>
+                <div className="space-y-6">
+                    <FormField control={form.control} name="pumpFrameSize" render={({ field }) => (
+                        <FormItem><FormLabel>Frame Size</FormLabel><FormControl><Input placeholder="e.g., 160M" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="pumpFrameType" render={({ field }) => (
+                        <FormItem><FormLabel>Frame Type</FormLabel><FormControl><Input placeholder="e.g., Cast Iron" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </div>
+
                 <FormField control={form.control} name="pumpAssignedToId" render={({ field }) => (
                     <FormItem className="md:col-span-2">
                         <FormLabel>Assigned Pump Technician</FormLabel>
