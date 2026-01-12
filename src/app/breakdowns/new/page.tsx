@@ -26,8 +26,9 @@ import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Equipment, VSD, Breakdown } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
-import React from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Input } from '@/components/ui/input';
 
 
 const formSchema = z.object({
@@ -44,6 +45,8 @@ export default function NewBreakdownPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const equipmentIdFromQuery = searchParams.get('equipmentId');
   
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -51,10 +54,17 @@ export default function NewBreakdownPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      equipmentId: '',
+      equipmentId: equipmentIdFromQuery || '',
+      component: '',
       description: '',
     },
   });
+
+  useEffect(() => {
+    if (equipmentIdFromQuery) {
+        form.setValue('equipmentId', equipmentIdFromQuery);
+    }
+  }, [equipmentIdFromQuery, form]);
 
   const watchedEquipmentId = useWatch({
     control: form.control,
@@ -135,20 +145,26 @@ export default function NewBreakdownPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Equipment Cluster</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={equipmentLoading}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select the equipment cluster..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {equipmentLoading ? (
-                            <SelectItem value="loading" disabled>Loading equipment...</SelectItem>
-                        ) : (
-                            equipmentList?.map(eq => <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.location})</SelectItem>)
-                        )}
-                      </SelectContent>
-                    </Select>
+                    {equipmentIdFromQuery && selectedEquipment ? (
+                        <FormControl>
+                            <Input value={`${selectedEquipment.name} (${selectedEquipment.location})`} disabled />
+                        </FormControl>
+                    ) : (
+                        <Select onValueChange={field.onChange} value={field.value} disabled={equipmentLoading}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select the equipment cluster..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {equipmentLoading ? (
+                                    <SelectItem value="loading" disabled>Loading equipment...</SelectItem>
+                                ) : (
+                                    equipmentList?.map(eq => <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.location})</SelectItem>)
+                                )}
+                            </SelectContent>
+                        </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -251,3 +267,5 @@ export default function NewBreakdownPage() {
     </div>
   );
 }
+
+    
