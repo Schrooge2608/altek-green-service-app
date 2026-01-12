@@ -2,12 +2,12 @@
 
 'use client';
 
-import { notFound, useParams, useRouter } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info } from 'lucide-react';
+import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import React, { useMemo } from 'react';
 import { Separator } from '@/components/ui/separator';
+import { EditGeneralInfoForm } from '@/components/equipment/edit-general-info-form';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -158,11 +159,8 @@ export default function EquipmentDetailPage() {
                     <Info className="text-primary" /> 
                     <CardTitle>General Information</CardTitle>
                 </div>
-                 {isKnownAdmin && (
-                    <Button variant="outline" size="sm">
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                    </Button>
+                 {isKnownAdmin && eq && (
+                    <EditGeneralInfoForm equipment={eq} />
                 )}
             </CardHeader>
             <CardContent className="grid md:grid-cols-3 gap-6 text-sm">
