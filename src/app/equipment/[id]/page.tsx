@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog } from 'lucide-react';
+import { PlusCircle, Pencil, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -225,6 +225,21 @@ export default function EquipmentDetailPage() {
                         <DetailRow label="Installation Date" value={eq.protectionInstallationDate} />
                         <DetailRow label="Assigned Technician" value={eq.protectionAssignedToName} />
                     </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>UPS/BTU Details</CardTitle>
+                    <CardDescription>Battery backup unit information.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                    <DetailRow label="UPS Model" value={eq.upsModel} />
+                    <DetailRow label="UPS Serial Number" value={eq.upsSerialNumber} />
+                    <DetailRow label="Battery Type" value={eq.batteryType} />
+                    <DetailRow label="Installation Date" value={eq.upsInstallationDate} />
+                    <DetailRow label="Last Battery Replacement" value={eq.lastBatteryReplacement} />
+                    <DetailRow label="Assigned Technician" value={eq.upsAssignedToName} />
                 </CardContent>
             </Card>
 
