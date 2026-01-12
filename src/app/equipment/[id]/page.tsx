@@ -219,6 +219,20 @@ export default function EquipmentDetailPage() {
         <div className="space-y-8">
             <Card>
                 <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Power className="text-primary" /> UPS/BTU Details</CardTitle>
+                    <CardDescription>Battery backup unit information.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                    <DetailRow label="UPS Model" value={eq.upsModel} />
+                    <DetailRow label="UPS Serial Number" value={eq.upsSerialNumber} />
+                    <DetailRow label="Battery Type" value={eq.batteryType} />
+                    <DetailRow label="Installation Date" value={eq.upsInstallationDate} />
+                    <DetailRow label="Last Battery Replacement" value={eq.lastBatteryReplacement} />
+                    <DetailRow label="Assigned Technician" value={eq.upsAssignedToName} />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Cpu className="text-primary" /> VSD Information</CardTitle>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
@@ -273,21 +287,6 @@ export default function EquipmentDetailPage() {
                     <DetailRow label="Frame Type" value={eq.pumpFrameType} />
                     <Separator className="md:col-span-2 my-2"/>
                     <DetailRow label="Assigned Technician" value={eq.pumpAssignedToName} />
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Power className="text-primary" /> UPS/BTU Details</CardTitle>
-                    <CardDescription>Battery backup unit information.</CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm space-y-2">
-                    <DetailRow label="UPS Model" value={eq.upsModel} />
-                    <DetailRow label="UPS Serial Number" value={eq.upsSerialNumber} />
-                    <DetailRow label="Battery Type" value={eq.batteryType} />
-                    <DetailRow label="Installation Date" value={eq.upsInstallationDate} />
-                    <DetailRow label="Last Battery Replacement" value={eq.lastBatteryReplacement} />
-                    <DetailRow label="Assigned Technician" value={eq.upsAssignedToName} />
                 </CardContent>
             </Card>
         </div>
