@@ -20,6 +20,9 @@ import { Separator } from '@/components/ui/separator';
 import { EditGeneralInfoForm } from '@/components/equipment/edit-general-info-form';
 import { EditProtectionForm } from '@/components/equipment/edit-protection-form';
 import { EditUpsForm } from '@/components/equipment/edit-ups-form';
+import { EditVsdForm } from '@/components/equipment/edit-vsd-form';
+import { EditMotorForm } from '@/components/equipment/edit-motor-form';
+import { EditPumpForm } from '@/components/equipment/edit-pump-form';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -252,8 +255,11 @@ export default function EquipmentDetailPage() {
                 </CardContent>
             </Card>
             <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2"><Cpu className="text-primary" /> VSD Information</CardTitle>
+                    {isKnownAdmin && vsd && (
+                        <EditVsdForm vsd={vsd} />
+                    )}
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
                     <DetailRow label="VSD Model" value={vsd?.model} />
@@ -269,11 +275,14 @@ export default function EquipmentDetailPage() {
                 </CardContent>
             </Card>
             <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2"><Cog className="text-primary" /> Motor Information</CardTitle>
-                    <CardDescription>Details for the motor driven by the VSD.</CardDescription>
+                    {isKnownAdmin && eq && (
+                        <EditMotorForm equipment={eq} />
+                    )}
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
+                    <CardDescription>Details for the motor driven by the VSD.</CardDescription>
                     <DetailRow label="Motor Model" value={eq.motorModel} />
                     <DetailRow label="Motor Power" value={eq.motorPower ? `${eq.motorPower} kW` : null} />
                     <DetailRow label="Motor Voltage" value={eq.motorVoltage ? `${eq.motorVoltage} V` : null} />
@@ -349,9 +358,11 @@ export default function EquipmentDetailPage() {
                 </CardContent>
             </Card>
             <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2"><Droplets className="text-primary" /> Pump Information</CardTitle>
-                    <CardDescription>Details for the pump connected to the motor.</CardDescription>
+                    {isKnownAdmin && eq && (
+                        <EditPumpForm equipment={eq} />
+                    )}
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
                     <DetailRow label="Pump Type" value={eq.pumpType} />
