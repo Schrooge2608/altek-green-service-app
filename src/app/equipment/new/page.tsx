@@ -396,7 +396,7 @@ export default function NewEquipmentPage() {
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Assign a technician..." />
-                                </Trigger>
+                                </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                                 {usersLoading ? (
