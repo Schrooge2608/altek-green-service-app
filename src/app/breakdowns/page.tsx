@@ -17,10 +17,10 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, CheckCircle, CalendarIcon } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { PlusCircle, CheckCircle, CalendarIcon, Trash2, Loader2 } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDoc } from 'firebase/firestore';
-import type { Breakdown, Equipment, VSD } from '@/lib/types';
+import type { Breakdown, Equipment, VSD, User as AppUser } from '@/lib/types';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -136,8 +136,16 @@ function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown:
 export default function BreakdownsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user, isUserLoading } = useUser();
+
+  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userRole, isLoading: userRoleLoading } = useDoc<AppUser>(userRoleRef);
+
   const breakdownsQuery = useMemoFirebase(() => collection(firestore, 'breakdown_reports'), [firestore]);
-  const { data: breakdowns, isLoading } = useCollection<Breakdown>(breakdownsQuery);
+  const { data: breakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
+
+  const isLoading = breakdownsLoading || isUserLoading || userRoleLoading;
+  const isKnownAdmin = userRole?.role && (userRole.role.includes('Admin') || userRole.role.includes('Superadmin'));
 
   const handleResolve = async (breakdown: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => {
     const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
@@ -203,6 +211,15 @@ export default function BreakdownsPage() {
         description: `The issue for ${breakdown.equipmentName} has been marked as resolved.`,
     });
   }
+
+  const handleDeleteBreakdown = (breakdown: Breakdown) => {
+    const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
+    deleteDocumentNonBlocking(breakdownRef);
+    toast({
+        title: 'Breakdown Report Deleted',
+        description: `The report for ${breakdown.equipmentName} has been removed.`,
+    });
+  }
   
   const formatDate = (dateString?: string) => {
       if (!dateString) return 'N/A';
@@ -255,7 +272,12 @@ export default function BreakdownsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center h-24">Loading breakdowns...</TableCell>
+                  <TableCell colSpan={10} className="text-center h-24">
+                    <div className='flex justify-center items-center'>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading breakdowns...
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : breakdowns && breakdowns.length > 0 ? (
                 breakdowns.map((b) => {
@@ -280,14 +302,44 @@ export default function BreakdownsPage() {
                       <TableCell className="text-right">{b.resolved ? b.overtimeHours ?? 0 : 'N/A'}</TableCell>
                       <TableCell className="text-right">{b.resolved ? totalHours : 'N/A'}</TableCell>
                       <TableCell className="text-right">
-                        {!b.resolved && (
-                          <ResolveBreakdownDialog breakdown={b} onResolve={handleResolve}>
-                              <Button variant="ghost" size="sm">
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Resolved
-                              </Button>
-                          </ResolveBreakdownDialog>
-                        )}
+                        <div className='flex items-center justify-end gap-2'>
+                          {!b.resolved && (
+                            <ResolveBreakdownDialog breakdown={b} onResolve={handleResolve}>
+                                <Button variant="ghost" size="sm">
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Resolved
+                                </Button>
+                            </ResolveBreakdownDialog>
+                          )}
+                          {isKnownAdmin && (
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Delete Report</span>
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action will permanently delete the breakdown report for <strong>{b.equipmentName}</strong> logged on {formatDate(b.timeReported)}. 
+                                            This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                            onClick={() => handleDeleteBreakdown(b)}
+                                        >
+                                            Yes, delete report
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -311,5 +363,3 @@ export default function BreakdownsPage() {
     </div>
   );
 }
-
-    
