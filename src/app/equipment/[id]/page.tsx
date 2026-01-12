@@ -79,19 +79,18 @@ export default function EquipmentDetailPage() {
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
   const uptimePercentage = useMemo(() => {
-    if (!vsd?.installationDate) return 100;
+    if (!vsd?.installationDate || !eq) return 100;
     const installationDate = new Date(vsd.installationDate);
     const now = new Date();
     const totalHours = (now.getTime() - installationDate.getTime()) / (1000 * 60 * 60);
     if (totalHours <= 0) return 100;
 
-    // Downtime needs to be tracked on the equipment or VSD object to be used here
-    const downtimeHours = 0; // Placeholder
+    const downtimeHours = eq.totalDowntimeHours || 0;
     const uptimeHours = totalHours - downtimeHours;
     
     return Math.max(0, (uptimeHours / totalHours) * 100);
 
-  }, [vsd]);
+  }, [vsd, eq]);
 
   if (eqLoading || vsdLoading) {
     return <EquipmentDetailSkeleton />;
@@ -250,7 +249,7 @@ export default function EquipmentDetailPage() {
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Total Downtime</span>
-                        <span className="font-bold">0 hours</span>
+                        <span className="font-bold">{(eq.totalDowntimeHours || 0).toFixed(2)} hours</span>
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Power Consumption</span>
@@ -263,3 +262,5 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
+    
