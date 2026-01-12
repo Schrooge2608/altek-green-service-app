@@ -1,20 +1,86 @@
 
 'use client';
 
-import { notFound, useParams } from 'next/navigation';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { notFound, useParams, useRouter } from 'next/navigation';
+import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
+
+const formSchema = z.object({
+  name: z.string().min(1, 'Equipment name is required'),
+  plant: z.enum(['Mining', 'Smelter']),
+  division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
+  location: z.string().min(1, 'Location is required'),
+});
+
+const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
 
 export default function EditEquipmentPage() {
   const params = useParams();
+  const router = useRouter();
+  const { toast } = useToast();
   const id = typeof params.id === 'string' ? params.id : '';
   const firestore = useFirestore();
 
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      location: '',
+    },
+  });
+
+  useEffect(() => {
+    if (eq) {
+      form.reset({
+        name: eq.name,
+        plant: eq.plant,
+        division: eq.division,
+        location: eq.location,
+      });
+    }
+  }, [eq, form]);
+
+  const watchedPlant = useWatch({ control: form.control, name: 'plant' });
+  const watchedDivision = useWatch({ control: form.control, name: 'division' });
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!eqRef) return;
+    
+    if (values.plant === 'Mining' && !values.division) {
+        form.setError('division', { type: 'manual', message: 'Please select a division for the Mining plant.' });
+        return;
+    }
+
+    const updateData: Partial<Equipment> = {
+        name: values.name,
+        plant: values.plant,
+        location: values.location,
+        division: values.plant === 'Mining' ? values.division : undefined,
+    };
+
+    updateDocumentNonBlocking(eqRef, updateData);
+
+    toast({
+      title: 'Equipment Updated',
+      description: `${values.name} has been successfully updated.`,
+    });
+    router.push(`/equipment/${id}`);
+  }
 
   if (eqLoading) {
     return (
@@ -35,21 +101,128 @@ export default function EditEquipmentPage() {
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Edit Equipment: {eq.name}</h1>
         <p className="text-muted-foreground">
-          Below are the details for the selected equipment cluster.
+          Update the details for the selected equipment cluster.
         </p>
       </header>
 
-      <Card>
-        <CardHeader>
-            <CardTitle>Equipment Cluster Details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-            <div><strong>ID:</strong> {eq.id}</div>
-            <div><strong>Plant:</strong> {eq.plant}</div>
-            <div><strong>Division:</strong> {eq.division || 'N/A'}</div>
-            <div><strong>Location:</strong> {eq.location}</div>
-        </CardContent>
-      </Card>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Card>
+            <CardHeader>
+                <CardTitle>Equipment Details</CardTitle>
+                <CardDescription>Update information about the main equipment unit.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Equipment Name</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Coolant Pump B" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormItem>
+                    <FormLabel>Equipment ID (Read-only)</FormLabel>
+                    <Input readOnly disabled value={eq.id} />
+                </FormItem>
+                 <FormField
+                    control={form.control}
+                    name="plant"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Plant</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select a plant" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="Mining">Mining</SelectItem>
+                            <SelectItem value="Smelter">Smelter</SelectItem>
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                {watchedPlant === 'Mining' && (
+                    <FormField
+                    control={form.control}
+                    name="division"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Division</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a division" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="Boosters">Boosters</SelectItem>
+                            <SelectItem value="Dredgers">Dredgers</SelectItem>
+                            <SelectItem value="Pump Stations">Pump Stations</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                )}
+                 {watchedPlant === 'Mining' && watchedDivision === 'Dredgers' ? (
+                    <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Location (Plant Heading)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a location" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {dredgerLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                ) : (
+                    <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Location</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., Sector C, Line 2" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                )}
+            </CardContent>
+          </Card>
+
+           <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }
