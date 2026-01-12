@@ -784,7 +784,7 @@ export default function NewEquipmentPage() {
                 <CardDescription>Details for the pump connected to the motor.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-                <FormField control={form.control} name="pumpType" render={({ field }) => (
+                 <FormField control={form.control} name="pumpType" render={({ field }) => (
                     <FormItem><FormLabel>Pump Type</FormLabel><FormControl><Input placeholder="e.g., Centrifugal" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="pumpBrand" render={({ field }) => (
@@ -796,7 +796,12 @@ export default function NewEquipmentPage() {
                 <FormField control={form.control} name="pumpManufacturer" render={({ field }) => (
                     <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g., KSB Group" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
-
+                <FormField control={form.control} name="pumpFrameSize" render={({ field }) => (
+                    <FormItem><FormLabel>Frame Size</FormLabel><FormControl><Input placeholder="e.g., 160M" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="pumpFrameType" render={({ field }) => (
+                    <FormItem><FormLabel>Frame Type</FormLabel><FormControl><Input placeholder="e.g., Cast Iron" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
                 <FormField control={form.control} name="pumpHead" render={({ field }) => (
                     <FormItem><FormLabel>Pump Head (m)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
@@ -806,7 +811,13 @@ export default function NewEquipmentPage() {
                 <FormField control={form.control} name="pumpImpellerDiameter" render={({ field }) => (
                     <FormItem><FormLabel>Impeller Diameter (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 250" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="pumpCommissionDate" render={({ field }) => (
+                <FormField control={form.control} name="pumpFlangeSizeIn" render={({ field }) => (
+                    <FormItem><FormLabel>Flange Size In (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="pumpFlangeSizeOutlet" render={({ field }) => (
+                    <FormItem><FormLabel>Flange Size Outlet (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 80" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+                 <FormField control={form.control} name="pumpCommissionDate" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Date Commissioned</FormLabel><Popover>
                         <PopoverTrigger asChild><FormControl>
                             <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -816,18 +827,6 @@ export default function NewEquipmentPage() {
                         </FormControl></PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus /></PopoverContent>
                     </Popover><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpFlangeSizeIn" render={({ field }) => (
-                    <FormItem><FormLabel>Flange Size In (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpFlangeSizeOutlet" render={({ field }) => (
-                    <FormItem><FormLabel>Flange Size Outlet (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 80" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpFrameSize" render={({ field }) => (
-                    <FormItem><FormLabel>Frame Size</FormLabel><FormControl><Input placeholder="e.g., 160M" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="pumpFrameType" render={({ field }) => (
-                    <FormItem><FormLabel>Frame Type</FormLabel><FormControl><Input placeholder="e.g., Cast Iron" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="pumpAssignedToId" render={({ field }) => (
                     <FormItem className="md:col-span-2">
@@ -864,4 +863,3 @@ export default function NewEquipmentPage() {
 
 
 
-    
