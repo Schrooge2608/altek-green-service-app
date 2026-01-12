@@ -85,8 +85,8 @@ export const seedVsds: VSD[] = seedEquipment.map(eq => ({
     model: eq.model,
     installationDate: eq.installationDate,
     status: eq.status,
-    assignedToId: eq.assignedToId,
-    assignedToName: eq.assignedToName,
+    assignedToId: eq.assignedToId || '',
+    assignedToName: eq.assignedToName || '',
 }));
 
 
