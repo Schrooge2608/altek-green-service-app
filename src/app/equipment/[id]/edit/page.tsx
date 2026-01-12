@@ -130,15 +130,14 @@ export default function EditEquipmentPage() {
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
       plant: values.plant,
+      division: values.division,
       location: values.location,
       imageUrl: values.imageUrl,
       pumpHead: values.pumpHead || 0,
       flowRate: values.flowRate || 0,
     };
     
-    if (values.plant === 'Mining') {
-        equipmentUpdateData.division = values.division;
-    } else {
+    if (values.plant !== 'Mining') {
         equipmentUpdateData.division = undefined;
     }
 
@@ -455,3 +454,5 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
+
+    
