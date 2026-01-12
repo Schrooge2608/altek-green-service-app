@@ -117,7 +117,7 @@ function AuthenticatedMiningDivisionPage() {
     return null;
   }
 
-  const isGroupedByLocation = ['Dredgers', 'Boosters'].includes(memoizedDivisionName);
+  const isGroupedByLocation = ['Dredgers', 'Boosters', 'Pump Stations'].includes(memoizedDivisionName);
   const locations = Object.keys(equipmentByLocation).sort();
 
   return (
@@ -327,3 +327,5 @@ export default function MiningDivisionPage() {
 
     return <AuthenticatedMiningDivisionPage />;
 }
+
+    
