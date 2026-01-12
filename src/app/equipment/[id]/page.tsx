@@ -20,7 +20,6 @@ const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
     Fan: "fan-1",
     Compressor: "compressor-1",
-    "Utility Room": "dashboard-hero",
     Winch: "winch-1"
 };
 
