@@ -32,9 +32,9 @@
     },
     {
       "id": "winch-1",
-      "description": "An industrial winch.",
-      "imageUrl": "https://images.unsplash.com/photo-1763478488192-be34b513f424?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxpbmR1c3RyaWFsJTIwd2luY2h8ZW58MHx8fHwxNzY4MjAyNjgxfDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "industrial winch"
+      "description": "An industrial rope winch.",
+      "imageUrl": "https://images.unsplash.com/photo-1593557223611-3428945f363c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxJbmR1c3RyaWFsJTIwcm9wZSUyMHdpbmNofGVufDB8fHx8MTc2ODIyNjU5OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "rope winch"
     }
   ]
 }
