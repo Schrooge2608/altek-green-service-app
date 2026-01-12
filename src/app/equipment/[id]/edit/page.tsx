@@ -74,6 +74,8 @@ export default function EditEquipmentPage() {
     defaultValues: {
         plant: 'Mining',
         division: undefined,
+        pumpHead: 0,
+        flowRate: 0,
     },
   });
 
@@ -85,15 +87,15 @@ export default function EditEquipmentPage() {
         division: eq.division,
         location: eq.location,
         imageUrl: eq.imageUrl || '',
-        pumpHead: eq.pumpHead ?? undefined,
-        flowRate: eq.flowRate ?? undefined,
+        pumpHead: eq.pumpHead ?? 0,
+        flowRate: eq.flowRate ?? 0,
         model: vsd.model || '',
         serialNumber: vsd.serialNumber || '',
         installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
         assignedToId: vsd.assignedToId || 'unassigned',
       });
     }
-  }, [eq, vsd]);
+  }, [eq, vsd, form]);
 
 
   const watchedPlant = useWatch({
@@ -290,7 +292,7 @@ export default function EditEquipmentPage() {
                     <FormItem>
                         <FormLabel>Pump Head (m)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} />
+                        <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? 0} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -303,7 +305,7 @@ export default function EditEquipmentPage() {
                     <FormItem>
                         <FormLabel>Flow Rate (m³/h)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} />
+                        <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? 0} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -446,5 +448,3 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
-
-    
