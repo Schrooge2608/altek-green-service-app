@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, Pencil, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
-import type { Equipment, Breakdown, VSD } from '@/lib/types';
+import type { Equipment, Breakdown, VSD, User as AppUser } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import React, { useMemo } from 'react';
@@ -84,6 +84,7 @@ export default function EquipmentDetailPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
   const firestore = useFirestore();
+  const { user } = useUser();
   
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
@@ -93,6 +94,10 @@ export default function EquipmentDetailPage() {
 
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
   const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
+
+  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userData } = useDoc<AppUser>(userRoleRef);
+  const isKnownAdmin = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin'));
 
   const uptimePercentage = useMemo(() => {
     if (!vsd?.installationDate || !eq) return 100;
@@ -144,12 +149,14 @@ export default function EquipmentDetailPage() {
                     Back
                 </Button>
             </Link>
-            <Link href={`/equipment/${id}/edit`} passHref>
-                <Button>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Equipment
-                </Button>
-            </Link>
+            {isKnownAdmin && (
+              <Link href={`/equipment/${id}/edit`} passHref>
+                  <Button>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Equipment
+                  </Button>
+              </Link>
+            )}
         </div>
       </header>
 
@@ -369,4 +376,3 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
-
