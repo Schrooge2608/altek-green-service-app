@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Equipment, VSD, Breakdown } from '@/lib/types';
@@ -115,6 +115,10 @@ export default function NewBreakdownPage() {
     };
 
     addDocumentNonBlocking(breakdownRef, breakdownData);
+    
+    // Update the equipment status
+    const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
+    updateDocumentNonBlocking(equipmentRef, { breakdownStatus: 'Active' });
 
     toast({
       title: 'Breakdown Reported',

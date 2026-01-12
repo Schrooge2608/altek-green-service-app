@@ -107,6 +107,22 @@ function AuthenticatedMiningDivisionPage() {
         });
     };
 
+    const getStatusVariant = (status?: Equipment['breakdownStatus']) => {
+        switch (status) {
+          case 'Active':
+            return 'destructive';
+          case 'Resolved':
+          case 'Pending PO':
+          case 'Awaiting OT':
+            return 'secondary';
+          case 'Signed Off':
+          case 'Invoiced':
+            return 'default';
+          default:
+            return 'outline';
+        }
+    };
+
   if (!memoizedDivisionName) {
     return null;
   }
@@ -152,6 +168,7 @@ function AuthenticatedMiningDivisionPage() {
                                                 <TableRow>
                                                     <TableHead>Name</TableHead>
                                                     <TableHead>Assigned To</TableHead>
+                                                    <TableHead>Breakdown Status</TableHead>
                                                     <TableHead className="text-right">Uptime</TableHead>
                                                     <TableHead className="text-right">Power (kWh)</TableHead>
                                                     {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
@@ -166,6 +183,11 @@ function AuthenticatedMiningDivisionPage() {
                                                       </Link>
                                                     </TableCell>
                                                     <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={getStatusVariant(eq.breakdownStatus)}>
+                                                            {eq.breakdownStatus || 'None'}
+                                                        </Badge>
+                                                    </TableCell>
                                                     <TableCell className="text-right">
                                                       <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
                                                         {eq.uptime}%
@@ -215,6 +237,7 @@ function AuthenticatedMiningDivisionPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Assigned To</TableHead>
+                    <TableHead>Breakdown Status</TableHead>
                     <TableHead className="text-right">Uptime</TableHead>
                     <TableHead className="text-right">Power (kWh)</TableHead>
                     {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
@@ -231,6 +254,11 @@ function AuthenticatedMiningDivisionPage() {
                         </TableCell>
                         <TableCell>{eq.location}</TableCell>
                         <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
+                        <TableCell>
+                            <Badge variant={getStatusVariant(eq.breakdownStatus)}>
+                                {eq.breakdownStatus || 'None'}
+                            </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
                           <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
                             {eq.uptime}%
@@ -264,7 +292,7 @@ function AuthenticatedMiningDivisionPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={isKnownAdmin ? 6 : 5} className="text-center h-24">No equipment found for this division.</TableCell>
+                      <TableCell colSpan={isKnownAdmin ? 7 : 6} className="text-center h-24">No equipment found for this division.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>

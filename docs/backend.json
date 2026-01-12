@@ -1,4 +1,5 @@
 
+
 {
   "entities": {
     "VSD": {
@@ -87,7 +88,12 @@
         "pumpFrameSize": { "type": "string" },
         "pumpFrameType": { "type": "string" },
         "pumpAssignedToId": { "type": "string", "description": "The UID of the user assigned to the pump." },
-        "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." }
+        "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." },
+        "breakdownStatus": {
+          "type": "string",
+          "enum": ["None", "Active", "Resolved", "Pending PO", "Awaiting OT", "Signed Off", "Invoiced"],
+          "description": "The current status of a breakdown workflow for the equipment."
+        }
       },
       "required": ["id", "name", "location", "vsdId", "plant"]
     },
@@ -117,6 +123,7 @@
         "id": { "type": "string" },
         "equipmentId": { "type": "string" },
         "equipmentName": { "type": "string" },
+        "component": { "type": "string", "enum": ["VSD", "Motor", "Pump", "Protection", "UPS", "Other"], "description": "The specific component that failed." },
         "date": { "type": "string", "format": "date" },
         "description": { "type": "string" },
         "resolved": { "type": "boolean" },
@@ -126,7 +133,7 @@
         "timeReported": { "type": "string", "format": "date-time" },
         "timeBackInService": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "equipmentId", "equipmentName", "date", "description", "resolved", "timeReported"]
+      "required": ["id", "equipmentId", "equipmentName", "component", "date", "description", "resolved", "timeReported"]
     },
      "CompletedSchedule": {
       "title": "CompletedSchedule",
@@ -248,3 +255,5 @@
     ]
   }
 }
+
+    

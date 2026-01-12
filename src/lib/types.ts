@@ -77,6 +77,7 @@ export interface Equipment {
   pumpFrameType?: string;
   pumpAssignedToId?: string;
   pumpAssignedToName?: string;
+  breakdownStatus?: 'None' | 'Active' | 'Resolved' | 'Pending PO' | 'Awaiting OT' | 'Signed Off' | 'Invoiced';
 }
 
 export interface VSD {
