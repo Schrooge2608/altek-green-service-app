@@ -1,12 +1,12 @@
 
 'use client';
 
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, User, Shield, Wrench, Cpu, Droplets } from 'lucide-react';
+import { PlusCircle, Pencil, User, Shield, Wrench, Cpu, Droplets, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -67,6 +67,7 @@ function EquipmentDetailSkeleton() {
 
 export default function EquipmentDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = typeof params.id === 'string' ? params.id : '';
   const firestore = useFirestore();
   
@@ -113,12 +114,18 @@ export default function EquipmentDetailPage() {
             <h1 className="text-3xl font-bold tracking-tight">{eq.name}</h1>
             <p className="text-muted-foreground">Detailed view of equipment ID: {eq.id}</p>
         </div>
-        <Link href={`/equipment/${id}/edit`} passHref>
-            <Button>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Equipment
+        <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => router.back()}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
             </Button>
-        </Link>
+            <Link href={`/equipment/${id}/edit`} passHref>
+                <Button>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Equipment
+                </Button>
+            </Link>
+        </div>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-3">
