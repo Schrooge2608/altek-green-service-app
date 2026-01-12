@@ -1,5 +1,5 @@
 
-import type { Equipment, VSD } from './types';
+import type { Equipment } from './types';
 import { format } from 'date-fns';
 
 const today = new Date();
@@ -19,11 +19,10 @@ const baseEquipment = {
   assignedToName: '',
   pumpHead: 0,
   flowRate: 0,
-  status: 'active',
   installationDate: todayFormatted,
 } as const;
 
-export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId'> & { model: string; serialNumber: string }> = [
+export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & { model: string; serialNumber: string, installationDate: string }> = [
   // Hlabane
   { ...baseEquipment, name: 'Pump No.1', location: 'HLABANE', model: 'ABB ACS 880', serialNumber: 'SN-HLAB-001' },
   { ...baseEquipment, name: 'Pump No.2', location: 'HLABANE', model: 'ABB ACS 880', serialNumber: 'SN-HLAB-002' },

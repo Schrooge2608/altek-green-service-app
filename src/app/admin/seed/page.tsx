@@ -1,16 +1,14 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { pumpStations } from '@/lib/seed-data';
 import type { Equipment, VSD } from '@/lib/types';
 import { useState } from 'react';
 import { Loader2, Database } from 'lucide-react';
-import { format } from 'date-fns';
 
 export default function SeedPage() {
   const { toast } = useToast();
@@ -19,6 +17,14 @@ export default function SeedPage() {
   const [isSeeded, setIsSeeded] = useState(false);
 
   async function seedDatabase() {
+    if (!firestore) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Firestore is not initialized.'
+        });
+        return;
+    }
     setIsLoading(true);
     const batch = writeBatch(firestore);
 
@@ -26,24 +32,27 @@ export default function SeedPage() {
         const equipmentId = `pump-station-${String(index + 1).padStart(3, '0')}`;
         const vsdId = `vsd-ps-${String(index + 1).padStart(3, '0')}`;
         
-        const { model, serialNumber, ...baseEq } = pump;
+        const { model, serialNumber, installationDate, ...baseEq } = pump;
 
         const equipmentDoc: Equipment = {
             ...baseEq,
             id: equipmentId,
             vsdId: vsdId,
-            model: pump.model,
-            serialNumber: pump.serialNumber,
-            installationDate: pump.installationDate,
-            status: pump.status,
+            // These fields below now correctly live on the VSD record, 
+            // but the type still expects them. We set them to placeholder values
+            // that reflect the VSD details for type consistency.
+            model: model, 
+            serialNumber: serialNumber,
+            installationDate: installationDate,
+            status: 'active',
         };
         
         const vsdDoc: VSD = {
             id: vsdId,
             equipmentId: equipmentId,
-            model: pump.model,
-            serialNumber: pump.serialNumber,
-            installationDate: pump.installationDate,
+            model: model,
+            serialNumber: serialNumber,
+            installationDate: installationDate,
             status: 'active',
         };
 
@@ -98,7 +107,7 @@ export default function SeedPage() {
               )}
               {isSeeded ? 'Database Already Seeded' : 'Seed Database'}
             </Button>
-            {isSeeded && <p className="text-sm text-green-600">Seeding complete. You can now remove this page.</p>}
+            {isSeeded && <p className="text-sm text-green-600">Seeding complete. You can now request to remove this page.</p>}
           </div>
         </CardContent>
       </Card>

@@ -31,6 +31,7 @@ import {
   Library,
   Gauge,
   Store,
+  Database,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -309,6 +310,13 @@ export function SidebarNav() {
                             <Link href="/admin/users" passHref>
                                 <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
                                   <span>User Management</span>
+                                </SidebarMenuSubButton>
+                            </Link>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <Link href="/admin/seed" passHref>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
+                                  <span>Seed Data</span>
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
