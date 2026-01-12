@@ -125,8 +125,8 @@ export default function NewEquipmentPage() {
         assignedToName: assignedUser?.name || '',
     };
 
-    setDocumentNonBlocking(equipmentRef, equipmentData, { merge: true });
-    setDocumentNonBlocking(vsdRef, vsdData, { merge: true });
+    setDocumentNonBlocking(equipmentRef, equipmentData);
+    setDocumentNonBlocking(vsdRef, vsdData);
 
     toast({
       title: 'Equipment Added',
@@ -434,4 +434,3 @@ export default function NewEquipmentPage() {
   );
 }
 
-    

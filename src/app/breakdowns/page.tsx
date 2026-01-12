@@ -167,6 +167,7 @@ export default function BreakdownsPage() {
                 const installationDate = new Date(vsdData.installationDate);
                 const now = new Date();
                 const totalHours = (now.getTime() - installationDate.getTime()) / (1000 * 60 * 60);
+                
                 let newUptimePercentage = 100;
                 if (totalHours > 0) {
                     const uptimeHours = totalHours - newTotalDowntime;
