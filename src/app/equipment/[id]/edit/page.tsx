@@ -80,7 +80,8 @@ export default function EditEquipmentPage() {
         pumpHead: undefined,
         flowRate: undefined,
         assignedToId: 'unassigned',
-        plant: 'Mining', // Set a default to avoid uncontrolled component warning
+        plant: undefined,
+        division: undefined,
     },
   });
 
