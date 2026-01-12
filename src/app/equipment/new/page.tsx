@@ -306,181 +306,183 @@ export default function NewEquipmentPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-                <CardTitle>Protection Details</CardTitle>
-                <CardDescription>Circuit breaker or vacuum breaker information.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-                <FormField
-                    control={form.control}
-                    name="breakerModel"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Breaker Model</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Siemens 3RV" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="breakerAmperage"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Breaker Amperage (A)</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="breakerLocation"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Breaker Location</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Panel PP-01" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="protectionAssignedToId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Assigned Protection Technician</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Assign a technician..." />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {usersLoading ? (
-                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                ) : (
-                                    <>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                    </>
-                                )}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card>
+              <CardHeader>
+                  <CardTitle>Protection Details</CardTitle>
+                  <CardDescription>Circuit breaker information.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-6">
+                  <FormField
+                      control={form.control}
+                      name="breakerModel"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Breaker Model</FormLabel>
+                          <FormControl>
+                          <Input placeholder="e.g., Siemens 3RV" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="breakerAmperage"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Breaker Amperage (A)</FormLabel>
+                          <FormControl>
+                          <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="breakerLocation"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Breaker Location</FormLabel>
+                          <FormControl>
+                          <Input placeholder="e.g., Panel PP-01" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="protectionAssignedToId"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Assigned Protection Technician</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Assign a technician..." />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {usersLoading ? (
+                                      <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                  ) : (
+                                      <>
+                                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                                          {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                      </>
+                                  )}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-                <CardTitle>UPS/BTU Details</CardTitle>
-                <CardDescription>UPS system or battery backup unit information.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-                <FormField
-                    control={form.control}
-                    name="upsModel"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>UPS Model</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Eaton 9PX" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="upsSerialNumber"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>UPS Serial Number</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., SN-UPS-123" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="batteryType"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Battery Type</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Lead-Acid, Li-Ion" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="lastBatteryReplacement"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                        <FormLabel>Last Battery Replacement</FormLabel>
-                        <Popover>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                            <Button
-                                variant={"outline"}
-                                className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                            >
-                                {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
-                        </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="upsAssignedToId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Assigned UPS Technician</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Assign a technician..." />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {usersLoading ? (
-                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                ) : (
-                                    <>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                    </>
-                                )}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                  <CardTitle>UPS/BTU Details</CardTitle>
+                  <CardDescription>Battery backup unit information.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-6">
+                  <FormField
+                      control={form.control}
+                      name="upsModel"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>UPS Model</FormLabel>
+                          <FormControl>
+                          <Input placeholder="e.g., Eaton 9PX" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="upsSerialNumber"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>UPS Serial Number</FormLabel>
+                          <FormControl>
+                          <Input placeholder="e.g., SN-UPS-123" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="batteryType"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Battery Type</FormLabel>
+                          <FormControl>
+                          <Input placeholder="e.g., Lead-Acid, Li-Ion" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="lastBatteryReplacement"
+                      render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                          <FormLabel>Last Battery Replacement</FormLabel>
+                          <Popover>
+                          <PopoverTrigger asChild>
+                              <FormControl>
+                              <Button
+                                  variant={"outline"}
+                                  className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                              >
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                              </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                          </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="upsAssignedToId"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Assigned UPS Technician</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Assign a technician..." />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {usersLoading ? (
+                                      <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                  ) : (
+                                      <>
+                                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                                          {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                      </>
+                                  )}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+              </CardContent>
+            </Card>
+          </div>
 
           <Card>
             <CardHeader>
