@@ -72,20 +72,27 @@ export default function EditEquipmentPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-        plant: 'Mining',
+        equipmentName: '',
+        plant: undefined,
         division: undefined,
+        location: '',
+        imageUrl: '',
         pumpHead: 0,
         flowRate: 0,
+        model: '',
+        serialNumber: '',
+        installationDate: new Date(),
+        assignedToId: '',
     },
   });
 
   useEffect(() => {
     if (eq && vsd) {
       form.reset({
-        equipmentName: eq.name,
+        equipmentName: eq.name || '',
         plant: eq.plant,
         division: eq.division,
-        location: eq.location,
+        location: eq.location || '',
         imageUrl: eq.imageUrl || '',
         pumpHead: eq.pumpHead ?? 0,
         flowRate: eq.flowRate ?? 0,
@@ -95,7 +102,7 @@ export default function EditEquipmentPage() {
         assignedToId: vsd.assignedToId || 'unassigned',
       });
     }
-  }, [eq, vsd, form]);
+  }, [eq, vsd, form.reset]);
 
 
   const watchedPlant = useWatch({
@@ -124,16 +131,12 @@ export default function EditEquipmentPage() {
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
       plant: values.plant,
-      division: values.division,
+      division: values.plant === 'Mining' ? values.division : undefined,
       location: values.location,
       imageUrl: values.imageUrl,
       pumpHead: values.pumpHead || 0,
       flowRate: values.flowRate || 0,
     };
-    
-    if (values.plant !== 'Mining') {
-        equipmentUpdateData.division = undefined;
-    }
 
 
     const vsdUpdateData: Partial<VSD> = {
@@ -448,3 +451,5 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
+
+    
