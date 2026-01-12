@@ -24,7 +24,7 @@ import {
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import type { Equipment, User } from '@/lib/types';
-import { Fan, Droplets, AirVent, PlusCircle, LogIn, Loader2, Trash2 } from 'lucide-react';
+import { Fan, Droplets, AirVent, PlusCircle, LogIn, Loader2, Trash2, Cable, Cog } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,13 @@ const equipmentIcons: Record<string, React.ReactNode> = {
     Pump: <Droplets className="h-4 w-4 text-muted-foreground" />,
     Fan: <Fan className="h-4 w-4 text-muted-foreground" />,
     Compressor: <AirVent className="h-4 w-4 text-muted-foreground" />,
+    Winch: <Cable className="h-4 w-4 text-muted-foreground" />,
+    Motor: <Cog className="h-4 w-4 text-muted-foreground" />,
+    'Hydraulic Motors': <Cog className="h-4 w-4 text-muted-foreground" />,
+    Densifiers: <Cog className="h-4 w-4 text-muted-foreground" />,
+    Mids: <Cog className="h-4 w-4 text-muted-foreground" />,
+    Feeds: <Cog className="h-4 w-4 text-muted-foreground" />,
+    Transfers: <Cog className="h-4 w-4 text-muted-foreground" />,
 }
 
 const validDivisions: Record<string, string> = {
@@ -327,5 +334,3 @@ export default function MiningDivisionPage() {
 
     return <AuthenticatedMiningDivisionPage />;
 }
-
-    
