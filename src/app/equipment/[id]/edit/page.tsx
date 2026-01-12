@@ -73,7 +73,7 @@ export default function EditEquipmentPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
         equipmentName: '',
-        plant: undefined,
+        plant: 'Mining',
         division: undefined,
         location: '',
         imageUrl: '',
@@ -102,7 +102,7 @@ export default function EditEquipmentPage() {
         assignedToId: vsd.assignedToId || 'unassigned',
       });
     }
-  }, [eq, vsd, form.reset]);
+  }, [eq, vsd, form]);
 
 
   const watchedPlant = useWatch({
@@ -221,7 +221,6 @@ export default function EditEquipmentPage() {
                         </FormControl>
                         <SelectContent>
                             <SelectItem value="Mining">Mining</SelectItem>
-                            <SelectItem value="Smelter">Smelter</SelectItem>
                         </SelectContent>
                         </Select>
                         <FormMessage />
@@ -451,5 +450,3 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
-
-    
