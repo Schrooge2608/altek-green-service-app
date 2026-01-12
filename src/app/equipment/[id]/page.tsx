@@ -113,7 +113,7 @@ export default function EquipmentDetailPage() {
             <p className="text-muted-foreground">Detailed view of equipment ID: {eq.id}</p>
         </div>
         <Link href={`/equipment/${id}/edit`} passHref>
-            <Button variant="outline">
+            <Button>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit Equipment
             </Button>
@@ -262,5 +262,3 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
-
-    
