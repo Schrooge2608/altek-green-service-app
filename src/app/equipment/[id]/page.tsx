@@ -298,7 +298,7 @@ export default function EquipmentDetailPage() {
                         <CardTitle>Breakdown History</CardTitle>
                         <CardDescription>Log of all reported issues for this equipment.</CardDescription>
                     </div>
-                    <Link href="/breakdowns/new" passHref>
+                    <Link href={`/breakdowns/new?equipmentId=${eq.id}`} passHref>
                         <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Log Breakdown</Button>
                     </Link>
                 </CardHeader>

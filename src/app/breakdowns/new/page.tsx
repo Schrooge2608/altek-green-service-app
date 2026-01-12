@@ -24,10 +24,10 @@ import { cn } from "@/lib/utils"
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import type { Equipment, VSD } from '@/lib/types';
+import type { Equipment, VSD, Breakdown } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
-import React from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 
 const formSchema = z.object({
@@ -44,6 +44,8 @@ export default function NewBreakdownPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const equipmentIdFromUrl = searchParams.get('equipmentId');
   
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -51,9 +53,16 @@ export default function NewBreakdownPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      equipmentId: equipmentIdFromUrl || '',
       description: '',
     },
   });
+  
+  useEffect(() => {
+    if (equipmentIdFromUrl) {
+      form.setValue('equipmentId', equipmentIdFromUrl);
+    }
+  }, [equipmentIdFromUrl, form]);
 
   const watchedEquipmentId = useWatch({
     control: form.control,
@@ -93,7 +102,7 @@ export default function NewBreakdownPage() {
 
     const breakdownRef = collection(firestore, 'breakdown_reports');
 
-    const breakdownData = {
+    const breakdownData: Omit<Breakdown, 'id'> = {
       equipmentId: values.equipmentId,
       equipmentName: selectedEquipment.name,
       component: values.component.split('::')[0] as Breakdown['component'], // Store only component type
@@ -109,7 +118,7 @@ export default function NewBreakdownPage() {
       title: 'Breakdown Reported',
       description: `The issue for ${selectedEquipment.name} (${values.component}) has been logged.`,
     });
-    form.reset();
+    router.push(`/equipment/${values.equipmentId}`);
   }
 
   return (
@@ -134,7 +143,7 @@ export default function NewBreakdownPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Equipment Cluster</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={equipmentLoading}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={equipmentLoading || !!equipmentIdFromUrl}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select the equipment cluster..." />
@@ -250,5 +259,3 @@ export default function NewBreakdownPage() {
     </div>
   );
 }
-
-    
