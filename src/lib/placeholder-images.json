@@ -29,6 +29,12 @@
       "description": "A user's profile picture.",
       "imageUrl": "https://images.unsplash.com/photo-1521146764736-56c929d59c83?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwb3J0cmFpdCUyMHBlcnNvbnxlbnwwfHx8fDE3Njc1MTEzNDJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "portrait person"
+    },
+    {
+      "id": "winch-1",
+      "description": "An industrial winch.",
+      "imageUrl": "https://images.unsplash.com/photo-1763478488192-be34b513f424?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxpbmR1c3RyaWFsJTIwd2luY2h8ZW58MHx8fHwxNzY4MjAyNjgxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "industrial winch"
     }
   ]
 }
