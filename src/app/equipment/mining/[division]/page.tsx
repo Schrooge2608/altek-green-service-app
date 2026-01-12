@@ -151,6 +151,7 @@ function AuthenticatedMiningDivisionPage() {
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Name</TableHead>
+                                                    <TableHead>Assigned To</TableHead>
                                                     <TableHead className="text-right">Uptime</TableHead>
                                                     <TableHead className="text-right">Power (kWh)</TableHead>
                                                     {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
@@ -164,6 +165,7 @@ function AuthenticatedMiningDivisionPage() {
                                                         {eq.name}
                                                       </Link>
                                                     </TableCell>
+                                                    <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
                                                     <TableCell className="text-right">
                                                       <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
                                                         {eq.uptime}%
@@ -212,6 +214,7 @@ function AuthenticatedMiningDivisionPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Location</TableHead>
+                    <TableHead>Assigned To</TableHead>
                     <TableHead className="text-right">Uptime</TableHead>
                     <TableHead className="text-right">Power (kWh)</TableHead>
                     {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
@@ -227,6 +230,7 @@ function AuthenticatedMiningDivisionPage() {
                           </Link>
                         </TableCell>
                         <TableCell>{eq.location}</TableCell>
+                        <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
                         <TableCell className="text-right">
                           <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
                             {eq.uptime}%
@@ -260,7 +264,7 @@ function AuthenticatedMiningDivisionPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={isKnownAdmin ? 5 : 4} className="text-center h-24">No equipment found for this division.</TableCell>
+                      <TableCell colSpan={isKnownAdmin ? 6 : 5} className="text-center h-24">No equipment found for this division.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -307,5 +311,3 @@ export default function MiningDivisionPage() {
 
     return <AuthenticatedMiningDivisionPage />;
 }
-
-    

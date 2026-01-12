@@ -93,6 +93,7 @@ function AuthenticatedEquipmentPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Division</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead>Assigned To</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
                 <TableHead className="text-right">Power (kWh)</TableHead>
                 {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
@@ -101,7 +102,7 @@ function AuthenticatedEquipmentPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={isKnownAdmin ? 6 : 5} className="text-center h-24">Loading equipment...</TableCell>
+                  <TableCell colSpan={isKnownAdmin ? 7 : 6} className="text-center h-24">Loading equipment...</TableCell>
                 </TableRow>
               ) : equipment && equipment.length > 0 ? (
                 equipment.map((eq) => (
@@ -113,6 +114,7 @@ function AuthenticatedEquipmentPage() {
                     </TableCell>
                     <TableCell>{eq.division || 'N/A'}</TableCell>
                     <TableCell>{eq.location}</TableCell>
+                    <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
                         {eq.uptime}%
@@ -146,7 +148,7 @@ function AuthenticatedEquipmentPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isKnownAdmin ? 6 : 5} className="text-center h-24">No mining equipment found.</TableCell>
+                  <TableCell colSpan={isKnownAdmin ? 7 : 6} className="text-center h-24">No mining equipment found.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -192,5 +194,3 @@ export default function EquipmentPage() {
 
     return <AuthenticatedEquipmentPage />;
 }
-
-    
