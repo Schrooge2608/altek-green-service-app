@@ -35,7 +35,6 @@ import { Combobox } from '@/components/ui/combobox';
 const formSchema = z.object({
   equipmentName: z.string().min(1, 'Equipment name is required'),
   plant: z.enum(['Mining']),
-  division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
   location: z.string().min(1, 'Location is required'),
   imageUrl: z.string().optional(),
   pumpHead: z.coerce.number().optional(),
@@ -74,7 +73,6 @@ export default function EditEquipmentPage() {
     defaultValues: {
         equipmentName: '',
         plant: 'Mining',
-        division: undefined,
         location: '',
         imageUrl: '',
         pumpHead: 0,
@@ -91,7 +89,6 @@ export default function EditEquipmentPage() {
       form.reset({
         equipmentName: eq.name || '',
         plant: eq.plant || 'Mining',
-        division: eq.division,
         location: eq.location || '',
         imageUrl: eq.imageUrl || '',
         pumpHead: eq.pumpHead ?? 0,
@@ -110,19 +107,9 @@ export default function EditEquipmentPage() {
     name: 'plant',
   });
   
-  const watchedDivision = useWatch({
-    control: form.control,
-    name: 'division',
-  });
-
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!eqRef || !vsdRef) {
+    if (!eqRef || !vsdRef || !eq) {
         toast({ variant: 'destructive', title: 'Error', description: 'Equipment or VSD data not loaded.' });
-        return;
-    }
-
-    if (values.plant === 'Mining' && !values.division) {
-        form.setError('division', { type: 'manual', message: 'Please select a division for the Mining plant.' });
         return;
     }
     
@@ -131,7 +118,7 @@ export default function EditEquipmentPage() {
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
       plant: values.plant,
-      division: values.plant === 'Mining' ? values.division : undefined,
+      division: eq.division, // Keep the existing division
       location: values.location,
       imageUrl: values.imageUrl,
       pumpHead: values.pumpHead,
@@ -230,31 +217,16 @@ export default function EditEquipmentPage() {
                       </FormItem>
                       )}
                   />
-                  {watchedPlant === 'Mining' && (
-                      <FormField
-                      control={form.control}
-                      name="division"
-                      render={({ field }) => (
-                          <FormItem>
+                  {eq.plant === 'Mining' && (
+                      <FormItem>
                           <FormLabel>Division</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select a division" />
-                              </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                              <SelectItem value="Boosters">Boosters</SelectItem>
-                              <SelectItem value="Dredgers">Dredgers</SelectItem>
-                              <SelectItem value="Pump Stations">Pump Stations</SelectItem>
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
+                          <FormControl>
+                              <Input value={eq.division} disabled />
+                          </FormControl>
+                      </FormItem>
                   )}
-                  {watchedPlant === 'Mining' && watchedDivision ? (
+                  
+                  {eq.plant === 'Mining' && eq.division ? (
                       <FormField
                       control={form.control}
                       name="location"
@@ -452,7 +424,4 @@ export default function EditEquipmentPage() {
       </Form>
     </div>
   );
-
-    
-
-    
+}
