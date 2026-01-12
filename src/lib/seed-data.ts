@@ -9,11 +9,11 @@ const nextMaintenanceDate = format(new Date(today.setMonth(today.getMonth() + 3)
 // This file is ready for future data seeding.
 // To add new equipment, populate this array following the example structure.
 export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & { model: string; serialNumber: string, installationDate: string }> = [
-  // Example of how to add data:
-  /*
   {
+    name: 'Booster Pump No.1',
     plant: 'Mining',
-    division: 'Pump Stations',
+    division: 'Boosters',
+    location: 'RWBS',
     type: 'Pump',
     lastMaintenance: todayFormatted,
     nextMaintenance: nextMaintenanceDate,
@@ -25,10 +25,26 @@ export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & {
     pumpHead: 0,
     flowRate: 0,
     installationDate: todayFormatted,
-    name: 'New Pump',
-    location: 'New Location',
-    model: 'New Model',
-    serialNumber: 'New-SN-001'
+    model: 'ABB ACS880',
+    serialNumber: 'RWBS-SN-001'
   },
-  */
+  {
+    name: 'Booster Pump No.2',
+    plant: 'Mining',
+    division: 'Boosters',
+    location: 'RWBS',
+    type: 'Pump',
+    lastMaintenance: todayFormatted,
+    nextMaintenance: nextMaintenanceDate,
+    uptime: 100,
+    powerConsumption: 0,
+    totalDowntimeHours: 0,
+    assignedToId: '',
+    assignedToName: '',
+    pumpHead: 0,
+    flowRate: 0,
+    installationDate: todayFormatted,
+    model: 'ABB ACS880',
+    serialNumber: 'RWBS-SN-002'
+  },
 ];
