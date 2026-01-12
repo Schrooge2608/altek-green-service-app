@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
   Form,
@@ -28,9 +28,6 @@ import React, { useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useParams, useRouter, notFound } from 'next/navigation';
 import type { Equipment, User, VSD } from '@/lib/types';
-import backendConfig from '@/docs/backend.json';
-import { Combobox } from '@/components/ui/combobox';
-
 
 const formSchema = z.object({
   equipmentName: z.string().min(1, 'Equipment name is required'),
@@ -60,7 +57,7 @@ export default function EditEquipmentPage() {
   const id = typeof params.id === 'string' ? params.id : '';
 
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
-  const { data: eq, isLoading: eqLoading, error: eqError } = useDoc<Equipment>(eqRef);
+  const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
   
   const vsdRef = useMemoFirebase(() => (eq ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
   const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
@@ -70,42 +67,24 @@ export default function EditEquipmentPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-        equipmentName: '',
-        plant: 'Mining',
-        location: '',
-        imageUrl: '',
-        pumpHead: 0,
-        flowRate: 0,
-        model: '',
-        serialNumber: '',
-        installationDate: new Date(),
-        assignedToId: '',
-    },
   });
 
   useEffect(() => {
     if (eq && vsd) {
       form.reset({
-        equipmentName: eq.name || '',
+        equipmentName: eq.name,
         plant: eq.plant || 'Mining',
-        location: eq.location || '',
+        location: eq.location,
         imageUrl: eq.imageUrl || '',
-        pumpHead: eq.pumpHead ?? 0,
-        flowRate: eq.flowRate ?? 0,
-        model: vsd.model || '',
-        serialNumber: vsd.serialNumber || '',
+        pumpHead: eq.pumpHead || 0,
+        flowRate: eq.flowRate || 0,
+        model: vsd.model,
+        serialNumber: vsd.serialNumber,
         installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
         assignedToId: vsd.assignedToId || 'unassigned',
       });
     }
   }, [eq, vsd, form.reset]);
-
-
-  const watchedPlant = useWatch({
-    control: form.control,
-    name: 'plant',
-  });
   
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!eqRef || !vsdRef || !eq) {
@@ -125,7 +104,6 @@ export default function EditEquipmentPage() {
       flowRate: values.flowRate,
     };
 
-
     const vsdUpdateData: Partial<VSD> = {
         model: values.model,
         serialNumber: values.serialNumber,
@@ -133,7 +111,6 @@ export default function EditEquipmentPage() {
         assignedToId: values.assignedToId === 'unassigned' ? '' : values.assignedToId,
         assignedToName: values.assignedToId === 'unassigned' ? '' : (assignedUser?.name || ''),
     };
-
 
     updateDocumentNonBlocking(eqRef, equipmentUpdateData);
     setDocumentNonBlocking(vsdRef, vsdUpdateData, { merge: true });
@@ -156,7 +133,7 @@ export default function EditEquipmentPage() {
     )
   }
 
-  if (!eq) {
+  if (!eq || !vsd) {
     notFound();
     return null;
   }
@@ -217,14 +194,13 @@ export default function EditEquipmentPage() {
                       </FormItem>
                       )}
                   />
-                  {eq.plant === 'Mining' && (
-                      <FormItem>
-                          <FormLabel>Division</FormLabel>
-                          <FormControl>
-                              <Input value={eq.division} disabled />
-                          </FormControl>
-                      </FormItem>
-                  )}
+                  
+                  <FormItem>
+                      <FormLabel>Division</FormLabel>
+                      <FormControl>
+                          <Input value={eq.division} disabled />
+                      </FormControl>
+                  </FormItem>
                   
                   {eq.plant === 'Mining' && eq.division ? (
                       <FormField
