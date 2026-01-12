@@ -18,6 +18,7 @@ import Link from 'next/link';
 import React, { useMemo } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { EditGeneralInfoForm } from '@/components/equipment/edit-general-info-form';
+import { EditProtectionForm } from '@/components/equipment/edit-protection-form';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -173,11 +174,17 @@ export default function EquipmentDetailPage() {
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-8">
              <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Shield className="text-primary" /> Protection Details</CardTitle>
-                    <CardDescription>Circuit breaker identification, ratings, and settings.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Shield className="text-primary" />
+                        <CardTitle>Protection Details</CardTitle>
+                    </div>
+                    {isKnownAdmin && eq && (
+                        <EditProtectionForm equipment={eq} />
+                    )}
                 </CardHeader>
                 <CardContent className="text-sm space-y-6">
+                    <CardDescription>Circuit breaker identification, ratings, and settings.</CardDescription>
                     <div>
                         <h4 className="font-semibold mb-2 text-muted-foreground">Identification & Location</h4>
                         <DetailRow label="Asset Number / Tag ID" value={eq.breakerAssetNumber} />
