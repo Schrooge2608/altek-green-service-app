@@ -134,8 +134,8 @@ export default function NewEquipmentPage() {
         assignedToName: assignedUser?.name || '',
     };
 
-    setDocumentNonBlocking(equipmentRef, equipmentData);
-    setDocumentNonBlocking(vsdRef, vsdData);
+    setDocumentNonBlocking(equipmentRef, equipmentData, { merge: true });
+    setDocumentNonBlocking(vsdRef, vsdData, { merge: true });
 
     toast({
       title: 'Equipment Added',
@@ -294,6 +294,81 @@ export default function NewEquipmentPage() {
 
           <Card>
             <CardHeader>
+                <CardTitle>Protection Details</CardTitle>
+                <CardDescription>Circuit breaker or vacuum breaker information.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                <FormField
+                    control={form.control}
+                    name="breakerModel"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Breaker Model</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Siemens 3RV" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="breakerAmperage"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Breaker Amperage (A)</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="breakerLocation"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Breaker Location</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Panel PP-01" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="protectionAssignedToId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assigned Protection Technician</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign a technician..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    <>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
                 <CardTitle>VSD Information</CardTitle>
                 <CardDescription>Details for the Variable Speed Drive controlling this equipment.</CardDescription>
             </CardHeader>
@@ -321,7 +396,7 @@ export default function NewEquipmentPage() {
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Assign a technician..." />
-                                </SelectTrigger>
+                                </Trigger>
                             </FormControl>
                             <SelectContent>
                                 {usersLoading ? (
@@ -408,80 +483,6 @@ export default function NewEquipmentPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-                <CardTitle>Protection Details</CardTitle>
-                <CardDescription>Circuit breaker or vacuum breaker information.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-                <FormField
-                    control={form.control}
-                    name="breakerModel"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Breaker Model</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Siemens 3RV" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="breakerAmperage"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Breaker Amperage (A)</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="breakerLocation"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Breaker Location</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Panel PP-01" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="protectionAssignedToId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Assigned Protection Technician</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Assign a technician..." />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {usersLoading ? (
-                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                                ) : (
-                                    <>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                    </>
-                                )}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-            </CardContent>
-          </Card>
           
           <div className="flex justify-end">
             <Button type="submit">Save Equipment</Button>
@@ -491,5 +492,3 @@ export default function NewEquipmentPage() {
     </div>
   );
 }
-
-    
