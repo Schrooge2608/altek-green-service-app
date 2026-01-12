@@ -22,9 +22,26 @@ export interface Equipment {
   motorAssignedToId?: string;
   motorAssignedToName?: string;
   // Protection fields
-  breakerModel?: string;
-  breakerAmperage?: number;
-  breakerLocation?: string;
+  breakerAssetNumber?: string;
+  breakerLocationHierarchy?: string;
+  breakerServiceDescription?: string;
+  breakerManufacturer?: string;
+  breakerModelRange?: string;
+  breakerType?: 'MCB' | 'MCCB' | 'ACB' | 'VCB';
+  breakerRatedVoltage?: number;
+  breakerFrameSize?: number;
+  breakerBreakingCapacity?: number;
+  breakerNumberOfPoles?: 3 | 4;
+  breakerTripUnitType?: 'Thermal-Magnetic' | 'Electronic';
+  breakerOverloadSetting?: number;
+  breakerShortCircuitSetting?: number;
+  breakerInstantaneousSetting?: number;
+  breakerGroundFaultSetting?: string; // Can be complex, string for now
+  breakerOperationMechanism?: 'Manual' | 'Motorized';
+  breakerMotorVoltage?: number;
+  breakerShuntTripVoltage?: number;
+  breakerUndervoltageRelease?: 'Yes' | 'No';
+  breakerAuxiliaryContacts?: string; // e.g., "2NO+2NC"
   protectionInstallationDate?: string;
   // Downtime
   totalDowntimeHours?: number;
@@ -144,9 +161,3 @@ export interface User {
   purchaseOrderNo?: string;
   justification?: string;
 }
-
-    
-
-    
-
-    

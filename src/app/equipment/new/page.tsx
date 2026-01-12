@@ -12,6 +12,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,8 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import type { User, Equipment, VSD } from '@/lib/types';
 import backendConfig from '@/docs/backend.json';
 import { Combobox } from '@/components/ui/combobox';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const formSchema = z.object({
@@ -59,9 +62,26 @@ const formSchema = z.object({
   motorAssignedToId: z.string().optional(),
 
   // Protection fields
-  breakerModel: z.string().optional(),
-  breakerAmperage: z.coerce.number().optional(),
-  breakerLocation: z.string().optional(),
+  breakerAssetNumber: z.string().optional(),
+  breakerLocationHierarchy: z.string().optional(),
+  breakerServiceDescription: z.string().optional(),
+  breakerManufacturer: z.string().optional(),
+  breakerModelRange: z.string().optional(),
+  breakerType: z.enum(['MCB', 'MCCB', 'ACB', 'VCB']).optional(),
+  breakerRatedVoltage: z.coerce.number().optional(),
+  breakerFrameSize: z.coerce.number().optional(),
+  breakerBreakingCapacity: z.coerce.number().optional(),
+  breakerNumberOfPoles: z.enum(['3', '4']).optional(),
+  breakerTripUnitType: z.enum(['Thermal-Magnetic', 'Electronic']).optional(),
+  breakerOverloadSetting: z.coerce.number().optional(),
+  breakerShortCircuitSetting: z.coerce.number().optional(),
+  breakerInstantaneousSetting: z.coerce.number().optional(),
+  breakerGroundFaultSetting: z.string().optional(),
+  breakerOperationMechanism: z.enum(['Manual', 'Motorized']).optional(),
+  breakerMotorVoltage: z.coerce.number().optional(),
+  breakerShuntTripVoltage: z.coerce.number().optional(),
+  breakerUndervoltageRelease: z.enum(['Yes', 'No']).optional(),
+  breakerAuxiliaryContacts: z.string().optional(),
   protectionInstallationDate: z.date().optional(),
   protectionAssignedToId: z.string().optional(),
 
@@ -149,12 +169,31 @@ export default function NewEquipmentPage() {
       uptime: 100,
       powerConsumption: 0,
       totalDowntimeHours: 0,
-      breakerModel: values.breakerModel,
-      breakerAmperage: values.breakerAmperage,
-      breakerLocation: values.breakerLocation,
+      
+      breakerAssetNumber: values.breakerAssetNumber,
+      breakerLocationHierarchy: values.breakerLocationHierarchy,
+      breakerServiceDescription: values.breakerServiceDescription,
+      breakerManufacturer: values.breakerManufacturer,
+      breakerModelRange: values.breakerModelRange,
+      breakerType: values.breakerType,
+      breakerRatedVoltage: values.breakerRatedVoltage,
+      breakerFrameSize: values.breakerFrameSize,
+      breakerBreakingCapacity: values.breakerBreakingCapacity,
+      breakerNumberOfPoles: values.breakerNumberOfPoles ? parseInt(values.breakerNumberOfPoles) as 3 | 4 : undefined,
+      breakerTripUnitType: values.breakerTripUnitType,
+      breakerOverloadSetting: values.breakerOverloadSetting,
+      breakerShortCircuitSetting: values.breakerShortCircuitSetting,
+      breakerInstantaneousSetting: values.breakerInstantaneousSetting,
+      breakerGroundFaultSetting: values.breakerGroundFaultSetting,
+      breakerOperationMechanism: values.breakerOperationMechanism,
+      breakerMotorVoltage: values.breakerMotorVoltage,
+      breakerShuntTripVoltage: values.breakerShuntTripVoltage,
+      breakerUndervoltageRelease: values.breakerUndervoltageRelease,
+      breakerAuxiliaryContacts: values.breakerAuxiliaryContacts,
       protectionInstallationDate: values.protectionInstallationDate ? format(values.protectionInstallationDate, "yyyy-MM-dd") : undefined,
       protectionAssignedToId: values.protectionAssignedToId,
       protectionAssignedToName: protectionAssignedUser?.name,
+
       upsModel: values.upsModel,
       upsSerialNumber: values.upsSerialNumber,
       batteryType: values.batteryType,
@@ -162,6 +201,7 @@ export default function NewEquipmentPage() {
       lastBatteryReplacement: values.lastBatteryReplacement ? format(values.lastBatteryReplacement, "yyyy-MM-dd") : undefined,
       upsAssignedToId: values.upsAssignedToId,
       upsAssignedToName: upsAssignedUser?.name,
+
       motorModel: values.motorModel,
       motorPower: values.motorPower,
       motorVoltage: values.motorVoltage,
@@ -170,6 +210,7 @@ export default function NewEquipmentPage() {
       motorInstallationDate: values.motorInstallationDate ? format(values.motorInstallationDate, "yyyy-MM-dd") : undefined,
       motorAssignedToId: values.motorAssignedToId,
       motorAssignedToName: motorAssignedUser?.name,
+
       pumpType: values.pumpType,
       pumpBrand: values.pumpBrand,
       pumpSerialNumber: values.pumpSerialNumber,
@@ -363,48 +404,53 @@ export default function NewEquipmentPage() {
             <Card>
               <CardHeader>
                   <CardTitle>Protection Details</CardTitle>
-                  <CardDescription>Circuit breaker information.</CardDescription>
+                  <CardDescription>Circuit breaker identification, ratings, and settings.</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-6">
-                  <FormField
-                      control={form.control}
-                      name="breakerModel"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Breaker Model</FormLabel>
-                          <FormControl>
-                          <Input placeholder="e.g., Siemens 3RV" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="breakerAmperage"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Breaker Amperage (A)</FormLabel>
-                          <FormControl>
-                          <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="breakerLocation"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Breaker Location</FormLabel>
-                          <FormControl>
-                          <Input placeholder="e.g., Panel PP-01" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
+              <CardContent className="space-y-6">
+                <div>
+                  <h4 className="mb-4 font-medium text-sm text-muted-foreground">Identification & Location</h4>
+                  <div className="grid gap-4">
+                    <FormField control={form.control} name="breakerAssetNumber" render={({ field }) => (<FormItem><FormLabel>Asset Number / Tag ID</FormLabel><FormControl><Input placeholder="e.g., CB-SUB01-F03" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="breakerLocationHierarchy" render={({ field }) => (<FormItem><FormLabel>Location / Hierarchy</FormLabel><FormControl><Input placeholder="Substation > DB > Cubicle" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="breakerServiceDescription" render={({ field }) => (<FormItem><FormLabel>Service / Description</FormLabel><FormControl><Textarea placeholder="What does it feed? e.g., Conveyor 3 Main Drive" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="breakerManufacturer" render={({ field }) => (<FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g., Schneider, ABB" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="breakerModelRange" render={({ field }) => (<FormItem><FormLabel>Model Range</FormLabel><FormControl><Input placeholder="e.g., Masterpact NW" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="breakerType" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="MCB">MCB (Miniature)</SelectItem><SelectItem value="MCCB">MCCB (Moulded Case)</SelectItem><SelectItem value="ACB">ACB (Air)</SelectItem><SelectItem value="VCB">VCB (Vacuum)</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                  </div>
+                </div>
+                <Separator/>
+                <div>
+                  <h4 className="mb-4 font-medium text-sm text-muted-foreground">Electrical Ratings (Hard Limits)</h4>
+                   <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="breakerRatedVoltage" render={({ field }) => (<FormItem><FormLabel>Rated Voltage (V)</FormLabel><FormControl><Input type="number" placeholder="e.g., 525" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="breakerFrameSize" render={({ field }) => (<FormItem><FormLabel>Frame Size (A)</FormLabel><FormControl><Input type="number" placeholder="e.g., 400" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="breakerBreakingCapacity" render={({ field }) => (<FormItem><FormLabel>Breaking Capacity (kA)</FormLabel><FormControl><Input type="number" placeholder="e.g., 36" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="breakerNumberOfPoles" render={({ field }) => (<FormItem><FormLabel>Number of Poles</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="3">3-Pole</SelectItem><SelectItem value="4">4-Pole</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                  </div>
+                </div>
+                <Separator/>
+                 <div>
+                  <h4 className="mb-4 font-medium text-sm text-muted-foreground">Protection Settings (Soft Limits)</h4>
+                   <div className="grid grid-cols-2 gap-4">
+                      <FormField control={form.control} name="breakerTripUnitType" render={({ field }) => (<FormItem className="col-span-2"><FormLabel>Trip Unit Type</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select trip unit..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="Thermal-Magnetic">Thermal-Magnetic</SelectItem><SelectItem value="Electronic">Electronic (Micrologic, Ekip, etc.)</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name="breakerOverloadSetting" render={({ field }) => (<FormItem><FormLabel>Overload (Ir)</FormLabel><FormControl><Input type="number" placeholder="e.g., 320" {...field} value={field.value ?? ''} /></FormControl><FormDescription>Long-time current</FormDescription><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name="breakerShortCircuitSetting" render={({ field }) => (<FormItem><FormLabel>Short-Circuit (Isd)</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} /></FormControl><FormDescription>Short-time delay</FormDescription><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name="breakerInstantaneousSetting" render={({ field }) => (<FormItem><FormLabel>Instantaneous (Ii)</FormLabel><FormControl><Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} /></FormControl><FormDescription>Immediate trip</FormDescription><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name="breakerGroundFaultSetting" render={({ field }) => (<FormItem><FormLabel>Ground Fault (Ig)</FormLabel><FormControl><Input placeholder="Sensitivity (A) & Time (s)" {...field} value={field.value ?? ''} /></FormControl><FormDescription>Is it enabled?</FormDescription><FormMessage /></FormItem>)} />
+                   </div>
+                </div>
+                <Separator/>
+                <div>
+                  <h4 className="mb-4 font-medium text-sm text-muted-foreground">Accessories & Control</h4>
+                   <div className="grid grid-cols-2 gap-4">
+                     <FormField control={form.control} name="breakerOperationMechanism" render={({ field }) => (<FormItem><FormLabel>Operation Mechanism</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="Manual">Manual (Handle)</SelectItem><SelectItem value="Motorized">Motorized (Electrical)</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="breakerMotorVoltage" render={({ field }) => (<FormItem><FormLabel>Motor Voltage (V)</FormLabel><FormControl><Input type="number" placeholder="110, 230, 24" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="breakerShuntTripVoltage" render={({ field }) => (<FormItem><FormLabel>Shunt Trip Voltage (V)</FormLabel><FormControl><Input type="number" placeholder="e.g., 220" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="breakerUndervoltageRelease" render={({ field }) => (<FormItem><FormLabel>Undervoltage Release</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="Yes">Yes</SelectItem><SelectItem value="No">No</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="breakerAuxiliaryContacts" render={({ field }) => (<FormItem className="col-span-2"><FormLabel>Auxiliary Contacts</FormLabel><FormControl><Input placeholder="e.g., 2 NO + 2 NC" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                  </div>
+                </div>
+                 <Separator/>
                   <FormField
                       control={form.control}
                       name="protectionInstallationDate"
@@ -784,7 +830,7 @@ export default function NewEquipmentPage() {
                 <CardDescription>Details for the pump connected to the motor.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-                 <FormField control={form.control} name="pumpType" render={({ field }) => (
+                <FormField control={form.control} name="pumpType" render={({ field }) => (
                     <FormItem><FormLabel>Pump Type</FormLabel><FormControl><Input placeholder="e.g., Centrifugal" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="pumpBrand" render={({ field }) => (
@@ -860,6 +906,3 @@ export default function NewEquipmentPage() {
     </div>
   );
 }
-
-
-
