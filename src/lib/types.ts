@@ -16,6 +16,8 @@ export interface Equipment {
   motorPower?: number;
   motorVoltage?: number;
   motorSerialNumber?: string;
+  motorAssignedToId?: string;
+  motorAssignedToName?: string;
   // Protection fields
   breakerModel?: string;
   breakerAmperage?: number;
