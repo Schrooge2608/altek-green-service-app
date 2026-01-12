@@ -32,6 +32,7 @@ import type { Equipment, User, VSD } from '@/lib/types';
 
 const formSchema = z.object({
   equipmentName: z.string().min(1, 'Equipment name is required'),
+  type: z.enum(['Pump', 'Fan', 'Compressor', 'Utility Room', 'Winch', 'Motor']),
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
   location: z.string().min(1, 'Location is required'),
@@ -73,6 +74,7 @@ export default function EditEquipmentPage() {
         serialNumber: '',
         model: '',
         equipmentName: '',
+        type: 'Pump',
         location: '',
         imageUrl: '',
         pumpHead: undefined,
@@ -89,6 +91,7 @@ export default function EditEquipmentPage() {
         installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
         assignedToId: vsd.assignedToId || 'unassigned',
         equipmentName: eq.name,
+        type: eq.type,
         plant: eq.plant,
         division: eq.division,
         location: eq.location,
@@ -125,6 +128,7 @@ export default function EditEquipmentPage() {
 
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
+      type: values.type,
       plant: values.plant,
       location: values.location,
       imageUrl: values.imageUrl,
@@ -196,6 +200,31 @@ export default function EditEquipmentPage() {
                         <FormControl>
                         <Input placeholder="e.g., Coolant Pump B" {...field} />
                         </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Equipment Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select an equipment type" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="Pump">Pump</SelectItem>
+                            <SelectItem value="Fan">Fan</SelectItem>
+                            <SelectItem value="Compressor">Compressor</SelectItem>
+                            <SelectItem value="Winch">Winch</SelectItem>
+                            <SelectItem value="Motor">Motor</SelectItem>
+                            <SelectItem value="Utility Room">Utility Room</SelectItem>
+                        </SelectContent>
+                        </Select>
                         <FormMessage />
                     </FormItem>
                     )}

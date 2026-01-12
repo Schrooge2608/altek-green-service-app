@@ -32,6 +32,7 @@ import type { User, Equipment, VSD } from '@/lib/types';
 const formSchema = z.object({
   equipmentId: z.string().min(1, 'Equipment ID is required'),
   equipmentName: z.string().min(1, 'Equipment name is required'),
+  type: z.enum(['Pump', 'Fan', 'Compressor', 'Utility Room', 'Winch', 'Motor']),
   plant: z.enum(['Mining', 'Smelter']),
   division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
   location: z.string().min(1, 'Location is required'),
@@ -64,6 +65,7 @@ export default function NewEquipmentPage() {
     defaultValues: {
       equipmentId: '',
       equipmentName: '',
+      type: 'Pump',
       location: '',
       imageUrl: '',
       vsdId: '',
@@ -96,7 +98,7 @@ export default function NewEquipmentPage() {
     const equipmentData: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> & {totalDowntimeHours: number, powerConsumption: number} = {
       id: values.equipmentId,
       name: values.equipmentName,
-      type: 'Pump', // Defaulting to Pump
+      type: values.type,
       plant: values.plant,
       vsdId: values.vsdId,
       location: values.location,
@@ -173,6 +175,31 @@ export default function NewEquipmentPage() {
                     <FormControl>
                       <Input placeholder="e.g., Coolant Pump B" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Equipment Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an equipment type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Pump">Pump</SelectItem>
+                        <SelectItem value="Fan">Fan</SelectItem>
+                        <SelectItem value="Compressor">Compressor</SelectItem>
+                        <SelectItem value="Winch">Winch</SelectItem>
+                        <SelectItem value="Motor">Motor</SelectItem>
+                        <SelectItem value="Utility Room">Utility Room</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
