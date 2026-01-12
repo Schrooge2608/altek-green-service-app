@@ -1,5 +1,4 @@
 
-
 {
   "entities": {
     "VSD": {
@@ -38,6 +37,7 @@
         "motorPower": { "type": "number" },
         "motorVoltage": { "type": "number" },
         "motorSerialNumber": { "type": "string" },
+        "motorFrameType": { "type": "string" },
         "motorAssignedToId": { "type": "string", "description": "The UID of the user assigned to the motor." },
         "motorAssignedToName": { "type": "string", "description": "The name of the user assigned to the motor." },
         "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." },
@@ -53,7 +53,21 @@
         "batteryType": { "type": "string", "description": "The type of batteries used in the UPS." },
         "lastBatteryReplacement": { "type": "string", "format": "date", "description": "The date the UPS batteries were last replaced." },
         "upsAssignedToId": { "type": "string", "description": "The UID of the user assigned to the UPS." },
-        "upsAssignedToName": { "type": "string", "description": "The name of the user assigned to the UPS." }
+        "upsAssignedToName": { "type": "string", "description": "The name of the user assigned to the UPS." },
+        "pumpHead": { "type": "number", "description": "The head of the pump in meters." },
+        "flowRate": { "type": "number", "description": "The flow rate of the pump in m³/h." },
+        "pumpType": { "type": "string" },
+        "pumpBrand": { "type": "string" },
+        "pumpSerialNumber": { "type": "string" },
+        "pumpManufacturer": { "type": "string" },
+        "pumpImpellerDiameter": { "type": "number" },
+        "pumpCommissionDate": { "type": "string", "format": "date" },
+        "pumpFlangeSizeIn": { "type": "number" },
+        "pumpFlangeSizeOutlet": { "type": "number" },
+        "pumpFrameSize": { "type": "string" },
+        "pumpFrameType": { "type": "string" },
+        "pumpAssignedToId": { "type": "string", "description": "The UID of the user assigned to the pump." },
+        "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." }
       },
       "required": ["id", "name", "location", "vsdId", "plant"]
     },
@@ -214,5 +228,6 @@
     ]
   }
 }
+    
 
     

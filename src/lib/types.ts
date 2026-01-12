@@ -1,4 +1,5 @@
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -16,6 +17,7 @@ export interface Equipment {
   motorPower?: number;
   motorVoltage?: number;
   motorSerialNumber?: string;
+  motorFrameType?: string;
   motorAssignedToId?: string;
   motorAssignedToName?: string;
   // Protection fields
@@ -43,6 +45,16 @@ export interface Equipment {
   // Pump fields
   pumpHead?: number;
   flowRate?: number;
+  pumpType?: string;
+  pumpBrand?: string;
+  pumpSerialNumber?: string;
+  pumpManufacturer?: string;
+  pumpImpellerDiameter?: number;
+  pumpCommissionDate?: string;
+  pumpFlangeSizeIn?: number;
+  pumpFlangeSizeOutlet?: number;
+  pumpFrameSize?: string;
+  pumpFrameType?: string;
   pumpAssignedToId?: string;
   pumpAssignedToName?: string;
 }
@@ -129,5 +141,7 @@ export interface User {
   purchaseOrderNo?: string;
   justification?: string;
 }
+
+    
 
     
