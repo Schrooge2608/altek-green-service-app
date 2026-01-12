@@ -18,12 +18,14 @@ export interface Equipment {
   motorVoltage?: number;
   motorSerialNumber?: string;
   motorFrameType?: string;
+  motorInstallationDate?: string;
   motorAssignedToId?: string;
   motorAssignedToName?: string;
   // Protection fields
   breakerModel?: string;
   breakerAmperage?: number;
   breakerLocation?: string;
+  protectionInstallationDate?: string;
   // Downtime
   totalDowntimeHours?: number;
   // VSD is not a separate type but its fields are on Equipment
@@ -39,6 +41,7 @@ export interface Equipment {
   upsModel?: string;
   upsSerialNumber?: string;
   batteryType?: string;
+  upsInstallationDate?: string;
   lastBatteryReplacement?: string;
   upsAssignedToId?: string;
   upsAssignedToName?: string;
@@ -141,6 +144,8 @@ export interface User {
   purchaseOrderNo?: string;
   justification?: string;
 }
+
+    
 
     
 

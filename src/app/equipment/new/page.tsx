@@ -55,28 +55,31 @@ const formSchema = z.object({
   motorVoltage: z.coerce.number().optional(),
   motorSerialNumber: z.string().optional(),
   motorFrameType: z.string().optional(),
+  motorInstallationDate: z.date().optional(),
   motorAssignedToId: z.string().optional(),
 
   // Protection fields
   breakerModel: z.string().optional(),
   breakerAmperage: z.coerce.number().optional(),
   breakerLocation: z.string().optional(),
+  protectionInstallationDate: z.date().optional(),
   protectionAssignedToId: z.string().optional(),
 
   // UPS/BTU fields
   upsModel: z.string().optional(),
   upsSerialNumber: z.string().optional(),
   batteryType: z.string().optional(),
+  upsInstallationDate: z.date().optional(),
   lastBatteryReplacement: z.date().optional(),
   upsAssignedToId: z.string().optional(),
 
   // Pump fields
-  pumpHead: z.coerce.number().optional(),
-  flowRate: z.coerce.number().optional(),
   pumpType: z.string().optional(),
   pumpBrand: z.string().optional(),
   pumpSerialNumber: z.string().optional(),
   pumpManufacturer: z.string().optional(),
+  pumpHead: z.coerce.number().optional(),
+  flowRate: z.coerce.number().optional(),
   pumpImpellerDiameter: z.coerce.number().optional(),
   pumpCommissionDate: z.date().optional(),
   pumpFlangeSizeIn: z.coerce.number().optional(),
@@ -149,11 +152,13 @@ export default function NewEquipmentPage() {
       breakerModel: values.breakerModel,
       breakerAmperage: values.breakerAmperage,
       breakerLocation: values.breakerLocation,
+      protectionInstallationDate: values.protectionInstallationDate ? format(values.protectionInstallationDate, "yyyy-MM-dd") : undefined,
       protectionAssignedToId: values.protectionAssignedToId,
       protectionAssignedToName: protectionAssignedUser?.name,
       upsModel: values.upsModel,
       upsSerialNumber: values.upsSerialNumber,
       batteryType: values.batteryType,
+      upsInstallationDate: values.upsInstallationDate ? format(values.upsInstallationDate, "yyyy-MM-dd") : undefined,
       lastBatteryReplacement: values.lastBatteryReplacement ? format(values.lastBatteryReplacement, "yyyy-MM-dd") : undefined,
       upsAssignedToId: values.upsAssignedToId,
       upsAssignedToName: upsAssignedUser?.name,
@@ -162,14 +167,15 @@ export default function NewEquipmentPage() {
       motorVoltage: values.motorVoltage,
       motorSerialNumber: values.motorSerialNumber,
       motorFrameType: values.motorFrameType,
+      motorInstallationDate: values.motorInstallationDate ? format(values.motorInstallationDate, "yyyy-MM-dd") : undefined,
       motorAssignedToId: values.motorAssignedToId,
       motorAssignedToName: motorAssignedUser?.name,
-      pumpHead: values.pumpHead,
-      flowRate: values.flowRate,
       pumpType: values.pumpType,
       pumpBrand: values.pumpBrand,
       pumpSerialNumber: values.pumpSerialNumber,
       pumpManufacturer: values.pumpManufacturer,
+      pumpHead: values.pumpHead,
+      flowRate: values.flowRate,
       pumpImpellerDiameter: values.pumpImpellerDiameter,
       pumpCommissionDate: values.pumpCommissionDate ? format(values.pumpCommissionDate, "yyyy-MM-dd") : undefined,
       pumpFlangeSizeIn: values.pumpFlangeSizeIn,
@@ -401,6 +407,32 @@ export default function NewEquipmentPage() {
                   />
                   <FormField
                       control={form.control}
+                      name="protectionInstallationDate"
+                      render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                          <FormLabel>Installation Date</FormLabel>
+                          <Popover>
+                          <PopoverTrigger asChild>
+                              <FormControl>
+                              <Button
+                                  variant={"outline"}
+                                  className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                              >
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                              </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                          </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
                       name="protectionAssignedToId"
                       render={({ field }) => (
                       <FormItem>
@@ -470,6 +502,32 @@ export default function NewEquipmentPage() {
                           <FormControl>
                           <Input placeholder="e.g., Lead-Acid, Li-Ion" {...field} value={field.value ?? ''} />
                           </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="upsInstallationDate"
+                      render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                          <FormLabel>Installation Date</FormLabel>
+                          <Popover>
+                          <PopoverTrigger asChild>
+                              <FormControl>
+                              <Button
+                                  variant={"outline"}
+                                  className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                              >
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                              </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                          </PopoverContent>
+                          </Popover>
                           <FormMessage />
                       </FormItem>
                       )}
@@ -669,6 +727,32 @@ export default function NewEquipmentPage() {
                     <FormField control={form.control} name="motorFrameType" render={({ field }) => (
                         <FormItem><FormLabel>Motor Frame Type</FormLabel><FormControl><Input placeholder="e.g., IEC 132" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
+                    <FormField
+                      control={form.control}
+                      name="motorInstallationDate"
+                      render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                          <FormLabel>Installation Date</FormLabel>
+                          <Popover>
+                          <PopoverTrigger asChild>
+                              <FormControl>
+                              <Button
+                                  variant={"outline"}
+                                  className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                              >
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                              </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                          </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                    />
                      <FormField control={form.control} name="motorAssignedToId" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Assigned Motor Technician</FormLabel>
@@ -778,3 +862,6 @@ export default function NewEquipmentPage() {
   );
 }
 
+
+
+    
