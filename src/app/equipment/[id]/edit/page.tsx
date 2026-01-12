@@ -134,8 +134,8 @@ export default function EditEquipmentPage() {
       division: values.plant === 'Mining' ? values.division : undefined,
       location: values.location,
       imageUrl: values.imageUrl,
-      pumpHead: values.pumpHead || 0,
-      flowRate: values.flowRate || 0,
+      pumpHead: values.pumpHead,
+      flowRate: values.flowRate,
     };
 
 
@@ -297,7 +297,7 @@ export default function EditEquipmentPage() {
                       <FormItem>
                           <FormLabel>Pump Head (m)</FormLabel>
                           <FormControl>
-                          <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? 0} />
+                          <Input type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} />
                           </FormControl>
                           <FormMessage />
                       </FormItem>
@@ -310,7 +310,7 @@ export default function EditEquipmentPage() {
                       <FormItem>
                           <FormLabel>Flow Rate (m³/h)</FormLabel>
                           <FormControl>
-                          <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? 0} />
+                          <Input type="number" placeholder="e.g., 120" {...field} value={field.value ?? ''} />
                           </FormControl>
                           <FormMessage />
                       </FormItem>
@@ -452,5 +452,7 @@ export default function EditEquipmentPage() {
       </Form>
     </div>
   );
+
+    
 
     
