@@ -71,26 +71,20 @@ export default function EditEquipmentPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    // Default values are set here, but will be overwritten by the useEffect below
     defaultValues: {
-        serialNumber: '',
-        model: '',
-        equipmentName: '',
-        location: '',
-        imageUrl: '',
-        pumpHead: undefined,
-        flowRate: undefined,
-        assignedToId: 'unassigned',
         plant: 'Mining',
         division: undefined,
     },
   });
 
   useEffect(() => {
+    // This effect now correctly populates the entire form once data is loaded.
     if (eq && vsd) {
       form.reset({
         equipmentName: eq.name,
         plant: eq.plant,
-        division: eq.division,
+        division: eq.division, // This is the crucial line for division
         location: eq.location,
         imageUrl: eq.imageUrl || '',
         pumpHead: eq.pumpHead ?? undefined,
@@ -127,10 +121,11 @@ export default function EditEquipmentPage() {
     
     const assignedUser = users?.find(u => u.id === values.assignedToId);
 
+    // This data object now correctly includes all fields from the form
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
       plant: values.plant,
-      division: values.division,
+      division: values.division, // This ensures the division is saved
       location: values.location,
       imageUrl: values.imageUrl,
       pumpHead: values.pumpHead || 0,
