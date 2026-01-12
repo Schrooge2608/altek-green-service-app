@@ -26,8 +26,8 @@ import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Equipment, VSD, Breakdown } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
-import React, { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React from 'react';
+import { useRouter } from 'next/navigation';
 
 
 const formSchema = z.object({
@@ -44,8 +44,6 @@ export default function NewBreakdownPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const equipmentIdFromUrl = searchParams.get('equipmentId');
   
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -53,16 +51,10 @@ export default function NewBreakdownPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      equipmentId: equipmentIdFromUrl || '',
+      equipmentId: '',
       description: '',
     },
   });
-  
-  useEffect(() => {
-    if (equipmentIdFromUrl) {
-      form.setValue('equipmentId', equipmentIdFromUrl);
-    }
-  }, [equipmentIdFromUrl, form]);
 
   const watchedEquipmentId = useWatch({
     control: form.control,
@@ -143,7 +135,7 @@ export default function NewBreakdownPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Equipment Cluster</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={equipmentLoading || !!equipmentIdFromUrl}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={equipmentLoading}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select the equipment cluster..." />
