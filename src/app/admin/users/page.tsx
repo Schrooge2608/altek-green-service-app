@@ -182,12 +182,6 @@ export default function UserManagementPage() {
                 </div>
                 {isKnownAdmin && (
                     <div className='flex items-center gap-2'>
-                        <Link href="/admin/seed" passHref>
-                            <Button variant="outline">
-                                <Database className="mr-2 h-4 w-4" />
-                                Seed Data
-                            </Button>
-                        </Link>
                         <Link href="/admin/users/new" passHref>
                             <Button>
                                 <PlusCircle className="mr-2 h-4 w-4" />
