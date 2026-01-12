@@ -50,7 +50,7 @@ const formSchema = z.object({
   assignedToId: z.string().optional(),
 });
 
-const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
+const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING", "Tailings Booster Pumps", "Concentrator Booster Pumps", "Smelter Area 1", "Smelter Area 2", "RWBS"];
 
 export default function EditEquipmentPage() {
   const { toast } = useToast();
@@ -88,10 +88,6 @@ export default function EditEquipmentPage() {
   useEffect(() => {
     if (eq && vsd) {
       form.reset({
-        serialNumber: vsd.serialNumber || '',
-        model: vsd.model || '',
-        installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
-        assignedToId: vsd.assignedToId || 'unassigned',
         equipmentName: eq.name,
         plant: eq.plant,
         division: eq.division,
@@ -99,6 +95,10 @@ export default function EditEquipmentPage() {
         imageUrl: eq.imageUrl || '',
         pumpHead: eq.pumpHead ?? undefined,
         flowRate: eq.flowRate ?? undefined,
+        model: vsd.model || '',
+        serialNumber: vsd.serialNumber || '',
+        installationDate: vsd.installationDate ? parseISO(vsd.installationDate) : new Date(),
+        assignedToId: vsd.assignedToId || 'unassigned',
       });
     }
   }, [eq, vsd, form]);
@@ -255,7 +255,7 @@ export default function EditEquipmentPage() {
                     )}
                     />
                 )}
-                {watchedPlant === 'Mining' && watchedDivision === 'Dredgers' ? (
+                {watchedPlant === 'Mining' && watchedDivision ? (
                     <FormField
                     control={form.control}
                     name="location"
@@ -454,3 +454,5 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
+
+    
