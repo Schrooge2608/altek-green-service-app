@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power } from 'lucide-react';
+import { PlusCircle, Pencil, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -157,30 +157,18 @@ export default function EquipmentDetailPage() {
         <div className="lg:col-span-2 space-y-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Equipment Details</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Info className="text-primary" /> General Information</CardTitle>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
-                    <div>
-                        <h3 className="font-semibold text-muted-foreground">Information</h3>
-                        <div className="mt-2 space-y-1">
-                            <p><strong>ID:</strong> {eq.id}</p>
-                            <p><strong>Location:</strong> {eq.location}</p>
-                            <p><strong>Plant:</strong> {eq.plant} {eq.division && `> ${eq.division}`}</p>
-                        </div>
-                    </div>
-                     <div>
-                        <h3 className="font-semibold text-muted-foreground">Pump Specifications</h3>
-                         <div className="mt-2 space-y-1">
-                            <p><strong>Pump Head:</strong> {eq.pumpHead > 0 ? `${eq.pumpHead}m` : 'N/A'}</p>
-                            <p><strong>Flow Rate:</strong> {eq.flowRate > 0 ? `${eq.flowRate} m³/h`: 'N/A'}</p>
-                        </div>
-                    </div>
+                    <DetailRow label="ID" value={eq.id} />
+                    <DetailRow label="Location" value={eq.location} />
+                    <DetailRow label="Plant" value={`${eq.plant} ${eq.division ? `> ${eq.division}` : ''}`} />
                 </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Protection Details</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Shield className="text-primary" /> Protection Details</CardTitle>
                     <CardDescription>Circuit breaker identification, ratings, and settings.</CardDescription>
                 </CardHeader>
                 <CardContent className="text-sm space-y-6">
@@ -230,7 +218,7 @@ export default function EquipmentDetailPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>UPS/BTU Details</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Power className="text-primary" /> UPS/BTU Details</CardTitle>
                     <CardDescription>Battery backup unit information.</CardDescription>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
@@ -245,41 +233,25 @@ export default function EquipmentDetailPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>VSD Information</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Cpu className="text-primary" /> VSD Information</CardTitle>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
-                    <div>
-                        <h3 className="font-semibold text-muted-foreground">VSD Details</h3>
-                        <div className="mt-2 space-y-1">
-                            <p><strong>VSD Model:</strong> {vsd?.model || 'N/A'}</p>
-                            <p><strong>VSD S/N:</strong> {vsd?.serialNumber || 'N/A'}</p>
-                            <div><strong>Status:</strong> <Badge variant={vsd?.status === 'active' ? 'default' : (vsd?.status === 'maintenance' ? 'secondary' : 'destructive')}>{vsd?.status || 'Unknown'}</Badge></div>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-muted-foreground">Assigned Technician</h3>
-                        <div className="mt-2 flex items-center gap-3">
-                            <User className="w-5 h-5 text-muted-foreground" />
-                            <div>
-                                <p className="font-medium">{vsd?.assignedToName || 'Unassigned'}</p>
-                                <p className="text-xs text-muted-foreground">VSD Technician</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-muted-foreground">Maintenance</h3>
-                         <div className="mt-2 space-y-1">
-                            <p><strong>Last:</strong> {eq.lastMaintenance}</p>
-                            <p><strong>Next:</strong> {eq.nextMaintenance}</p>
-                             <p><strong>Installation:</strong> {vsd?.installationDate || 'N/A'}</p>
-                        </div>
+                    <DetailRow label="VSD Model" value={vsd?.model} />
+                    <DetailRow label="VSD S/N" value={vsd?.serialNumber} />
+                    <DetailRow label="Installation Date" value={vsd?.installationDate} />
+                    <DetailRow label="Assigned Technician" value={vsd?.assignedToName} />
+                    <div className="flex justify-between py-1.5 border-b border-dashed col-span-2 md:col-span-1">
+                        <span className="text-muted-foreground">Status:</span>
+                        <span className="font-medium text-right">
+                           <Badge variant={vsd?.status === 'active' ? 'default' : (vsd?.status === 'maintenance' ? 'secondary' : 'destructive')}>{vsd?.status || 'Unknown'}</Badge>
+                        </span>
                     </div>
                 </CardContent>
             </Card>
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Motor Information</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Cog className="text-primary" /> Motor Information</CardTitle>
                     <CardDescription>Details for the motor driven by the VSD.</CardDescription>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
@@ -290,6 +262,31 @@ export default function EquipmentDetailPage() {
                     <DetailRow label="Motor Frame Type" value={eq.motorFrameType} />
                     <DetailRow label="Installation Date" value={eq.motorInstallationDate} />
                     <DetailRow label="Assigned Technician" value={eq.motorAssignedToName} />
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Droplets className="text-primary" /> Pump Information</CardTitle>
+                    <CardDescription>Details for the pump connected to the motor.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                    <DetailRow label="Pump Type" value={eq.pumpType} />
+                    <DetailRow label="Pump Brand" value={eq.pumpBrand} />
+                    <DetailRow label="Pump S/N" value={eq.pumpSerialNumber} />
+                    <DetailRow label="Manufacturer" value={eq.pumpManufacturer} />
+                    <Separator className="md:col-span-2 my-2"/>
+                    <DetailRow label="Pump Head" value={eq.pumpHead ? `${eq.pumpHead} m` : null} />
+                    <DetailRow label="Flow Rate" value={eq.flowRate ? `${eq.flowRate} m³/h` : null} />
+                    <DetailRow label="Impeller Diameter" value={eq.pumpImpellerDiameter ? `${eq.pumpImpellerDiameter} mm` : null} />
+                    <DetailRow label="Date Commissioned" value={eq.pumpCommissionDate} />
+                    <Separator className="md:col-span-2 my-2"/>
+                    <DetailRow label="Flange Size In" value={eq.pumpFlangeSizeIn ? `${eq.pumpFlangeSizeIn} mm` : null} />
+                    <DetailRow label="Flange Size Outlet" value={eq.pumpFlangeSizeOutlet ? `${eq.pumpFlangeSizeOutlet} mm` : null} />
+                    <DetailRow label="Frame Size" value={eq.pumpFrameSize} />
+                    <DetailRow label="Frame Type" value={eq.pumpFrameType} />
+                    <Separator className="md:col-span-2 my-2"/>
+                    <DetailRow label="Assigned Technician" value={eq.pumpAssignedToName} />
                 </CardContent>
             </Card>
 
@@ -375,4 +372,3 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
-
