@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, ArrowLeft } from 'lucide-react';
 import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, useUser, setDocumentNonBlocking } from '@/firebase';
@@ -183,11 +183,17 @@ export default function EditEquipmentPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Equipment: {eq.name}</h1>
-        <p className="text-muted-foreground">
-          Update the details for this piece of equipment.
-        </p>
+      <header className="flex items-center justify-between">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Edit Equipment: {eq.name}</h1>
+            <p className="text-muted-foreground">
+            Update the details for this piece of equipment.
+            </p>
+        </div>
+        <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+        </Button>
       </header>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -465,7 +471,7 @@ export default function EditEquipmentPage() {
           </Card>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => router.back()}>Back</Button>
             <Button type="submit">Save Changes</Button>
           </div>
         </form>
