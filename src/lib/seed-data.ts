@@ -1,7 +1,7 @@
 
 import type { Equipment, VSD } from './types';
 import { format } from 'date-fns';
-import { doc } from 'firebase/firestore';
+import { collection, writeBatch, doc } from 'firebase/firestore';
 
 const today = new Date();
 const installationDate = format(new Date('2023-01-01'), "yyyy-MM-dd");
@@ -91,7 +91,6 @@ export const seedVsds: VSD[] = seedEquipment.map(eq => ({
 
 
 export async function seedDatabase(firestore: any) {
-  const { collection, writeBatch, doc } = await import('firebase/firestore');
 
   const batch = writeBatch(firestore);
 
