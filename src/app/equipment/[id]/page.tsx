@@ -19,6 +19,7 @@ import React, { useMemo } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { EditGeneralInfoForm } from '@/components/equipment/edit-general-info-form';
 import { EditProtectionForm } from '@/components/equipment/edit-protection-form';
+import { EditUpsForm } from '@/components/equipment/edit-ups-form';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -231,11 +232,17 @@ export default function EquipmentDetailPage() {
         </div>
         <div className="space-y-8">
             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Power className="text-primary" /> UPS/BTU Details</CardTitle>
-                    <CardDescription>Battery backup unit information.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Power className="text-primary" />
+                      <CardTitle>UPS/BTU Details</CardTitle>
+                    </div>
+                    {isKnownAdmin && eq && (
+                        <EditUpsForm equipment={eq} />
+                    )}
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
+                    <CardDescription>Battery backup unit information.</CardDescription>
                     <DetailRow label="UPS Model" value={eq.upsModel} />
                     <DetailRow label="UPS Serial Number" value={eq.upsSerialNumber} />
                     <DetailRow label="Battery Type" value={eq.batteryType} />
