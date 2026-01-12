@@ -130,17 +130,12 @@ export default function EditEquipmentPage() {
     const equipmentUpdateData: Partial<Equipment> = {
       name: values.equipmentName,
       plant: values.plant,
+      division: values.plant === 'Mining' ? values.division : undefined,
       location: values.location,
       imageUrl: values.imageUrl,
       pumpHead: values.pumpHead || 0,
       flowRate: values.flowRate || 0,
     };
-
-    if (values.plant === 'Mining') {
-        equipmentUpdateData.division = values.division;
-    } else {
-        equipmentUpdateData.division = undefined;
-    }
 
     const vsdUpdateData: Partial<VSD> = {
         model: values.model,
@@ -454,5 +449,3 @@ export default function EditEquipmentPage() {
     </div>
   );
 }
-
-    
