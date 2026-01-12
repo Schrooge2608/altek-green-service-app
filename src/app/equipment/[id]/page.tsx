@@ -82,7 +82,7 @@ export default function EquipmentDetailPage() {
   const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
 
   const breakdownsQuery = useMemoFirebase(() => (id ? query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', id)) : null), [firestore, id]);
-  const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
+  const { data: eqBreakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(eqBreakdowns);
 
   const uptimePercentage = useMemo(() => {
     if (!vsd?.installationDate || !eq) return 100;
