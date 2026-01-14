@@ -32,6 +32,10 @@ import {
   Gauge,
   Store,
   Database,
+  Cpu,
+  Cog,
+  Droplets,
+  Power,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -79,6 +83,19 @@ const completedSchedulesCategories = [
     { href: '/maintenance/completed/pumps', label: 'Pumps' },
 ]
 
+const vsdProcedureSubMenu = [
+    { href: '/maintenance/vsds/weekly', label: 'Weekly' },
+    { href: '/maintenance/vsds/monthly', label: 'Monthly' },
+    { href: '/maintenance/vsds/3-monthly', label: '3-Monthly' },
+    { href: '/maintenance/vsds/6-monthly', label: '6-Monthly' },
+    { href: '/maintenance/vsds/yearly', label: 'Yearly' },
+];
+
+const protectionProcedureSubMenu = [
+    { href: '/maintenance/protection/6-monthly', label: '6-Monthly' },
+];
+
+
 const inventorySubMenu = [
     { href: '/inventory/parts', label: 'Parts' },
     { href: '/inventory/needs-restock', label: 'Needs Restock' },
@@ -124,6 +141,7 @@ export function SidebarNav() {
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
   const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library'));
   const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed'));
+  const [isProceduresOpen, setIsProceduresOpen] = React.useState(pathname.startsWith('/maintenance/vsds') || pathname.startsWith('/maintenance/protection'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -257,7 +275,7 @@ export function SidebarNav() {
            <Collapsible open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Maintenance" isActive={pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed')}>
+                        <SidebarMenuButton tooltip="Maintenance" isActive={pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed') && !pathname.startsWith('/maintenance/vsds') && !pathname.startsWith('/maintenance/protection')}>
                             <Calendar />
                             <span>Maintenance</span>
                             <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
@@ -275,6 +293,70 @@ export function SidebarNav() {
                                 </Link>
                             </SidebarMenuItem>
                         ))}
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+           </Collapsible>
+
+           <Collapsible open={isProceduresOpen} onOpenChange={setIsProceduresOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Maintenance Procedures" isActive={pathname.startsWith('/maintenance/vsds') || pathname.startsWith('/maintenance/protection')}>
+                            <FileText />
+                            <span>Maint. Procedures</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                        <Collapsible open={pathname.startsWith('/maintenance/vsds')} onOpenChange={(isOpen) => setIsProceduresOpen(isOpen)}>
+                             <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton tooltip="VSD Procedures" isActive={pathname.startsWith('/maintenance/vsds')}>
+                                        <Cpu />
+                                        <span>VSDs</span>
+                                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                    </SidebarMenuButton>
+                                </CollapsibleTrigger>
+                            </SidebarMenuItem>
+                            <CollapsibleContent>
+                                <SidebarMenuSub>
+                                {vsdProcedureSubMenu.map((item) => (
+                                    <SidebarMenuItem key={item.href}>
+                                        <Link href={item.href} passHref>
+                                            <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                            <span>{item.label}</span>
+                                            </SidebarMenuSubButton>
+                                        </Link>
+                                    </SidebarMenuItem>
+                                ))}
+                                </SidebarMenuSub>
+                            </CollapsibleContent>
+                        </Collapsible>
+                        <Collapsible open={pathname.startsWith('/maintenance/protection')} onOpenChange={(isOpen) => setIsProceduresOpen(isOpen)}>
+                             <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton tooltip="Protection Procedures" isActive={pathname.startsWith('/maintenance/protection')}>
+                                        <Shield />
+                                        <span>Protection</span>
+                                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                    </SidebarMenuButton>
+                                </CollapsibleTrigger>
+                            </SidebarMenuItem>
+                            <CollapsibleContent>
+                                <SidebarMenuSub>
+                                {protectionProcedureSubMenu.map((item) => (
+                                    <SidebarMenuItem key={item.href}>
+                                        <Link href={item.href} passHref>
+                                            <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                            <span>{item.label}</span>
+                                            </SidebarMenuSubButton>
+                                        </Link>
+                                    </SidebarMenuItem>
+                                ))}
+                                </SidebarMenuSub>
+                            </CollapsibleContent>
+                        </Collapsible>
                     </SidebarMenuSub>
                 </CollapsibleContent>
            </Collapsible>
