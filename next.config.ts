@@ -1,6 +1,6 @@
 import type {NextConfig} from 'next';
 
-// Triggering a server restart to apply Firebase config changes.
+// Triggering a server restart to apply Firebase config changes and remove .firebaserc.
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
