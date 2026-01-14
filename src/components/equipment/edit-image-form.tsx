@@ -80,7 +80,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
   }, [isOpen]);
 
   const getCameraPermission = async () => {
-    if (hasCameraPermission) return;
+    if (hasCameraPermission !== null) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setHasCameraPermission(true);
@@ -173,8 +173,8 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
             
             <Tabs defaultValue="upload">
                 <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="upload"><Upload className="mr-2" /> Upload File</TabsTrigger>
-                    <TabsTrigger value="camera" onClick={getCameraPermission}><Video className="mr-2" /> Use Camera</TabsTrigger>
+                    <TabsTrigger value="upload"><Upload className="mr-2 h-4 w-4" /> Upload File</TabsTrigger>
+                    <TabsTrigger value="camera" onClick={getCameraPermission}><Video className="mr-2 h-4 w-4" /> Use Camera</TabsTrigger>
                 </TabsList>
                 <TabsContent value="upload">
                     <Form {...form}>
@@ -195,7 +195,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
                             <DialogFooter>
                                 <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                                 <Button type="submit" disabled={isUploading}>
-                                    {isUploading ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
+                                    {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                                     {isUploading ? 'Uploading...' : 'Upload Image'}
                                 </Button>
                             </DialogFooter>
@@ -212,10 +212,10 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
                                 <>
                                     <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
                                     {hasCameraPermission === false && (
-                                        <Alert variant="destructive" className="w-auto">
-                                            <AlertTriangle />
+                                        <Alert variant="destructive" className="absolute w-auto m-4">
+                                            <AlertTriangle className="h-4 w-4" />
                                             <AlertTitle>Camera Access Denied</AlertTitle>
-                                            <AlertDescription>Enable camera permissions to use this feature.</AlertDescription>
+                                            <AlertDescription>Enable permissions to use this feature.</AlertDescription>
                                         </Alert>
                                     )}
                                 </>
@@ -226,17 +226,17 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
                             {capturedImage ? (
                                 <>
                                     <Button variant="outline" onClick={handleRetake} disabled={isUploading}>
-                                        <RefreshCw className="mr-2" />
+                                        <RefreshCw className="mr-2 h-4 w-4" />
                                         Retake
                                     </Button>
                                     <Button onClick={handleAcceptAndUpload} disabled={isUploading}>
-                                        {isUploading ? <Loader2 className="mr-2 animate-spin" /> : <Check className="mr-2" />}
+                                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                                         {isUploading ? 'Uploading...' : 'Accept & Upload'}
                                     </Button>
                                 </>
                             ) : (
-                                <Button onClick={handleTakePicture} disabled={isUploading || !hasCameraPermission}>
-                                    <Camera className="mr-2" />
+                                <Button onClick={handleTakePicture} disabled={isUploading || hasCameraPermission !== true}>
+                                    <Camera className="mr-2 h-4 w-4" />
                                     Take Picture
                                 </Button>
                             )}
