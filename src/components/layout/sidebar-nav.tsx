@@ -91,6 +91,7 @@ const inventorySubMenu = [
 const librarySubMenu = [
     { href: '/library/work-orders', label: 'Works Orders' },
     { href: '/library/procedures', label: 'Procedures' },
+    { href: '/library/data-sheets', label: 'Data Sheets' },
 ]
 
 const maintenanceSubMenu = [
