@@ -137,10 +137,6 @@ export default function EquipmentDetailPage() {
     return null; // notFound() throws an error, but this is needed for type safety
   }
   
-  const defaultPlaceholder = PlaceHolderImages.find(p => p.id === 'dashboard-hero');
-  const imageUrl = eq.imageUrl || defaultPlaceholder?.imageUrl;
-  const imageHint = defaultPlaceholder?.imageHint || 'industrial equipment';
-  
   return (
     <div className="flex flex-col gap-8">
       <header className="flex items-center justify-between">
@@ -383,18 +379,16 @@ export default function EquipmentDetailPage() {
                     <DetailRow label="Assigned Technician" value={eq.pumpAssignedToName} />
                 </CardContent>
             </Card>
-            {imageUrl && (
-                <div className="overflow-hidden rounded-lg border">
-                    <Image 
-                        src={imageUrl}
-                        alt={eq.name}
-                        width={600}
-                        height={400}
-                        className="w-full h-auto object-cover"
-                        data-ai-hint={imageHint}
-                    />
-                </div>
-            )}
+            <div className="overflow-hidden rounded-lg border">
+                <Image 
+                    src="/Pump.jpg"
+                    alt={eq.name}
+                    width={600}
+                    height={400}
+                    className="w-full h-auto object-cover"
+                    data-ai-hint="industrial pump"
+                />
+            </div>
         </div>
       </div>
     </div>
