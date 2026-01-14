@@ -44,9 +44,9 @@ import { collection, doc } from 'firebase/firestore';
 
 const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
   { href: '/messages', label: 'Messages', icon: Mail },
+  { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
   { href: '/meters', label: 'Meters', icon: Gauge },
   { href: '/vendors', label: 'Vendors', icon: Store },
@@ -116,6 +116,11 @@ export function SidebarNav() {
     }
   }, [isEquipmentPath]);
 
+  const dashboardLink = mainLinks.find(link => link.label === 'Dashboard');
+  const breakdownLink = mainLinks.find(link => link.label === 'Breakdowns');
+  const messagesLink = mainLinks.find(link => link.label === 'Messages');
+  const otherLinks = mainLinks.filter(link => !['Dashboard', 'Breakdowns', 'Messages'].includes(link.label));
+
 
   return (
     <>
@@ -130,43 +135,20 @@ export function SidebarNav() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {mainLinks.map((link) => (
-            <SidebarMenuItem key={link.href}>
-              <Link href={link.href}>
+          {dashboardLink && (
+            <SidebarMenuItem key={dashboardLink.href}>
+              <Link href={dashboardLink.href}>
                 <SidebarMenuButton
-                  isActive={pathname === link.href}
-                  tooltip={link.label}
+                  isActive={pathname === dashboardLink.href}
+                  tooltip={dashboardLink.label}
                 >
-                  <link.icon />
-                  <span>{link.label}</span>
+                  <dashboardLink.icon />
+                  <span>{dashboardLink.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-          ))}
-           <Collapsible open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
-                <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Maintenance" isActive={pathname.startsWith('/maintenance')}>
-                            <Calendar />
-                            <span>Maintenance</span>
-                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                        </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                </SidebarMenuItem>
-                <CollapsibleContent>
-                    <SidebarMenuSub>
-                        {maintenanceSubMenu.map((item) => (
-                            <SidebarMenuItem key={item.href}>
-                                <Link href={item.href} passHref>
-                                    <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                    <span>{item.label}</span>
-                                    </SidebarMenuSubButton>
-                                </Link>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenuSub>
-                </CollapsibleContent>
-           </Collapsible>
+          )}
+
            <Collapsible open={isAssetsOpen} onOpenChange={setIsAssetsOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
@@ -245,7 +227,61 @@ export function SidebarNav() {
                     </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>
-            <Collapsible open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
+            
+           <Collapsible open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Maintenance" isActive={pathname.startsWith('/maintenance')}>
+                            <Calendar />
+                            <span>Maintenance</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                        {maintenanceSubMenu.map((item) => (
+                            <SidebarMenuItem key={item.href}>
+                                <Link href={item.href} passHref>
+                                    <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                    <span>{item.label}</span>
+                                    </SidebarMenuSubButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+           </Collapsible>
+           
+          {breakdownLink && (
+            <SidebarMenuItem key={breakdownLink.href}>
+              <Link href={breakdownLink.href}>
+                <SidebarMenuButton
+                  isActive={pathname === breakdownLink.href}
+                  tooltip={breakdownLink.label}
+                >
+                  <breakdownLink.icon />
+                  <span>{breakdownLink.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          )}
+
+          {messagesLink && (
+            <SidebarMenuItem key={messagesLink.href}>
+              <Link href={messagesLink.href}>
+                <SidebarMenuButton
+                  isActive={pathname === messagesLink.href}
+                  tooltip={messagesLink.label}
+                >
+                  <messagesLink.icon />
+                  <span>{messagesLink.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          )}
+
+           <Collapsible open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                         <SidebarMenuButton tooltip="Parts Inventory" isActive={pathname.startsWith('/inventory')}>
@@ -293,6 +329,21 @@ export function SidebarNav() {
                     </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>
+            
+            {otherLinks.map((link) => (
+                <SidebarMenuItem key={link.href}>
+                <Link href={link.href}>
+                    <SidebarMenuButton
+                    isActive={pathname === link.href}
+                    tooltip={link.label}
+                    >
+                    <link.icon />
+                    <span>{link.label}</span>
+                    </SidebarMenuButton>
+                </Link>
+                </SidebarMenuItem>
+            ))}
+
              {userData?.role === 'Admin' && (
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                 <SidebarMenuItem>
