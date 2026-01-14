@@ -313,6 +313,13 @@ export function SidebarNav() {
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
+                         <SidebarMenuItem>
+                            <Link href="/seed-admin" passHref>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
+                                  <span>Seed Admin</span>
+                                </SidebarMenuSubButton>
+                            </Link>
+                        </SidebarMenuItem>
                         <SidebarMenuItem>
                             <Link href="/admin/seed" passHref>
                                 <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
@@ -357,5 +364,5 @@ export function SidebarNav() {
         <UserNav />
       </SidebarFooter>
     </>
-  );
+    );
 }
