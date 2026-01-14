@@ -2,7 +2,7 @@
 import { addDays, addMonths, differenceInDays, format, isBefore, startOfDay } from 'date-fns';
 import type { Equipment, MaintenanceTask } from './types';
 
-export type MaintenanceCategory = 'VSDs' | 'Protection' | 'Motors' | 'Pumps';
+export type MaintenanceCategory = 'VSDs' | 'Protection' | 'Motors' | 'Pumps' | 'UPS/BTU\'s';
 
 const frequencies: { name: MaintenanceTask['frequency']; days: number }[] = [
   { name: 'Weekly', days: 7 },
@@ -17,6 +17,7 @@ const tasksByCategory: Record<MaintenanceCategory, { task: string, component: Ma
     'Protection': { task: 'Perform protection system check', component: 'Protection' },
     'Motors': { task: 'Perform motor inspection', component: 'Motor' },
     'Pumps': { task: 'Perform pump service', component: 'Pump' },
+    'UPS/BTU\'s': { task: 'Perform UPS/BTU inspection', component: 'UPS' },
 };
 
 
@@ -50,10 +51,11 @@ export function generateTasksForEquipment(equipment: Equipment): MaintenanceTask
 
   // Determine which categories apply to this equipment
   const applicableCategories: MaintenanceCategory[] = ['VSDs'];
+  if (equipment.breakerAssetNumber) applicableCategories.push('Protection');
+  if (equipment.motorModel) applicableCategories.push('Motors');
+  if (equipment.pumpBrand) applicableCategories.push('Pumps');
+  if (equipment.upsModel) applicableCategories.push('UPS/BTU\'s');
   
-  // Add other categories based on equipment properties if needed in the future
-  // For now, we are generating for the main VSD component.
-
   applicableCategories.forEach(category => {
     const categoryInfo = tasksByCategory[category];
     

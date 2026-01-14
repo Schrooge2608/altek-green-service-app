@@ -12,8 +12,9 @@ import type { Equipment, MaintenanceTask } from '@/lib/types';
 import { generateTasksForEquipment, MaintenanceCategory } from '@/lib/task-generator';
 
 const maintenanceCategories: MaintenanceCategory[] = [
-  'VSDs',
   'Protection',
+  'UPS/BTU\'s',
+  'VSDs',
   'Motors',
   'Pumps',
 ];
@@ -23,7 +24,7 @@ export default function MaintenancePage() {
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
-  const [activeTab, setActiveTab] = useState<MaintenanceCategory>('VSDs');
+  const [activeTab, setActiveTab] = useState<MaintenanceCategory>('Protection');
 
   const allTasks = useMemo(() => {
     if (!equipment) return [];
@@ -32,7 +33,11 @@ export default function MaintenancePage() {
 
   const tasksByCategory = useMemo(() => {
     return maintenanceCategories.reduce((acc, category) => {
-      acc[category] = allTasks.filter(task => task.component === category.slice(0, -1)); // 'VSDs' -> 'VSD'
+      let componentName: string = category.slice(0, -1);
+      if (category === 'UPS/BTU\'s') {
+        componentName = 'UPS';
+      }
+      acc[category] = allTasks.filter(task => task.component === componentName);
       return acc;
     }, {} as Record<MaintenanceCategory, MaintenanceTask[]>);
   }, [allTasks]);
@@ -53,8 +58,8 @@ export default function MaintenancePage() {
             <p className="ml-2">Generating maintenance tasks...</p>
         </div>
       ) : (
-        <Tabs defaultValue="VSDs" className="w-full" onValueChange={(value) => setActiveTab(value as MaintenanceCategory)}>
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="Protection" className="w-full" onValueChange={(value) => setActiveTab(value as MaintenanceCategory)}>
+          <TabsList className="grid w-full grid-cols-5">
             {maintenanceCategories.map(cat => (
               <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
             ))}

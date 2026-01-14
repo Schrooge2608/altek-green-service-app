@@ -95,7 +95,7 @@ export interface MaintenanceTask {
   id: string;
   equipmentId: string;
   equipmentName: string;
-  component: 'VSD' | 'Protection' | 'Motor' | 'Pump';
+  component: 'VSD' | 'Protection' | 'Motor' | 'Pump' | 'UPS';
   task: string;
   dueDate: string;
   frequency: 'Weekly' | 'Monthly' | '3-Monthly' | '6-Monthly' | 'Yearly';
