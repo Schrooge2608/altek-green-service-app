@@ -6,14 +6,19 @@ import { Shield, Power, Cpu, Cog, Droplets } from 'lucide-react';
 
 const dataSheetCategories = [
   {
-    title: 'VSD\'s',
-    description: 'Find data sheets for Variable Speed Drives.',
-    icon: Cpu,
-  },
-  {
     title: 'Protection',
     description: 'Data sheets for circuit breakers and relays.',
     icon: Shield,
+  },
+  {
+    title: 'UPS/BTU\'s',
+    description: 'Uninterruptible Power Supply technical data.',
+    icon: Power,
+  },
+  {
+    title: 'VSD\'s',
+    description: 'Find data sheets for Variable Speed Drives.',
+    icon: Cpu,
   },
   {
     title: 'Motors',
@@ -24,11 +29,6 @@ const dataSheetCategories = [
     title: 'Pumps',
     description: 'Data sheets for various industrial pumps.',
     icon: Droplets,
-  },
-  {
-    title: 'UPS/BTU\'s',
-    description: 'Uninterruptible Power Supply technical data.',
-    icon: Power,
   },
 ];
 
