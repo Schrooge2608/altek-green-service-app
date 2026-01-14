@@ -34,7 +34,7 @@ import React, { useState } from 'react';
 
 const formSchema = z.object({
   image: z
-    .instanceof(FileList)
+    .custom<FileList>()
     .refine((files) => files?.length === 1, 'An image is required.'),
 });
 
