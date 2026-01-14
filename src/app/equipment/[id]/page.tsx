@@ -104,7 +104,7 @@ export default function EquipmentDetailPage() {
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<AppUser>(userRoleRef);
-  const isKnownAdmin = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin'));
+  const canEdit = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin') || userData.role === 'Technician');
 
   const uptimePercentage = useMemo(() => {
     if (!vsd?.installationDate || !eq) return 100;
@@ -161,7 +161,7 @@ export default function EquipmentDetailPage() {
                     <Info className="text-primary" /> 
                     <CardTitle>General Information</CardTitle>
                 </div>
-                 {isKnownAdmin && eq && (
+                 {canEdit && eq && (
                     <EditGeneralInfoForm equipment={eq} />
                 )}
             </CardHeader>
@@ -180,7 +180,7 @@ export default function EquipmentDetailPage() {
                         <Shield className="text-primary" />
                         <CardTitle>Protection Details</CardTitle>
                     </div>
-                    {isKnownAdmin && eq && (
+                    {canEdit && eq && (
                         <EditProtectionForm equipment={eq} />
                     )}
                 </CardHeader>
@@ -237,7 +237,7 @@ export default function EquipmentDetailPage() {
                       <Power className="text-primary" />
                       <CardTitle>UPS/BTU Details</CardTitle>
                     </div>
-                    {isKnownAdmin && eq && (
+                    {canEdit && eq && (
                         <EditUpsForm equipment={eq} />
                     )}
                 </CardHeader>
@@ -254,7 +254,7 @@ export default function EquipmentDetailPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2"><Cpu className="text-primary" /> VSD Information</CardTitle>
-                    {isKnownAdmin && vsd && (
+                    {canEdit && vsd && (
                         <EditVsdForm vsd={vsd} />
                     )}
                 </CardHeader>
@@ -274,7 +274,7 @@ export default function EquipmentDetailPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2"><Cog className="text-primary" /> Motor Information</CardTitle>
-                    {isKnownAdmin && eq && (
+                    {canEdit && eq && (
                         <EditMotorForm equipment={eq} />
                     )}
                 </CardHeader>
@@ -357,7 +357,7 @@ export default function EquipmentDetailPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2"><Droplets className="text-primary" /> Pump Information</CardTitle>
-                    {isKnownAdmin && eq && (
+                    {canEdit && eq && (
                         <EditPumpForm equipment={eq} />
                     )}
                 </CardHeader>
@@ -383,7 +383,7 @@ export default function EquipmentDetailPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Equipment Image</CardTitle>
-                     {isKnownAdmin && eq && (
+                     {canEdit && eq && (
                         <EditImageForm equipment={eq} />
                     )}
                 </CardHeader>
@@ -406,4 +406,5 @@ export default function EquipmentDetailPage() {
 }
 
     
+
 
