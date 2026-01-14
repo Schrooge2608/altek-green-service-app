@@ -13,7 +13,7 @@ export default function RegisterPage() {
                     className="absolute inset-0 bg-cover"
                     style={{
                         backgroundImage:
-                        'url(https://images.unsplash.com/photo-1562813531-529ab21a43a8?q=80&w=1974&auto=format&fit=crop)',
+                        'url(/Pump.jpg)',
                     }}
                 />
                  <div className="relative z-20 flex items-center text-lg font-medium">
