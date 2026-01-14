@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,25 +11,25 @@ const procedureCategories = [
     title: 'VSD\'s',
     description: 'Procedures for Variable Speed Drives.',
     icon: Cpu,
-    href: '/maintenance/completed/vsds',
+    href: '/maintenance/vsds/weekly',
   },
   {
     title: 'Protection',
     description: 'Circuit breaker and protection relay procedures.',
     icon: Shield,
-    href: '/maintenance/completed/protection',
+    href: '/maintenance/protection/6-monthly',
   },
   {
     title: 'Motors',
     description: 'Electric motor maintenance and testing guides.',
     icon: Cog,
-    href: '/maintenance/completed/motors',
+    href: '#', // Placeholder link
   },
   {
     title: 'Pumps',
     description: 'Procedures for various types of industrial pumps.',
     icon: Droplets,
-    href: '/maintenance/completed/pumps',
+    href: '#', // Placeholder link
   },
   {
     title: 'UPS/BTU\'s',
@@ -49,21 +50,23 @@ export default function ProceduresPage() {
       </header>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {procedureCategories.map((cat) => (
-          <Card key={cat.title}>
+          <Card key={cat.title} className="flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <cat.icon className="h-6 w-6 text-primary" />
                 <span>{cat.title}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col justify-between h-full">
+            <CardContent className="flex flex-col flex-grow justify-between">
               <p className="text-muted-foreground mb-4">{cat.description}</p>
-              <Link href={cat.href} passHref>
-                <Button variant={cat.href === '#' ? 'secondary' : 'default'} disabled={cat.href === '#'} className="w-full">
-                  {cat.href === '#' ? 'Coming Soon' : 'View Procedures'}
-                  {cat.href !== '#' && <ArrowRight className="ml-2 h-4 w-4" />}
-                </Button>
-              </Link>
+              <div className="mt-auto">
+                <Link href={cat.href} passHref>
+                  <Button variant={cat.href === '#' ? 'secondary' : 'default'} disabled={cat.href === '#'} className="w-full">
+                    {cat.href === '#' ? 'Coming Soon' : 'View Procedures'}
+                    {cat.href !== '#' && <ArrowRight className="ml-2 h-4 w-4" />}
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         ))}
