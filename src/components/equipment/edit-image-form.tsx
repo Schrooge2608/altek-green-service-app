@@ -74,7 +74,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
   }, []);
 
   const getCameraPermission = useCallback(async (force = false) => {
-    if (hasCameraPermission && !force) return;
+    if (hasCameraPermission === true && !force) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setHasCameraPermission(true);
@@ -112,7 +112,14 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
     const storageRef = ref(storage, storagePath);
 
     try {
-        const snapshot = await uploadBytes(storageRef, blob);
+        const uploadPromise = uploadBytes(storageRef, blob);
+        
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Upload timed out after 2 minutes.')), 120000)
+        );
+
+        const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as Awaited<typeof uploadPromise>;
+        
         const downloadURL = await getDownloadURL(snapshot.ref);
 
         const equipmentRef = doc(firestore, 'equipment', equipment.id);
