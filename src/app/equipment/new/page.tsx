@@ -39,7 +39,7 @@ const formSchema = z.object({
   equipmentId: z.string().min(1, 'Equipment ID is required'),
   equipmentName: z.string().min(1, 'Equipment name is required'),
   plant: z.enum(['Mining', 'Smelter']),
-  division: z.enum(["Boosters", "Dredgers", "Pump Stations"]).optional(),
+  division: z.enum(["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron injection", "Stripping Crane", "Slag plant", "North Screen", "UPS/BTU's"]).optional(),
   location: z.string().min(1, 'Location is required'),
   imageUrl: z.string().optional(),
   
@@ -227,7 +227,7 @@ export default function NewEquipmentPage() {
       pumpAssignedToName: pumpAssignedUser?.name,
     };
 
-    if (values.plant === 'Mining') {
+    if (values.plant === 'Mining' || values.plant === 'Smelter') {
         equipmentData.division = values.division;
     }
 
@@ -251,6 +251,10 @@ export default function NewEquipmentPage() {
     });
     form.reset();
   }
+
+  const miningDivisions = (backendConfig.entities.Equipment.properties.division.enum || []).filter(d => ["Boosters", "Dredgers", "Pump Stations"].includes(d));
+  const smelterDivisions = (backendConfig.entities.Equipment.properties.division.enum || []).filter(d => !["Boosters", "Dredgers", "Pump Stations"].includes(d));
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -329,9 +333,29 @@ export default function NewEquipmentPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Boosters">Boosters</SelectItem>
-                          <SelectItem value="Dredgers">Dredgers</SelectItem>
-                          <SelectItem value="Pump Stations">Pump Stations</SelectItem>
+                          {miningDivisions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+               {watchedPlant === 'Smelter' && (
+                <FormField
+                  control={form.control}
+                  name="division"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Division</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a division" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {smelterDivisions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
