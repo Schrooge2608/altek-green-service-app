@@ -45,6 +45,7 @@ const validDivisions: Record<string, string> = {
     'boosters': 'Boosters',
     'dredgers': 'Dredgers',
     'pump-stations': 'Pump Stations',
+    'ups-btus': 'UPS/BTU\'s',
     'cons-boosters': 'Cons Boosters',
 }
 

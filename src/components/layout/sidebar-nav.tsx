@@ -56,6 +56,7 @@ const miningDivisions = [
     { href: '/equipment/mining/boosters', label: 'Boosters' },
     { href: '/equipment/mining/dredgers', label: 'Dredgers' },
     { href: '/equipment/mining/pump-stations', label: 'Pump Stations' },
+    { href: '/equipment/mining/ups-btus', label: 'UPS/BTU\'s' },
 ]
 
 const completedSchedulesCategories = [
@@ -108,7 +109,7 @@ export function SidebarNav() {
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
   const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library'));
-  const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance'));
+  const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -232,7 +233,7 @@ export function SidebarNav() {
            <Collapsible open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Maintenance" isActive={pathname.startsWith('/maintenance')}>
+                        <SidebarMenuButton tooltip="Maintenance" isActive={pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed')}>
                             <Calendar />
                             <span>Maintenance</span>
                             <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
