@@ -30,7 +30,7 @@ import { doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Equipment } from '@/lib/types';
 import { Loader2, Pencil, Upload, Camera, Video, AlertTriangle, RefreshCw, Check } from 'lucide-react';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Image from 'next/image';
@@ -39,6 +39,7 @@ const formSchema = z.object({
   image: z
     .custom<FileList>()
     .refine((files) => files?.length === 1, 'An image is required.')
+    .refine((files) => files?.[0]?.type.startsWith("image/"), "Only image files are allowed.")
     .transform((files) => files[0]),
 });
 
@@ -65,22 +66,16 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
 
   const fileRef = form.register("image");
 
-  useEffect(() => {
-    if (isOpen) {
-        // Reset state when dialog opens
-        setHasCameraPermission(null);
-        setCapturedImage(null);
-    } else {
-        // Stop camera stream when dialog closes
-        if (videoRef.current && videoRef.current.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
-        }
+  const stopCameraStream = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
     }
-  }, [isOpen]);
+  }, []);
 
-  const getCameraPermission = async () => {
-    if (hasCameraPermission !== null) return;
+  const getCameraPermission = useCallback(async (force = false) => {
+    if (hasCameraPermission && !force) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setHasCameraPermission(true);
@@ -96,7 +91,20 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
         description: 'Please enable camera permissions in your browser settings.',
       });
     }
-  };
+  }, [hasCameraPermission, toast]);
+
+  useEffect(() => {
+    if (isOpen) {
+        setHasCameraPermission(null);
+        setCapturedImage(null);
+    } else {
+        stopCameraStream();
+    }
+    return () => {
+        stopCameraStream();
+    }
+  }, [isOpen, stopCameraStream]);
+
 
   const uploadBlob = async (blob: Blob, fileName: string) => {
     setIsUploading(true);
@@ -140,11 +148,13 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
         
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         setCapturedImage(canvas.toDataURL('image/jpeg'));
+        stopCameraStream();
     }
   };
 
   const handleRetake = () => {
     setCapturedImage(null);
+    getCameraPermission(true); // Force re-acquisition of camera
   };
 
   const handleAcceptAndUpload = async () => {
@@ -174,7 +184,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
             <Tabs defaultValue="upload">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="upload"><Upload className="mr-2 h-4 w-4" /> Upload File</TabsTrigger>
-                    <TabsTrigger value="camera" onClick={getCameraPermission}><Video className="mr-2 h-4 w-4" /> Use Camera</TabsTrigger>
+                    <TabsTrigger value="camera" onClick={() => getCameraPermission()}><Video className="mr-2 h-4 w-4" /> Use Camera</TabsTrigger>
                 </TabsList>
                 <TabsContent value="upload">
                     <Form {...form}>
