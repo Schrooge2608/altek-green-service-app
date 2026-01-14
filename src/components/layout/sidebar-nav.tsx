@@ -45,8 +45,8 @@ import { collection, doc } from 'firebase/firestore';
 const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
-  { href: '/messages', label: 'Messages', icon: Mail },
   { href: '/reports', label: 'Reports', icon: FileText },
+  { href: '/messages', label: 'Messages', icon: Mail },
   { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
   { href: '/meters', label: 'Meters', icon: Gauge },
   { href: '/vendors', label: 'Vendors', icon: Store },
@@ -118,8 +118,9 @@ export function SidebarNav() {
 
   const dashboardLink = mainLinks.find(link => link.label === 'Dashboard');
   const breakdownLink = mainLinks.find(link => link.label === 'Breakdowns');
+  const reportsLink = mainLinks.find(link => link.label === 'Reports');
   const messagesLink = mainLinks.find(link => link.label === 'Messages');
-  const otherLinks = mainLinks.filter(link => !['Dashboard', 'Breakdowns', 'Messages'].includes(link.label));
+  const otherLinks = mainLinks.filter(link => !['Dashboard', 'Breakdowns', 'Reports', 'Messages'].includes(link.label));
 
 
   return (
@@ -262,6 +263,20 @@ export function SidebarNav() {
                 >
                   <breakdownLink.icon />
                   <span>{breakdownLink.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          )}
+
+          {reportsLink && (
+            <SidebarMenuItem key={reportsLink.href}>
+              <Link href={reportsLink.href}>
+                <SidebarMenuButton
+                  isActive={pathname === reportsLink.href}
+                  tooltip={reportsLink.label}
+                >
+                  <reportsLink.icon />
+                  <span>{reportsLink.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
