@@ -21,7 +21,7 @@ export default function RegisterPage() {
                 </div>
                  <div className="relative z-20 mt-auto">
                     <blockquote className="space-y-2">
-                    <p className="text-lg">
+                    <p className="text-lg text-accent">
                         &ldquo;This platform has streamlined our entire maintenance workflow, saving us countless hours and preventing costly breakdowns.&rdquo;
                     </p>
                     <footer className="text-sm">Lead Site Supervisor</footer>
