@@ -27,17 +27,18 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, updateDocumentNonBlocking, useFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, uploadString, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Equipment } from '@/lib/types';
-import { Loader2, Pencil, Upload, Camera, Video, AlertTriangle } from 'lucide-react';
+import { Loader2, Pencil, Upload, Camera, Video, AlertTriangle, RefreshCw, Check } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import Image from 'next/image';
 
 const formSchema = z.object({
   image: z
     .custom<FileList>()
-    .refine((files) => files?.length > 0, 'An image is required.')
+    .refine((files) => files?.length === 1, 'An image is required.')
     .transform((files) => files[0]),
 });
 
@@ -53,6 +54,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
   const [isUploading, setIsUploading] = useState(false);
   
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -67,6 +69,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
     if (isOpen) {
         // Reset state when dialog opens
         setHasCameraPermission(null);
+        setCapturedImage(null);
     } else {
         // Stop camera stream when dialog closes
         if (videoRef.current && videoRef.current.srcObject) {
@@ -126,7 +129,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
     await uploadBlob(values.image, values.image.name);
   }
 
-  const handleTakePicture = async () => {
+  const handleTakePicture = () => {
     if (videoRef.current && canvasRef.current) {
         const video = videoRef.current;
         const canvas = canvasRef.current;
@@ -136,11 +139,18 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
         if (!context) return;
         
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(async (blob) => {
-            if (blob) {
-                await uploadBlob(blob, `capture-${Date.now()}.jpg`);
-            }
-        }, 'image/jpeg');
+        setCapturedImage(canvas.toDataURL('image/jpeg'));
+    }
+  };
+
+  const handleRetake = () => {
+    setCapturedImage(null);
+  };
+
+  const handleAcceptAndUpload = async () => {
+    if (capturedImage) {
+        const blob = await (await fetch(capturedImage)).blob();
+        await uploadBlob(blob, `capture-${Date.now()}.jpg`);
     }
   };
 
@@ -196,21 +206,40 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
                     <div className="space-y-4 pt-4">
                         <canvas ref={canvasRef} className="hidden" />
                         <div className="overflow-hidden rounded-md border aspect-video relative bg-muted flex items-center justify-center">
-                            <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-                            {hasCameraPermission === false && (
-                                <Alert variant="destructive" className="w-auto">
-                                    <AlertTriangle />
-                                    <AlertTitle>Camera Access Denied</AlertTitle>
-                                    <AlertDescription>Enable camera permissions to use this feature.</AlertDescription>
-                                </Alert>
-                            )}
+                           {capturedImage ? (
+                                <Image src={capturedImage} alt="Captured photo" layout="fill" objectFit="contain" />
+                            ) : (
+                                <>
+                                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                                    {hasCameraPermission === false && (
+                                        <Alert variant="destructive" className="w-auto">
+                                            <AlertTriangle />
+                                            <AlertTitle>Camera Access Denied</AlertTitle>
+                                            <AlertDescription>Enable camera permissions to use this feature.</AlertDescription>
+                                        </Alert>
+                                    )}
+                                </>
+                           )}
                         </div>
-                         <DialogFooter>
+                        <DialogFooter>
                             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                            <Button onClick={handleTakePicture} disabled={isUploading || !hasCameraPermission}>
-                                {isUploading ? <Loader2 className="mr-2 animate-spin" /> : <Camera className="mr-2" />}
-                                {isUploading ? 'Uploading...' : 'Take Picture'}
-                            </Button>
+                            {capturedImage ? (
+                                <>
+                                    <Button variant="outline" onClick={handleRetake} disabled={isUploading}>
+                                        <RefreshCw className="mr-2" />
+                                        Retake
+                                    </Button>
+                                    <Button onClick={handleAcceptAndUpload} disabled={isUploading}>
+                                        {isUploading ? <Loader2 className="mr-2 animate-spin" /> : <Check className="mr-2" />}
+                                        {isUploading ? 'Uploading...' : 'Accept & Upload'}
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button onClick={handleTakePicture} disabled={isUploading || !hasCameraPermission}>
+                                    <Camera className="mr-2" />
+                                    Take Picture
+                                </Button>
+                            )}
                         </DialogFooter>
                     </div>
                 </TabsContent>
