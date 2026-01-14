@@ -81,7 +81,7 @@ function AuthenticatedSmelterDivisionPage() {
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
-  const isKnownAdmin = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin'));
+  const canEdit = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin') || userData.role === 'Technician');
   
   const equipmentByLocation = useMemo(() => {
     if (!equipment) return {};
@@ -179,7 +179,7 @@ function AuthenticatedSmelterDivisionPage() {
                                                     <TableHead>Breakdown Status</TableHead>
                                                     <TableHead className="text-right">Uptime</TableHead>
                                                     <TableHead className="text-right">Power (kWh)</TableHead>
-                                                    {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
+                                                    {canEdit && <TableHead className="text-right">Actions</TableHead>}
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -202,7 +202,7 @@ function AuthenticatedSmelterDivisionPage() {
                                                       </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
-                                                    {isKnownAdmin && (
+                                                    {canEdit && (
                                                         <TableCell className="text-right">
                                                             <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
@@ -248,7 +248,7 @@ function AuthenticatedSmelterDivisionPage() {
                     <TableHead>Breakdown Status</TableHead>
                     <TableHead className="text-right">Uptime</TableHead>
                     <TableHead className="text-right">Power (kWh)</TableHead>
-                    {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
+                    {canEdit && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -273,7 +273,7 @@ function AuthenticatedSmelterDivisionPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
-                         {isKnownAdmin && (
+                         {canEdit && (
                             <TableCell className="text-right">
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -300,7 +300,7 @@ function AuthenticatedSmelterDivisionPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={isKnownAdmin ? 7 : 6} className="text-center h-24">No equipment found for this division.</TableCell>
+                      <TableCell colSpan={canEdit ? 7 : 6} className="text-center h-24">No equipment found for this division.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
