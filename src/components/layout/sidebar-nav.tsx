@@ -72,8 +72,9 @@ const smelterDivisions = [
 ]
 
 const completedSchedulesCategories = [
-    { href: '/maintenance/completed/vsds', label: 'VSDs' },
     { href: '/maintenance/completed/protection', label: 'Protection' },
+    { href: '/maintenance/completed/ups-btus', label: "UPS/BTU's" },
+    { href: '/maintenance/completed/vsds', label: 'VSDs' },
     { href: '/maintenance/completed/motors', label: 'Motors' },
     { href: '/maintenance/completed/pumps', label: 'Pumps' },
 ]
