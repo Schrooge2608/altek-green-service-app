@@ -38,8 +38,7 @@ import Image from 'next/image';
 const formSchema = z.object({
   image: z
     .custom<FileList>()
-    .refine((files) => files?.length === 1, 'An image is required.')
-    .refine((files) => files?.[0]?.type.startsWith("image/"), "Only image files are allowed.")
+    .refine((files) => files?.[0], 'An image is required.')
     .transform((files) => files[0]),
 });
 
@@ -147,7 +146,8 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
         if (!context) return;
         
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setCapturedImage(canvas.toDataURL('image/jpeg'));
+        // Compress the image to a high-quality JPEG (0.8 = 80% quality)
+        setCapturedImage(canvas.toDataURL('image/jpeg', 0.8));
         stopCameraStream();
     }
   };
