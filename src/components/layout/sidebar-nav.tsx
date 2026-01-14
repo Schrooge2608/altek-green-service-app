@@ -59,6 +59,17 @@ const miningDivisions = [
     { href: '/equipment/mining/ups-btus', label: 'UPS/BTU\'s' },
 ]
 
+const smelterDivisions = [
+    { href: '/equipment/smelter/msp', label: 'MSP' },
+    { href: '/equipment/smelter/roaster', label: 'Roaster' },
+    { href: '/equipment/smelter/char-plant', label: 'Char Plant' },
+    { href: '/equipment/smelter/smelter', label: 'Smelter' },
+    { href: '/equipment/smelter/iron-injection', label: 'Iron injection' },
+    { href: '/equipment/smelter/stripping-crane', label: 'Stripping Crane' },
+    { href: '/equipment/smelter/slag-plant', label: 'Slag plant' },
+    { href: '/equipment/smelter/north-screen', label: 'North Screen' },
+]
+
 const completedSchedulesCategories = [
     { href: '/maintenance/completed/vsds', label: 'VSDs' },
     { href: '/maintenance/completed/protection', label: 'Protection' },
@@ -103,7 +114,7 @@ export function SidebarNav() {
   const isEquipmentPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter');
   const [isAssetsOpen, setIsAssetsOpen] = React.useState(isEquipmentPath);
   const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment/mining'));
-  const [isSmelterOpen, setIsSmelterOpen] = React.useState(pathname.startsWith('/smelter'));
+  const [isSmelterOpen, setIsSmelterOpen] = React.useState(pathname.startsWith('/equipment/smelter'));
   const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin'));
   const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
@@ -190,7 +201,7 @@ export function SidebarNav() {
                         <Collapsible open={isSmelterOpen} onOpenChange={setIsSmelterOpen}>
                             <SidebarMenuItem>
                                 <CollapsibleTrigger asChild>
-                                    <SidebarMenuButton tooltip="Smelter Equipment" isActive={pathname.startsWith('/smelter')}>
+                                    <SidebarMenuButton tooltip="Smelter Equipment" isActive={pathname.startsWith('/equipment/smelter')}>
                                         <Wrench />
                                         <span>Smelter Equipment</span>
                                         <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
@@ -198,7 +209,17 @@ export function SidebarNav() {
                                 </CollapsibleTrigger>
                             </SidebarMenuItem>
                             <CollapsibleContent>
-                                {/* Smelter sub-items will go here */}
+                                <SidebarMenuSub>
+                                    {smelterDivisions.map((division) => (
+                                        <SidebarMenuItem key={division.href}>
+                                            <Link href={division.href} passHref>
+                                                <SidebarMenuSubButton asChild isActive={pathname === division.href}>
+                                                <span>{division.label}</span>
+                                                </SidebarMenuSubButton>
+                                            </Link>
+                                        </SidebarMenuItem>
+                                    ))}
+                                </SidebarMenuSub>
                             </CollapsibleContent>
                         </Collapsible>
                     </SidebarMenuSub>
@@ -433,3 +454,5 @@ export function SidebarNav() {
     </>
     );
 }
+
+    
