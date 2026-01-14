@@ -33,7 +33,9 @@ import { Loader2, Pencil, Upload } from 'lucide-react';
 import React, { useState } from 'react';
 
 const formSchema = z.object({
-  image: z.instanceof(File).refine(file => file.size > 0, 'Please select an image file.'),
+  image: z
+    .instanceof(FileList)
+    .refine((files) => files?.length === 1, 'An image is required.'),
 });
 
 interface EditImageFormProps {
@@ -56,7 +58,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsUploading(true);
     const storage = getStorage(firebaseApp);
-    const imageFile = values.image;
+    const imageFile = values.image[0];
     const storagePath = `equipment_images/${equipment.id}/${imageFile.name}`;
     const storageRef = ref(storage, storagePath);
     
@@ -133,7 +135,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
                                 </>
                             ) : (
                                 <>
-                                <Upload className="mr-2 h-4 w-4" />
+                                <Upload className="mr-2 h-4" />
                                 Upload Image
                                 </>
                             )}
