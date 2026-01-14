@@ -13,7 +13,7 @@ export default function RegisterPage() {
                     className="absolute inset-0 bg-cover"
                     style={{
                         backgroundImage:
-                        'url(/DRedger.png)',
+                        'url(/Pump.jpg)',
                     }}
                 />
                  <div className="relative z-20 flex items-center text-lg font-medium">
