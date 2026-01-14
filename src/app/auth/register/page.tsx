@@ -3,6 +3,7 @@
 
 import { UserAuthForm } from '@/components/user-auth-form';
 import { AltekLogo } from '@/components/altek-logo';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function RegisterPage() {
     return (
@@ -29,7 +30,18 @@ export default function RegisterPage() {
             </div>
             <div className="lg:p-8">
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-                    <UserAuthForm mode="login" />
+                     <Tabs defaultValue="login" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="login">Sign In</TabsTrigger>
+                        <TabsTrigger value="createUser">Create Account</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="login">
+                        <UserAuthForm mode="login" />
+                      </TabsContent>
+                      <TabsContent value="createUser">
+                        <UserAuthForm mode="createUser" />
+                      </TabsContent>
+                    </Tabs>
                     <p className="px-8 text-center text-sm text-muted-foreground">
                         By clicking continue, you agree to our{' '}
                         <a

@@ -24,6 +24,7 @@ import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { User } from '@/lib/types';
 import backendConfig from '@/docs/backend.json';
+import { useRouter } from 'next/navigation';
 
 
 const formSchema = z.object({
@@ -31,7 +32,6 @@ const formSchema = z.object({
   email: z.string().email('Please enter a valid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
   role: z.string().min(1, 'Role is required.').optional(),
-  adminPassword: z.string().optional(),
 });
 
 type UserFormValue = z.infer<typeof formSchema>;
@@ -43,10 +43,10 @@ interface UserAuthFormProps {
 
 export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
   const auth = useAuth();
-  const { user: adminUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
+  const router = useRouter();
   
   const roleOptions = (backendConfig.entities.User.properties.role.enum || []).map(role => ({
     label: role,
@@ -55,10 +55,7 @@ export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
 
   const getFormSchema = () => {
     if (mode === 'createUser') {
-      // Require admin password for re-authentication
-      return formSchema.required({ name: true, role: true }).extend({
-          adminPassword: z.string().min(6, 'Your admin password is required to confirm this action.'),
-      });
+      return formSchema.required({ name: true, role: true });
     }
     return formSchema.pick({ email: true, password: true }); // Login mode
   };
@@ -70,7 +67,6 @@ export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
       email: '',
       password: '',
       role: 'Technician',
-      adminPassword: '',
     },
   });
 
@@ -80,14 +76,9 @@ export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
       if (mode === 'login') {
         await signInWithEmailAndPassword(auth, data.email, data.password);
         toast({ title: 'Login Successful', description: 'Welcome back!' });
+        router.push('/');
         if(onSuccess) onSuccess();
       } else { // createUser mode
-        if (!adminUser || !adminUser.email || !data.adminPassword) {
-            throw new Error("Admin user not found or admin password not provided.");
-        }
-
-        // --- Step 1: Create the new user ---
-        // This will temporarily sign in as the new user.
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const newUser = userCredential.user;
 
@@ -97,35 +88,29 @@ export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
             email: data.email,
             role: data.role as User['role'],
         };
-        // --- Step 2: Save the new user's profile to Firestore ---
         await setDoc(doc(firestore, 'users', newUser.uid), userData);
 
         toast({
-            title: 'User Created Successfully',
-            description: `The account for ${data.name} has been created.`,
+            title: 'Account Created',
+            description: `The account for ${data.name} has been created. Please sign in.`,
         });
 
-        // --- Step 3: Re-authenticate as the admin ---
-        // This signs the admin back in, restoring their session.
-        await signInWithEmailAndPassword(auth, adminUser.email, data.adminPassword);
+        // Sign the new user out so they can log in themselves
+        await auth.signOut();
         
         if (onSuccess) {
             onSuccess();
         } else {
-            form.reset();
+            // This might not be necessary if the page redirects, but good practice
+            form.reset(); 
+            // Potentially switch to login tab or redirect
         }
       }
     } catch (error: any) {
-        // If re-authentication fails, the admin might be logged in as the new user.
-        // It's a good idea to inform them about this.
-        let description = error.message;
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            description = "Your admin password was incorrect. You might be logged in as the new user. Please log out and back into your admin account."
-        }
-      
+      let description = error.message;
       toast({
         variant: 'destructive',
-        title: mode === 'createUser' ? 'User Creation Failed' : 'Authentication Failed',
+        title: mode === 'createUser' ? 'Account Creation Failed' : 'Authentication Failed',
         description: description,
       });
     } finally {
@@ -133,9 +118,9 @@ export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
     }
   };
   
-  const title = mode === 'createUser' ? 'Create a new user account' : 'Sign in to your account';
-  const description = mode === 'createUser' ? 'Enter the details for the new user below.' : 'Enter your credentials to access your dashboard.';
-  const buttonText = mode === 'createUser' ? 'Create User' : 'Sign In';
+  const title = mode === 'createUser' ? 'Create an account' : 'Sign in to your account';
+  const description = mode === 'createUser' ? 'Enter your details below to create your account.' : 'Enter your credentials to access your dashboard.';
+  const buttonText = mode === 'createUser' ? 'Create Account' : 'Sign In';
 
   return (
     <>
@@ -152,7 +137,7 @@ export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
                 name="name"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>New User's Name</FormLabel>
+                    <FormLabel>Full Name</FormLabel>
                     <FormControl>
                     <Input placeholder="John Doe" {...field} />
                     </FormControl>
@@ -166,7 +151,7 @@ export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{mode === 'createUser' ? "New User's Email" : "Email"}</FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input placeholder="name@example.com" {...field} />
                   </FormControl>
@@ -179,7 +164,7 @@ export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{mode === 'createUser' ? "New User's Temporary Password" : "Password"}</FormLabel>
+                  <FormLabel>Password</FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="••••••••" {...field} />
                   </FormControl>
@@ -188,43 +173,28 @@ export function UserAuthForm({ mode, onSuccess }: UserAuthFormProps) {
               )}
             />
              {mode === 'createUser' && (
-                <>
-                    <FormField
-                    control={form.control}
-                    name="role"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {roleOptions.map(option => (
-                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
                 <FormField
-                  control={form.control}
-                  name="adminPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Your Admin Password (to confirm)</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="Enter your admin password" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                </>
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {roleOptions.map(option => (
+                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
             )}
             <Button disabled={isLoading} className="w-full">
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
