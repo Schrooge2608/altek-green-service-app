@@ -172,7 +172,7 @@ export default function NewEquipmentPage() {
       
       breakerAssetNumber: values.breakerAssetNumber,
       breakerLocationHierarchy: values.breakerLocationHierarchy,
-      breakerServiceDescription: values.breakerServiceDescription,
+      breakerServiceDescription: values.breakerServiceDescription || '',
       breakerManufacturer: values.breakerManufacturer,
       breakerModelRange: values.breakerModelRange,
       breakerType: values.breakerType,
