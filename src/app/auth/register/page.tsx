@@ -24,7 +24,7 @@ export default function RegisterPage() {
                     <p className="text-lg text-accent">
                         &ldquo;This platform has streamlined our entire maintenance workflow, saving us countless hours and preventing costly breakdowns.&rdquo;
                     </p>
-                    <footer className="text-sm">Lead Site Supervisor</footer>
+                    <footer className="text-sm text-primary">Lead Site Supervisor</footer>
                     </blockquote>
                 </div>
             </div>
