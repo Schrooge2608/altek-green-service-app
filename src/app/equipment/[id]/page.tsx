@@ -23,6 +23,7 @@ import { EditUpsForm } from '@/components/equipment/edit-ups-form';
 import { EditVsdForm } from '@/components/equipment/edit-vsd-form';
 import { EditMotorForm } from '@/components/equipment/edit-motor-form';
 import { EditPumpForm } from '@/components/equipment/edit-pump-form';
+import { EditImageForm } from '@/components/equipment/edit-image-form';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -379,16 +380,25 @@ export default function EquipmentDetailPage() {
                     <DetailRow label="Assigned Technician" value={eq.pumpAssignedToName} />
                 </CardContent>
             </Card>
-            <div className="overflow-hidden rounded-lg border">
-                <Image 
-                    src="/Pump.jpg"
-                    alt={eq.name}
-                    width={600}
-                    height={400}
-                    className="w-full h-auto object-cover"
-                    data-ai-hint="industrial pump"
-                />
-            </div>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Equipment Image</CardTitle>
+                     {isKnownAdmin && eq && (
+                        <EditImageForm equipment={eq} />
+                    )}
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-hidden rounded-lg border aspect-video relative">
+                        <Image 
+                            src={eq.imageUrl || "/Pump.jpg"}
+                            alt={eq.name}
+                            fill
+                            className="w-full h-auto object-cover"
+                            data-ai-hint="industrial pump"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
         </div>
       </div>
     </div>
@@ -396,3 +406,4 @@ export default function EquipmentDetailPage() {
 }
 
     
+
