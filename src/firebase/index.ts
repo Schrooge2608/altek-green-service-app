@@ -1,31 +1,25 @@
 'use client';
 
-import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore } from 'firebase/firestore';
 import { DependencyList, useMemo } from 'react';
+
+// Hardcoded Firebase configuration to ensure the correct project is used.
+const firebaseConfig = {
+  apiKey: "AIzaSyCYugYlB7XHdQxB6GQ3omRv9a0n7fBG6Yg",
+  authDomain: "studio-8966443065-8fafa.firebaseapp.com",
+  projectId: "studio-8966443065-8fafa",
+  storageBucket: "studio-8966443065-8fafa.appspot.com",
+  messagingSenderId: "1080999162704",
+  appId: "1:1080999162704:web:7d15f613f892c50fc7f255",
+};
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
   if (!getApps().length) {
-    // Important! initializeApp() is called without any arguments because Firebase App Hosting
-    // integrates with the initializeApp() function to provide the environment variables needed to
-    // populate the FirebaseOptions in production. It is critical that we attempt to call initializeApp()
-    // without arguments.
-    let firebaseApp;
-    try {
-      // Attempt to initialize via Firebase App Hosting environment variables
-      firebaseApp = initializeApp();
-    } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-      }
-      firebaseApp = initializeApp(firebaseConfig);
-    }
-
+    // Initialize with the hardcoded config to prevent any ambiguity.
+    const firebaseApp = initializeApp(firebaseConfig);
     return getSdks(firebaseApp);
   }
 
