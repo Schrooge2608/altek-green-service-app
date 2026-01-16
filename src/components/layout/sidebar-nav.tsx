@@ -393,18 +393,16 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                         <SidebarMenuItem>
                             <Link href="/reports" passHref>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/reports'}>
-                                    <a><span>Performance Reports</span></a>
+                                <SidebarMenuSubButton isActive={pathname === '/reports'}>
+                                    <span>Performance Reports</span>
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
                             <Link href="/reports/contractors-daily-diary" passHref>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/reports/contractors-daily-diary'}>
-                                    <a>
-                                        <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
-                                        <span>Contractors Daily Diary</span>
-                                    </a>
+                                <SidebarMenuSubButton isActive={pathname === '/reports/contractors-daily-diary'}>
+                                    <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
+                                    <span>Contractors Daily Diary</span>
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
