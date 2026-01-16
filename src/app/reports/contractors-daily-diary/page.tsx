@@ -226,13 +226,13 @@ export default function NewDailyDiaryPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Designation</TableHead>
-                                    <TableHead>Forecast</TableHead>
-                                    <TableHead>Actual</TableHead>
-                                    <TableHead>Normal Hrs worked</TableHead>
-                                    <TableHead>1.5 Overtime</TableHead>
-                                    <TableHead>2.0 Overtime</TableHead>
-                                    <TableHead>Total Man Hrs</TableHead>
+                                    <TableHead className="w-[250px]">Designation</TableHead>
+                                    <TableHead className="w-[100px]">Forecast</TableHead>
+                                    <TableHead className="w-[100px]">Actual</TableHead>
+                                    <TableHead className="w-[120px]">Normal Hrs worked</TableHead>
+                                    <TableHead className="w-[120px]">1.5 Overtime</TableHead>
+                                    <TableHead className="w-[120px]">2.0 Overtime</TableHead>
+                                    <TableHead className="w-[120px]">Total Man Hrs</TableHead>
                                     <TableHead>Comments</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -272,16 +272,16 @@ export default function NewDailyDiaryPage() {
                              <TableFooter>
                                 <TableRow>
                                     <TableCell className="text-right font-bold">Totals</TableCell>
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="forecast-total" className="text-xs">Forecasted</Label>
-                                            <Input id="forecast-total" type="number" value={forecastTotal} readOnly className="font-bold bg-muted" />
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="actual-total" className="text-xs">Actual</Label>
-                                            <Input id="actual-total" type="number" value={actualTotal} readOnly className="font-bold bg-muted" />
+                                    <TableCell colSpan={2}>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <Label htmlFor="forecast-total" className="text-xs">Forecasted</Label>
+                                                <Input id="forecast-total" type="number" value={forecastTotal} readOnly className="font-bold bg-muted" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="actual-total" className="text-xs">Actual</Label>
+                                                <Input id="actual-total" type="number" value={actualTotal} readOnly className="font-bold bg-muted" />
+                                            </div>
                                         </div>
                                     </TableCell>
                                     <TableCell colSpan={5}></TableCell>
