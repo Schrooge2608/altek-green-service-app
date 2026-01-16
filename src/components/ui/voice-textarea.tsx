@@ -45,20 +45,32 @@ export function VoiceTextarea({ value, onChange, ...props }: VoiceTextareaProps)
     };
 
     recognition.onerror = (event: any) => {
+      // Ignore 'no-speech' and 'aborted' errors, which are common and not critical.
+      if (event.error === 'no-speech' || event.error === 'aborted') {
+        setIsListening(false);
+        return;
+      }
+      
       console.error('Speech recognition error', event.error);
       toast({
         variant: 'destructive',
         title: 'Voice Recognition Error',
-        description: `An error occurred: ${event.error}`,
+        description: `An error occurred: ${event.error}. Please check microphone permissions.`,
       });
       setIsListening(false);
     };
+    
+    recognition.onend = () => {
+      setIsListening(false);
+    }
 
     recognitionRef.current = recognition;
     
     // Cleanup function to stop recognition when the component unmounts
     return () => {
-      recognition.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     };
   }, [value, onChange, toast]);
   
