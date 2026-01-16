@@ -1,7 +1,8 @@
+
 'use client';
 
 import React from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { DailyDiary } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,13 +13,15 @@ import Link from 'next/link';
 
 export default function DiaryTrackerPage() {
   const firestore = useFirestore();
+  const { user, isUserLoading: authIsLoading } = useUser();
   
-  // Temporarily disable fetching to prevent permission errors until rules are finalized.
-  // TODO: Re-enable this by uncommenting the useCollection hook once Firestore security rules are correctly configured.
-  // const diariesQuery = useMemoFirebase(() => collection(firestore, 'daily_diaries'), [firestore]);
-  // const { data: diaries, isLoading } = useCollection<DailyDiary>(diariesQuery);
-  const diaries: DailyDiary[] = [];
-  const isLoading = false;
+  const diariesQuery = useMemoFirebase(
+      () => (authIsLoading || !user ? null : collection(firestore, 'daily_diaries')),
+      [firestore, authIsLoading, user]
+  );
+  const { data: diaries, isLoading: diariesAreLoading } = useCollection<DailyDiary>(diariesQuery);
+
+  const isLoading = authIsLoading || diariesAreLoading;
 
   return (
     <div className="flex flex-col gap-8">
