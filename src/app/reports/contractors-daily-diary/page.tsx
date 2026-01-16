@@ -150,7 +150,7 @@ export default function DailyDiaryPage() {
                                         <TableCell><Input type="number" step="0.1" /></TableCell>
                                         <TableCell><Input type="number" step="0.1" /></TableCell>
                                         <TableCell><Input type="number" step="0.1" /></TableCell>
-                                        <TableCell><Input /></TableCell>
+                                        <TableCell><Textarea rows={1} /></TableCell>
                                     </TableRow>
                                 ))}
                                 <TableRow>
@@ -185,7 +185,7 @@ export default function DailyDiaryPage() {
                                                 </div>
                                             </RadioGroup>
                                         </TableCell>
-                                        <TableCell><Input /></TableCell>
+                                        <TableCell><Textarea rows={1} /></TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -233,7 +233,7 @@ export default function DailyDiaryPage() {
                         {[...Array(5)].map((_, i) => (
                             <div key={i} className="flex items-center gap-2">
                                 <Label className="w-6">{i + 1}.</Label>
-                                <Input />
+                                <Textarea rows={1} />
                             </div>
                         ))}
                     </CardContent>
@@ -248,7 +248,7 @@ export default function DailyDiaryPage() {
                          {[...Array(5)].map((_, i) => (
                             <div key={i} className="flex items-center gap-2">
                                 <Label className="w-6">{i + 1}.</Label>
-                                <Input />
+                                <Textarea rows={1} />
                             </div>
                         ))}
                     </CardContent>
