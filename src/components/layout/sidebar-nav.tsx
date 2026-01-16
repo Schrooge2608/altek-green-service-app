@@ -36,6 +36,7 @@ import {
   Cog,
   Droplets,
   Power,
+  ScanLine,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -110,6 +111,7 @@ const librarySubMenu = [
     { href: '/library/work-orders', label: 'Works Orders' },
     { href: '/library/procedures', label: 'Schedule Procedures' },
     { href: '/library/data-sheets', label: 'Data Sheets' },
+    { href: '/scan', label: 'Scan Document', icon: ScanLine },
 ]
 
 const maintenanceSubMenu = [
@@ -139,7 +141,7 @@ export function SidebarNav() {
   const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
-  const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library'));
+  const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library') || pathname === '/scan');
   const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed'));
   const [isProceduresOpen, setIsProceduresOpen] = React.useState(pathname.startsWith('/maintenance/vsds') || pathname.startsWith('/maintenance/protection'));
 
@@ -430,7 +432,7 @@ export function SidebarNav() {
              <Collapsible open={isLibraryOpen} onOpenChange={setIsLibraryOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Library" isActive={pathname.startsWith('/library')}>
+                        <SidebarMenuButton tooltip="Library" isActive={pathname.startsWith('/library') || pathname === '/scan'}>
                             <Library />
                             <span>Library</span>
                             <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
@@ -443,6 +445,7 @@ export function SidebarNav() {
                             <SidebarMenuItem key={item.href}>
                                 <Link href={item.href} passHref>
                                     <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                     {item.icon && <item.icon />}
                                     <span>{item.label}</span>
                                     </SidebarMenuSubButton>
                                 </Link>
