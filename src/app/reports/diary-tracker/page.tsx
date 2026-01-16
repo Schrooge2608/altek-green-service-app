@@ -11,7 +11,7 @@ import Link from 'next/link';
 
 export default function DiaryTrackerPage() {
   // Data fetching is temporarily disabled to prevent permission errors.
-  // The app will load, but the list of diaries will be empty for now.
+  // This ensures the app loads without crashing while the underlying issue is investigated.
   const diaries: DailyDiary[] = [];
   const isLoading = false;
 
@@ -34,7 +34,7 @@ export default function DiaryTrackerPage() {
       <Card>
         <CardHeader>
             <CardTitle>Submitted Diaries</CardTitle>
-            <CardDescription>A log of all contractor daily diaries.</CardDescription>
+            <CardDescription>A log of all contractor daily diaries. (Note: Data loading is temporarily paused.)</CardDescription>
         </CardHeader>
         <CardContent>
             <Table>
@@ -57,26 +57,10 @@ export default function DiaryTrackerPage() {
                                 </div>
                             </TableCell>
                         </TableRow>
-                    ) : diaries && diaries.length > 0 ? (
-                        diaries.map(diary => (
-                            <TableRow key={diary.id}>
-                                <TableCell className="font-mono text-xs">{diary.id}</TableCell>
-                                <TableCell>{diary.contractTitle}</TableCell>
-                                <TableCell>{diary.date}</TableCell>
-                                <TableCell>{diary.area}</TableCell>
-                                <TableCell className="text-right">
-                                    <Link href={`/reports/contractors-daily-diary/${diary.id}`} passHref>
-                                        <Button variant="ghost" size="icon">
-                                            <FileText className="h-4 w-4" />
-                                        </Button>
-                                    </Link>
-                                </TableCell>
-                            </TableRow>
-                        ))
                     ) : (
                         <TableRow>
                             <TableCell colSpan={5} className="h-24 text-center">
-                                No diaries found.
+                                Diary list is temporarily unavailable while we resolve a data access issue.
                             </TableCell>
                         </TableRow>
                     )}
@@ -87,3 +71,5 @@ export default function DiaryTrackerPage() {
     </div>
   );
 }
+
+    

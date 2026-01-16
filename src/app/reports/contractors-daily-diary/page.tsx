@@ -17,7 +17,7 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -44,12 +44,11 @@ export default function NewDailyDiaryPage() {
     const router = useRouter();
     
     useEffect(() => {
-        // Generate a unique ID based on a timestamp substring to keep it short.
-        // This avoids reading the database and triggering permission errors.
-        const uniqueSuffix = Date.now().toString().slice(-5);
-        const formattedId = `AG-RBM-DD-${uniqueSuffix.padStart(5, '0')}`;
+        // Generate a short random alphanumeric string for the ID to ensure uniqueness without reading the DB
+        const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+        const formattedId = `AG-RBM-DD-${randomPart}`;
         setUniqueId(formattedId);
-    }, []); // Runs only once on component mount
+    }, []);
     
     const handleSave = () => {
         if (!firestore || !uniqueId) {
@@ -79,7 +78,7 @@ export default function NewDailyDiaryPage() {
             description: `Document ${uniqueId} has been saved successfully.`,
         });
         
-        router.push('/reports/diary-tracker');
+        router.push(`/reports/contractors-daily-diary/${uniqueId}`);
     };
 
 
@@ -352,3 +351,5 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
+
+    
