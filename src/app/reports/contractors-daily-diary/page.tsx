@@ -16,18 +16,19 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import type { DailyDiary } from '@/lib/types';
+import type { DailyDiary, User } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const initialManpowerData = [
-    { id: 1, designation: 'Power Electronic Engineer', forecast: 1, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
-    { id: 2, designation: 'Power Electronic Technician', forecast: 1, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
-    { id: 3, designation: 'Field Service Technician', forecast: 2, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
-    { id: 4, designation: 'Assistant Technician', forecast: 1, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
+    { id: 1, designation: '', forecast: 1, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
+    { id: 2, designation: '', forecast: 1, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
+    { id: 3, designation: '', forecast: 2, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
+    { id: 4, designation: '', forecast: 1, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
 ];
 
 
@@ -49,11 +50,21 @@ export default function NewDailyDiaryPage() {
     
     // Manpower state
     const [manpowerData, setManpowerData] = useState(initialManpowerData);
+
+    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
+
+    const userOptions = useMemo(() => {
+        if (!users) return [];
+        return users
+            .filter(u => u.role !== 'Admin' && u.role !== 'Superadmin')
+            .map(u => ({ label: u.name, value: u.name }));
+    }, [users]);
     
     useEffect(() => {
         // Generate a simple, non-sequential unique ID to avoid database queries.
         setIsIdLoading(true);
-        const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+        const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
         setUniqueId(`AG-RBM-DD-${randomPart}`);
         setIsIdLoading(false);
     }, []);
@@ -228,7 +239,26 @@ export default function NewDailyDiaryPage() {
                             <TableBody>
                                 {manpowerData.map((row, i) => (
                                     <TableRow key={row.id}>
-                                        <TableCell>{row.designation}</TableCell>
+                                        <TableCell>
+                                            <Select
+                                                onValueChange={(value) => handleManpowerChange(i, 'designation', value)}
+                                                value={row.designation}
+                                                disabled={usersLoading}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select user..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {usersLoading ? (
+                                                        <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                                    ) : (
+                                                        userOptions.map(option => (
+                                                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                        ))
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
                                         <TableCell><Input type="number" value={row.forecast} onChange={(e) => handleManpowerChange(i, 'forecast', e.target.value)} /></TableCell>
                                         <TableCell><Input type="number" value={row.actual} onChange={(e) => handleManpowerChange(i, 'actual', e.target.value)} /></TableCell>
                                         <TableCell><Input type="number" step="0.1" value={row.normalHrs} onChange={(e) => handleManpowerChange(i, 'normalHrs', e.target.value)} /></TableCell>
