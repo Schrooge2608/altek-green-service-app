@@ -51,10 +51,10 @@ const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
   { href: '/reports', label: 'Reports', icon: FileText },
-  { href: '/messages', label: 'Messages', icon: Mail },
-  { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
-  { href: '/meters', label: 'Meters', icon: Gauge },
-  { href: '/vendors', label: 'Vendors', icon: Store },
+  { href: '/messages', label: 'Messages', icon: Mail, beta: true },
+  { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, beta: true },
+  { href: '/meters', label: 'Meters', icon: Gauge, beta: true },
+  { href: '/vendors', label: 'Vendors', icon: Store, beta: true },
 ];
 
 const miningDivisions = [
@@ -131,6 +131,7 @@ export function SidebarNav() {
   const { data: allUsers } = useCollection<User>(usersQuery);
 
   const isManager = userData?.role && ['Site Supervisor', 'Services Manager', 'Corporate Manager'].includes(userData.role);
+  const canViewBeta = userData?.role && ['Admin', 'Superadmin', 'Beta Tester'].includes(userData.role);
 
 
   const isEquipmentPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter');
@@ -154,8 +155,7 @@ export function SidebarNav() {
   const dashboardLink = mainLinks.find(link => link.label === 'Dashboard');
   const breakdownLink = mainLinks.find(link => link.label === 'Breakdowns');
   const reportsLink = mainLinks.find(link => link.label === 'Reports');
-  const messagesLink = mainLinks.find(link => link.label === 'Messages');
-  const otherLinks = mainLinks.filter(link => !['Dashboard', 'Breakdowns', 'Reports', 'Messages'].includes(link.label));
+  const otherLinks = mainLinks.filter(link => !['Dashboard', 'Breakdowns', 'Reports'].includes(link.label));
 
 
   return (
@@ -391,21 +391,7 @@ export function SidebarNav() {
             </SidebarMenuItem>
           )}
 
-          {messagesLink && (
-            <SidebarMenuItem key={messagesLink.href}>
-              <Link href={messagesLink.href}>
-                <SidebarMenuButton
-                  isActive={pathname === messagesLink.href}
-                  tooltip={messagesLink.label}
-                >
-                  <messagesLink.icon />
-                  <span>{messagesLink.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          )}
-
-           <Collapsible open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
+            <Collapsible open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                         <SidebarMenuButton tooltip="Parts Inventory" isActive={pathname.startsWith('/inventory')}>
@@ -455,19 +441,24 @@ export function SidebarNav() {
                 </CollapsibleContent>
             </Collapsible>
             
-            {otherLinks.map((link) => (
-                <SidebarMenuItem key={link.href}>
-                <Link href={link.href}>
-                    <SidebarMenuButton
-                    isActive={pathname === link.href}
-                    tooltip={link.label}
-                    >
-                    <link.icon />
-                    <span>{link.label}</span>
-                    </SidebarMenuButton>
-                </Link>
-                </SidebarMenuItem>
-            ))}
+            {otherLinks.map((link) => {
+                if (link.beta && !canViewBeta) {
+                    return null;
+                }
+                return (
+                    <SidebarMenuItem key={link.href}>
+                    <Link href={link.href}>
+                        <SidebarMenuButton
+                        isActive={pathname === link.href}
+                        tooltip={link.label}
+                        >
+                        <link.icon />
+                        <span>{link.label}</span>
+                        </SidebarMenuButton>
+                    </Link>
+                    </SidebarMenuItem>
+                )
+            })}
 
              {userData?.role === 'Admin' && (
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>

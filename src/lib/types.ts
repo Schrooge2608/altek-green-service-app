@@ -149,7 +149,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Technician' | 'Junior Technician' | 'Technologist' | 'Power systems engineer' | 'HVAC product specialist' | 'Site Supervisor' | 'Services Manager' | 'Corporate Manager' | 'Admin' | 'Data Admin' | 'Superadmin';
+  role: 'Technician' | 'Junior Technician' | 'Technologist' | 'Power systems engineer' | 'HVAC product specialist' | 'Site Supervisor' | 'Services Manager' | 'Corporate Manager' | 'Admin' | 'Data Admin' | 'Superadmin' | 'Beta Tester';
   phoneNumber?: string;
   address?: string;
   nextOfKinName?: string;
@@ -163,5 +163,3 @@ export interface User {
   purchaseOrderNo?: string;
   justification?: string;
 }
-
-    
