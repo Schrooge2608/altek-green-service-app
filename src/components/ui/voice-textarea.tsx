@@ -45,8 +45,8 @@ export function VoiceTextarea({ value, onChange, ...props }: VoiceTextareaProps)
     };
 
     recognition.onerror = (event: any) => {
-      // Ignore 'no-speech' and 'aborted' errors, which are common and not critical.
-      if (event.error === 'no-speech' || event.error === 'aborted') {
+      // Ignore common, non-critical errors like no speech detected, user aborting, or network issues.
+      if (['no-speech', 'aborted', 'network'].includes(event.error)) {
         setIsListening(false);
         return;
       }
