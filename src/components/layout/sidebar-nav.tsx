@@ -215,7 +215,7 @@ export function SidebarNav() {
                                         <SidebarMenuItem key={division.href}>
                                             <Link href={division.href} passHref>
                                                 <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                                <span>{division.label}</span>
+                                                <a>{division.label}</a>
                                                 </SidebarMenuSubButton>
                                             </Link>
                                         </SidebarMenuItem>
@@ -239,7 +239,7 @@ export function SidebarNav() {
                                         <SidebarMenuItem key={division.href}>
                                             <Link href={division.href} passHref>
                                                 <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                                <span>{division.label}</span>
+                                                <a>{division.label}</a>
                                                 </SidebarMenuSubButton>
                                             </Link>
                                         </SidebarMenuItem>
@@ -267,7 +267,7 @@ export function SidebarNav() {
                             <SidebarMenuItem key={category.href}>
                                 <Link href={category.href} passHref>
                                     <SidebarMenuSubButton asChild isActive={pathname === category.href}>
-                                    <span>{category.label}</span>
+                                    <a>{category.label}</a>
                                     </SidebarMenuSubButton>
                                 </Link>
                             </SidebarMenuItem>
@@ -292,7 +292,7 @@ export function SidebarNav() {
                             <SidebarMenuItem key={item.href}>
                                 <Link href={item.href} passHref>
                                     <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                    <span>{item.label}</span>
+                                    <a>{item.label}</a>
                                     </SidebarMenuSubButton>
                                 </Link>
                             </SidebarMenuItem>
@@ -329,7 +329,7 @@ export function SidebarNav() {
                                     <SidebarMenuItem key={item.href}>
                                         <Link href={item.href} passHref>
                                             <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                            <span>{item.label}</span>
+                                            <a>{item.label}</a>
                                             </SidebarMenuSubButton>
                                         </Link>
                                     </SidebarMenuItem>
@@ -353,7 +353,7 @@ export function SidebarNav() {
                                     <SidebarMenuItem key={item.href}>
                                         <Link href={item.href} passHref>
                                             <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                            <span>{item.label}</span>
+                                            <a>{item.label}</a>
                                             </SidebarMenuSubButton>
                                         </Link>
                                     </SidebarMenuItem>
@@ -393,14 +393,14 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                         <SidebarMenuItem>
                             <Link href="/reports" passHref>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/reports'}>
+                                <SidebarMenuSubButton isActive={pathname === '/reports'}>
                                     <span>Performance Reports</span>
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
                             <Link href="/reports/contractors-daily-diary" passHref>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/reports/contractors-daily-diary'}>
+                                <SidebarMenuSubButton isActive={pathname === '/reports/contractors-daily-diary'}>
                                     <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
                                     <span>Contractors Daily Diary</span>
                                 </SidebarMenuSubButton>
@@ -426,7 +426,7 @@ export function SidebarNav() {
                             <SidebarMenuItem key={item.href}>
                                 <Link href={item.href} passHref>
                                     <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                    <span>{item.label}</span>
+                                    <a>{item.label}</a>
                                     </SidebarMenuSubButton>
                                 </Link>
                             </SidebarMenuItem>
@@ -450,8 +450,10 @@ export function SidebarNav() {
                             <SidebarMenuItem key={item.href}>
                                 <Link href={item.href} passHref>
                                     <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                     <a>
                                      {item.icon && <item.icon />}
                                     <span>{item.label}</span>
+                                    </a>
                                     </SidebarMenuSubButton>
                                 </Link>
                             </SidebarMenuItem>
@@ -495,21 +497,21 @@ export function SidebarNav() {
                         <SidebarMenuItem>
                             <Link href="/admin/users" passHref>
                                 <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
-                                  <span>User Management</span>
+                                  <a>User Management</a>
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
                          <SidebarMenuItem>
                             <Link href="/seed-admin" passHref>
                                 <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
-                                  <span>Seed Admin</span>
+                                  <a>Seed Admin</a>
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
                             <Link href="/admin/seed" passHref>
                                 <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
-                                  <span>Seed Data</span>
+                                  <a>Seed Data</a>
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
@@ -534,7 +536,7 @@ export function SidebarNav() {
                             <SidebarMenuItem key={u.id}>
                                 <Link href={`/profile/${u.id}`} passHref>
                                     <SidebarMenuSubButton asChild isActive={pathname === `/profile/${u.id}`}>
-                                        <span>{u.name}</span>
+                                        <a>{u.name}</a>
                                     </SidebarMenuSubButton>
                                 </Link>
                             </SidebarMenuItem>
