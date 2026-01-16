@@ -143,7 +143,7 @@ export default function DailyDiaryPage() {
                                 {manpowerRows.map((row, i) => (
                                     <TableRow key={i}>
                                         <TableCell>{row.designation}</TableCell>
-                                        <TableCell>{row.forecast}</TableCell>
+                                        <TableCell><Input type="number" defaultValue={row.forecast} /></TableCell>
                                         <TableCell><Input type="number" /></TableCell>
                                         <TableCell><Input type="number" step="0.1" /></TableCell>
                                         <TableCell><Input type="number" step="0.1" /></TableCell>
