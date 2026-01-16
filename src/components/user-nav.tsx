@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,7 +15,6 @@ import {
 import { useAuth, useUser, useMemoFirebase } from '@/firebase';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { LogOut, User as UserIcon, UserPlus } from 'lucide-react';
-import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
@@ -47,12 +47,10 @@ export function UserNav() {
   if (!user) {
     return (
       <div className="p-2">
-        <Link href="/auth/register" passHref>
-          <Button className="w-full">
-            <UserPlus className="mr-2 h-4 w-4" />
-            Register / Login
-          </Button>
-        </Link>
+        <Button className="w-full">
+          <UserPlus className="mr-2 h-4 w-4" />
+          Register / Login
+        </Button>
       </div>
     );
   }
@@ -88,12 +86,10 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <Link href="/profile" passHref>
             <DropdownMenuItem>
                 <UserIcon className="mr-2 h-4 w-4" />
                 <span>Profile</span>
             </DropdownMenuItem>
-          </Link>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => auth.signOut()}>

@@ -2,7 +2,6 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
 import {
   SidebarHeader,
@@ -175,15 +174,13 @@ export function SidebarNav() {
         <SidebarMenu>
           {dashboardLink && (
             <SidebarMenuItem key={dashboardLink.href}>
-              <Link href={dashboardLink.href}>
-                <SidebarMenuButton
-                  isActive={pathname === dashboardLink.href}
-                  tooltip={dashboardLink.label}
-                >
-                  <dashboardLink.icon />
-                  <span>{dashboardLink.label}</span>
-                </SidebarMenuButton>
-              </Link>
+              <SidebarMenuButton
+                isActive={pathname === dashboardLink.href}
+                tooltip={dashboardLink.label}
+              >
+                <dashboardLink.icon />
+                <span>{dashboardLink.label}</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           )}
 
@@ -213,11 +210,9 @@ export function SidebarNav() {
                                 <SidebarMenuSub>
                                     {miningDivisions.map((division) => (
                                         <SidebarMenuItem key={division.href}>
-                                            <Link href={division.href} passHref>
-                                                <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                                <a>{division.label}</a>
-                                                </SidebarMenuSubButton>
-                                            </Link>
+                                            <SidebarMenuSubButton isActive={pathname === division.href}>
+                                              {division.label}
+                                            </SidebarMenuSubButton>
                                         </SidebarMenuItem>
                                     ))}
                                 </SidebarMenuSub>
@@ -237,11 +232,9 @@ export function SidebarNav() {
                                 <SidebarMenuSub>
                                     {smelterDivisions.map((division) => (
                                         <SidebarMenuItem key={division.href}>
-                                            <Link href={division.href} passHref>
-                                                <SidebarMenuSubButton asChild isActive={pathname === division.href}>
-                                                <a>{division.label}</a>
-                                                </SidebarMenuSubButton>
-                                            </Link>
+                                            <SidebarMenuSubButton isActive={pathname === division.href}>
+                                              {division.label}
+                                            </SidebarMenuSubButton>
                                         </SidebarMenuItem>
                                     ))}
                                 </SidebarMenuSub>
@@ -265,11 +258,9 @@ export function SidebarNav() {
                      <SidebarMenuSub>
                         {completedSchedulesCategories.map((category) => (
                             <SidebarMenuItem key={category.href}>
-                                <Link href={category.href} passHref>
-                                    <SidebarMenuSubButton asChild isActive={pathname === category.href}>
-                                    <a>{category.label}</a>
-                                    </SidebarMenuSubButton>
-                                </Link>
+                                <SidebarMenuSubButton isActive={pathname === category.href}>
+                                  {category.label}
+                                </SidebarMenuSubButton>
                             </SidebarMenuItem>
                         ))}
                     </SidebarMenuSub>
@@ -290,11 +281,9 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                         {maintenanceSubMenu.map((item) => (
                             <SidebarMenuItem key={item.href}>
-                                <Link href={item.href} passHref>
-                                    <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                    <a>{item.label}</a>
-                                    </SidebarMenuSubButton>
-                                </Link>
+                                <SidebarMenuSubButton isActive={pathname === item.href}>
+                                  {item.label}
+                                </SidebarMenuSubButton>
                             </SidebarMenuItem>
                         ))}
                     </SidebarMenuSub>
@@ -327,11 +316,9 @@ export function SidebarNav() {
                                 <SidebarMenuSub>
                                 {vsdProcedureSubMenu.map((item) => (
                                     <SidebarMenuItem key={item.href}>
-                                        <Link href={item.href} passHref>
-                                            <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                            <a>{item.label}</a>
-                                            </SidebarMenuSubButton>
-                                        </Link>
+                                        <SidebarMenuSubButton isActive={pathname === item.href}>
+                                          {item.label}
+                                        </SidebarMenuSubButton>
                                     </SidebarMenuItem>
                                 ))}
                                 </SidebarMenuSub>
@@ -351,11 +338,9 @@ export function SidebarNav() {
                                 <SidebarMenuSub>
                                 {protectionProcedureSubMenu.map((item) => (
                                     <SidebarMenuItem key={item.href}>
-                                        <Link href={item.href} passHref>
-                                            <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                            <a>{item.label}</a>
-                                            </SidebarMenuSubButton>
-                                        </Link>
+                                        <SidebarMenuSubButton isActive={pathname === item.href}>
+                                          {item.label}
+                                        </SidebarMenuSubButton>
                                     </SidebarMenuItem>
                                 ))}
                                 </SidebarMenuSub>
@@ -367,15 +352,13 @@ export function SidebarNav() {
            
           {breakdownLink && (
             <SidebarMenuItem key={breakdownLink.href}>
-              <Link href={breakdownLink.href}>
-                <SidebarMenuButton
-                  isActive={pathname === breakdownLink.href}
-                  tooltip={breakdownLink.label}
-                >
-                  <breakdownLink.icon />
-                  <span>{breakdownLink.label}</span>
-                </SidebarMenuButton>
-              </Link>
+              <SidebarMenuButton
+                isActive={pathname === breakdownLink.href}
+                tooltip={breakdownLink.label}
+              >
+                <breakdownLink.icon />
+                <span>{breakdownLink.label}</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           )}
 
@@ -392,19 +375,15 @@ export function SidebarNav() {
                 <CollapsibleContent>
                     <SidebarMenuSub>
                         <SidebarMenuItem>
-                            <Link href="/reports" passHref>
-                                <SidebarMenuSubButton isActive={pathname === '/reports'}>
-                                    <span>Performance Reports</span>
-                                </SidebarMenuSubButton>
-                            </Link>
+                            <SidebarMenuSubButton isActive={pathname === '/reports'}>
+                                <span>Performance Reports</span>
+                            </SidebarMenuSubButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <Link href="/reports/contractors-daily-diary" passHref>
-                                <SidebarMenuSubButton isActive={pathname === '/reports/contractors-daily-diary'}>
-                                    <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
-                                    <span>Contractors Daily Diary</span>
-                                </SidebarMenuSubButton>
-                            </Link>
+                            <SidebarMenuSubButton isActive={pathname === '/reports/contractors-daily-diary'}>
+                                <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
+                                <span>Contractors Daily Diary</span>
+                            </SidebarMenuSubButton>
                         </SidebarMenuItem>
                     </SidebarMenuSub>
                 </CollapsibleContent>
@@ -424,11 +403,9 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                         {inventorySubMenu.map((item) => (
                             <SidebarMenuItem key={item.href}>
-                                <Link href={item.href} passHref>
-                                    <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                    <a>{item.label}</a>
-                                    </SidebarMenuSubButton>
-                                </Link>
+                                <SidebarMenuSubButton isActive={pathname === item.href}>
+                                  {item.label}
+                                </SidebarMenuSubButton>
                             </SidebarMenuItem>
                         ))}
                     </SidebarMenuSub>
@@ -448,14 +425,12 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                         {librarySubMenu.map((item) => (
                             <SidebarMenuItem key={item.href}>
-                                <Link href={item.href} passHref>
-                                    <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                <SidebarMenuSubButton asChild isActive={pathname === item.href}>
                                      <a>
                                      {item.icon && <item.icon />}
                                     <span>{item.label}</span>
                                     </a>
-                                    </SidebarMenuSubButton>
-                                </Link>
+                                </SidebarMenuSubButton>
                             </SidebarMenuItem>
                         ))}
                     </SidebarMenuSub>
@@ -468,7 +443,6 @@ export function SidebarNav() {
                 }
                 return (
                     <SidebarMenuItem key={link.href}>
-                    <Link href={link.href}>
                         <SidebarMenuButton
                         isActive={pathname === link.href}
                         tooltip={link.label}
@@ -476,7 +450,6 @@ export function SidebarNav() {
                         <link.icon />
                         <span>{link.label}</span>
                         </SidebarMenuButton>
-                    </Link>
                     </SidebarMenuItem>
                 )
             })}
@@ -495,25 +468,19 @@ export function SidebarNav() {
                 <CollapsibleContent>
                     <SidebarMenuSub>
                         <SidebarMenuItem>
-                            <Link href="/admin/users" passHref>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
-                                  <a>User Management</a>
-                                </SidebarMenuSubButton>
-                            </Link>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
+                              <a>User Management</a>
+                            </SidebarMenuSubButton>
                         </SidebarMenuItem>
                          <SidebarMenuItem>
-                            <Link href="/seed-admin" passHref>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
-                                  <a>Seed Admin</a>
-                                </SidebarMenuSubButton>
-                            </Link>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
+                              <a>Seed Admin</a>
+                            </SidebarMenuSubButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <Link href="/admin/seed" passHref>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
-                                  <a>Seed Data</a>
-                                </SidebarMenuSubButton>
-                            </Link>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
+                              <a>Seed Data</a>
+                            </SidebarMenuSubButton>
                         </SidebarMenuItem>
                     </SidebarMenuSub>
                 </CollapsibleContent>
@@ -534,11 +501,9 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                          {allUsers?.map((u) => (
                             <SidebarMenuItem key={u.id}>
-                                <Link href={`/profile/${u.id}`} passHref>
-                                    <SidebarMenuSubButton asChild isActive={pathname === `/profile/${u.id}`}>
-                                        <a>{u.name}</a>
-                                    </SidebarMenuSubButton>
-                                </Link>
+                                <SidebarMenuSubButton asChild isActive={pathname === `/profile/${u.id}`}>
+                                    <a>{u.name}</a>
+                                </SidebarMenuSubButton>
                             </SidebarMenuItem>
                         ))}
                     </SidebarMenuSub>
