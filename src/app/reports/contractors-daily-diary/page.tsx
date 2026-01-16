@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,10 +44,10 @@ export default function NewDailyDiaryPage() {
     const router = useRouter();
 
     useEffect(() => {
-        // Generate a unique ID based on a timestamp to avoid fetching the collection,
-        // which is causing permission errors.
-        const timestamp = Date.now();
-        setUniqueId(`AG-RBM-DD-${timestamp}`);
+        // Generate a shorter random unique ID to avoid fetching the collection,
+        // which is causing permission errors, and to make the ID more readable.
+        const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+        setUniqueId(`AG-RBM-DD-${randomPart}`);
     }, []);
     
     const handleSave = () => {
