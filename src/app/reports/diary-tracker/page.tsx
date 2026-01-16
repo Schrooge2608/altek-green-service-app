@@ -12,8 +12,13 @@ import Link from 'next/link';
 
 export default function DiaryTrackerPage() {
   const firestore = useFirestore();
-  const diariesQuery = useMemoFirebase(() => collection(firestore, 'daily_diaries'), [firestore]);
-  const { data: diaries, isLoading } = useCollection<DailyDiary>(diariesQuery);
+  
+  // Temporarily disable fetching to prevent permission errors until rules are finalized.
+  // TODO: Re-enable this by uncommenting the useCollection hook once Firestore security rules are correctly configured.
+  // const diariesQuery = useMemoFirebase(() => collection(firestore, 'daily_diaries'), [firestore]);
+  // const { data: diaries, isLoading } = useCollection<DailyDiary>(diariesQuery);
+  const diaries: DailyDiary[] = [];
+  const isLoading = false;
 
   return (
     <div className="flex flex-col gap-8">

@@ -16,11 +16,10 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import type { DailyDiary } from '@/lib/types';
 
 const manpowerRows = [
     { designation: 'Power Electronic Engineer', forecast: 1 },
@@ -43,15 +42,12 @@ export default function NewDailyDiaryPage() {
     const { toast } = useToast();
     const router = useRouter();
 
-    const diariesQuery = useMemoFirebase(() => collection(firestore, 'daily_diaries'), [firestore]);
-    const { data: diaries, isLoading: diariesLoading } = useCollection<DailyDiary>(diariesQuery);
-    
     useEffect(() => {
-        if (!diariesLoading) {
-            const nextId = (diaries?.length || 0) + 1;
-            setUniqueId(`AG-RBM-DD-${String(nextId).padStart(3, '0')}`);
-        }
-    }, [diaries, diariesLoading]);
+        // Generate a unique ID based on a timestamp to avoid fetching the collection,
+        // which is causing permission errors.
+        const timestamp = Date.now();
+        setUniqueId(`AG-RBM-DD-${timestamp}`);
+    }, []);
     
     const handleSave = () => {
         if (!firestore || !uniqueId) {
@@ -64,7 +60,7 @@ export default function NewDailyDiaryPage() {
         }
 
         const diaryData = {
-            // The document ID will be `uniqueId`, so we don't store it in the document body.
+            id: uniqueId,
             date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
             contractTitle: 'VSD MAINTENANCE', // Placeholder
             incidents: incidentsText,
@@ -74,7 +70,6 @@ export default function NewDailyDiaryPage() {
         
         const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
 
-        // Optimistically navigate and show success, as the write is non-blocking.
         setDocumentNonBlocking(diaryDocRef, diaryData, { merge: true });
         
         toast({
@@ -89,7 +84,7 @@ export default function NewDailyDiaryPage() {
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
             <div className="flex justify-end mb-4 gap-2 print:hidden">
-                 <Button onClick={handleSave} disabled={diariesLoading || !uniqueId}>
+                 <Button onClick={handleSave} disabled={!uniqueId}>
                     <Save className="mr-2 h-4 w-4" /> Save Diary
                 </Button>
                 <Button onClick={() => window.print()} variant="outline">
