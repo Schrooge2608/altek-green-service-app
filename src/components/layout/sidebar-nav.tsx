@@ -210,8 +210,8 @@ export function SidebarNav() {
                                 <SidebarMenuSub>
                                     {miningDivisions.map((division) => (
                                         <SidebarMenuItem key={division.href}>
-                                            <Link href={division.href} passHref legacyBehavior>
-                                                <SidebarMenuSubButton as="a" isActive={pathname === division.href}>
+                                            <Link href={division.href} asChild>
+                                                <SidebarMenuSubButton isActive={pathname === division.href}>
                                                 {division.label}
                                                 </SidebarMenuSubButton>
                                             </Link>
@@ -234,8 +234,8 @@ export function SidebarNav() {
                                 <SidebarMenuSub>
                                     {smelterDivisions.map((division) => (
                                         <SidebarMenuItem key={division.href}>
-                                             <Link href={division.href} passHref legacyBehavior>
-                                                <SidebarMenuSubButton as="a" isActive={pathname === division.href}>
+                                             <Link href={division.href} asChild>
+                                                <SidebarMenuSubButton isActive={pathname === division.href}>
                                                 {division.label}
                                                 </SidebarMenuSubButton>
                                             </Link>
@@ -262,8 +262,8 @@ export function SidebarNav() {
                      <SidebarMenuSub>
                         {completedSchedulesCategories.map((category) => (
                             <SidebarMenuItem key={category.href}>
-                                <Link href={category.href} passHref legacyBehavior>
-                                    <SidebarMenuSubButton as="a" isActive={pathname === category.href}>
+                                <Link href={category.href} asChild>
+                                    <SidebarMenuSubButton isActive={pathname === category.href}>
                                     {category.label}
                                     </SidebarMenuSubButton>
                                 </Link>
@@ -287,8 +287,8 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                         {maintenanceSubMenu.map((item) => (
                             <SidebarMenuItem key={item.href}>
-                                <Link href={item.href} passHref legacyBehavior>
-                                    <SidebarMenuSubButton as="a" isActive={pathname === item.href}>
+                                <Link href={item.href} asChild>
+                                    <SidebarMenuSubButton isActive={pathname === item.href}>
                                     {item.label}
                                     </SidebarMenuSubButton>
                                 </Link>
@@ -324,8 +324,8 @@ export function SidebarNav() {
                                 <SidebarMenuSub>
                                 {vsdProcedureSubMenu.map((item) => (
                                     <SidebarMenuItem key={item.href}>
-                                        <Link href={item.href} passHref legacyBehavior>
-                                            <SidebarMenuSubButton as="a" isActive={pathname === item.href}>
+                                        <Link href={item.href} asChild>
+                                            <SidebarMenuSubButton isActive={pathname === item.href}>
                                             {item.label}
                                             </SidebarMenuSubButton>
                                         </Link>
@@ -348,8 +348,8 @@ export function SidebarNav() {
                                 <SidebarMenuSub>
                                 {protectionProcedureSubMenu.map((item) => (
                                     <SidebarMenuItem key={item.href}>
-                                        <Link href={item.href} passHref legacyBehavior>
-                                            <SidebarMenuSubButton as="a" isActive={pathname === item.href}>
+                                        <Link href={item.href} asChild>
+                                            <SidebarMenuSubButton isActive={pathname === item.href}>
                                             {item.label}
                                             </SidebarMenuSubButton>
                                         </Link>
@@ -386,8 +386,8 @@ export function SidebarNav() {
                 <CollapsibleContent>
                     <SidebarMenuSub>
                         <SidebarMenuItem>
-                            <Link href="/reports" passHref legacyBehavior>
-                                <SidebarMenuSubButton as="a" isActive={pathname === '/reports'}>
+                            <Link href="/reports" asChild>
+                                <SidebarMenuSubButton isActive={pathname === '/reports'}>
                                     <span>Performance Reports</span>
                                 </SidebarMenuSubButton>
                             </Link>
@@ -405,15 +405,15 @@ export function SidebarNav() {
                             <CollapsibleContent>
                                 <SidebarMenuSub>
                                     <SidebarMenuItem>
-                                        <Link href="/reports/contractors-daily-diary" passHref legacyBehavior>
-                                            <SidebarMenuSubButton as="a" isActive={pathname === '/reports/contractors-daily-diary'}>
+                                        <Link href="/reports/contractors-daily-diary" asChild>
+                                            <SidebarMenuSubButton isActive={pathname === '/reports/contractors-daily-diary'}>
                                             New Diary
                                             </SidebarMenuSubButton>
                                         </Link>
                                     </SidebarMenuItem>
                                     <SidebarMenuItem>
-                                        <Link href="/reports/diary-tracker" passHref legacyBehavior>
-                                            <SidebarMenuSubButton as="a" isActive={pathname === '/reports/diary-tracker'}>
+                                        <Link href="/reports/diary-tracker" asChild>
+                                            <SidebarMenuSubButton isActive={pathname === '/reports/diary-tracker'}>
                                             Diary Tracker
                                             </SidebarMenuSubButton>
                                         </Link>
@@ -439,8 +439,8 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                         {inventorySubMenu.map((item) => (
                             <SidebarMenuItem key={item.href}>
-                                <Link href={item.href} passHref legacyBehavior>
-                                    <SidebarMenuSubButton as="a" isActive={pathname === item.href}>
+                                <Link href={item.href} asChild>
+                                    <SidebarMenuSubButton isActive={pathname === item.href}>
                                     {item.label}
                                     </SidebarMenuSubButton>
                                 </Link>
@@ -463,8 +463,8 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                         {librarySubMenu.map((item) => (
                             <SidebarMenuItem key={item.href}>
-                                <Link href={item.href} passHref legacyBehavior>
-                                    <SidebarMenuSubButton as="a" isActive={pathname === item.href}>
+                                <Link href={item.href} asChild>
+                                    <SidebarMenuSubButton isActive={pathname === item.href}>
                                         {item.icon && <item.icon />}
                                         <span>{item.label}</span>
                                     </SidebarMenuSubButton>
@@ -505,22 +505,22 @@ export function SidebarNav() {
                 <CollapsibleContent>
                     <SidebarMenuSub>
                         <SidebarMenuItem>
-                            <Link href="/admin/users" passHref legacyBehavior>
-                                <SidebarMenuSubButton as="a" isActive={pathname === '/admin/users'}>
+                            <Link href="/admin/users" asChild>
+                                <SidebarMenuSubButton isActive={pathname === '/admin/users'}>
                                 User Management
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
                          <SidebarMenuItem>
-                            <Link href="/seed-admin" passHref legacyBehavior>
-                                <SidebarMenuSubButton as="a" isActive={pathname === '/seed-admin'}>
+                            <Link href="/seed-admin" asChild>
+                                <SidebarMenuSubButton isActive={pathname === '/seed-admin'}>
                                 Seed Admin
                                 </SidebarMenuSubButton>
                             </Link>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                             <Link href="/admin/seed" passHref legacyBehavior>
-                                <SidebarMenuSubButton as="a" isActive={pathname === '/admin/seed'}>
+                             <Link href="/admin/seed" asChild>
+                                <SidebarMenuSubButton isActive={pathname === '/admin/seed'}>
                                 Seed Data
                                 </SidebarMenuSubButton>
                             </Link>
@@ -544,8 +544,8 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                          {allUsers?.map((u) => (
                             <SidebarMenuItem key={u.id}>
-                                <Link href={`/profile/${u.id}`} passHref legacyBehavior>
-                                    <SidebarMenuSubButton as="a" isActive={pathname === `/profile/${u.id}`}>
+                                <Link href={`/profile/${u.id}`} asChild>
+                                    <SidebarMenuSubButton isActive={pathname === `/profile/${u.id}`}>
                                         {u.name}
                                     </SidebarMenuSubButton>
                                 </Link>
