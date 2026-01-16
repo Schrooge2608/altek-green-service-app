@@ -3,6 +3,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   SidebarHeader,
   SidebarMenu,
@@ -145,6 +146,7 @@ export function SidebarNav() {
   const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library') || pathname === '/scan');
   const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed'));
   const [isProceduresOpen, setIsProceduresOpen] = React.useState(pathname.startsWith('/maintenance/vsds') || pathname.startsWith('/maintenance/protection'));
+  const [isReportsOpen, setIsReportsOpen] = React.useState(pathname.startsWith('/reports'));
 
   React.useEffect(() => {
     if (isEquipmentPath) {
@@ -377,19 +379,36 @@ export function SidebarNav() {
             </SidebarMenuItem>
           )}
 
-          {reportsLink && (
-            <SidebarMenuItem key={reportsLink.href}>
-              <Link href={reportsLink.href}>
-                <SidebarMenuButton
-                  isActive={pathname === reportsLink.href}
-                  tooltip={reportsLink.label}
-                >
-                  <reportsLink.icon />
-                  <span>{reportsLink.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          )}
+            <Collapsible open={isReportsOpen} onOpenChange={setIsReportsOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Reports" isActive={pathname.startsWith('/reports')}>
+                            <FileText />
+                            <span>Reports</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                        <SidebarMenuItem>
+                            <Link href="/reports" passHref>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/reports'}>
+                                    <span>Performance Reports</span>
+                                </SidebarMenuSubButton>
+                            </Link>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <Link href="/reports/contractors-daily-diary" passHref>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/reports/contractors-daily-diary'}>
+                                    <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
+                                    <span>Contractors Daily Diary</span>
+                                </SidebarMenuSubButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+            </Collapsible>
 
             <Collapsible open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
                 <SidebarMenuItem>
