@@ -5,13 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
+import { VoiceTextarea } from '@/components/ui/voice-textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CalendarIcon, Printer } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -32,6 +32,8 @@ const plantRows = [
 
 export default function DailyDiaryPage() {
     const [date, setDate] = React.useState<Date>();
+    const [incidentsText, setIncidentsText] = useState('');
+    const [toolboxTalkText, setToolboxTalkText] = useState('');
 
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
@@ -109,11 +111,11 @@ export default function DailyDiaryPage() {
                     <CardContent className="p-4 space-y-4">
                         <div className="space-y-1">
                             <Label htmlFor="incidents">Incidents/Accidents/Injuries</Label>
-                            <Textarea id="incidents" rows={2} />
+                            <VoiceTextarea id="incidents" rows={2} value={incidentsText} onChange={setIncidentsText} />
                         </div>
                          <div className="space-y-1">
                             <Label htmlFor="toolbox-talk">Toolbox Talk</Label>
-                            <Textarea id="toolbox-talk" rows={2} />
+                            <VoiceTextarea id="toolbox-talk" rows={2} value={toolboxTalkText} onChange={setToolboxTalkText} />
                         </div>
                     </CardContent>
                 </Card>
