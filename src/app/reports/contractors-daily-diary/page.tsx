@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,28 +5,31 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { VoiceTextarea } from '@/components/ui/voice-textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CalendarIcon, Printer, Save } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { CalendarIcon, Printer, Save, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, setDocumentNonBlocking, useUser, useMemoFirebase } from '@/firebase';
+import { doc, collection, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import type { DailyDiary } from '@/lib/types';
 
-const manpowerRows = [
-    { designation: 'Power Electronic Engineer', forecast: 1 },
-    { designation: 'Power Electronic Technician', forecast: 1 },
-    { designation: 'Field Service Technician', forecast: 2 },
-    { designation: 'Assistant Technician', forecast: 1 },
+
+const initialManpowerData = [
+    { id: 1, designation: 'Power Electronic Engineer', forecast: 1, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
+    { id: 2, designation: 'Power Electronic Technician', forecast: 1, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
+    { id: 3, designation: 'Field Service Technician', forecast: 2, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
+    { id: 4, designation: 'Assistant Technician', forecast: 1, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' },
 ];
+
 
 const plantRows = [
     { description: 'LDV - Single Cab' },
@@ -39,16 +41,46 @@ export default function NewDailyDiaryPage() {
     const [incidentsText, setIncidentsText] = useState('');
     const [toolboxTalkText, setToolboxTalkText] = useState('');
     const [uniqueId, setUniqueId] = useState('');
+    const [isIdLoading, setIsIdLoading] = useState(true);
     const firestore = useFirestore();
     const { toast } = useToast();
     const router = useRouter();
+    const { user, isUserLoading } = useUser();
     
+    // Manpower state
+    const [manpowerData, setManpowerData] = useState(initialManpowerData);
+    
+    const diariesCollectionRef = useMemoFirebase(
+      () => (firestore ? collection(firestore, 'daily_diaries') : null),
+      [firestore]
+    );
+
     useEffect(() => {
-        // Generate a short random alphanumeric string for the ID to ensure uniqueness without reading the DB
-        const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
-        const formattedId = `AG-RBM-DD-${randomPart}`;
-        setUniqueId(formattedId);
-    }, []);
+        if (!user || !diariesCollectionRef) return;
+
+        const generateId = async () => {
+            setIsIdLoading(true);
+            try {
+                const snapshot = await getDocs(diariesCollectionRef);
+                const count = snapshot.size;
+                const nextId = (count + 1).toString().padStart(5, '0');
+                setUniqueId(`AG-RBM-DD-${nextId}`);
+            } catch (error) {
+                console.error("Error fetching diary count:", error);
+                const randomPart = `ts-${Date.now().toString().slice(-5)}`;
+                setUniqueId(`AG-RBM-DD-${randomPart}`);
+                toast({
+                    variant: 'destructive',
+                    title: 'ID Generation Error',
+                    description: 'Could not generate sequential ID. Using a timestamp ID as fallback.',
+                });
+            } finally {
+                setIsIdLoading(false);
+            }
+        };
+
+        generateId();
+    }, [user, diariesCollectionRef, toast]);
     
     const handleSave = () => {
         if (!firestore || !uniqueId) {
@@ -60,18 +92,20 @@ export default function NewDailyDiaryPage() {
             return;
         }
 
-        const diaryData = {
+        const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
+        
+        const plainManpowerData = manpowerData.map(row => ({...row}));
+        const finalDiaryData: Partial<DailyDiary> = { 
             id: uniqueId,
             date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
             contractTitle: 'VSD MAINTENANCE', // Placeholder
             incidents: incidentsText,
             toolboxTalk: toolboxTalkText,
-            // ... gather all other form fields
+            manpower: plainManpowerData,
+             // ... gather all other form fields
         };
-        
-        const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
 
-        setDocumentNonBlocking(diaryDocRef, diaryData, { merge: true });
+        setDocumentNonBlocking(diaryDocRef, finalDiaryData, { merge: true });
         
         toast({
             title: 'Diary Saved',
@@ -81,11 +115,34 @@ export default function NewDailyDiaryPage() {
         router.push(`/reports/contractors-daily-diary/${uniqueId}`);
     };
 
+    const handleManpowerChange = (index: number, field: keyof typeof manpowerData[0], value: string) => {
+        const newData = [...manpowerData];
+        const parsedValue = (field !== 'designation' && field !== 'comments' && value !== '') ? parseFloat(value) : value;
+
+        // @ts-ignore
+        newData[index][field] = parsedValue;
+        setManpowerData(newData);
+    };
+
+    const { forecastTotal, actualTotal } = useMemo(() => {
+        const forecastTotal = manpowerData.reduce((sum, row) => sum + Number(row.forecast || 0), 0);
+        const actualTotal = manpowerData.reduce((sum, row) => sum + Number(row.actual || 0), 0);
+        return { forecastTotal, actualTotal };
+    }, [manpowerData]);
+
+     if (isUserLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
 
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
             <div className="flex justify-end mb-4 gap-2 print:hidden">
-                 <Button onClick={handleSave} disabled={!uniqueId}>
+                 <Button onClick={handleSave} disabled={!uniqueId || isIdLoading}>
                     <Save className="mr-2 h-4 w-4" /> Save Diary
                 </Button>
                 <Button onClick={() => window.print()} variant="outline">
@@ -97,7 +154,7 @@ export default function NewDailyDiaryPage() {
                     <AltekLogo className="h-10" />
                     <div className="text-right">
                         <h1 className="text-2xl font-bold tracking-tight text-primary">DAILY DIARY</h1>
-                        <p className="text-sm text-muted-foreground font-mono">ID: {uniqueId || 'Generating...'}</p>
+                        <p className="text-sm text-muted-foreground font-mono">ID: {isIdLoading ? 'Generating...' : uniqueId}</p>
                     </div>
                 </header>
 
@@ -193,23 +250,37 @@ export default function NewDailyDiaryPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {manpowerRows.map((row, i) => (
-                                    <TableRow key={i}>
+                                {manpowerData.map((row, i) => (
+                                    <TableRow key={row.id}>
                                         <TableCell>{row.designation}</TableCell>
-                                        <TableCell><Input type="number" defaultValue={row.forecast} /></TableCell>
-                                        <TableCell><Input type="number" /></TableCell>
-                                        <TableCell><Input type="number" step="0.1" /></TableCell>
-                                        <TableCell><Input type="number" step="0.1" /></TableCell>
-                                        <TableCell><Input type="number" step="0.1" /></TableCell>
-                                        <TableCell><Input type="number" step="0.1" /></TableCell>
-                                        <TableCell><Textarea rows={1} /></TableCell>
+                                        <TableCell><Input type="number" value={row.forecast} onChange={(e) => handleManpowerChange(i, 'forecast', e.target.value)} /></TableCell>
+                                        <TableCell><Input type="number" value={row.actual} onChange={(e) => handleManpowerChange(i, 'actual', e.target.value)} /></TableCell>
+                                        <TableCell><Input type="number" step="0.1" value={row.normalHrs} onChange={(e) => handleManpowerChange(i, 'normalHrs', e.target.value)} /></TableCell>
+                                        <TableCell><Input type="number" step="0.1" value={row.overtime1_5} onChange={(e) => handleManpowerChange(i, 'overtime1_5', e.target.value)} /></TableCell>
+                                        <TableCell><Input type="number" step="0.1" value={row.overtime2_0} onChange={(e) => handleManpowerChange(i, 'overtime2_0', e.target.value)}/></TableCell>
+                                        <TableCell><Input type="number" step="0.1" value={row.totalManHrs} onChange={(e) => handleManpowerChange(i, 'totalManHrs', e.target.value)}/></TableCell>
+                                        <TableCell><Textarea rows={1} value={row.comments} onChange={(e) => handleManpowerChange(i, 'comments', e.target.value)}/></TableCell>
                                     </TableRow>
                                 ))}
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-right font-bold">Total Workforce on site</TableCell>
-                                    <TableCell><Input type="number" /></TableCell>
-                                </TableRow>
                             </TableBody>
+                             <TableFooter>
+                                <TableRow>
+                                    <TableCell className="text-right font-bold">Totals</TableCell>
+                                    <TableCell>
+                                        <div className="space-y-1">
+                                            <Label htmlFor="forecast-total" className="text-xs">Forecasted</Label>
+                                            <Input id="forecast-total" type="number" value={forecastTotal} readOnly className="font-bold bg-muted" />
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="space-y-1">
+                                            <Label htmlFor="actual-total" className="text-xs">Actual</Label>
+                                            <Input id="actual-total" type="number" value={actualTotal} readOnly className="font-bold bg-muted" />
+                                        </div>
+                                    </TableCell>
+                                    <TableCell colSpan={5}></TableCell>
+                                </TableRow>
+                            </TableFooter>
                         </Table>
                          <Table>
                             <TableHeader>
@@ -351,5 +422,3 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
-
-    
