@@ -163,3 +163,54 @@ export interface User {
   purchaseOrderNo?: string;
   justification?: string;
 }
+
+export interface ManpowerEntry {
+    designation: string;
+    forecast: number;
+    actual?: number;
+    normalHrs?: number;
+    overtime1_5?: number;
+    overtime2_0?: number;
+    totalManHrs?: number;
+    comments?: string;
+}
+
+export interface PlantEntry {
+    description: string;
+    qty?: number;
+    inspectionDone?: 'yes' | 'no';
+    comments?: string;
+}
+
+export interface WorkEntry {
+    area?: string;
+    scope?: string;
+    timeStart?: string;
+    timeEnd?: string;
+    hrs?: number;
+}
+
+
+export interface DailyDiary {
+  id: string;
+  contractTitle?: string;
+  contractNumber?: string;
+  area?: 'Mining' | 'Smelter';
+  date?: string;
+  shiftStart?: string;
+  shiftEnd?: string;
+  hrs?: number;
+  incidents?: string;
+  toolboxTalk?: string;
+  manpower?: ManpowerEntry[];
+  plant?: PlantEntry[];
+  works?: WorkEntry[];
+  delays?: string[];
+  comments?: string[];
+  contractorName?: string;
+  contractorSignature?: string; // base64
+  contractorDate?: string;
+  clientName?: string;
+  clientSignature?: string; // base64
+  clientDate?: string;
+}

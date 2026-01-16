@@ -25,9 +25,9 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS"] },
+        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS", "MSP - TTP"] },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
-        "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations"], "description": "The specific division within the Mining plant." },
+        "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron injection", "Stripping Crane", "Slag plant", "North Screen", "UPS/BTU's"], "description": "The specific division within the Mining or Smelter plant." },
         "vsdId": { "type": "string" },
         "lastMaintenance": { "type": "string", "format": "date" },
         "nextMaintenance": { "type": "string", "format": "date" },
@@ -88,7 +88,12 @@
         "pumpFrameSize": { "type": "string" },
         "pumpFrameType": { "type": "string" },
         "pumpAssignedToId": { "type": "string", "description": "The UID of the user assigned to the pump." },
-        "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." }
+        "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." },
+        "breakdownStatus": {
+          "type": "string",
+          "enum": ["None", "Active", "Resolved", "Pending PO", "Awaiting OT", "Signed Off", "Invoiced"],
+          "description": "The current status of a breakdown workflow for the equipment."
+        }
       },
       "required": ["id", "name", "location", "vsdId", "plant"]
     },
@@ -177,7 +182,7 @@
             "id": { "type": "string", "description": "The user's unique ID, same as their Firebase Auth UID." },
             "name": { "type": "string" },
             "email": { "type": "string", "format": "email" },
-            "role": { "type": "string", "enum": ["Technician", "Junior Technician", "Technologist", "Power systems engineer", "HVAC product specialist", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin", "Data Admin", "Superadmin"] },
+            "role": { "type": "string", "enum": ["Technician", "Junior Technician", "Technologist", "Power systems engineer", "HVAC product specialist", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin", "Data Admin", "Superadmin", "Beta Tester"] },
             "phoneNumber": { "type": "string" },
             "address": { "type": "string" },
             "nextOfKinName": { "type": "string" },
@@ -192,6 +197,73 @@
             "justification": { "type": "string", "description": "RBM Information: Justification." }
         },
         "required": ["id", "name", "email", "role"]
+    },
+    "DailyDiary": {
+        "title": "DailyDiary",
+        "type": "object",
+        "description": "Represents a contractor's daily diary entry.",
+        "properties": {
+            "id": { "type": "string" },
+            "contractTitle": { "type": "string" },
+            "contractNumber": { "type": "string" },
+            "area": { "type": "string", "enum": ["Mining", "Smelter"] },
+            "date": { "type": "string", "format": "date" },
+            "shiftStart": { "type": "string" },
+            "shiftEnd": { "type": "string" },
+            "hrs": { "type": "number" },
+            "incidents": { "type": "string" },
+            "toolboxTalk": { "type": "string" },
+            "manpower": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                "designation": { "type": "string" },
+                "forecast": { "type": "number" },
+                "actual": { "type": "number" },
+                "normalHrs": { "type": "number" },
+                "overtime1_5": { "type": "number" },
+                "overtime2_0": { "type": "number" },
+                "totalManHrs": { "type": "number" },
+                "comments": { "type": "string" }
+                }
+            }
+            },
+            "plant": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                "description": { "type": "string" },
+                "qty": { "type": "number" },
+                "inspectionDone": { "type": "string", "enum": ["yes", "no"] },
+                "comments": { "type": "string" }
+                }
+            }
+            },
+            "works": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                "area": { "type": "string" },
+                "scope": { "type": "string" },
+                "timeStart": { "type": "string" },
+                "timeEnd": { "type": "string" },
+                "hrs": { "type": "number" }
+                }
+            }
+            },
+            "delays": { "type": "array", "items": { "type": "string" } },
+            "comments": { "type": "array", "items": { "type": "string" } },
+            "contractorName": { "type": "string" },
+            "contractorSignature": { "type": "string" },
+            "contractorDate": { "type": "string", "format": "date" },
+            "clientName": { "type": "string" },
+            "clientSignature": { "type": "string" },
+            "clientDate": { "type": "string", "format": "date" }
+        },
+        "required": ["id", "date", "contractTitle", "contractNumber"]
     }
   },
   "auth": {
@@ -246,9 +318,15 @@
               "schema": { "$ref": "#/entities/User" },
               "description": "Stores user profiles and roles."
           }
+      },
+      {
+        "path": "/daily_diaries/{diaryId}",
+        "definition": {
+          "entityName": "DailyDiary",
+          "schema": { "$ref": "#/entities/DailyDiary" },
+          "description": "Stores contractor daily diary entries."
+        }
       }
     ]
   }
 }
-
-    

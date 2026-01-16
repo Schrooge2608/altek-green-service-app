@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -45,6 +44,7 @@ import React from 'react';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import type { User } from '@/lib/types';
 import { collection, doc } from 'firebase/firestore';
+import Link from 'next/link';
 
 
 const mainLinks = [
@@ -173,7 +173,7 @@ export function SidebarNav() {
       <SidebarContent>
         <SidebarMenu>
           {dashboardLink && (
-            <SidebarMenuItem key={dashboardLink.href}>
+            <SidebarMenuItem>
               <SidebarMenuButton
                 isActive={pathname === dashboardLink.href}
                 tooltip={dashboardLink.label}
@@ -351,7 +351,7 @@ export function SidebarNav() {
            </Collapsible>
            
           {breakdownLink && (
-            <SidebarMenuItem key={breakdownLink.href}>
+            <SidebarMenuItem>
               <SidebarMenuButton
                 isActive={pathname === breakdownLink.href}
                 tooltip={breakdownLink.label}
@@ -375,16 +375,41 @@ export function SidebarNav() {
                 <CollapsibleContent>
                     <SidebarMenuSub>
                         <SidebarMenuItem>
-                            <SidebarMenuSubButton isActive={pathname === '/reports'}>
-                                <span>Performance Reports</span>
-                            </SidebarMenuSubButton>
+                            <Link href="/reports" passHref>
+                                <SidebarMenuSubButton isActive={pathname === '/reports'}>
+                                    <span>Performance Reports</span>
+                                </SidebarMenuSubButton>
+                            </Link>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuSubButton isActive={pathname === '/reports/contractors-daily-diary'}>
-                                <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
-                                <span>Contractors Daily Diary</span>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
+                        <Collapsible>
+                             <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton isActive={pathname.startsWith('/reports/contractors-daily-diary') || pathname === '/reports/diary-tracker'}>
+                                        <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
+                                        <span>Daily Diary</span>
+                                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                    </SidebarMenuButton>
+                                </CollapsibleTrigger>
+                            </SidebarMenuItem>
+                            <CollapsibleContent>
+                                <SidebarMenuSub>
+                                    <SidebarMenuItem>
+                                        <Link href="/reports/contractors-daily-diary" passHref>
+                                            <SidebarMenuSubButton isActive={pathname === '/reports/contractors-daily-diary'}>
+                                              New Diary
+                                            </SidebarMenuSubButton>
+                                        </Link>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <Link href="/reports/diary-tracker" passHref>
+                                            <SidebarMenuSubButton isActive={pathname === '/reports/diary-tracker'}>
+                                              Diary Tracker
+                                            </SidebarMenuSubButton>
+                                        </Link>
+                                    </SidebarMenuItem>
+                                </SidebarMenuSub>
+                            </CollapsibleContent>
+                        </Collapsible>
                     </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>
@@ -425,11 +450,9 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                         {librarySubMenu.map((item) => (
                             <SidebarMenuItem key={item.href}>
-                                <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                     <a>
+                                <SidebarMenuSubButton isActive={pathname === item.href}>
                                      {item.icon && <item.icon />}
                                     <span>{item.label}</span>
-                                    </a>
                                 </SidebarMenuSubButton>
                             </SidebarMenuItem>
                         ))}
@@ -468,18 +491,18 @@ export function SidebarNav() {
                 <CollapsibleContent>
                     <SidebarMenuSub>
                         <SidebarMenuItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
-                              <a>User Management</a>
+                            <SidebarMenuSubButton isActive={pathname === '/admin/users'}>
+                              User Management
                             </SidebarMenuSubButton>
                         </SidebarMenuItem>
                          <SidebarMenuItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
-                              <a>Seed Admin</a>
+                            <SidebarMenuSubButton isActive={pathname === '/seed-admin'}>
+                              Seed Admin
                             </SidebarMenuSubButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
-                              <a>Seed Data</a>
+                            <SidebarMenuSubButton isActive={pathname === '/admin/seed'}>
+                              Seed Data
                             </SidebarMenuSubButton>
                         </SidebarMenuItem>
                     </SidebarMenuSub>
@@ -501,8 +524,8 @@ export function SidebarNav() {
                     <SidebarMenuSub>
                          {allUsers?.map((u) => (
                             <SidebarMenuItem key={u.id}>
-                                <SidebarMenuSubButton asChild isActive={pathname === `/profile/${u.id}`}>
-                                    <a>{u.name}</a>
+                                <SidebarMenuSubButton isActive={pathname === `/profile/${u.id}`}>
+                                    {u.name}
                                 </SidebarMenuSubButton>
                             </SidebarMenuItem>
                         ))}
