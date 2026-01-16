@@ -16,8 +16,8 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, setDocumentNonBlocking, useUser, useMemoFirebase } from '@/firebase';
-import { doc, collection, getDocs } from 'firebase/firestore';
+import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { DailyDiary } from '@/lib/types';
@@ -50,37 +50,13 @@ export default function NewDailyDiaryPage() {
     // Manpower state
     const [manpowerData, setManpowerData] = useState(initialManpowerData);
     
-    const diariesCollectionRef = useMemoFirebase(
-      () => (firestore ? collection(firestore, 'daily_diaries') : null),
-      [firestore]
-    );
-
     useEffect(() => {
-        if (!user || !diariesCollectionRef) return;
-
-        const generateId = async () => {
-            setIsIdLoading(true);
-            try {
-                const snapshot = await getDocs(diariesCollectionRef);
-                const count = snapshot.size;
-                const nextId = (count + 1).toString().padStart(5, '0');
-                setUniqueId(`AG-RBM-DD-${nextId}`);
-            } catch (error) {
-                console.error("Error fetching diary count:", error);
-                const randomPart = `ts-${Date.now().toString().slice(-5)}`;
-                setUniqueId(`AG-RBM-DD-${randomPart}`);
-                toast({
-                    variant: 'destructive',
-                    title: 'ID Generation Error',
-                    description: 'Could not generate sequential ID. Using a timestamp ID as fallback.',
-                });
-            } finally {
-                setIsIdLoading(false);
-            }
-        };
-
-        generateId();
-    }, [user, diariesCollectionRef, toast]);
+        // Generate a simple, non-sequential unique ID to avoid database queries.
+        setIsIdLoading(true);
+        const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+        setUniqueId(`AG-RBM-DD-${randomPart}`);
+        setIsIdLoading(false);
+    }, []);
     
     const handleSave = () => {
         if (!firestore || !uniqueId) {
