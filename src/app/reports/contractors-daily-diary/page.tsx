@@ -17,6 +17,7 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SignaturePad } from '@/components/ui/signature-pad';
+import { Textarea } from '@/components/ui/textarea';
 
 const manpowerRows = [
     { designation: 'Power Electronic Engineer', forecast: 1 },
@@ -212,7 +213,7 @@ export default function DailyDiaryPage() {
                                 {[...Array(5)].map((_, i) => (
                                     <TableRow key={i}>
                                         <TableCell><Input /></TableCell>
-                                        <TableCell><Input /></TableCell>
+                                        <TableCell><Textarea rows={1} /></TableCell>
                                         <TableCell><Input type="time" /></TableCell>
                                         <TableCell><Input type="time" /></TableCell>
                                         <TableCell><Input type="number" /></TableCell>
