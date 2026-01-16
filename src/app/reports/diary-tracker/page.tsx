@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-// import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-// import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import type { DailyDiary } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,13 +11,9 @@ import { FileText, Loader2, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DiaryTrackerPage() {
-  // const firestore = useFirestore();
-  // const diariesQuery = useMemoFirebase(() => collection(firestore, 'daily_diaries'), [firestore]);
-  // const { data: diaries, isLoading } = useCollection<DailyDiary>(diariesQuery);
-
-  // Temporarily hardcode data to prevent data-fetching crash
-  const diaries: DailyDiary[] = [];
-  const isLoading = false;
+  const firestore = useFirestore();
+  const diariesQuery = useMemoFirebase(() => collection(firestore, 'daily_diaries'), [firestore]);
+  const { data: diaries, isLoading } = useCollection<DailyDiary>(diariesQuery);
 
   return (
     <div className="flex flex-col gap-8">

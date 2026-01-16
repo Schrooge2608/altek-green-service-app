@@ -16,10 +16,11 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import type { DailyDiary } from '@/lib/types';
 
 const manpowerRows = [
     { designation: 'Power Electronic Engineer', forecast: 1 },
@@ -42,27 +43,28 @@ export default function NewDailyDiaryPage() {
     const { toast } = useToast();
     const router = useRouter();
 
-    useEffect(() => {
-        // Generate a unique ID for display when the component mounts
-        if (firestore) {
-            setUniqueId(doc(collection(firestore, 'temp_ids')).id);
-        }
-    }, [firestore]);
+    const diariesQuery = useMemoFirebase(() => collection(firestore, 'daily_diaries'), [firestore]);
+    const { data: diaries, isLoading: diariesLoading } = useCollection<DailyDiary>(diariesQuery);
     
-    const handleSave = async () => {
-        // In a real app, you would gather all form data here into a single object.
-        // For this step, we'll save a placeholder document.
-        if (!firestore) {
+    useEffect(() => {
+        if (!diariesLoading) {
+            const nextId = (diaries?.length || 0) + 1;
+            setUniqueId(`AG-RBM-DD-${String(nextId).padStart(3, '0')}`);
+        }
+    }, [diaries, diariesLoading]);
+    
+    const handleSave = () => {
+        if (!firestore || !uniqueId) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Database not available.',
+                description: 'Database not available or ID not generated.',
             });
             return;
         }
 
         const diaryData = {
-            id: uniqueId,
+            // The document ID will be `uniqueId`, so we don't store it in the document body.
             date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
             contractTitle: 'VSD MAINTENANCE', // Placeholder
             incidents: incidentsText,
@@ -70,29 +72,24 @@ export default function NewDailyDiaryPage() {
             // ... gather all other form fields
         };
         
-        const diaryCollectionRef = collection(firestore, 'daily_diaries');
+        const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
 
-        try {
-            await addDocumentNonBlocking(diaryCollectionRef, diaryData);
-            toast({
-                title: 'Diary Saved',
-                description: `Document ${uniqueId} has been saved successfully.`,
-            });
-            router.push('/reports/diary-tracker');
-        } catch (error: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Save Failed',
-                description: error.message || 'Could not save the diary.',
-            });
-        }
+        // Optimistically navigate and show success, as the write is non-blocking.
+        setDocumentNonBlocking(diaryDocRef, diaryData, { merge: true });
+        
+        toast({
+            title: 'Diary Saved',
+            description: `Document ${uniqueId} has been saved successfully.`,
+        });
+        
+        router.push('/reports/diary-tracker');
     };
 
 
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
             <div className="flex justify-end mb-4 gap-2 print:hidden">
-                 <Button onClick={handleSave}>
+                 <Button onClick={handleSave} disabled={diariesLoading || !uniqueId}>
                     <Save className="mr-2 h-4 w-4" /> Save Diary
                 </Button>
                 <Button onClick={() => window.print()} variant="outline">
@@ -104,7 +101,7 @@ export default function NewDailyDiaryPage() {
                     <AltekLogo className="h-10" />
                     <div className="text-right">
                         <h1 className="text-2xl font-bold tracking-tight text-primary">DAILY DIARY</h1>
-                        <p className="text-sm text-muted-foreground font-mono">ID: {uniqueId}</p>
+                        <p className="text-sm text-muted-foreground font-mono">ID: {uniqueId || 'Generating...'}</p>
                     </div>
                 </header>
 
