@@ -20,6 +20,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase/provider';
 import type { User } from '@/lib/types';
+import Link from 'next/link';
 
 
 export function UserNav() {
@@ -86,9 +87,11 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-            <DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/profile/${user.uid}`}>
                 <UserIcon className="mr-2 h-4 w-4" />
                 <span>Profile</span>
+              </Link>
             </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
