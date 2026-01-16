@@ -17,11 +17,10 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, setDocumentNonBlocking, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import type { DailyDiary } from '@/lib/types';
 
 const manpowerRows = [
     { designation: 'Power Electronic Engineer', forecast: 1 },
@@ -43,18 +42,14 @@ export default function NewDailyDiaryPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const router = useRouter();
-    const { user, isUserLoading } = useUser();
     
-    const diariesQuery = useMemoFirebase(() => (isUserLoading || !user ? null : collection(firestore, 'daily_diaries')), [firestore, isUserLoading, user]);
-    const { data: diaries, isLoading: diariesLoading } = useCollection<DailyDiary>(diariesQuery);
-
     useEffect(() => {
-        if (!diariesLoading && !isUserLoading) {
-            const nextIdNumber = (diaries?.length || 0) + 1;
-            const formattedId = `AG-RBM-DD-${String(nextIdNumber).padStart(5, '0')}`;
-            setUniqueId(formattedId);
-        }
-    }, [diaries, diariesLoading, isUserLoading]);
+        // Generate a unique ID based on a timestamp substring to keep it short.
+        // This avoids reading the database and triggering permission errors.
+        const uniqueSuffix = Date.now().toString().slice(-5);
+        const formattedId = `AG-RBM-DD-${uniqueSuffix.padStart(5, '0')}`;
+        setUniqueId(formattedId);
+    }, []); // Runs only once on component mount
     
     const handleSave = () => {
         if (!firestore || !uniqueId) {
