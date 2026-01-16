@@ -44,7 +44,6 @@ import React from 'react';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import type { User } from '@/lib/types';
 import { collection, doc } from 'firebase/firestore';
-import Link from 'next/link';
 
 
 const mainLinks = [
@@ -375,11 +374,9 @@ export function SidebarNav() {
                 <CollapsibleContent>
                     <SidebarMenuSub>
                         <SidebarMenuItem>
-                            <Link href="/reports" passHref>
-                                <SidebarMenuSubButton isActive={pathname === '/reports'}>
-                                    <span>Performance Reports</span>
-                                </SidebarMenuSubButton>
-                            </Link>
+                            <SidebarMenuSubButton isActive={pathname === '/reports'}>
+                                <span>Performance Reports</span>
+                            </SidebarMenuSubButton>
                         </SidebarMenuItem>
                         <Collapsible>
                              <SidebarMenuItem>
@@ -394,18 +391,14 @@ export function SidebarNav() {
                             <CollapsibleContent>
                                 <SidebarMenuSub>
                                     <SidebarMenuItem>
-                                        <Link href="/reports/contractors-daily-diary" passHref>
-                                            <SidebarMenuSubButton isActive={pathname === '/reports/contractors-daily-diary'}>
-                                              New Diary
-                                            </SidebarMenuSubButton>
-                                        </Link>
+                                        <SidebarMenuSubButton isActive={pathname === '/reports/contractors-daily-diary'}>
+                                          New Diary
+                                        </SidebarMenuSubButton>
                                     </SidebarMenuItem>
                                     <SidebarMenuItem>
-                                        <Link href="/reports/diary-tracker" passHref>
-                                            <SidebarMenuSubButton isActive={pathname === '/reports/diary-tracker'}>
-                                              Diary Tracker
-                                            </SidebarMenuSubButton>
-                                        </Link>
+                                        <SidebarMenuSubButton isActive={pathname === '/reports/diary-tracker'}>
+                                          Diary Tracker
+                                        </SidebarMenuSubButton>
                                     </SidebarMenuItem>
                                 </SidebarMenuSub>
                             </CollapsibleContent>
