@@ -105,6 +105,7 @@ export default function EquipmentDetailPage() {
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<AppUser>(userRoleRef);
   const canEdit = userData?.role && userData.role !== 'Client Manager';
+  const isClientManager = userData?.role === 'Client Manager';
 
   const uptimePercentage = useMemo(() => {
     if (!vsd?.installationDate || !eq) return 100;
@@ -298,7 +299,7 @@ export default function EquipmentDetailPage() {
                         <CardTitle>Breakdown History</CardTitle>
                         <CardDescription>Log of all reported issues for this equipment.</CardDescription>
                     </div>
-                    {canEdit && (
+                    {(canEdit || isClientManager) && (
                         <Link href={`/breakdowns/new?equipmentId=${eq.id}`} passHref>
                             <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Log Breakdown</Button>
                         </Link>
@@ -409,5 +410,3 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
-
-    

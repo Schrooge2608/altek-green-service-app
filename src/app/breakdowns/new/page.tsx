@@ -21,10 +21,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useFirestore, useCollection, useMemoFirebase, useDoc, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import type { Equipment, VSD, Breakdown, User as AppUser } from '@/lib/types';
+import type { Equipment, VSD, Breakdown } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
 import React, { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -47,14 +47,9 @@ export default function NewBreakdownPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const equipmentIdFromQuery = searchParams.get('equipmentId');
-  const { user } = useUser();
   
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
-
-  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-  const { data: userRole } = useDoc<AppUser>(userRoleRef);
-  const isClientManager = userRole?.role === 'Client Manager';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -269,12 +264,10 @@ export default function NewBreakdownPage() {
           
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-            <Button type="submit" variant="destructive" disabled={isClientManager}>Submit Report</Button>
+            <Button type="submit" variant="destructive">Submit Report</Button>
           </div>
         </form>
       </Form>
     </div>
   );
 }
-
-    
