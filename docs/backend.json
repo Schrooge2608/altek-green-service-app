@@ -182,7 +182,7 @@
             "id": { "type": "string", "description": "The user's unique ID, same as their Firebase Auth UID." },
             "name": { "type": "string" },
             "email": { "type": "string", "format": "email" },
-            "role": { "type": "string", "enum": ["Technician", "Junior Technician", "Technologist", "Power systems engineer", "HVAC product specialist", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin", "Data Admin", "Superadmin", "Beta Tester"] },
+            "role": { "type": "string", "enum": ["Admin", "Client Manager", "Corporate Manager", "Corporate Manager (Beta)", "Data Admin", "Data Admin (Beta)", "HVAC product specialist", "HVAC product specialist (Beta)", "Junior Technician", "Junior Technician (Beta)", "Power systems engineer", "Power systems engineer (Beta)", "Services Manager", "Services Manager (Beta)", "Site Supervisor", "Site Supervisor (Beta)", "Superadmin", "Technician", "Technician (Beta)", "Technologist", "Technologist (Beta)"] },
             "phoneNumber": { "type": "string" },
             "address": { "type": "string" },
             "nextOfKinName": { "type": "string" },
@@ -197,6 +197,73 @@
             "justification": { "type": "string", "description": "RBM Information: Justification." }
         },
         "required": ["id", "name", "email", "role"]
+    },
+    "DailyDiary": {
+        "title": "DailyDiary",
+        "type": "object",
+        "description": "Represents a contractor's daily diary entry.",
+        "properties": {
+            "id": { "type": "string" },
+            "contractTitle": { "type": "string" },
+            "contractNumber": { "type": "string" },
+            "area": { "type": "string", "enum": ["Mining", "Smelter"] },
+            "date": { "type": "string", "format": "date" },
+            "shiftStart": { "type": "string" },
+            "shiftEnd": { "type": "string" },
+            "hrs": { "type": "number" },
+            "incidents": { "type": "string" },
+            "toolboxTalk": { "type": "string" },
+            "manpower": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                "designation": { "type": "string" },
+                "forecast": { "type": "number" },
+                "actual": { "type": "number" },
+                "normalHrs": { "type": "number" },
+                "overtime1_5": { "type": "number" },
+                "overtime2_0": { "type": "number" },
+                "totalManHrs": { "type": "number" },
+                "comments": { "type": "string" }
+                }
+            }
+            },
+            "plant": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                "description": { "type": "string" },
+                "qty": { "type": "number" },
+                "inspectionDone": { "type": "string", "enum": ["yes", "no"] },
+                "comments": { "type": "string" }
+                }
+            }
+            },
+            "works": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                "area": { "type": "string" },
+                "scope": { "type": "string" },
+                "timeStart": { "type": "string" },
+                "timeEnd": { "type": "string" },
+                "hrs": { "type": "number" }
+                }
+            }
+            },
+            "delays": { "type": "array", "items": { "type": "string" } },
+            "comments": { "type": "array", "items": { "type": "string" } },
+            "contractorName": { "type": "string" },
+            "contractorSignature": { "type": "string" },
+            "contractorDate": { "type": "string", "format": "date" },
+            "clientName": { "type": "string" },
+            "clientSignature": { "type": "string" },
+            "clientDate": { "type": "string", "format": "date" }
+        },
+        "required": ["id", "date", "contractTitle", "contractNumber"]
     }
   },
   "auth": {
@@ -251,6 +318,14 @@
               "schema": { "$ref": "#/entities/User" },
               "description": "Stores user profiles and roles."
           }
+      },
+      {
+        "path": "/daily_diaries/{diaryId}",
+        "definition": {
+          "entityName": "DailyDiary",
+          "schema": { "$ref": "#/entities/DailyDiary" },
+          "description": "Stores contractor daily diary entries."
+        }
       }
     ]
   }
