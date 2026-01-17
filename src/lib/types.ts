@@ -1,5 +1,4 @@
 
-
 export interface Equipment {
   id: string;
   name: string;
@@ -213,4 +212,6 @@ export interface DailyDiary {
   clientName?: string;
   clientSignature?: string; // base64
   clientDate?: string;
+  beforeWorkImages?: string[];
+  afterWorkImages?: string[];
 }

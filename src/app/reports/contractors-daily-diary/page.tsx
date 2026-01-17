@@ -17,12 +17,14 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { DailyDiary, User as AppUser, User } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ImageUploader } from '@/components/image-uploader';
 
 
 const initialManpowerData = [
@@ -44,13 +46,17 @@ export default function NewDailyDiaryPage() {
     const [toolboxTalkText, setToolboxTalkText] = useState('');
     const [uniqueId, setUniqueId] = useState('');
     const [isIdLoading, setIsIdLoading] = useState(true);
-    const firestore = useFirestore();
+    const [isSaving, setIsSaving] = useState(false);
+
+    const { firestore, firebaseApp } = useFirebase();
     const { toast } = useToast();
     const router = useRouter();
     const { user, isUserLoading } = useUser();
     
     // Manpower state
     const [manpowerData, setManpowerData] = useState(initialManpowerData);
+    const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
+    const [afterFiles, setAfterFiles] = useState<File[]>([]);
 
     const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
@@ -67,44 +73,71 @@ export default function NewDailyDiaryPage() {
     }, [users]);
     
     useEffect(() => {
-        // Generate a simple, non-sequential unique ID to avoid database queries.
         setIsIdLoading(true);
         const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
         setUniqueId(`AG-RBM-DD-${randomPart}`);
         setIsIdLoading(false);
     }, []);
     
-    const handleSave = () => {
+    const uploadImages = async (files: File[], folder: 'before' | 'after'): Promise<string[]> => {
+        if (!firebaseApp || files.length === 0) return [];
+        
+        const storage = getStorage(firebaseApp);
+        
+        const uploadPromises = files.map(file => {
+            const storagePath = `daily_diaries/${uniqueId}/${folder}/${file.name}`;
+            const storageRef = ref(storage, storagePath);
+            return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+        });
+    
+        try {
+            const downloadedUrls = await Promise.all(uploadPromises);
+            return downloadedUrls;
+        } catch (error) {
+            console.error("Image upload failed:", error);
+            toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload one or more images." });
+            throw error;
+        }
+    };
+
+    const handleSave = async () => {
         if (!firestore || !uniqueId) {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Database not available or ID not generated.',
-            });
+            toast({ variant: 'destructive', title: 'Error', description: 'Database not available or ID not generated.' });
             return;
         }
 
-        const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
-        
-        const plainManpowerData = manpowerData.map(row => ({...row}));
-        const finalDiaryData: Partial<DailyDiary> = { 
-            id: uniqueId,
-            date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
-            contractTitle: 'VSD MAINTENANCE', // Placeholder
-            incidents: incidentsText,
-            toolboxTalk: toolboxTalkText,
-            manpower: plainManpowerData,
-             // ... gather all other form fields
-        };
+        setIsSaving(true);
+        try {
+            const beforeImageUrls = await uploadImages(beforeFiles, 'before');
+            const afterImageUrls = await uploadImages(afterFiles, 'after');
 
-        setDocumentNonBlocking(diaryDocRef, finalDiaryData, { merge: true });
-        
-        toast({
-            title: 'Diary Saved',
-            description: `Document ${uniqueId} has been saved successfully.`,
-        });
-        
-        router.push(`/reports/contractors-daily-diary/${uniqueId}`);
+            const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
+            
+            const plainManpowerData = manpowerData.map(row => ({...row}));
+            const finalDiaryData: Partial<DailyDiary> = { 
+                id: uniqueId,
+                date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
+                contractTitle: 'VSD MAINTENANCE', // Placeholder
+                incidents: incidentsText,
+                toolboxTalk: toolboxTalkText,
+                manpower: plainManpowerData,
+                beforeWorkImages: beforeImageUrls,
+                afterWorkImages: afterImageUrls,
+            };
+
+            await setDoc(diaryDocRef, finalDiaryData, { merge: true });
+            
+            toast({
+                title: 'Diary Saved',
+                description: `Document ${uniqueId} has been saved successfully.`,
+            });
+            
+            router.push(`/reports/contractors-daily-diary/${uniqueId}`);
+        } catch (error) {
+            // Error is already handled and toasted inside uploadImages
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleManpowerChange = (index: number, field: keyof typeof manpowerData[0], value: string) => {
@@ -134,8 +167,9 @@ export default function NewDailyDiaryPage() {
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
             <div className="flex justify-end mb-4 gap-2 print:hidden">
-                 <Button onClick={handleSave} disabled={!uniqueId || isIdLoading || isClientManager}>
-                    <Save className="mr-2 h-4 w-4" /> Save Diary
+                 <Button onClick={handleSave} disabled={!uniqueId || isIdLoading || isClientManager || isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    {isSaving ? 'Saving...' : 'Save Diary'}
                 </Button>
                 <Button onClick={() => window.print()} variant="outline">
                     <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
@@ -150,7 +184,6 @@ export default function NewDailyDiaryPage() {
                     </div>
                 </header>
 
-                {/* Contract Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 text-sm items-end">
                     <div className="lg:col-span-2 grid grid-cols-2 gap-4">
                         <div className="space-y-1">
@@ -205,7 +238,6 @@ export default function NewDailyDiaryPage() {
                     </div>
                 </div>
 
-                {/* Section A */}
                 <Card className="mb-4">
                     <CardHeader className="bg-muted p-2 rounded-t-lg">
                         <CardTitle className="text-sm">SECTION A: HSE</CardTitle>
@@ -222,7 +254,6 @@ export default function NewDailyDiaryPage() {
                     </CardContent>
                 </Card>
 
-                {/* Section B */}
                 <Card className="mb-4">
                      <CardHeader className="bg-muted p-2 rounded-t-lg">
                         <CardTitle className="text-sm">SECTION B: MANPOWER AND PLANT</CardTitle>
@@ -234,10 +265,10 @@ export default function NewDailyDiaryPage() {
                                     <TableHead className="w-[250px]">Designation</TableHead>
                                     <TableHead className="w-[100px]">Forecast</TableHead>
                                     <TableHead className="w-[100px]">Actual</TableHead>
-                                    <TableHead className="w-[120px]">Normal Hrs worked</TableHead>
-                                    <TableHead className="w-[120px]">1.5 Overtime</TableHead>
-                                    <TableHead className="w-[120px]">2.0 Overtime</TableHead>
-                                    <TableHead className="w-[120px]">Total Man Hrs</TableHead>
+                                    <TableHead className="w-[120px]">Normal Hrs</TableHead>
+                                    <TableHead className="w-[120px]">1.5 OT</TableHead>
+                                    <TableHead className="w-[120px]">2.0 OT</TableHead>
+                                    <TableHead className="w-[120px]">Total Hrs</TableHead>
                                     <TableHead>Comments</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -266,10 +297,10 @@ export default function NewDailyDiaryPage() {
                                         </TableCell>
                                         <TableCell><Input type="number" value={row.forecast} onChange={(e) => handleManpowerChange(i, 'forecast', e.target.value)} /></TableCell>
                                         <TableCell><Input type="number" value={row.actual} onChange={(e) => handleManpowerChange(i, 'actual', e.target.value)} /></TableCell>
-                                        <TableCell><Input type="number" step="0.1" value={row.normalHrs} onChange={(e) => handleManpowerChange(i, 'normalHrs', e.target.value)} /></TableCell>
-                                        <TableCell><Input type="number" step="0.1" value={row.overtime1_5} onChange={(e) => handleManpowerChange(i, 'overtime1_5', e.target.value)} /></TableCell>
-                                        <TableCell><Input type="number" step="0.1" value={row.overtime2_0} onChange={(e) => handleManpowerChange(i, 'overtime2_0', e.target.value)}/></TableCell>
-                                        <TableCell><Input type="number" step="0.1" value={row.totalManHrs} onChange={(e) => handleManpowerChange(i, 'totalManHrs', e.target.value)}/></TableCell>
+                                        <TableCell><Input type="number" step="0.1" value={row.normalHrs} onChange={(e) => handleManpowerChange(i, 'normalHrs', e.target.value)} className="w-[80px]" /></TableCell>
+                                        <TableCell><Input type="number" step="0.1" value={row.overtime1_5} onChange={(e) => handleManpowerChange(i, 'overtime1_5', e.target.value)} className="w-[80px]" /></TableCell>
+                                        <TableCell><Input type="number" step="0.1" value={row.overtime2_0} onChange={(e) => handleManpowerChange(i, 'overtime2_0', e.target.value)} className="w-[80px]" /></TableCell>
+                                        <TableCell><Input type="number" step="0.1" value={row.totalManHrs} onChange={(e) => handleManpowerChange(i, 'totalManHrs', e.target.value)} className="w-[80px]" /></TableCell>
                                         <TableCell><Textarea rows={1} value={row.comments} onChange={(e) => handleManpowerChange(i, 'comments', e.target.value)}/></TableCell>
                                     </TableRow>
                                 ))}
@@ -327,7 +358,6 @@ export default function NewDailyDiaryPage() {
                     </CardContent>
                 </Card>
 
-                {/* Section C */}
                 <Card className="mb-4">
                     <CardHeader className="bg-muted p-2 rounded-t-lg">
                         <CardTitle className="text-sm">SECTION C: DESCRIPTION OF WORKS</CardTitle>
@@ -337,7 +367,7 @@ export default function NewDailyDiaryPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Area of Work</TableHead>
-                                    <TableHead>Scope of Work</TableHead>
+                                    <TableHead className="w-[40%]">Scope of Work</TableHead>
                                     <TableHead>Time Start</TableHead>
                                     <TableHead>Time End</TableHead>
                                     <TableHead>Hrs</TableHead>
@@ -350,7 +380,7 @@ export default function NewDailyDiaryPage() {
                                         <TableCell><Textarea rows={1} /></TableCell>
                                         <TableCell><Input type="time" /></TableCell>
                                         <TableCell><Input type="time" /></TableCell>
-                                        <TableCell><Input type="number" /></TableCell>
+                                        <TableCell><Input type="number" className="w-[70px]" /></TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -358,7 +388,6 @@ export default function NewDailyDiaryPage() {
                     </CardContent>
                 </Card>
                 
-                {/* Section D */}
                  <Card className="mb-4">
                     <CardHeader className="bg-muted p-2 rounded-t-lg">
                         <CardTitle className="text-sm">SECTION D: DELAYS</CardTitle>
@@ -373,7 +402,6 @@ export default function NewDailyDiaryPage() {
                     </CardContent>
                 </Card>
 
-                {/* Section E */}
                 <Card className="mb-4">
                     <CardHeader className="bg-muted p-2 rounded-t-lg">
                         <CardTitle className="text-sm">SECTION E: COMMENTS</CardTitle>
@@ -388,7 +416,22 @@ export default function NewDailyDiaryPage() {
                     </CardContent>
                 </Card>
 
-                {/* Signatures */}
+                <Card>
+                    <CardHeader className="bg-muted p-2 rounded-t-lg">
+                        <CardTitle className="text-sm">SECTION F: GALLERY</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-6">
+                        <div className="space-y-2">
+                            <h4 className="font-semibold">Before Work</h4>
+                            <ImageUploader onImagesChange={setBeforeFiles} title="Before Work" />
+                        </div>
+                        <div className="space-y-2">
+                            <h4 className="font-semibold">After Work</h4>
+                            <ImageUploader onImagesChange={setAfterFiles} title="After Work" />
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <div className="grid grid-cols-2 gap-8 mt-8">
                     <Card>
                          <CardHeader className="p-4">

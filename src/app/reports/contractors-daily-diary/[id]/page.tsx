@@ -20,6 +20,28 @@ function DetailRow({ label, value }: { label: string; value?: string | number | 
     );
 }
 
+function ImageGallery({ title, images }: { title: string; images?: string[] }) {
+    if (!images || images.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="mt-4">
+            <h4 className="font-semibold text-muted-foreground">{title}</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-2">
+                {images.map((url, index) => (
+                    <a key={index} href={url} target="_blank" rel="noopener noreferrer">
+                        <div className="relative group aspect-square border rounded-md overflow-hidden">
+                            <Image src={url} alt={`${title} image ${index + 1}`} layout="fill" className="object-cover transition-transform group-hover:scale-105" />
+                        </div>
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+
 export default function ViewDailyDiaryPage() {
     const params = useParams();
     const router = useRouter();
@@ -93,8 +115,19 @@ export default function ViewDailyDiaryPage() {
                         </div>
                     </CardContent>
                 </Card>
-                
-                {/* Add more sections to display other diary data as needed */}
+
+                <Card className="mt-4">
+                    <CardHeader>
+                        <CardTitle>Gallery</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ImageGallery title="Before Work" images={diary.beforeWorkImages} />
+                        <ImageGallery title="After Work" images={diary.afterWorkImages} />
+                        {(!diary.beforeWorkImages || diary.beforeWorkImages.length === 0) && (!diary.afterWorkImages || diary.afterWorkImages.length === 0) && (
+                            <p className="text-sm text-muted-foreground">No images were uploaded for this diary entry.</p>
+                        )}
+                    </CardContent>
+                </Card>
                 
                  <div className="grid grid-cols-2 gap-8 mt-8">
                     <Card>
@@ -128,5 +161,3 @@ export default function ViewDailyDiaryPage() {
         </div>
     );
 }
-
-    
