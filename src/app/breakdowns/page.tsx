@@ -145,7 +145,8 @@ export default function BreakdownsPage() {
   const { data: breakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
   const isLoading = breakdownsLoading || isUserLoading || userRoleLoading;
-  const isKnownAdmin = userRole?.role && (userRole.role.includes('Admin') || userRole.role.includes('Superadmin'));
+  const isClientManager = userRole?.role === 'Client Manager';
+  const canDelete = userRole?.role && (userRole.role.includes('Admin') || userRole.role.includes('Superadmin'));
 
   const handleResolve = async (breakdown: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => {
     const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
@@ -245,12 +246,14 @@ export default function BreakdownsPage() {
             History of all reported equipment breakdowns.
           </p>
         </div>
-        <Link href="/breakdowns/new" passHref>
-          <Button variant="destructive">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Report New Breakdown
-          </Button>
-        </Link>
+        {!isClientManager && (
+            <Link href="/breakdowns/new" passHref>
+              <Button variant="destructive">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Report New Breakdown
+              </Button>
+            </Link>
+        )}
       </header>
       <Card>
         <CardContent className="pt-6">
@@ -303,7 +306,7 @@ export default function BreakdownsPage() {
                       <TableCell className="text-right">{b.resolved ? totalHours : 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <div className='flex items-center justify-end gap-2'>
-                          {!b.resolved && (
+                          {!b.resolved && !isClientManager && (
                             <ResolveBreakdownDialog breakdown={b} onResolve={handleResolve}>
                                 <Button variant="ghost" size="sm">
                                     <CheckCircle className="mr-2 h-4 w-4" />
@@ -311,7 +314,7 @@ export default function BreakdownsPage() {
                                 </Button>
                             </ResolveBreakdownDialog>
                           )}
-                          {isKnownAdmin && (
+                          {canDelete && (
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">

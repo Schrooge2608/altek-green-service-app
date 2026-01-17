@@ -81,7 +81,8 @@ function AuthenticatedSmelterDivisionPage() {
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
-  const canEdit = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin') || userData.role === 'Technician');
+  const canDelete = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
+  const isClientManager = userData?.role === 'Client Manager';
   
   const equipmentByLocation = useMemo(() => {
     if (!equipment) return {};
@@ -144,12 +145,14 @@ function AuthenticatedSmelterDivisionPage() {
             All monitored equipment in the {memoizedDivisionName} division.
             </p>
         </div>
-        <Link href="/equipment/new" passHref>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Equipment
-          </Button>
-        </Link>
+        {!isClientManager && (
+            <Link href="/equipment/new" passHref>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Equipment
+              </Button>
+            </Link>
+        )}
       </header>
         {isLoading ? (
             <Card>
@@ -179,7 +182,7 @@ function AuthenticatedSmelterDivisionPage() {
                                                     <TableHead>Breakdown Status</TableHead>
                                                     <TableHead className="text-right">Uptime</TableHead>
                                                     <TableHead className="text-right">Power (kWh)</TableHead>
-                                                    {canEdit && <TableHead className="text-right">Actions</TableHead>}
+                                                    {canDelete && <TableHead className="text-right">Actions</TableHead>}
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -202,7 +205,7 @@ function AuthenticatedSmelterDivisionPage() {
                                                       </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
-                                                    {canEdit && (
+                                                    {canDelete && (
                                                         <TableCell className="text-right">
                                                             <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
@@ -248,7 +251,7 @@ function AuthenticatedSmelterDivisionPage() {
                     <TableHead>Breakdown Status</TableHead>
                     <TableHead className="text-right">Uptime</TableHead>
                     <TableHead className="text-right">Power (kWh)</TableHead>
-                    {canEdit && <TableHead className="text-right">Actions</TableHead>}
+                    {canDelete && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -273,7 +276,7 @@ function AuthenticatedSmelterDivisionPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
-                         {canEdit && (
+                         {canDelete && (
                             <TableCell className="text-right">
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -300,7 +303,7 @@ function AuthenticatedSmelterDivisionPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={canEdit ? 7 : 6} className="text-center h-24">No equipment found for this division.</TableCell>
+                      <TableCell colSpan={canDelete ? 7 : 6} className="text-center h-24">No equipment found for this division.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>

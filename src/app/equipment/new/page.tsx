@@ -24,11 +24,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import type { User, Equipment, VSD } from '@/lib/types';
+import type { User, Equipment, VSD, User as AppUser } from '@/lib/types';
 import backendConfig from '@/docs/backend.json';
 import { Combobox } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -118,6 +118,10 @@ export default function NewEquipmentPage() {
   
   const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
   const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
+
+  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userRole } = useDoc<AppUser>(userRoleRef);
+  const isClientManager = userRole?.role === 'Client Manager';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -252,7 +256,7 @@ export default function NewEquipmentPage() {
     form.reset();
   }
 
-  const miningDivisions = (backendConfig.entities.Equipment.properties.division.enum || []).filter(d => ["Boosters", "Dredgers", "Pump Stations"].includes(d));
+  const miningDivisions = (backendConfig.entities.Equipment.properties.division.enum || []).filter(d => ["Boosters", "Dredgers", "Pump Stations", "UPS/BTU's"].includes(d));
   const smelterDivisions = (backendConfig.entities.Equipment.properties.division.enum || []).filter(d => !["Boosters", "Dredgers", "Pump Stations"].includes(d));
 
 
@@ -931,7 +935,7 @@ export default function NewEquipmentPage() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit">Save Equipment</Button>
+            <Button type="submit" disabled={isClientManager}>Save Equipment</Button>
           </div>
         </form>
       </Form>

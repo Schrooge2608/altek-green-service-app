@@ -5,7 +5,7 @@ export interface Equipment {
   name: string;
   location: string;
   plant: 'Mining' | 'Smelter';
-  division?: 'Boosters' | 'Dredgers' | 'Pump Stations';
+  division?: 'Boosters' | 'Dredgers' | 'Pump Stations' | 'MSP' | 'Roaster' | 'Char Plant' | 'Smelter' | 'Iron injection' | 'Stripping Crane' | 'Slag plant' | 'North Screen' | "UPS/BTU's";
   vsdId: string;
   lastMaintenance: string;
   nextMaintenance: string;
@@ -149,7 +149,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Technician' | 'Junior Technician' | 'Technologist' | 'Power systems engineer' | 'HVAC product specialist' | 'Site Supervisor' | 'Services Manager' | 'Corporate Manager' | 'Admin' | 'Data Admin' | 'Superadmin' | 'Beta Tester';
+  role: 'Admin' | 'Client Manager' | 'Corporate Manager' | 'Corporate Manager (Beta)' | 'Data Admin' | 'Data Admin (Beta)' | 'HVAC product specialist' | 'HVAC product specialist (Beta)' | 'Junior Technician' | 'Junior Technician (Beta)' | 'Power systems engineer' | 'Power systems engineer (Beta)' | 'Services Manager' | 'Services Manager (Beta)' | 'Site Supervisor' | 'Site Supervisor (Beta)' | 'Superadmin' | 'Technician' | 'Technician (Beta)' | 'Technologist' | 'Technologist (Beta)';
   phoneNumber?: string;
   address?: string;
   nextOfKinName?: string;

@@ -50,7 +50,9 @@ function AuthenticatedEquipmentPage() {
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
-  const isKnownAdmin = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin'));
+  
+  const canDelete = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
+  const isClientManager = userData?.role === 'Client Manager';
 
   const handleDeleteEquipment = (item: Equipment) => {
     if (!item.id || !item.vsdId) {
@@ -95,12 +97,14 @@ function AuthenticatedEquipmentPage() {
             View and manage all monitored equipment in the Mining plant.
             </p>
         </div>
-         <Link href="/equipment/new" passHref>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Equipment
-          </Button>
-        </Link>
+        {!isClientManager && (
+            <Link href="/equipment/new" passHref>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Equipment
+                </Button>
+            </Link>
+        )}
       </header>
       <Card>
         <CardContent className="pt-6">
@@ -114,13 +118,13 @@ function AuthenticatedEquipmentPage() {
                 <TableHead>Breakdown Status</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
                 <TableHead className="text-right">Power (kWh)</TableHead>
-                {isKnownAdmin && <TableHead className="text-right">Actions</TableHead>}
+                {canDelete && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={isKnownAdmin ? 8 : 7} className="text-center h-24">Loading equipment...</TableCell>
+                  <TableCell colSpan={canDelete ? 8 : 7} className="text-center h-24">Loading equipment...</TableCell>
                 </TableRow>
               ) : equipment && equipment.length > 0 ? (
                 equipment.map((eq) => (
@@ -144,7 +148,7 @@ function AuthenticatedEquipmentPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
-                    {isKnownAdmin && (
+                    {canDelete && (
                         <TableCell className="text-right">
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -171,7 +175,7 @@ function AuthenticatedEquipmentPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isKnownAdmin ? 8 : 7} className="text-center h-24">No mining equipment found.</TableCell>
+                  <TableCell colSpan={canDelete ? 8 : 7} className="text-center h-24">No mining equipment found.</TableCell>
                 </TableRow>
               )}
             </TableBody>

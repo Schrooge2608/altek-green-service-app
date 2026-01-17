@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -10,10 +11,11 @@ import { Loader2, ScanLine, Upload, Check, AlertTriangle } from 'lucide-react';
 import { extractScheduleData, type DocumentScanOutput } from '@/ai/flows/extract-schedule-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import type { User as AppUser } from '@/lib/types';
 
 function fileToDataUri(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -28,6 +30,7 @@ export default function ScanPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const router = useRouter();
+  const { user } = useUser();
 
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -35,6 +38,10 @@ export default function ScanPage() {
   const [extractedData, setExtractedData] = useState<DocumentScanOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userRole } = useDoc<AppUser>(userRoleRef);
+  const isClientManager = userRole?.role === 'Client Manager';
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
@@ -106,14 +113,14 @@ export default function ScanPage() {
         <CardContent className="space-y-6">
           <div className="grid w-full max-w-sm items-center gap-1.5">
             <Label htmlFor="picture">Document Image</Label>
-            <Input id="picture" type="file" accept="image/*" onChange={handleFileChange} disabled={isLoading} />
+            <Input id="picture" type="file" accept="image/*" onChange={handleFileChange} disabled={isLoading || isClientManager} />
           </div>
           {filePreview && (
             <div className="w-full max-w-md border p-2 rounded-md">
                 <Image src={filePreview} alt="File preview" width={400} height={400} className="w-full h-auto object-contain" />
             </div>
           )}
-          <Button onClick={handleScan} disabled={isLoading || !file}>
+          <Button onClick={handleScan} disabled={isLoading || !file || isClientManager}>
             {isLoading && !extractedData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
             {isLoading && !extractedData ? 'Analyzing...' : 'Scan Document'}
           </Button>
@@ -139,7 +146,7 @@ export default function ScanPage() {
                 <pre className="p-4 bg-muted rounded-md text-xs overflow-x-auto">
                     {JSON.stringify(extractedData, null, 2)}
                 </pre>
-                 <Button onClick={handleSave} disabled={isLoading}>
+                 <Button onClick={handleSave} disabled={isLoading || isClientManager}>
                     {isLoading && extractedData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                     {isLoading && extractedData ? 'Saving...' : 'Accept and Save'}
                 </Button>

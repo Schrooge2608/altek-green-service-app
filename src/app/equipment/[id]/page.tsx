@@ -104,7 +104,7 @@ export default function EquipmentDetailPage() {
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<AppUser>(userRoleRef);
-  const canEdit = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Superadmin') || userData.role === 'Technician');
+  const canEdit = userData?.role && userData.role !== 'Client Manager';
 
   const uptimePercentage = useMemo(() => {
     if (!vsd?.installationDate || !eq) return 100;
@@ -124,6 +124,9 @@ export default function EquipmentDetailPage() {
     if (!eq) return '/equipment';
     if (eq.plant === 'Mining' && eq.division) {
       return `/equipment/mining/${getDivisionSlug(eq.division)}`;
+    }
+     if (eq.plant === 'Smelter' && eq.division) {
+      return `/equipment/smelter/${getDivisionSlug(eq.division)}`;
     }
     // Fallback for Smelter or equipment without a division
     return '/equipment'; 
@@ -295,9 +298,11 @@ export default function EquipmentDetailPage() {
                         <CardTitle>Breakdown History</CardTitle>
                         <CardDescription>Log of all reported issues for this equipment.</CardDescription>
                     </div>
-                    <Link href={`/breakdowns/new?equipmentId=${eq.id}`} passHref>
-                        <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Log Breakdown</Button>
-                    </Link>
+                    {canEdit && (
+                        <Link href={`/breakdowns/new?equipmentId=${eq.id}`} passHref>
+                            <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Log Breakdown</Button>
+                        </Link>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <Table>

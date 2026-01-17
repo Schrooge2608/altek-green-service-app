@@ -132,7 +132,9 @@ export function SidebarNav() {
   const { data: allUsers } = useCollection<User>(usersQuery);
 
   const isManager = userData?.role && ['Site Supervisor', 'Services Manager', 'Corporate Manager'].includes(userData.role);
-  const canViewBeta = userData?.role && ['Admin', 'Superadmin', 'Beta Tester'].includes(userData.role);
+  const canViewBeta = userData?.role && (userData.role.includes('(Beta)') || userData.role.includes('Admin') || userData.role.includes('Superadmin'));
+  const isAdmin = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
+  const isClientManager = userData?.role === 'Client Manager';
 
 
   const isEquipmentPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter');
@@ -443,16 +445,21 @@ export function SidebarNav() {
                 </SidebarMenuItem>
                 <CollapsibleContent>
                     <SidebarMenuSub>
-                        {librarySubMenu.map((item) => (
-                            <SidebarMenuItem key={item.href}>
-                                <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                    <Link href={item.href}>
-                                        {item.icon && <item.icon />}
-                                        <span>{item.label}</span>
-                                    </Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuItem>
-                        ))}
+                        {librarySubMenu.map((item) => {
+                            if (isClientManager && item.href === '/scan') {
+                                return null;
+                            }
+                            return (
+                                <SidebarMenuItem key={item.href}>
+                                    <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                                        <Link href={item.href}>
+                                            {item.icon && <item.icon />}
+                                            <span>{item.label}</span>
+                                        </Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuItem>
+                            )
+                        })}
                     </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>
@@ -473,7 +480,7 @@ export function SidebarNav() {
                 )
             })}
 
-             {userData?.role === 'Admin' && (
+             {isAdmin && (
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
