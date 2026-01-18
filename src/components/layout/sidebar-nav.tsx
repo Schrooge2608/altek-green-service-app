@@ -118,6 +118,7 @@ const librarySubMenu = [
 const maintenanceSubMenu = [
     { href: '/maintenance', label: 'Schedule' },
     { href: '/maintenance/work-orders', label: 'Work Orders' },
+    { href: '/maintenance/permit-to-work', label: 'Permit to Work' },
 ];
 
 export function SidebarNav() {
