@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -9,7 +10,7 @@ import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { Building, Pickaxe } from 'lucide-react';
+import { Building, Pickaxe, Cpu, Shield, Power, Activity, Zap } from 'lucide-react';
 
 const uptimeChartConfig = {
     uptime: {
@@ -85,6 +86,21 @@ export function DivisionPerformanceDashboard({ plantName }: DivisionPerformanceD
         }
     };
 
+    const totalVSDs = equipment?.length ?? 0;
+    const totalProtection = equipment?.filter(eq => eq.breakerAssetNumber).length ?? 0;
+    const totalUps = equipment?.filter(eq => eq.upsModel).length ?? 0;
+
+    const avgUptime = useMemo(() => {
+        if (!equipment || equipment.length === 0) return 0;
+        const total = equipment.reduce((acc, eq) => acc + (eq.uptime || 0), 0);
+        return total / equipment.length;
+    }, [equipment]);
+    
+    const totalPowerConsumption = useMemo(() => {
+        if (!equipment) return 0;
+        return equipment.reduce((acc, eq) => acc + (eq.powerConsumption || 0), 0);
+    }, [equipment]);
+
     return (
         <Card>
             <CardHeader>
@@ -97,6 +113,59 @@ export function DivisionPerformanceDashboard({ plantName }: DivisionPerformanceD
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-8">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total VSDs</CardTitle>
+                            <Cpu className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? <Skeleton className="h-6 w-12" /> : <div className="text-2xl font-bold">{totalVSDs}</div>}
+                            <p className="text-xs text-muted-foreground">Monitored controllers</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Protection</CardTitle>
+                            <Shield className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? <Skeleton className="h-6 w-12" /> : <div className="text-2xl font-bold">{totalProtection}</div>}
+                            <p className="text-xs text-muted-foreground">Protected units</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">UPS/BTUs</CardTitle>
+                            <Power className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? <Skeleton className="h-6 w-12" /> : <div className="text-2xl font-bold">{totalUps}</div>}
+                            <p className="text-xs text-muted-foreground">Backup units</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Avg. Uptime</CardTitle>
+                            <Activity className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? <Skeleton className="h-6 w-20" /> : <div className="text-2xl font-bold">{avgUptime.toFixed(2)}%</div>}
+                            <p className="text-xs text-muted-foreground">Across all units</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Power</CardTitle>
+                            <Zap className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? <Skeleton className="h-6 w-24" /> : <div className="text-2xl font-bold">{(totalPowerConsumption / 1000).toFixed(2)} MWh</div>}
+                            <p className="text-xs text-muted-foreground">Consumed this month</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
                 <Card>
                     <CardHeader>
                         <CardTitle>Average Uptime by Division</CardTitle>
