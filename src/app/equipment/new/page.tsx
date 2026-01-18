@@ -107,6 +107,33 @@ const formSchema = z.object({
   pumpFrameSize: z.string().optional(),
   pumpFrameType: z.string().optional(),
   pumpAssignedToId: z.string().optional(),
+
+  // Gearbox fields
+  gearboxModel: z.string().optional(),
+  gearboxBrand: z.string().optional(),
+  gearboxRatio: z.string().optional(),
+  gearboxSerialNumber: z.string().optional(),
+  gearboxOilType: z.string().optional(),
+  gearboxOilCapacityLiters: z.coerce.number().optional(),
+  gearboxAssignedToId: z.string().optional(),
+
+  // Fan fields
+  fanType: z.string().optional(),
+  fanBrand: z.string().optional(),
+  fanModel: z.string().optional(),
+  fanSerialNumber: z.string().optional(),
+  fanAirflowCFM: z.coerce.number().optional(),
+  fanBladeDiameter: z.coerce.number().optional(),
+  fanAssignedToId: z.string().optional(),
+
+  // Valve fields
+  valveType: z.string().optional(),
+  valveBrand: z.string().optional(),
+  valveModel: z.string().optional(),
+  valveSerialNumber: z.string().optional(),
+  valveSizeInches: z.coerce.number().optional(),
+  valveActuatorType: z.string().optional(),
+  valveAssignedToId: z.string().optional(),
 });
 
 const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING", "MPE Dry Mining"];
@@ -157,6 +184,9 @@ export default function NewEquipmentPage() {
     const upsAssignedUser = users?.find(u => u.id === values.upsAssignedToId);
     const motorAssignedUser = users?.find(u => u.id === values.motorAssignedToId);
     const pumpAssignedUser = users?.find(u => u.id === values.pumpAssignedToId);
+    const gearboxAssignedUser = users?.find(u => u.id === values.gearboxAssignedToId);
+    const fanAssignedUser = users?.find(u => u.id === values.fanAssignedToId);
+    const valveAssignedUser = users?.find(u => u.id === values.valveAssignedToId);
 
     const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
     const vsdRef = doc(firestore, 'vsds', values.vsdId);
@@ -229,6 +259,33 @@ export default function NewEquipmentPage() {
       pumpFrameType: values.pumpFrameType,
       pumpAssignedToId: values.pumpAssignedToId,
       pumpAssignedToName: pumpAssignedUser?.name,
+
+      gearboxModel: values.gearboxModel,
+      gearboxBrand: values.gearboxBrand,
+      gearboxRatio: values.gearboxRatio,
+      gearboxSerialNumber: values.gearboxSerialNumber,
+      gearboxOilType: values.gearboxOilType,
+      gearboxOilCapacityLiters: values.gearboxOilCapacityLiters,
+      gearboxAssignedToId: values.gearboxAssignedToId,
+      gearboxAssignedToName: gearboxAssignedUser?.name,
+
+      fanType: values.fanType,
+      fanBrand: values.fanBrand,
+      fanModel: values.fanModel,
+      fanSerialNumber: values.fanSerialNumber,
+      fanAirflowCFM: values.fanAirflowCFM,
+      fanBladeDiameter: values.fanBladeDiameter,
+      fanAssignedToId: values.fanAssignedToId,
+      fanAssignedToName: fanAssignedUser?.name,
+
+      valveType: values.valveType,
+      valveBrand: values.valveBrand,
+      valveModel: values.valveModel,
+      valveSerialNumber: values.valveSerialNumber,
+      valveSizeInches: values.valveSizeInches,
+      valveActuatorType: values.valveActuatorType,
+      valveAssignedToId: values.valveAssignedToId,
+      valveAssignedToName: valveAssignedUser?.name,
     };
 
     if (values.plant === 'Mining' || values.plant === 'Smelter') {
@@ -931,6 +988,54 @@ export default function NewEquipmentPage() {
                         <FormMessage />
                     </FormItem>
                 )} />
+            </CardContent>
+          </Card>
+           
+          <Card>
+            <CardHeader>
+                <CardTitle>Gearbox Information</CardTitle>
+                <CardDescription>Details for the gearbox (if applicable).</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                 <FormField control={form.control} name="gearboxModel" render={({ field }) => (<FormItem><FormLabel>Gearbox Model</FormLabel><FormControl><Input placeholder="e.g., Helical G5" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="gearboxBrand" render={({ field }) => (<FormItem><FormLabel>Gearbox Brand</FormLabel><FormControl><Input placeholder="e.g., SEW-Eurodrive" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="gearboxRatio" render={({ field }) => (<FormItem><FormLabel>Gear Ratio</FormLabel><FormControl><Input placeholder="e.g., 50:1" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="gearboxSerialNumber" render={({ field }) => (<FormItem><FormLabel>Gearbox Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-GB-123" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="gearboxOilType" render={({ field }) => (<FormItem><FormLabel>Oil Type</FormLabel><FormControl><Input placeholder="e.g., ISO VG 220" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="gearboxOilCapacityLiters" render={({ field }) => (<FormItem><FormLabel>Oil Capacity (Liters)</FormLabel><FormControl><Input type="number" placeholder="e.g., 5.5" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="gearboxAssignedToId" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Assigned Gearbox Technician</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign a technician..." /></SelectTrigger></FormControl><SelectContent>{usersLoading ? (<SelectItem value="loading" disabled>Loading users...</SelectItem>) : (<><SelectItem value="unassigned">Unassigned</SelectItem>{users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+                <CardTitle>Fan Information</CardTitle>
+                <CardDescription>Details for the fan (if applicable).</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                 <FormField control={form.control} name="fanType" render={({ field }) => (<FormItem><FormLabel>Fan Type</FormLabel><FormControl><Input placeholder="e.g., Axial, Centrifugal" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="fanBrand" render={({ field }) => (<FormItem><FormLabel>Fan Brand</FormLabel><FormControl><Input placeholder="e.g., Ziehl-Abegg" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="fanModel" render={({ field }) => (<FormItem><FormLabel>Fan Model</FormLabel><FormControl><Input placeholder="e.g., FN050" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="fanSerialNumber" render={({ field }) => (<FormItem><FormLabel>Fan Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-FAN-456" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="fanAirflowCFM" render={({ field }) => (<FormItem><FormLabel>Airflow (CFM)</FormLabel><FormControl><Input type="number" placeholder="e.g., 5000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="fanBladeDiameter" render={({ field }) => (<FormItem><FormLabel>Blade Diameter (mm)</FormLabel><FormControl><Input type="number" placeholder="e.g., 500" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="fanAssignedToId" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Assigned Fan Technician</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign a technician..." /></SelectTrigger></FormControl><SelectContent>{usersLoading ? (<SelectItem value="loading" disabled>Loading users...</SelectItem>) : (<><SelectItem value="unassigned">Unassigned</SelectItem>{users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>Valve Information</CardTitle>
+                <CardDescription>Details for the valve (if applicable).</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                 <FormField control={form.control} name="valveType" render={({ field }) => (<FormItem><FormLabel>Valve Type</FormLabel><FormControl><Input placeholder="e.g., Ball, Gate, Butterfly" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="valveBrand" render={({ field }) => (<FormItem><FormLabel>Valve Brand</FormLabel><FormControl><Input placeholder="e.g., Fisher" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="valveModel" render={({ field }) => (<FormItem><FormLabel>Valve Model</FormLabel><FormControl><Input placeholder="e.g., Vee-Ball V150" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="valveSerialNumber" render={({ field }) => (<FormItem><FormLabel>Valve Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-VALVE-789" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="valveSizeInches" render={({ field }) => (<FormItem><FormLabel>Valve Size (Inches)</FormLabel><FormControl><Input type="number" placeholder="e.g., 6" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="valveActuatorType" render={({ field }) => (<FormItem><FormLabel>Actuator Type</FormLabel><FormControl><Input placeholder="e.g., Manual, Electric, Pneumatic" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="valveAssignedToId" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Assigned Valve Technician</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign a technician..." /></SelectTrigger></FormControl><SelectContent>{usersLoading ? (<SelectItem value="loading" disabled>Loading users...</SelectItem>) : (<><SelectItem value="unassigned">Unassigned</SelectItem>{users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</>)}</SelectContent></Select><FormMessage /></FormItem>)} />
             </CardContent>
           </Card>
 

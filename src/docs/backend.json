@@ -5,18 +5,20 @@
     "VSD": {
       "title": "VSD",
       "type": "object",
-      "description": "Represents a Variable Speed Drive.",
+      "description": "Represents a Variable Speed Drive or Soft Starter.",
       "properties": {
         "id": { "type": "string" },
+        "driveType": { "type": "string", "enum": ["VSD", "Soft Starter"] },
         "serialNumber": { "type": "string" },
         "equipmentId": { "type": "string" },
         "model": { "type": "string" },
+        "manufacturer": { "type": "string" },
         "installationDate": { "type": "string", "format": "date" },
         "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
         "assignedToId": { "type": "string", "description": "The UID of the user assigned to the VSD." },
         "assignedToName": { "type": "string", "description": "The name of the user assigned to the VSD." }
       },
-      "required": ["id", "serialNumber", "equipmentId", "model", "installationDate", "status"]
+      "required": ["id", "driveType", "serialNumber", "equipmentId", "model", "installationDate", "status"]
     },
     "Equipment": {
       "title": "Equipment",
@@ -25,14 +27,14 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS", "MSP - TTP", "Pilot Plant", "Drymill", "Roaster 1&2", "3,3KV Blowers", "Mag Separation", "Roaster - RTR Magnets", "Smelter feed", "Charplant - Stoker 1", "Charplant - Stoker 2", "Charplant - Baghouse", "Smelter - SF1", "Smelter - Common", "Smelter - SF2", "Smelter - SF3", "Smelter - SF4", "Smelter - Clay gun", "Smelter Elevator"] },
+        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "MPE Dry Mining", "Smelter Area 1", "Smelter Area 2", "RWBS", "MSP - TTP", "Pilot Plant", "Drymill", "Roaster 1&2", "3,3KV Blowers", "Mag Separation", "Roaster - RTR Magnets", "Smelter feed", "Charplant - Stoker 1", "Charplant - Stoker 2", "Charplant - Baghouse", "Smelter - SF1", "Smelter - Common", "Smelter - SF2", "Smelter - SF3", "Smelter - SF4", "Smelter - Clay gun", "Smelter Elevator", "Iron Injection - West Crane", "Iron Injection - East Crane", "Iron Injection", "Iron Injection - PCM1", "Iron Injection - PCM2", "Iron Injection - Fumehood", "Iron Injection - Turn Table", "Stripping crane 1", "Stripping crane 2", "Slag plant", "North Screen"] },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
         "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron injection", "Stripping Crane", "Slag plant", "North Screen", "UPS/BTU's"], "description": "The specific division within the Mining or Smelter plant." },
         "vsdId": { "type": "string" },
         "lastMaintenance": { "type": "string", "format": "date" },
         "nextMaintenance": { "type": "string", "format": "date" },
-        "uptime": { "type": "number" },
-        "powerConsumption": { "type": "number" },
+        "uptime": { "type": "number", "description": "Uptime percentage for the current reporting period." },
+        "powerConsumption": { "type": "number", "description": "Power consumption for the current reporting period in kWh." },
         "imageUrl": { "type": "string", "description": "URL of the equipment image." },
         "motorModel": { "type": "string" },
         "motorPower": { "type": "number" },
@@ -42,7 +44,7 @@
         "motorInstallationDate": { "type": "string", "format": "date" },
         "motorAssignedToId": { "type": "string", "description": "The UID of the user assigned to the motor." },
         "motorAssignedToName": { "type": "string", "description": "The name of the user assigned to the motor." },
-        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." },
+        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours for the current reporting period." },
         "breakerAssetNumber": { "type": "string", "description": "The unique asset number or tag ID for the breaker." },
         "breakerLocationHierarchy": { "type": "string", "description": "e.g., Substation > DB > Cubicle" },
         "breakerServiceDescription": { "type": "string", "description": "What the breaker feeds." },
@@ -89,6 +91,30 @@
         "pumpFrameType": { "type": "string" },
         "pumpAssignedToId": { "type": "string", "description": "The UID of the user assigned to the pump." },
         "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." },
+        "gearboxModel": { "type": "string", "description": "The model of the gearbox." },
+        "gearboxBrand": { "type": "string", "description": "The brand of the gearbox." },
+        "gearboxRatio": { "type": "string", "description": "The gear ratio, e.g., '50:1'." },
+        "gearboxSerialNumber": { "type": "string", "description": "The serial number of the gearbox." },
+        "gearboxOilType": { "type": "string", "description": "The type of oil used." },
+        "gearboxOilCapacityLiters": { "type": "number", "description": "Oil capacity in liters." },
+        "gearboxAssignedToId": { "type": "string", "description": "The UID of the user assigned to the gearbox." },
+        "gearboxAssignedToName": { "type": "string", "description": "The name of the user assigned to the gearbox." },
+        "fanType": { "type": "string", "description": "The type of fan, e.g., Axial, Centrifugal." },
+        "fanBrand": { "type": "string", "description": "The brand of the fan." },
+        "fanModel": { "type": "string", "description": "The model of the fan." },
+        "fanSerialNumber": { "type": "string", "description": "The serial number of the fan." },
+        "fanAirflowCFM": { "type": "number", "description": "Airflow in cubic feet per minute." },
+        "fanBladeDiameter": { "type": "number", "description": "Diameter of the fan blades in inches." },
+        "fanAssignedToId": { "type": "string", "description": "The UID of the user assigned to the fan." },
+        "fanAssignedToName": { "type": "string", "description": "The name of the user assigned to the fan." },
+        "valveType": { "type": "string", "description": "The type of valve, e.g., Ball, Gate, Butterfly." },
+        "valveBrand": { "type": "string", "description": "The brand of the valve." },
+        "valveModel": { "type": "string", "description": "The model of the valve." },
+        "valveSerialNumber": { "type": "string", "description": "The serial number of the valve." },
+        "valveSizeInches": { "type": "number", "description": "The size of the valve in inches." },
+        "valveActuatorType": { "type": "string", "description": "The actuator type, e.g., Manual, Electric, Pneumatic." },
+        "valveAssignedToId": { "type": "string", "description": "The UID of the user assigned to the valve." },
+        "valveAssignedToName": { "type": "string", "description": "The name of the user assigned to the valve." },
         "breakdownStatus": {
           "type": "string",
           "enum": ["None", "Active", "Resolved", "Pending PO", "Awaiting OT", "Signed Off", "Invoiced"],
@@ -96,6 +122,20 @@
         }
       },
       "required": ["id", "name", "location", "vsdId", "plant"]
+    },
+    "PerformanceRecord": {
+      "title": "PerformanceRecord",
+      "type": "object",
+      "description": "Stores a snapshot of equipment performance for a specific period (e.g., a month).",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "period": { "type": "string", "description": "The period this record represents, e.g., '2024-07' for July 2024." },
+        "uptime": { "type": "number" },
+        "downtimeHours": { "type": "number" },
+        "powerConsumption": { "type": "number" }
+      },
+      "required": ["id", "equipmentId", "period", "uptime", "downtimeHours", "powerConsumption"]
     },
     "MaintenanceTask": {
       "title": "MaintenanceTask",
@@ -288,6 +328,14 @@
         }
       },
       {
+        "path": "/equipment/{equipmentId}/performance_records/{recordId}",
+        "definition": {
+            "entityName": "PerformanceRecord",
+            "schema": { "$ref": "#/entities/PerformanceRecord" },
+            "description": "Stores monthly performance snapshots for a piece of equipment."
+        }
+      },
+      {
         "path": "/tasks/{taskId}",
         "definition": {
           "entityName": "MaintenanceTask",
@@ -330,7 +378,3 @@
     ]
   }
 }
-
-
-
-    

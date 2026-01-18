@@ -77,6 +77,33 @@ export interface Equipment {
   pumpFrameType?: string;
   pumpAssignedToId?: string;
   pumpAssignedToName?: string;
+  // Gearbox fields
+  gearboxModel?: string;
+  gearboxBrand?: string;
+  gearboxRatio?: string;
+  gearboxSerialNumber?: string;
+  gearboxOilType?: string;
+  gearboxOilCapacityLiters?: number;
+  gearboxAssignedToId?: string;
+  gearboxAssignedToName?: string;
+  // Fan fields
+  fanType?: string;
+  fanBrand?: string;
+  fanModel?: string;
+  fanSerialNumber?: string;
+  fanAirflowCFM?: number;
+  fanBladeDiameter?: number;
+  fanAssignedToId?: string;
+  fanAssignedToName?: string;
+  // Valve fields
+  valveType?: string;
+  valveBrand?: string;
+  valveModel?: string;
+  valveSerialNumber?: string;
+  valveSizeInches?: number;
+  valveActuatorType?: string;
+  valveAssignedToId?: string;
+  valveAssignedToName?: string;
   breakdownStatus?: 'None' | 'Active' | 'Resolved' | 'Pending PO' | 'Awaiting OT' | 'Signed Off' | 'Invoiced';
 }
 

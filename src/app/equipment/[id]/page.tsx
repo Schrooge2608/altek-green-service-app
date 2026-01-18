@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info } from 'lucide-react';
+import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info, Fan, GitCommit } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
@@ -24,6 +24,9 @@ import { EditVsdForm } from '@/components/equipment/edit-vsd-form';
 import { EditMotorForm } from '@/components/equipment/edit-motor-form';
 import { EditPumpForm } from '@/components/equipment/edit-pump-form';
 import { EditImageForm } from '@/components/equipment/edit-image-form';
+import { EditGearboxForm } from '@/components/equipment/edit-gearbox-form';
+import { EditFanForm } from '@/components/equipment/edit-fan-form';
+import { EditValveForm } from '@/components/equipment/edit-valve-form';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -365,32 +368,88 @@ export default function EquipmentDetailPage() {
                     </div>
                 </CardContent>
             </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="flex items-center gap-2"><Droplets className="text-primary" /> Pump Information</CardTitle>
-                    {canEdit && eq && (
-                        <EditPumpForm equipment={eq} />
-                    )}
-                </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                    <DetailRow label="Pump Type" value={eq.pumpType} />
-                    <DetailRow label="Pump Brand" value={eq.pumpBrand} />
-                    <DetailRow label="Pump S/N" value={eq.pumpSerialNumber} />
-                    <DetailRow label="Manufacturer" value={eq.pumpManufacturer} />
-                    <Separator className="md:col-span-2 my-2"/>
-                    <DetailRow label="Pump Head" value={eq.pumpHead ? `${eq.pumpHead} m` : null} />
-                    <DetailRow label="Flow Rate" value={eq.flowRate ? `${eq.flowRate} m³/h` : null} />
-                    <DetailRow label="Impeller Diameter" value={eq.pumpImpellerDiameter ? `${eq.pumpImpellerDiameter} mm` : null} />
-                    <DetailRow label="Date Commissioned" value={eq.pumpCommissionDate} />
-                    <Separator className="md:col-span-2 my-2"/>
-                    <DetailRow label="Flange Size In" value={eq.pumpFlangeSizeIn ? `${eq.pumpFlangeSizeIn} mm` : null} />
-                    <DetailRow label="Flange Size Outlet" value={eq.pumpFlangeSizeOutlet ? `${eq.pumpFlangeSizeOutlet} mm` : null} />
-                    <DetailRow label="Frame Size" value={eq.pumpFrameSize} />
-                    <DetailRow label="Frame Type" value={eq.pumpFrameType} />
-                    <Separator className="md:col-span-2 my-2"/>
-                    <DetailRow label="Assigned Technician" value={eq.pumpAssignedToName} />
-                </CardContent>
-            </Card>
+            
+            {eq.pumpBrand && (
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2"><Droplets className="text-primary" /> Pump Information</CardTitle>
+                        {canEdit && <EditPumpForm equipment={eq} />}
+                    </CardHeader>
+                    <CardContent className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <DetailRow label="Pump Type" value={eq.pumpType} />
+                        <DetailRow label="Pump Brand" value={eq.pumpBrand} />
+                        <DetailRow label="Pump S/N" value={eq.pumpSerialNumber} />
+                        <DetailRow label="Manufacturer" value={eq.pumpManufacturer} />
+                        <Separator className="md:col-span-2 my-2"/>
+                        <DetailRow label="Pump Head" value={eq.pumpHead ? `${eq.pumpHead} m` : null} />
+                        <DetailRow label="Flow Rate" value={eq.flowRate ? `${eq.flowRate} m³/h` : null} />
+                        <DetailRow label="Impeller Diameter" value={eq.pumpImpellerDiameter ? `${eq.pumpImpellerDiameter} mm` : null} />
+                        <DetailRow label="Date Commissioned" value={eq.pumpCommissionDate} />
+                        <Separator className="md:col-span-2 my-2"/>
+                        <DetailRow label="Flange Size In" value={eq.pumpFlangeSizeIn ? `${eq.pumpFlangeSizeIn} mm` : null} />
+                        <DetailRow label="Flange Size Outlet" value={eq.pumpFlangeSizeOutlet ? `${eq.pumpFlangeSizeOutlet} mm` : null} />
+                        <DetailRow label="Frame Size" value={eq.pumpFrameSize} />
+                        <DetailRow label="Frame Type" value={eq.pumpFrameType} />
+                        <Separator className="md:col-span-2 my-2"/>
+                        <DetailRow label="Assigned Technician" value={eq.pumpAssignedToName} />
+                    </CardContent>
+                </Card>
+            )}
+            
+            {eq.gearboxModel && (
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2"><Cog className="text-primary" /> Gearbox Information</CardTitle>
+                        {canEdit && <EditGearboxForm equipment={eq} />}
+                    </CardHeader>
+                    <CardContent className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <DetailRow label="Model" value={eq.gearboxModel} />
+                        <DetailRow label="Brand" value={eq.gearboxBrand} />
+                        <DetailRow label="Serial Number" value={eq.gearboxSerialNumber} />
+                        <DetailRow label="Ratio" value={eq.gearboxRatio} />
+                        <DetailRow label="Oil Type" value={eq.gearboxOilType} />
+                        <DetailRow label="Oil Capacity (L)" value={eq.gearboxOilCapacityLiters} />
+                        <DetailRow label="Assigned Technician" value={eq.gearboxAssignedToName} />
+                    </CardContent>
+                </Card>
+            )}
+            
+            {eq.fanModel && (
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2"><Fan className="text-primary" /> Fan Information</CardTitle>
+                        {canEdit && <EditFanForm equipment={eq} />}
+                    </CardHeader>
+                    <CardContent className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <DetailRow label="Type" value={eq.fanType} />
+                        <DetailRow label="Brand" value={eq.fanBrand} />
+                        <DetailRow label="Model" value={eq.fanModel} />
+                        <DetailRow label="Serial Number" value={eq.fanSerialNumber} />
+                        <DetailRow label="Airflow (CFM)" value={eq.fanAirflowCFM} />
+                        <DetailRow label="Blade Diameter (mm)" value={eq.fanBladeDiameter} />
+                        <DetailRow label="Assigned Technician" value={eq.fanAssignedToName} />
+                    </CardContent>
+                </Card>
+            )}
+
+            {eq.valveModel && (
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2"><GitCommit className="text-primary" /> Valve Information</CardTitle>
+                        {canEdit && <EditValveForm equipment={eq} />}
+                    </CardHeader>
+                    <CardContent className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <DetailRow label="Type" value={eq.valveType} />
+                        <DetailRow label="Brand" value={eq.valveBrand} />
+                        <DetailRow label="Model" value={eq.valveModel} />
+                        <DetailRow label="Serial Number" value={eq.valveSerialNumber} />
+                        <DetailRow label="Size (Inches)" value={eq.valveSizeInches} />
+                        <DetailRow label="Actuator Type" value={eq.valveActuatorType} />
+                        <DetailRow label="Assigned Technician" value={eq.valveAssignedToName} />
+                    </CardContent>
+                </Card>
+            )}
+
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Equipment Image</CardTitle>
