@@ -23,6 +23,7 @@ const hazardIconSources = [
     { src: "/entanglement.png", alt: "Entanglement Hazard" },
     { src: "/Falling%20From%20Heights.png", alt: "Falling From Heights Hazard" },
     { src: "/slipping%20&%20falling.png", alt: "Slipping & Falling Hazard" },
+    { src: "/energy.png", alt: "Release of Energy Hazard" },
 ];
 
 
