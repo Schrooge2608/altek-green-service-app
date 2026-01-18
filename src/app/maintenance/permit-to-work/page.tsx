@@ -20,6 +20,7 @@ import Image from 'next/image';
 const hazardIconSources = [
     { src: "/Vehicle%20Collision.png", alt: "Vehicle Collision Hazard" },
     { src: "/Vehicle%20Impact%20On%20person.png", alt: "Vehicle Impact On Person Hazard" },
+    { src: "/entanglement.png", alt: "Entanglement Hazard" },
 ];
 
 
@@ -297,3 +298,5 @@ export default function PermitToWorkPage() {
         </div>
     );
 }
+
+    
