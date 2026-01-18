@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -9,6 +8,7 @@ import type { Equipment } from '@/lib/types';
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 // Config for Uptime chart
 const uptimeChartConfig = {
@@ -28,6 +28,7 @@ const powerChartConfig = {
 
 export default function ReportsPage() {
     const firestore = useFirestore();
+    const router = useRouter();
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
 
@@ -57,6 +58,19 @@ export default function ReportsPage() {
 
     }, [equipment]);
 
+    const handleBarClick = (data: any) => {
+        if (data && data.activePayload && data.activePayload.length > 0) {
+            const payload = data.activePayload[0].payload;
+            const [plant, ...divisionParts] = payload.name.split(' - ');
+            const division = divisionParts.join(' - ');
+            
+            const plantSlug = plant.toLowerCase();
+            const divisionSlug = division.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
+            
+            router.push(`/reports/${plantSlug}/${divisionSlug}`);
+        }
+    };
+
     return (
         <div className="flex flex-col gap-8">
             <header>
@@ -70,13 +84,19 @@ export default function ReportsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Average Uptime by Division</CardTitle>
-                        <CardDescription>Comparing the average equipment uptime percentage for each division.</CardDescription>
+                        <CardDescription>Click a bar to see a detailed breakdown. Comparing the average equipment uptime percentage for each division.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
                             <ChartContainer config={uptimeChartConfig} className="min-h-[200px] w-full">
                                 <ResponsiveContainer width="100%" height={350}>
-                                    <BarChart accessibilityLayer data={divisionSummary} margin={{ top: 20, right: 20, bottom: 100, left: 20 }}>
+                                    <BarChart 
+                                        accessibilityLayer 
+                                        data={divisionSummary} 
+                                        margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
+                                        onClick={handleBarClick}
+                                        className="[&_.recharts-bar-rectangle]:cursor-pointer"
+                                    >
                                         <XAxis
                                             dataKey="name"
                                             tickLine={false}
@@ -108,13 +128,19 @@ export default function ReportsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Total Power Consumption by Division</CardTitle>
-                        <CardDescription>Comparing the total energy usage (in Megawatt-hours) for each division.</CardDescription>
+                        <CardDescription>Click a bar to see a detailed breakdown. Comparing the total energy usage (in Megawatt-hours) for each division.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
                             <ChartContainer config={powerChartConfig} className="min-h-[200px] w-full">
                                 <ResponsiveContainer width="100%" height={350}>
-                                    <BarChart accessibilityLayer data={divisionSummary} margin={{ top: 20, right: 20, bottom: 100, left: 20 }}>
+                                    <BarChart 
+                                        accessibilityLayer 
+                                        data={divisionSummary} 
+                                        margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
+                                        onClick={handleBarClick}
+                                        className="[&_.recharts-bar-rectangle]:cursor-pointer"
+                                    >
                                         <XAxis
                                             dataKey="name"
                                             tickLine={false}
