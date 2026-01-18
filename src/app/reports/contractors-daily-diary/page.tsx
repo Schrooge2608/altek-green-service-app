@@ -78,6 +78,30 @@ export default function NewDailyDiaryPage() {
         setUniqueId(`AG-RBM-DD-${randomPart}`);
         setIsIdLoading(false);
     }, []);
+
+    useEffect(() => {
+        const needsUpdate = manpowerData.some(row => {
+            const normal = Number(row.normalHrs || 0);
+            const ot1_5 = Number(row.overtime1_5 || 0);
+            const ot2_0 = Number(row.overtime2_0 || 0);
+            const total = normal + ot1_5 + ot2_0;
+            return total !== Number(row.totalManHrs || 0);
+        });
+
+        if (needsUpdate) {
+            setManpowerData(currentData =>
+                currentData.map(row => {
+                    const normal = Number(row.normalHrs || 0);
+                    const ot1_5 = Number(row.overtime1_5 || 0);
+                    const ot2_0 = Number(row.overtime2_0 || 0);
+                    return {
+                        ...row,
+                        totalManHrs: normal + ot1_5 + ot2_0
+                    };
+                })
+            );
+        }
+    }, [manpowerData]);
     
     const uploadImages = async (files: File[], folder: 'before' | 'after'): Promise<string[]> => {
         if (!firebaseApp || files.length === 0) return [];
@@ -142,17 +166,33 @@ export default function NewDailyDiaryPage() {
 
     const handleManpowerChange = (index: number, field: keyof typeof manpowerData[0], value: string) => {
         const newData = [...manpowerData];
-        const parsedValue = (field !== 'designation' && field !== 'comments' && value !== '') ? parseFloat(value) : value;
+        // For numeric fields, allow empty string to clear the input, otherwise parse to number
+        const parsedValue = (field !== 'designation' && field !== 'comments')
+            ? (value === '' ? '' : Number(value))
+            : value;
 
         // @ts-ignore
         newData[index][field] = parsedValue;
         setManpowerData(newData);
     };
 
-    const { forecastTotal, actualTotal } = useMemo(() => {
-        const forecastTotal = manpowerData.reduce((sum, row) => sum + Number(row.forecast || 0), 0);
-        const actualTotal = manpowerData.reduce((sum, row) => sum + Number(row.actual || 0), 0);
-        return { forecastTotal, actualTotal };
+    const { forecastTotal, actualTotal, normalHrsTotal, overtime1_5_Total, overtime2_0_Total, totalManHrsTotal } = useMemo(() => {
+        return manpowerData.reduce((acc, row) => {
+            acc.forecastTotal += Number(row.forecast || 0);
+            acc.actualTotal += Number(row.actual || 0);
+            acc.normalHrsTotal += Number(row.normalHrs || 0);
+            acc.overtime1_5_Total += Number(row.overtime1_5 || 0);
+            acc.overtime2_0_Total += Number(row.overtime2_0 || 0);
+            acc.totalManHrsTotal += Number(row.totalManHrs || 0);
+            return acc;
+        }, {
+            forecastTotal: 0,
+            actualTotal: 0,
+            normalHrsTotal: 0,
+            overtime1_5_Total: 0,
+            overtime2_0_Total: 0,
+            totalManHrsTotal: 0,
+        });
     }, [manpowerData]);
 
      if (isUserLoading) {
@@ -300,7 +340,7 @@ export default function NewDailyDiaryPage() {
                                         <TableCell><Input type="number" step="0.1" value={row.normalHrs} onChange={(e) => handleManpowerChange(i, 'normalHrs', e.target.value)} className="w-[80px]" /></TableCell>
                                         <TableCell><Input type="number" step="0.1" value={row.overtime1_5} onChange={(e) => handleManpowerChange(i, 'overtime1_5', e.target.value)} className="w-[80px]" /></TableCell>
                                         <TableCell><Input type="number" step="0.1" value={row.overtime2_0} onChange={(e) => handleManpowerChange(i, 'overtime2_0', e.target.value)} className="w-[80px]" /></TableCell>
-                                        <TableCell><Input type="number" step="0.1" value={row.totalManHrs} onChange={(e) => handleManpowerChange(i, 'totalManHrs', e.target.value)} className="w-[80px]" /></TableCell>
+                                        <TableCell><Input type="number" value={row.totalManHrs} readOnly className="w-[80px] bg-muted" /></TableCell>
                                         <TableCell><Textarea rows={1} value={row.comments} onChange={(e) => handleManpowerChange(i, 'comments', e.target.value)}/></TableCell>
                                     </TableRow>
                                 ))}
@@ -308,19 +348,25 @@ export default function NewDailyDiaryPage() {
                              <TableFooter>
                                 <TableRow>
                                     <TableCell className="text-right font-bold">Totals</TableCell>
-                                    <TableCell colSpan={2}>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <Label htmlFor="forecast-total" className="text-xs">Forecasted</Label>
-                                                <Input id="forecast-total" type="number" value={forecastTotal} readOnly className="font-bold bg-muted" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <Label htmlFor="actual-total" className="text-xs">Actual</Label>
-                                                <Input id="actual-total" type="number" value={actualTotal} readOnly className="font-bold bg-muted" />
-                                            </div>
-                                        </div>
+                                    <TableCell>
+                                        <Input type="number" value={forecastTotal} readOnly className="font-bold bg-muted" />
                                     </TableCell>
-                                    <TableCell colSpan={5}></TableCell>
+                                    <TableCell>
+                                        <Input type="number" value={actualTotal} readOnly className="font-bold bg-muted" />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Input type="number" value={normalHrsTotal} readOnly className="font-bold bg-muted w-[80px]" />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Input type="number" value={overtime1_5_Total} readOnly className="font-bold bg-muted w-[80px]" />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Input type="number" value={overtime2_0_Total} readOnly className="font-bold bg-muted w-[80px]" />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Input type="number" value={totalManHrsTotal} readOnly className="font-bold bg-muted w-[80px]" />
+                                    </TableCell>
+                                    <TableCell></TableCell>
                                 </TableRow>
                             </TableFooter>
                         </Table>
