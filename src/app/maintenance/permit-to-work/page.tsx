@@ -21,9 +21,10 @@ const hazardIconSources = [
     { src: "/Vehicle%20Collision.png", alt: "Vehicle Collision Hazard" },
     { src: "/Vehicle%20Impact%20On%20person.png", alt: "Vehicle Impact On Person Hazard" },
     { src: "/entanglement.png", alt: "Entanglement Hazard" },
-    { src: "/Falling%20From%20Heights.png", alt: "Falling From Heights Hazard" },
+    { src: "/falling%20from%20heights.png", alt: "Falling From Heights Hazard" },
     { src: "/slipping%20&%20falling.png", alt: "Slipping & Falling Hazard" },
     { src: "/energy.png", alt: "Release of Energy Hazard" },
+    { src: "/lifting%20operations.png", alt: "Lifting Operations Hazard" },
 ];
 
 
