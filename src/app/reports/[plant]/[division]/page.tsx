@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -9,7 +10,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
 // Helper to convert slug back to title case
@@ -34,6 +35,16 @@ const powerChartConfig = {
         label: 'Total Power (MWh)',
         color: 'hsl(var(--primary))',
     },
+};
+
+const getUptimeColor = (uptime: number) => {
+    if (uptime >= 99) {
+      return 'hsl(var(--accent))'; // Green for excellent
+    }
+    if (uptime >= 95) {
+      return '#ED7014'; // Orange for warning
+    }
+    return 'hsl(var(--destructive))'; // Red for critical
 };
 
 
@@ -158,7 +169,11 @@ export default function DivisionReportPage() {
                                                 tickFormatter={(value) => `${value}%`}
                                             />
                                             <ChartTooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
-                                            <Bar dataKey="uptime" fill="var(--color-uptime)" radius={4} />
+                                            <Bar dataKey="uptime" radius={4}>
+                                                {locationSummary.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={getUptimeColor(entry.uptime)} />
+                                                ))}
+                                            </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </ChartContainer>
