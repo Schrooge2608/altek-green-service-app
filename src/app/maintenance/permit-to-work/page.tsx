@@ -14,6 +14,7 @@ import { RbmLogo } from '@/components/rbm-logo';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const hazardIcons = [
   { icon: Car, label: 'Vehicle Collision' },
@@ -58,14 +59,30 @@ export default function PermitToWorkPage() {
                             <Input id="permit-no" className="col-span-2" />
                         </div>
                         <div className="flex justify-end items-center gap-4 mt-2">
-                            <div className="flex items-center gap-2">
-                                <Checkbox id="gptw" />
-                                <Label htmlFor="gptw">GPTW</Label>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Checkbox id="mptw" />
-                                <Label htmlFor="mptw">MPTW</Label>
-                            </div>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-2 cursor-pointer">
+                                            <Checkbox id="gptw" />
+                                            <Label htmlFor="gptw">GPTW</Label>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>General Purpose Work Permit</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-2 cursor-pointer">
+                                            <Checkbox id="mptw" />
+                                            <Label htmlFor="mptw">MPTW</Label>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Master Permit to Work</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </div>
                          <div className="flex justify-end items-center gap-2 mt-2">
                              <Label className="font-bold">Valid Date From:</Label>
