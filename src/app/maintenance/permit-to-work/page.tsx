@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SignaturePad } from '@/components/ui/signature-pad';
-import { Printer, Car, PersonStanding, Wind, Crane, Box, Zap, Ear, Biohazard, Flame, TrainTrack, Thermometer, Footprints } from 'lucide-react';
+import { Printer, Car, PersonStanding, Wind, Construction, Box, Zap, Ear, Biohazard, Flame, TrainTrack, Thermometer, Footprints } from 'lucide-react';
 import React from 'react';
 import { RbmLogo } from '@/components/rbm-logo';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,7 +22,7 @@ const hazardIcons = [
   { icon: PersonStanding, label: 'Fall From Height' }, // Placeholder icon
   { icon: Footprints, label: 'Slipping & Tripping' },
   { icon: Zap, label: 'Uncontrolled Release of Energy' },
-  { icon: Crane, label: 'Lifting Operations' },
+  { icon: Construction, label: 'Lifting Operations' },
   { icon: Box, label: 'Confined Space' },
   { icon: Zap, label: 'Contact with Electricity' },
   { icon: Ear, label: 'Noise' },
