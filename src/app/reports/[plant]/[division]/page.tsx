@@ -12,13 +12,26 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
-// Helper to convert slug back to title case
-function slugToTitle(slug: string) {
-    if (!slug) return '';
-    return slug
-        .replace(/-/g, ' ')
-        .replace(/\b\w/g, char => char.toUpperCase());
-}
+const plantDivisionMap = {
+    mining: {
+        'boosters': 'Boosters',
+        'dredgers': 'Dredgers',
+        'pump-stations': 'Pump Stations',
+        'ups-btus': "UPS/BTU's",
+    },
+    smelter: {
+        'msp': 'MSP',
+        'roaster': 'Roaster',
+        'char-plant': 'Char Plant',
+        'smelter': 'Smelter',
+        'iron-injection': 'Iron injection',
+        'stripping-crane': 'Stripping Crane',
+        'slag-plant': 'Slag plant',
+        'north-screen': 'North Screen',
+        'ups-btus': "UPS/BTU's",
+    }
+} as const;
+
 
 // Config for Uptime chart
 const uptimeChartConfig = {
@@ -37,22 +50,12 @@ const powerChartConfig = {
 };
 
 const getUptimeColor = (uptime: number) => {
-    if (uptime < 60) {
-        return '#C00000';
-    }
-    if (uptime < 80) {
-      return '#EE0000'; // Red for critical
-    }
-    if (uptime < 90) {
-      return '#FFC000'; // Orange for warning
-    }
-    if (uptime < 95) {
-      return '#FFFF00'; // Yellow for caution
-    }
-    if (uptime < 100) {
-      return '#92D050'; // Light Green for good
-    }
-    return 'hsl(var(--accent))'; // Dark Green for excellent
+    if (uptime < 60) return '#C00000';
+    if (uptime < 80) return '#EE0000';
+    if (uptime < 90) return '#FFC000';
+    if (uptime < 95) return '#FFFF00';
+    if (uptime < 100) return '#92D050';
+    return 'hsl(var(--accent))';
 };
 
 
@@ -64,8 +67,21 @@ export default function DivisionReportPage() {
     const plantSlug = Array.isArray(params.plant) ? params.plant[0] : params.plant;
     const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
 
-    const plantName = useMemo(() => slugToTitle(plantSlug), [plantSlug]);
-    const divisionName = useMemo(() => slugToTitle(divisionSlug), [divisionSlug]);
+    const plantName = useMemo(() => {
+        if (plantSlug !== 'mining' && plantSlug !== 'smelter') return '';
+        return plantSlug.charAt(0).toUpperCase() + plantSlug.slice(1);
+    }, [plantSlug]);
+
+    const divisionName = useMemo(() => {
+        if (plantSlug !== 'mining' && plantSlug !== 'smelter') return '';
+        const divisions = plantDivisionMap[plantSlug as keyof typeof plantDivisionMap];
+        type DivisionSlug = keyof typeof divisions;
+        if (divisionSlug in divisions) {
+            return divisions[divisionSlug as DivisionSlug];
+        }
+        return '';
+    }, [plantSlug, divisionSlug]);
+
 
     const pageTitle = useMemo(() => {
         if (!plantName || !divisionName) return 'Detailed Report';
@@ -241,7 +257,7 @@ export default function DivisionReportPage() {
                     </CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground max-w-md">
-                            Detailed performance charts for {slugToTitle(divisionSlug)} will be available in a future update.
+                            Detailed performance charts for {divisionName} will be available in a future update.
                         </p>
                     </CardContent>
                 </Card>
