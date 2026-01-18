@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -127,7 +126,13 @@ export default function PermitToWorkPage() {
                             </div>
                             <div>
                                 <h3 className="font-bold text-center mb-2">B1.2. Applicable Risks / Hazards</h3>
-                                <Textarea placeholder="Detail applicable risks/hazards here." className="h-full" />
+                                <div className="grid grid-cols-5 gap-2">
+                                    {[...Array(20)].map((_, i) => (
+                                        <div key={i} className="relative aspect-square rounded-md border bg-muted/20">
+                                            <Checkbox className="absolute left-1 top-1" />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t pt-4">
