@@ -25,7 +25,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS", "MSP - TTP", "Pilot Plant", "Drymill", "Roaster 1&2", "3,3KV Blowers", "Mag Separation", "Roaster - RTR Magnets", "Smelter feed"] },
+        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS", "MSP - TTP", "Pilot Plant", "Drymill", "Roaster 1&2", "3,3KV Blowers", "Mag Separation", "Roaster - RTR Magnets", "Smelter feed", "Charplant - Stoker 1", "Charplant - Stoker 2", "Charplant - Baghouse"] },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
         "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron injection", "Stripping Crane", "Slag plant", "North Screen", "UPS/BTU's"], "description": "The specific division within the Mining or Smelter plant." },
         "vsdId": { "type": "string" },
