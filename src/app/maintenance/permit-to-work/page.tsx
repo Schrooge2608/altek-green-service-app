@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SignaturePad } from '@/components/ui/signature-pad';
-import { Printer } from 'lucide-react';
+import { Printer, Car, PersonStanding, Wind, Construction, Box, Zap, Ear, Biohazard, Flame, TrainTrack, Thermometer, Footprints } from 'lucide-react';
 import React from 'react';
 import { RbmLogo } from '@/components/rbm-logo';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -130,7 +130,7 @@ export default function PermitToWorkPage() {
                                 <div className="grid grid-cols-5 gap-2">
                                     <div className="relative aspect-square rounded-md border bg-muted/20 flex items-center justify-center p-2">
                                         <Checkbox className="absolute left-1 top-1 z-10" />
-                                        <Image src="/Vehicle%20collision.svg" alt="Vehicle Collision Hazard" layout="fill" objectFit="contain" />
+                                        <Image src="/Vehicle%20Collision.png" alt="Vehicle Collision Hazard" layout="fill" objectFit="contain" />
                                     </div>
                                     {[...Array(19)].map((_, i) => (
                                         <div key={i} className="relative aspect-square rounded-md border bg-muted/20">
