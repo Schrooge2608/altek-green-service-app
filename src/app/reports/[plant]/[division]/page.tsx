@@ -64,9 +64,14 @@ export default function DivisionReportPage() {
 
     const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
 
-    const handleBarClick = () => {
-        if (plantSlug && divisionSlug) {
-            router.push(`/equipment/${plantSlug}/${divisionSlug}`);
+    const handleBarClick = (data: any) => {
+        if (data && data.activePayload && data.activePayload.length > 0) {
+            const payload = data.activePayload[0].payload;
+            const locationName = payload.name;
+            // Create a URL-friendly slug from the location name
+            const locationSlug = encodeURIComponent(locationName.toLowerCase().replace(/ /g, '-'));
+            
+            router.push(`/reports/${plantSlug}/${divisionSlug}/${locationSlug}`);
         }
     };
 
@@ -118,7 +123,7 @@ export default function DivisionReportPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Average Uptime by Sub-Location</CardTitle>
-                            <CardDescription>Click any bar to view the equipment list for the {divisionName} division.</CardDescription>
+                            <CardDescription>Click any bar to view a detailed equipment performance chart for that location.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
@@ -162,7 +167,7 @@ export default function DivisionReportPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Total Power Consumption by Sub-Location</CardTitle>
-                            <CardDescription>Click any bar to view the equipment list for the {divisionName} division.</CardDescription>
+                            <CardDescription>Click any bar to view a detailed equipment performance chart for that location.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
