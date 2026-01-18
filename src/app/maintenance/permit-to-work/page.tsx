@@ -21,6 +21,23 @@ const hazardIconSources = [
     { src: "/Vehicle%20Collision.png", alt: "Vehicle Collision Hazard" },
     { src: "/Vehicle%20Impact%20On%20person.png", alt: "Vehicle Impact On Person Hazard" },
     { src: "/entanglement.png", alt: "Entanglement Hazard" },
+    { src: "/Falling%20From%20Heights.png", alt: "Falling From Heights Hazard" },
+    { src: "/Slipping%20Hazard.png", alt: "Slipping Hazard" },
+    { src: "/Release%20Of%20Energy.png", alt: "Release Of Energy Hazard" },
+    { src: "/Lifting%20Operations.png", alt: "Lifting Operations Hazard" },
+    { src: "/Confined%20Spaces.png", alt: "Confined Spaces Hazard" },
+    { src: "/Contact%20With%20Electricity.png", alt: "Contact With Electricity Hazard" },
+    { src: "/Noise%20Hazard.png", alt: "Noise Hazard" },
+    { src: "/Falling%20Objects.png", alt: "Falling Objects Hazard" },
+    { src: "/Hazardous%20Materials.png", alt: "Hazardous Materials Hazard" },
+    { src: "/Slope%20Failure.png", alt: "Slope Failure Hazard" },
+    { src: "/Drowning%20Hazard.png", alt: "Drowning Hazard" },
+    { src: "/Radiation%20Hazard.png", alt: "Radiation Hazard" },
+    { src: "/Molten%20Metal.png", alt: "Molten Metal Hazard" },
+    { src: "/Rail%20Collision.png", alt: "Rail Collision Hazard" },
+    { src: "/Rail%20Impact%20With%20Person.png", alt: "Rail Impact With Person Hazard" },
+    { src: "/Fire%20Hazard.png", alt: "Fire Hazard" },
+    { src: "/Hot%20And%20Cold%20Surfaces.png", alt: "Hot And Cold Surfaces Hazard" },
 ];
 
 
