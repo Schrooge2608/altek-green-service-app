@@ -117,7 +117,9 @@ export default function EquipmentReportPage() {
                                             tickMargin={8}
                                             fontSize={12}
                                             stroke="hsl(var(--muted-foreground))"
-                                            domain={[dataMin => (Math.max(0, dataMin - 5)), 100]}
+                                            domain={[0, 100]}
+                                            ticks={[0, 20, 40, 60, 80, 85, 90, 95, 100]}
+                                            tickFormatter={(value) => `${value}%`}
                                         />
                                         <ChartTooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                                         <Bar dataKey="uptime" fill="var(--color-uptime)" radius={4} />
