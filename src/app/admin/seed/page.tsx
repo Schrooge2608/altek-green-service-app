@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,7 @@ export default function SeedPage() {
         const equipmentId = `ps-${pump.location.slice(0,3).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
         const vsdId = `vsd-ps-${pump.location.slice(0,3).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
         
-        const { model, serialNumber, installationDate, driveType, ...baseEq } = pump;
+        const { model, serialNumber, installationDate, driveType, manufacturer, ...baseEq } = pump;
 
         const equipmentDoc: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> = {
             ...baseEq,
@@ -60,6 +61,7 @@ export default function SeedPage() {
             driveType: driveType ?? 'VSD',
             equipmentId: equipmentId,
             model: model,
+            manufacturer: manufacturer,
             serialNumber: serialNumber,
             installationDate: installationDate,
             status: 'active',

@@ -267,6 +267,7 @@ export default function EquipmentDetailPage() {
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
                     <DetailRow label={`${controllerType} Model`} value={vsd?.model} />
+                    <DetailRow label={`${controllerType} Manufacturer`} value={vsd?.manufacturer} />
                     <DetailRow label={`${controllerType} S/N`} value={vsd?.serialNumber} />
                     <DetailRow label="Installation Date" value={vsd?.installationDate} />
                     <DetailRow label="Assigned Technician" value={vsd?.assignedToName} />

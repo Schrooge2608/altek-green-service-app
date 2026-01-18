@@ -40,6 +40,7 @@ import { CalendarIcon } from 'lucide-react';
 const formSchema = z.object({
   driveType: z.enum(['VSD', 'Soft Starter']),
   model: z.string().min(1, 'Model is required'),
+  manufacturer: z.string().optional(),
   serialNumber: z.string().min(1, 'Serial number is required'),
   installationDate: z.date({ required_error: "An installation date is required." }),
   status: z.enum(['active', 'inactive', 'maintenance']),
@@ -67,6 +68,7 @@ export function EditVsdForm({ vsd }: EditVsdFormProps) {
     defaultValues: {
         driveType: vsd.driveType || 'VSD',
         model: vsd.model,
+        manufacturer: vsd.manufacturer,
         serialNumber: vsd.serialNumber,
         installationDate: vsd.installationDate ? new Date(vsd.installationDate) : undefined,
         status: vsd.status,
@@ -134,6 +136,7 @@ export function EditVsdForm({ vsd }: EditVsdFormProps) {
                         )}
                     />
                     <FormField control={form.control} name="model" render={({ field }) => (<FormItem><FormLabel>Model</FormLabel><FormControl><Input placeholder="e.g., Altek Drive 5000" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="manufacturer" render={({ field }) => (<FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g., Allen-Bradley" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="serialNumber" render={({ field }) => (<FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-A1B2-C3D4" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="installationDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Installation Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="maintenance">Maintenance</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />

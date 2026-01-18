@@ -86,6 +86,7 @@ export interface VSD {
   serialNumber: string;
   equipmentId: string;
   model: string;
+  manufacturer?: string;
   installationDate: string;
   status: 'active' | 'inactive' | 'maintenance';
   assignedToId?: string;
