@@ -47,7 +47,9 @@ export default function EquipmentReportPage() {
 
     const pageTitle = useMemo(() => {
         if (!plantName || !divisionName || !locationName) return 'Equipment Report';
-        return `Report for: ${locationName}`;
+        // For display purposes, uppercase short location names as they are likely acronyms.
+        const displayLocation = locationName.length <= 4 ? locationName.toUpperCase() : locationName;
+        return `Report for: ${displayLocation}`;
     }, [plantName, divisionName, locationName]);
 
     const equipmentQuery = useMemoFirebase(() => {
@@ -90,7 +92,7 @@ export default function EquipmentReportPage() {
                  <Card>
                     <CardHeader>
                         <CardTitle>Equipment Uptime</CardTitle>
-                        <CardDescription>Uptime percentage for each piece of equipment in {locationName}.</CardDescription>
+                        <CardDescription>Uptime percentage for each piece of equipment in {locationName.length <= 4 ? locationName.toUpperCase() : locationName}.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
@@ -134,7 +136,7 @@ export default function EquipmentReportPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Equipment Power Consumption</CardTitle>
-                         <CardDescription>Total power consumption (MWh) for each piece of equipment in {locationName}.</CardDescription>
+                         <CardDescription>Total power consumption (MWh) for each piece of equipment in {locationName.length <= 4 ? locationName.toUpperCase() : locationName}.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
