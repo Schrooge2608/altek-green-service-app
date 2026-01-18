@@ -9,6 +9,74 @@ const nextMaintenanceDate = format(new Date(new Date().setMonth(new Date().getMo
 // This file is ready for future data seeding.
 // To add new equipment, populate this array following the example structure.
 export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & { model: string; serialNumber: string, installationDate: string }> = [
+  // Roaster 1&2
+  { name: 'ID fan', location: 'Roaster 1&2', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-R-12-IDF', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Recycle gas fan', location: 'Roaster 1&2', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-R-12-RGF', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Recycle dust fan', location: 'Roaster 1&2', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-R-12-RDF', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'PA Fan no.1', location: 'Roaster 1&2', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-R-12-PAF1', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'PA Fan no.2', location: 'Roaster 1&2', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-R-12-PAF2', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Fluidizing air fan no.1', location: 'Roaster 1&2', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-R-12-FAF1', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Fluidizing air fan no.2', location: 'Roaster 1&2', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-R-12-FAF2', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Calcine transfer fan no.2', location: 'Roaster 1&2', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'VLT5005', serialNumber: 'TBD-R-12-CTF2', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  // 3,3KV Blowers
+  { name: 'Elliot Blower no.1', location: '3,3KV Blowers', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'PERFECT HARMONY', serialNumber: 'TBD-R-B-EB1', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Elliot Blower no.2', location: '3,3KV Blowers', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'PERFECT HARMONY', serialNumber: 'TBD-R-B-EB2', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Elliot Blower no.3', location: '3,3KV Blowers', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'PERFECT HARMONY', serialNumber: 'TBD-R-B-EB3', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  // Mag Separation
+  ...Array.from({ length: 52 }, (_, i) => ({
+    name: `Magnet no.${i + 1}`,
+    location: 'Mag Separation',
+    plant: 'Smelter',
+    division: 'Roaster',
+    lastMaintenance: todayFormatted,
+    nextMaintenance: nextMaintenanceDate,
+    model: 'M400',
+    serialNumber: `TBD-R-MS-M${i + 1}`,
+    installationDate: todayFormatted,
+    uptime: 100,
+    powerConsumption: 0,
+  })),
+  // Roaster - RTR Magnets
+  ...Array.from({ length: 18 }, (_, i) => ({
+    name: `Magnet no.${i + 1}`,
+    location: 'Roaster - RTR Magnets',
+    plant: 'Smelter',
+    division: 'Roaster',
+    lastMaintenance: todayFormatted,
+    nextMaintenance: nextMaintenanceDate,
+    model: 'UNIDRIVE SP',
+    serialNumber: `TBD-R-RTR-M${i + 1}`,
+    installationDate: todayFormatted,
+    uptime: 100,
+    powerConsumption: 0,
+  })),
+  // Smelter feed
+  { name: 'Calcine transfer fan no.1', location: 'Smelter feed', plant: 'Smelter', division: 'Roaster', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'VLT5005', serialNumber: 'TBD-R-SF-CTF1', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  // Charplant - Stoker 1
+  { name: 'Stoker 1 grate drive', location: 'Charplant - Stoker 1', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'UNIDRIVE M700', serialNumber: 'TBD-CP-S1-GD', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Stoker 1 ID Fan', location: 'Charplant - Stoker 1', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-CP-S1-IDF', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  // Charplant - Stoker 2
+  { name: 'Stoker 2 grate drive', location: 'Charplant - Stoker 2', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'UNIDRIVE M700', serialNumber: 'TBD-CP-S2-GD', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Stoker 2 ID Fan', location: 'Charplant - Stoker 2', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-CP-S2-IDF', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  // Charplant - Baghouse
+  { name: 'Main baghouse fan', location: 'Charplant - Baghouse', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'POWERDRIVE', serialNumber: 'TBD-CP-BH-MBF', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Main baghouse screw conveyor no.1', location: 'Charplant - Baghouse', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'VLT5004', serialNumber: 'TBD-CP-BH-SC1', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Main baghouse screw conveyor no.2', location: 'Charplant - Baghouse', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'VLT5004', serialNumber: 'TBD-CP-BH-SC2', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Main baghouse screw conveyor no.3', location: 'Charplant - Baghouse', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'VLT5004', serialNumber: 'TBD-CP-BH-SC3', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Main baghouse screw conveyor no.4', location: 'Charplant - Baghouse', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'VLT5004', serialNumber: 'TBD-CP-BH-SC4', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Main baghouse rotary valve', location: 'Charplant - Baghouse', plant: 'Smelter', division: 'Char Plant', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'VLT5004', serialNumber: 'TBD-CP-BH-RV', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  // Smelter - SF1
+  { name: 'Electrode drives no.1', location: 'Smelter - SF1', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'M700', serialNumber: 'TBD-SM-SF1-ED1', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Electrode drives no.2', location: 'Smelter - SF1', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'M700', serialNumber: 'TBD-SM-SF1-ED2', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Electrode drives no.3', location: 'Smelter - SF1', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'M700', serialNumber: 'TBD-SM-SF1-ED3', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Electrode drives no.4', location: 'Smelter - SF1', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'M700', serialNumber: 'TBD-SM-SF1-ED4', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Electrode drives no.5', location: 'Smelter - SF1', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'M700', serialNumber: 'TBD-SM-SF1-ED5', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Electrode drives no.6', location: 'Smelter - SF1', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'M700', serialNumber: 'TBD-SM-SF1-ED6', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Electrode drives no.7', location: 'Smelter - SF1', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'M700', serialNumber: 'TBD-SM-SF1-ED7', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  // Smelter - Common
+  { name: 'Furnace hoist', location: 'Smelter - Common', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'FR-A800', serialNumber: 'TBD-SM-COM-FH', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Matte crane', location: 'Smelter - Common', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'VLT2881', serialNumber: 'TBD-SM-COM-MC', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
+  { name: 'Slag crane', location: 'Smelter - Common', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'VLT2881', serialNumber: 'TBD-SM-COM-SC', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
   // Smelter - SF2
   { name: 'Electrode drives no.1', location: 'Smelter - SF2', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'UNISP', serialNumber: 'TBD-SM-SF2-ED1', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
   { name: 'Electrode drives no.2', location: 'Smelter - SF2', plant: 'Smelter', division: 'Smelter', lastMaintenance: todayFormatted, nextMaintenance: nextMaintenanceDate, model: 'UNISP', serialNumber: 'TBD-SM-SF2-ED2', installationDate: todayFormatted, uptime: 100, powerConsumption: 0 },
