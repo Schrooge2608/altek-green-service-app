@@ -50,6 +50,9 @@ export default function SeedPage() {
             ...baseEq,
             id: equipmentId,
             vsdId: vsdId,
+            uptime: 100,
+            powerConsumption: 0,
+            totalDowntimeHours: 0,
         };
         
         const vsdDoc: VSD = {
