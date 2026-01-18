@@ -25,7 +25,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS", "MSP - TTP"] },
+        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "Smelter Area 1", "Smelter Area 2", "RWBS", "MSP - TTP", "Pilot Plant", "Drymill", "Roaster 1&2", "3,3KV Blowers", "Mag Separation", "Roaster - RTR Magnets"] },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
         "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron injection", "Stripping Crane", "Slag plant", "North Screen", "UPS/BTU's"], "description": "The specific division within the Mining or Smelter plant." },
         "vsdId": { "type": "string" },
@@ -182,7 +182,7 @@
             "id": { "type": "string", "description": "The user's unique ID, same as their Firebase Auth UID." },
             "name": { "type": "string" },
             "email": { "type": "string", "format": "email" },
-            "role": { "type": "string", "enum": ["Technician", "Client Manager", "Junior Technician", "Technologist", "Power systems engineer", "HVAC product specialist", "Site Supervisor", "Services Manager", "Corporate Manager", "Admin", "Data Admin", "Superadmin", "Technician(Beta User)"] },
+            "role": { "type": "string", "enum": ["Admin", "Client Manager", "Corporate Manager", "Corporate Manager (Beta)", "Data Admin", "Data Admin (Beta)", "HVAC product specialist", "HVAC product specialist (Beta)", "Junior Technician", "Junior Technician (Beta)", "Power systems engineer", "Power systems engineer (Beta)", "Services Manager", "Services Manager (Beta)", "Site Supervisor", "Site Supervisor (Beta)", "Superadmin", "Technician", "Technician (Beta)", "Technologist", "Technologist (Beta)"] },
             "phoneNumber": { "type": "string" },
             "address": { "type": "string" },
             "nextOfKinName": { "type": "string" },
@@ -331,4 +331,3 @@
   }
 }
 
-    
