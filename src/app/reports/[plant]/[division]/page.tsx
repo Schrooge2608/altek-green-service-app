@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -113,9 +112,9 @@ export default function DivisionReportPage() {
                         Detailed performance breakdown by sub-location.
                     </p>
                 </div>
-                <Button variant="outline" onClick={() => router.push('/reports')}>
+                <Button variant="outline" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Main Reports
+                    Back
                 </Button>
             </header>
 

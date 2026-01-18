@@ -9,6 +9,8 @@ import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 // Config for Uptime chart
 const uptimeChartConfig = {
@@ -73,11 +75,17 @@ export default function ReportsPage() {
 
     return (
         <div className="flex flex-col gap-8">
-            <header>
-                <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-                <p className="text-muted-foreground">
-                    High-level performance and maintenance reports by division.
-                </p>
+            <header className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+                    <p className="text-muted-foreground">
+                        High-level performance and maintenance reports by division.
+                    </p>
+                </div>
+                <Button variant="outline" onClick={() => router.push('/')}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Dashboard
+                </Button>
             </header>
 
             <div className="grid gap-8">
