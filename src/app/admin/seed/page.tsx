@@ -44,7 +44,7 @@ export default function SeedPage() {
         const equipmentId = `ps-${pump.location.slice(0,3).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
         const vsdId = `vsd-ps-${pump.location.slice(0,3).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
         
-        const { model, serialNumber, installationDate, ...baseEq } = pump;
+        const { model, serialNumber, installationDate, driveType, ...baseEq } = pump;
 
         const equipmentDoc: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> = {
             ...baseEq,
@@ -57,6 +57,7 @@ export default function SeedPage() {
         
         const vsdDoc: VSD = {
             id: vsdId,
+            driveType: driveType ?? 'VSD',
             equipmentId: equipmentId,
             model: model,
             serialNumber: serialNumber,
@@ -124,3 +125,5 @@ export default function SeedPage() {
     </div>
   );
 }
+
+    

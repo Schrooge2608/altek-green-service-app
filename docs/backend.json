@@ -5,9 +5,10 @@
     "VSD": {
       "title": "VSD",
       "type": "object",
-      "description": "Represents a Variable Speed Drive.",
+      "description": "Represents a Variable Speed Drive or Soft Starter.",
       "properties": {
         "id": { "type": "string" },
+        "driveType": { "type": "string", "enum": ["VSD", "Soft Starter"] },
         "serialNumber": { "type": "string" },
         "equipmentId": { "type": "string" },
         "model": { "type": "string" },
@@ -16,7 +17,7 @@
         "assignedToId": { "type": "string", "description": "The UID of the user assigned to the VSD." },
         "assignedToName": { "type": "string", "description": "The name of the user assigned to the VSD." }
       },
-      "required": ["id", "serialNumber", "equipmentId", "model", "installationDate", "status"]
+      "required": ["id", "driveType", "serialNumber", "equipmentId", "model", "installationDate", "status"]
     },
     "Equipment": {
       "title": "Equipment",
@@ -332,5 +333,7 @@
 }
 
 
+
+    
 
     

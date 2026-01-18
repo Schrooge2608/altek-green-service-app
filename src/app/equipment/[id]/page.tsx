@@ -133,6 +133,9 @@ export default function EquipmentDetailPage() {
     return '/equipment'; 
   }, [eq]);
 
+  const isSoftStarter = vsd?.driveType === 'Soft Starter';
+  const controllerType = isSoftStarter ? 'Soft Starter' : 'VSD';
+
   if (eqLoading || vsdLoading) {
     return <EquipmentDetailSkeleton />;
   }
@@ -257,14 +260,14 @@ export default function EquipmentDetailPage() {
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="flex items-center gap-2"><Cpu className="text-primary" /> VSD Information</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Cpu className="text-primary" /> {controllerType} Information</CardTitle>
                     {canEdit && vsd && (
                         <EditVsdForm vsd={vsd} />
                     )}
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
-                    <DetailRow label="VSD Model" value={vsd?.model} />
-                    <DetailRow label="VSD S/N" value={vsd?.serialNumber} />
+                    <DetailRow label={`${controllerType} Model`} value={vsd?.model} />
+                    <DetailRow label={`${controllerType} S/N`} value={vsd?.serialNumber} />
                     <DetailRow label="Installation Date" value={vsd?.installationDate} />
                     <DetailRow label="Assigned Technician" value={vsd?.assignedToName} />
                     <div className="flex justify-between py-1.5 border-b border-dashed col-span-2 md:col-span-1">
@@ -410,3 +413,5 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
+    

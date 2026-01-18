@@ -1,4 +1,5 @@
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -81,6 +82,7 @@ export interface Equipment {
 
 export interface VSD {
   id: string;
+  driveType: 'VSD' | 'Soft Starter';
   serialNumber: string;
   equipmentId: string;
   model: string;
@@ -215,3 +217,5 @@ export interface DailyDiary {
   beforeWorkImages?: string[];
   afterWorkImages?: string[];
 }
+
+    

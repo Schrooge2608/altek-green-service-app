@@ -38,8 +38,9 @@ import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 
 const formSchema = z.object({
-  model: z.string().min(1, 'VSD Model is required'),
-  serialNumber: z.string().min(1, 'VSD Serial number is required'),
+  driveType: z.enum(['VSD', 'Soft Starter']),
+  model: z.string().min(1, 'Model is required'),
+  serialNumber: z.string().min(1, 'Serial number is required'),
   installationDate: z.date({ required_error: "An installation date is required." }),
   status: z.enum(['active', 'inactive', 'maintenance']),
   assignedToId: z.string().optional(),
@@ -64,6 +65,7 @@ export function EditVsdForm({ vsd }: EditVsdFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+        driveType: vsd.driveType || 'VSD',
         model: vsd.model,
         serialNumber: vsd.serialNumber,
         installationDate: vsd.installationDate ? new Date(vsd.installationDate) : undefined,
@@ -87,8 +89,8 @@ export function EditVsdForm({ vsd }: EditVsdFormProps) {
     updateDocumentNonBlocking(vsdRef, updateData);
 
     toast({
-      title: 'VSD Details Updated',
-      description: `The VSD details for ${vsd.id} have been saved.`,
+      title: 'Controller Details Updated',
+      description: `The controller details for ${vsd.id} have been saved.`,
     });
     setIsOpen(false);
   }
@@ -103,15 +105,36 @@ export function EditVsdForm({ vsd }: EditVsdFormProps) {
         </DialogTrigger>
         <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-                <DialogTitle>Edit VSD Information</DialogTitle>
+                <DialogTitle>Edit Controller Information</DialogTitle>
                 <DialogDescription>
-                    Update the VSD information for this equipment.
+                    Update the controller information for this equipment.
                 </DialogDescription>
             </DialogHeader>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                    <FormField control={form.control} name="model" render={({ field }) => (<FormItem><FormLabel>VSD Model</FormLabel><FormControl><Input placeholder="e.g., Altek Drive 5000" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="serialNumber" render={({ field }) => (<FormItem><FormLabel>VSD Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-A1B2-C3D4" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField
+                        control={form.control}
+                        name="driveType"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Controller Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a controller type" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="VSD">VSD</SelectItem>
+                                    <SelectItem value="Soft Starter">Soft Starter</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField control={form.control} name="model" render={({ field }) => (<FormItem><FormLabel>Model</FormLabel><FormControl><Input placeholder="e.g., Altek Drive 5000" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="serialNumber" render={({ field }) => (<FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input placeholder="e.g., SN-A1B2-C3D4" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="installationDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Installation Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="maintenance">Maintenance</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="assignedToId" render={({ field }) => (<FormItem><FormLabel>Assigned Technician</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign a technician..." /></SelectTrigger></FormControl><SelectContent>{usersLoading ? (<SelectItem value="loading" disabled>Loading users...</SelectItem>) : (<><SelectItem value="unassigned">Unassigned</SelectItem>{users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</>)}</SelectContent></Select><FormMessage /></FormItem>)} />
@@ -137,3 +160,5 @@ export function EditVsdForm({ vsd }: EditVsdFormProps) {
     </Dialog>
   );
 }
+
+    
