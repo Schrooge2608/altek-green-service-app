@@ -126,14 +126,8 @@ export default function PermitToWorkPage() {
                                 </Table>
                             </div>
                             <div>
-                                <h3 className="font-bold text-center mb-2">B1.2. Applicable Risks / Hazards - Tick applicable</h3>
-                                <div className="grid grid-cols-5 gap-2">
-                                    {[...Array(20)].map((_, i) => (
-                                        <div key={i} className="relative aspect-square border-2 border-dashed bg-muted/50 rounded-md">
-                                            <Checkbox id={`hazard-placeholder-${i}`} className="absolute top-1 left-1" />
-                                        </div>
-                                    ))}
-                                </div>
+                                <h3 className="font-bold text-center mb-2">B1.2. Applicable Risks / Hazards</h3>
+                                <Textarea placeholder="Detail applicable risks/hazards here." className="h-full" />
                             </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t pt-4">
