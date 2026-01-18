@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -33,8 +32,11 @@ const chartConfig = {
 };
 
 const getUptimeColor = (uptime: number) => {
+    if (uptime < 60) {
+        return 'hsl(var(--destructive))';
+    }
     if (uptime < 80) {
-      return 'hsl(var(--destructive))'; // Red for critical
+      return '#EE0000'; // Red for critical
     }
     if (uptime < 90) {
       return '#FFC000'; // Orange for warning
