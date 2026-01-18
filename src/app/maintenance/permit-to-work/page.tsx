@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,15 +18,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import Image from 'next/image';
 
 const hazardIconSources = [
-    { src: "/Vehicle%20Collision.png", alt: "Vehicle Collision Hazard" },
-    { src: "/Vehicle%20Impact%20On%20person.png", alt: "Vehicle Impact On Person Hazard" },
+    { src: "/Vehicle Collision.png", alt: "Vehicle Collision Hazard" },
+    { src: "/Vehicle Impact On person.png", alt: "Vehicle Impact On Person Hazard" },
     { src: "/entanglement.png", alt: "Entanglement Hazard" },
-    { src: "/Falling%20From%20Heights.png", alt: "Falling From Heights Hazard" },
-    { src: "/slipping%20&%20falling.png", alt: "Slipping & Falling Hazard" },
+    { src: "/falling from heights.png", alt: "Falling From Heights Hazard" },
+    { src: "/slipping & falling.png", alt: "Slipping & Falling Hazard" },
     { src: "/energy.png", alt: "Release of Energy Hazard" },
-    { src: "/lifting%20operations.png", alt: "Lifting Operations Hazard" },
-    { src: "/confined%20spaces.png", alt: "Confined Spaces Hazard" },
-    { src: "/Contact%20with%20electricity.png", alt: "Contact with electricity Hazard" },
+    { src: "/lifting operations.png", alt: "Lifting Operations Hazard" },
+    { src: "/confined spaces.png", alt: "Confined Spaces Hazard" },
+    { src: "/Contact with electricity.png", alt: "Contact with electricity Hazard" },
+    { src: "/noise.png", alt: "Noise Hazard" },
 ];
 
 
