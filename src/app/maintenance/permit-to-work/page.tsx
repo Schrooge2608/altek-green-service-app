@@ -37,6 +37,7 @@ const hazardIconSources = [
     { src: "/rail collision.png", alt: "Rail Collision Hazard" },
     { src: "/rail impact to person.png", alt: "Rail Impact To Person Hazard" },
     { src: "/fire.png", alt: "Fire Hazard" },
+    { src: "/hot & cold surfaces.png", alt: "Hot & Cold Surfaces Hazard" },
 ];
 
 
