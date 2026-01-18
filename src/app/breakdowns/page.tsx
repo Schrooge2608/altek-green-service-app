@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, CheckCircle, CalendarIcon, Trash2, Loader2 } from 'lucide-react';
+import { PlusCircle, CheckCircle, Calendar as CalendarIcon, Trash2, Loader2, X } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDoc, runTransaction } from 'firebase/firestore';
 import type { Breakdown, Equipment, VSD, User as AppUser } from '@/lib/types';
@@ -39,7 +39,8 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown: Breakdown, onResolve: (b: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => void, children: React.ReactNode }) {
   const [normalHours, setNormalHours] = React.useState(0);
@@ -137,6 +138,7 @@ export default function BreakdownsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userRole, isLoading: userRoleLoading } = useDoc<AppUser>(userRoleRef);
@@ -147,6 +149,25 @@ export default function BreakdownsPage() {
   const isLoading = breakdownsLoading || isUserLoading || userRoleLoading;
   const isClientManager = userRole?.role === 'Client Manager';
   const canDelete = userRole?.role && (userRole.role.includes('Admin') || userRole.role.includes('Superadmin'));
+
+  const filteredBreakdowns = useMemo(() => {
+    if (!breakdowns) return [];
+    if (!dateRange?.from) return breakdowns;
+
+    const fromDate = startOfDay(dateRange.from);
+    const toDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+
+    return breakdowns.filter(b => {
+        if (!b.timeReported) return false;
+        try {
+            const reportedDate = new Date(b.timeReported);
+            return reportedDate >= fromDate && reportedDate <= toDate;
+        } catch (e) {
+            return false;
+        }
+    });
+  }, [breakdowns, dateRange]);
+
 
   const handleResolve = async (breakdown: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => {
     const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
@@ -217,26 +238,70 @@ export default function BreakdownsPage() {
   }
 
   const totalHoursSum = useMemo(() => {
-    if (!breakdowns) return 0;
-    return breakdowns.reduce((acc, b) => acc + (b.normalHours ?? 0) + (b.overtimeHours ?? 0), 0);
-  }, [breakdowns]);
+    if (!filteredBreakdowns) return 0;
+    return filteredBreakdowns.reduce((acc, b) => acc + (b.normalHours ?? 0) + (b.overtimeHours ?? 0), 0);
+  }, [filteredBreakdowns]);
 
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Breakdown Log</h1>
           <p className="text-muted-foreground">
             History of all reported equipment breakdowns.
           </p>
         </div>
-        <Link href="/breakdowns/new" passHref>
-          <Button variant="destructive">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Report New Breakdown
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+           <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[300px] justify-start text-left font-normal",
+                    !dateRange && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "LLL dd, y")} -{" "}
+                        {format(dateRange.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(dateRange.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+            {dateRange && (
+                <Button variant="ghost" onClick={() => setDateRange(undefined)}>
+                    <X className="mr-2 h-4 w-4"/>
+                    Clear
+                </Button>
+            )}
+            <Link href="/breakdowns/new" passHref>
+            <Button variant="destructive">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Report New Breakdown
+            </Button>
+            </Link>
+        </div>
       </header>
       <Card>
         <CardContent className="pt-6">
@@ -265,8 +330,8 @@ export default function BreakdownsPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : breakdowns && breakdowns.length > 0 ? (
-                breakdowns.map((b) => {
+              ) : filteredBreakdowns && filteredBreakdowns.length > 0 ? (
+                filteredBreakdowns.map((b) => {
                   const totalHours = (b.normalHours ?? 0) + (b.overtimeHours ?? 0);
                   return (
                     <TableRow key={b.id}>
@@ -332,13 +397,13 @@ export default function BreakdownsPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center h-24">No breakdowns found.</TableCell>
+                  <TableCell colSpan={10} className="text-center h-24">No breakdowns found{dateRange?.from ? ' for the selected date range' : ''}.</TableCell>
                 </TableRow>
               )}
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={8} className="font-semibold text-right">Total Hours Spent</TableCell>
+                    <TableCell colSpan={8} className="font-semibold text-right">Total Hours Spent (Filtered)</TableCell>
                     <TableCell className="text-right font-bold">{totalHoursSum}</TableCell>
                     <TableCell></TableCell>
                 </TableRow>
