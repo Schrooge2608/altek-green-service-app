@@ -28,6 +28,7 @@ const hazardIconSources = [
     { src: "/confined spaces.png", alt: "Confined Spaces Hazard" },
     { src: "/Contact with electricity.png", alt: "Contact with electricity Hazard" },
     { src: "/noise.png", alt: "Noise Hazard" },
+    { src: "/falling objects.png", alt: "Falling Objects Hazard" },
 ];
 
 
