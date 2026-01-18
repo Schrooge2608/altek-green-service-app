@@ -94,26 +94,24 @@ export default function EquipmentReportPage() {
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
                             <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-                                <ResponsiveContainer width="100%" height={Math.max(350, chartData.length * 25)}>
-                                    <BarChart 
-                                        accessibilityLayer 
-                                        data={chartData} 
-                                        layout="vertical"
-                                        margin={{ top: 5, right: 20, bottom: 5, left: 150 }}
+                                <ResponsiveContainer width="100%" height={350}>
+                                    <BarChart
+                                        accessibilityLayer
+                                        data={chartData}
+                                        margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
                                     >
-                                        <YAxis
+                                        <XAxis
                                             dataKey="name"
-                                            type="category"
                                             tickLine={false}
                                             axisLine={false}
                                             tickMargin={8}
-                                            width={150}
+                                            angle={-45}
+                                            textAnchor="end"
                                             interval={0}
                                             fontSize={12}
                                             stroke="hsl(var(--muted-foreground))"
                                         />
-                                        <XAxis
-                                            type="number"
+                                        <YAxis
                                             tickLine={false}
                                             axisLine={false}
                                             tickMargin={8}
@@ -138,32 +136,31 @@ export default function EquipmentReportPage() {
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
                            <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-                                <ResponsiveContainer width="100%" height={Math.max(350, chartData.length * 25)}>
-                                    <BarChart 
-                                        accessibilityLayer 
-                                        data={chartData} 
-                                        layout="vertical"
-                                        margin={{ top: 5, right: 20, bottom: 5, left: 150 }}
+                                <ResponsiveContainer width="100%" height={350}>
+                                    <BarChart
+                                        accessibilityLayer
+                                        data={chartData}
+                                        margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
                                     >
-                                        <YAxis
+                                        <XAxis
                                             dataKey="name"
-                                            type="category"
                                             tickLine={false}
                                             axisLine={false}
                                             tickMargin={8}
-                                            width={150}
+                                            angle={-45}
+                                            textAnchor="end"
                                             interval={0}
                                             fontSize={12}
                                             stroke="hsl(var(--muted-foreground))"
                                         />
-                                        <XAxis
-                                            type="number"
-                                            tickLine={false} 
-                                            axisLine={false} 
-                                            tickMargin={8} 
-                                            fontSize={12} 
-                                            stroke="hsl(var(--muted-foreground))" 
+                                        <YAxis
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={8}
+                                            fontSize={12}
+                                            stroke="hsl(var(--muted-foreground))"
                                             tickFormatter={(value) => `${value.toLocaleString()}`}
+                                            label={{ value: 'MWh', position: 'insideLeft', angle: -90, dy: 0, dx: -10, fill: 'hsl(var(--muted-foreground))' }}
                                         />
                                         <ChartTooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                                         <Bar dataKey="power" fill="var(--color-power)" radius={4} />
