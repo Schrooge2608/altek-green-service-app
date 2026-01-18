@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -26,6 +25,7 @@ const hazardIconSources = [
     { src: "/energy.png", alt: "Release of Energy Hazard" },
     { src: "/lifting%20operations.png", alt: "Lifting Operations Hazard" },
     { src: "/confined%20spaces.png", alt: "Confined Spaces Hazard" },
+    { src: "/Contact%20with%20electricity.png", alt: "Contact with electricity Hazard" },
 ];
 
 
