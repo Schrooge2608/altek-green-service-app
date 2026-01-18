@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 const HazardIconWrapper = ({ children }: { children: React.ReactNode }) => (
     <div className="relative w-16 h-14 flex items-center justify-center">
         <svg viewBox="0 0 64 56" className="absolute w-full h-full">
-            <path d="M32 4 L4 52 H60 Z" fill="#FFC700" stroke="black" strokeWidth="2" />
+            <path d="M32 4 L4 52 H60 Z" fill="#FFC700" stroke="black" strokeWidth="4" strokeLinejoin="round" />
         </svg>
         <div className="relative z-10 text-black">
             {children}
