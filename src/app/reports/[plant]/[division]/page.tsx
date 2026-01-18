@@ -1,10 +1,16 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, BarChart2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import React, { useMemo } from 'react';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import type { Equipment } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
 // Helper to convert slug back to title case
 function slugToTitle(slug: string) {
@@ -14,19 +20,77 @@ function slugToTitle(slug: string) {
         .replace(/\b\w/g, char => char.toUpperCase());
 }
 
+// Config for Uptime chart
+const uptimeChartConfig = {
+    uptime: {
+        label: 'Avg. Uptime (%)',
+        color: 'hsl(var(--accent))',
+    },
+};
+
+// Config for Power Consumption chart
+const powerChartConfig = {
+    power: {
+        label: 'Total Power (MWh)',
+        color: 'hsl(var(--primary))',
+    },
+};
+
+
 export default function DivisionReportPage() {
     const params = useParams();
     const router = useRouter();
+    const firestore = useFirestore();
     
     const plantSlug = Array.isArray(params.plant) ? params.plant[0] : params.plant;
     const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
 
+    const plantName = useMemo(() => slugToTitle(plantSlug), [plantSlug]);
+    const divisionName = useMemo(() => slugToTitle(divisionSlug), [divisionSlug]);
+
     const pageTitle = useMemo(() => {
-        if (!plantSlug || !divisionSlug) return 'Detailed Report';
-        const plantName = slugToTitle(plantSlug);
-        const divisionName = slugToTitle(divisionSlug);
+        if (!plantName || !divisionName) return 'Detailed Report';
         return `Report for: ${plantName} - ${divisionName}`;
-    }, [plantSlug, divisionSlug]);
+    }, [plantName, divisionName]);
+
+    const equipmentQuery = useMemoFirebase(() => {
+        if (!plantName || !divisionName) return null;
+        return query(
+            collection(firestore, 'equipment'),
+            where('plant', '==', plantName),
+            where('division', '==', divisionName)
+        );
+    }, [firestore, plantName, divisionName]);
+
+    const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
+
+    const locationSummary = useMemo(() => {
+        if (!equipment) return [];
+        
+        const locations: { [key: string]: { totalUptime: number; totalPower: number; count: number } } = {};
+
+        equipment.forEach(eq => {
+            if (!eq.location) return;
+            
+            const key = eq.location;
+            if (!locations[key]) {
+                locations[key] = { totalUptime: 0, totalPower: 0, count: 0 };
+            }
+            
+            locations[key].totalUptime += eq.uptime || 0;
+            locations[key].totalPower += eq.powerConsumption || 0;
+            locations[key].count += 1;
+        });
+
+        return Object.keys(locations).map(key => ({
+            name: key,
+            uptime: locations[key].count > 0 ? parseFloat((locations[key].totalUptime / locations[key].count).toFixed(2)) : 0,
+            power: parseFloat((locations[key].totalPower / 1000).toFixed(2)), // Convert to MWh
+        })).sort((a, b) => a.name.localeCompare(b.name));
+
+    }, [equipment]);
+
+    const showCharts = divisionSlug === 'boosters';
 
     return (
         <div className="flex flex-col gap-8">
@@ -43,19 +107,105 @@ export default function DivisionReportPage() {
                 </Button>
             </header>
 
-            <Card className="flex flex-col items-center justify-center text-center p-8 gap-4 min-h-[400px]">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-4">
-                        <BarChart2 className="h-12 w-12 text-muted-foreground" />
-                        Detailed Charts Coming Soon
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground max-w-md">
-                        This page will soon display detailed performance charts for each location within the {slugToTitle(divisionSlug)} division, such as {plantSlug === 'mining' ? "Concentrator Boosters and Tailings Booster Pumps" : "Smelter Area 1 and Smelter Area 2"}.
-                    </p>
-                </CardContent>
-            </Card>
+            {showCharts ? (
+                 <div className="grid gap-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Average Uptime by Sub-Location</CardTitle>
+                            <CardDescription>Comparing the average equipment uptime percentage for each location within {divisionName}.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
+                                <ChartContainer config={uptimeChartConfig} className="min-h-[200px] w-full">
+                                    <ResponsiveContainer width="100%" height={350}>
+                                        <BarChart 
+                                            accessibilityLayer 
+                                            data={locationSummary} 
+                                            margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
+                                        >
+                                            <XAxis
+                                                dataKey="name"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickMargin={8}
+                                                angle={-45}
+                                                textAnchor="end"
+                                                interval={0}
+                                                fontSize={12}
+                                                stroke="hsl(var(--muted-foreground))"
+                                            />
+                                            <YAxis
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickMargin={8}
+                                                fontSize={12}
+                                                stroke="hsl(var(--muted-foreground))"
+                                                domain={[dataMin => (Math.max(0, dataMin - 5)), 100]}
+                                            />
+                                            <ChartTooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                                            <Bar dataKey="uptime" fill="var(--color-uptime)" radius={4} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </ChartContainer>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Total Power Consumption by Sub-Location</CardTitle>
+                            <CardDescription>Comparing the total energy usage (in Megawatt-hours) for each location within {divisionName}.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
+                                <ChartContainer config={powerChartConfig} className="min-h-[200px] w-full">
+                                    <ResponsiveContainer width="100%" height={350}>
+                                        <BarChart 
+                                            accessibilityLayer 
+                                            data={locationSummary} 
+                                            margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
+                                        >
+                                            <XAxis
+                                                dataKey="name"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickMargin={8}
+                                                angle={-45}
+                                                textAnchor="end"
+                                                interval={0}
+                                                fontSize={12}
+                                                stroke="hsl(var(--muted-foreground))"
+                                            />
+                                            <YAxis 
+                                                tickLine={false} 
+                                                axisLine={false} 
+                                                tickMargin={8} 
+                                                fontSize={12} 
+                                                stroke="hsl(var(--muted-foreground))" 
+                                                tickFormatter={(value) => `${value.toLocaleString()}`}
+                                                label={{ value: 'MWh', position: 'insideLeft', angle: -90, dy: 0, dx: -10, fill: 'hsl(var(--muted-foreground))' }}
+                                            />
+                                            <ChartTooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
+                                            <Bar dataKey="power" fill="var(--color-power)" radius={4} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </ChartContainer>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            ) : (
+                <Card className="flex flex-col items-center justify-center text-center p-8 gap-4 min-h-[400px]">
+                    <CardHeader>
+                        <CardTitle>Detailed Charts Coming Soon</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground max-w-md">
+                            Detailed performance charts for {slugToTitle(divisionSlug)} will be available in a future update.
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
 
         </div>
     );
