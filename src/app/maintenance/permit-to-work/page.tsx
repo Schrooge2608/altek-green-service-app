@@ -29,6 +29,7 @@ const hazardIconSources = [
     { src: "/Contact with electricity.png", alt: "Contact with electricity Hazard" },
     { src: "/noise.png", alt: "Noise Hazard" },
     { src: "/falling objects.png", alt: "Falling Objects Hazard" },
+    { src: "/hazardous materials.png", alt: "Hazardous Materials Hazard" },
 ];
 
 
@@ -109,7 +110,7 @@ export default function PermitToWorkPage() {
                         </div>
                          <div className="space-y-1">
                              <Label htmlFor="contact-no">Contact No:</Label>
-                            <Input id="contact-no" />
+                             <Input id="contact-no" />
                         </div>
                     </div>
                 </section>
