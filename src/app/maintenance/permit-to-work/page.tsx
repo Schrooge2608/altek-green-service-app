@@ -162,26 +162,24 @@ export default function PermitToWorkPage() {
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t pt-4">
-                            <div>
-                                <h3 className="font-bold mb-2">B1.3. Specialized Control documentation required</h3>
-                                <div className="space-y-2">
-                                     {['Energized work / HT isolation log', 'Valid Working at Heights Authorisation form to be obtained', 'Confined Space Permit', 'Excavating / Trenching Authorization Certificate', 'Fire System Impediment Certificate', 'Radioactive Source Clearance Certificate', 'Mining Ponds - Face Inspection Checklist', 'Hotwork Clearance Certificate / No:'].map(item => (
-                                        <div key={item} className="flex justify-between items-center">
-                                            <Label>{item}</Label>
-                                            <RadioGroup defaultValue="no" className="flex gap-4">
-                                                <div className="flex items-center space-x-2"><RadioGroupItem value="yes" id={`${item}-yes`} /><Label htmlFor={`${item}-yes`}>Yes</Label></div>
-                                                <div className="flex items-center space-x-2"><RadioGroupItem value="no" id={`${item}-no`} /><Label htmlFor={`${item}-no`}>No</Label></div>
-                                            </RadioGroup>
-                                        </div>
-                                    ))}
+                                <div className="mt-4">
+                                    <h3 className="font-bold mb-2">B1.3. Specialized Control documentation required</h3>
+                                    <div className="space-y-2">
+                                        {['Energized work / HT isolation log', 'Valid Working at Heights Authorisation form to be obtained', 'Confined Space Permit', 'Excavating / Trenching Authorization Certificate', 'Fire System Impediment Certificate', 'Radioactive Source Clearance Certificate', 'Mining Ponds - Face Inspection Checklist', 'Hotwork Clearance Certificate / No:'].map(item => (
+                                            <div key={item} className="flex justify-between items-center">
+                                                <Label>{item}</Label>
+                                                <RadioGroup defaultValue="no" className="flex gap-4">
+                                                    <div className="flex items-center space-x-2"><RadioGroupItem value="yes" id={`${item}-yes`} /><Label htmlFor={`${item}-yes`}>Yes</Label></div>
+                                                    <div className="flex items-center space-x-2"><RadioGroupItem value="no" id={`${item}-no`} /><Label htmlFor={`${item}-no`}>No</Label></div>
+                                                </RadioGroup>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                             <div>
-                                <h3 className="font-bold mb-2">B2. Health/Safety/Environmental Precautions</h3>
-                                <Textarea placeholder="Specific to the Task(s). INCLUDE THIS IN YOUR TAKE 5." />
+                                <div className="mt-4">
+                                    <h3 className="font-bold mb-2">B2. Health/Safety/Environmental Precautions</h3>
+                                    <Textarea placeholder="Specific to the Task(s). INCLUDE THIS IN YOUR TAKE 5." />
+                                </div>
                             </div>
                         </div>
 
