@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -50,7 +49,7 @@ const validDivisions: Record<string, string> = {
     'stripping-crane': 'Stripping Crane',
     'slag-plant': 'Slag plant',
     'north-screen': 'North Screen',
-    'ups-btus': 'UPS/BTU\'s',
+    'ups-btus': "UPS/BTU's",
 }
 
 function AuthenticatedSmelterDivisionPage() {
@@ -350,5 +349,3 @@ export default function SmelterDivisionPage() {
 
     return <AuthenticatedSmelterDivisionPage />;
 }
-
-    
