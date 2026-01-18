@@ -21,8 +21,8 @@ import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFi
 import { doc, collection } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
-import type { DailyDiary, User as AppUser, User } from '@/lib/types';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { DailyDiary, User as AppUser, User, WorkEntry, PlantEntry } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUploader } from '@/components/image-uploader';
 
@@ -35,7 +35,7 @@ const initialManpowerData = [
 ];
 
 
-const plantRows = [
+const initialPlantRows = [
     { description: 'LDV - Single Cab' },
     { description: 'LDV - Double Cab' },
 ];
@@ -51,12 +51,36 @@ export default function NewDailyDiaryPage() {
     const { firestore, firebaseApp } = useFirebase();
     const { toast } = useToast();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user, isUserLoading } = useUser();
     
     // Manpower state
     const [manpowerData, setManpowerData] = useState(initialManpowerData);
     const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
     const [afterFiles, setAfterFiles] = useState<File[]>([]);
+    
+    const equipmentNameFromQuery = searchParams.get('equipmentName');
+
+    const initialWorks = useMemo(() => {
+        const works = Array(5).fill(null).map((_, i) => ({
+            id: i,
+            area: '',
+            scope: '',
+            timeStart: '',
+            timeEnd: '',
+            hrs: undefined,
+        }));
+        if (equipmentNameFromQuery) {
+            works[0].scope = `Unscheduled work on: ${equipmentNameFromQuery}`;
+        }
+        return works;
+    }, [equipmentNameFromQuery]);
+
+    const [works, setWorks] = useState(initialWorks);
+    const [plantData, setPlantData] = useState(initialPlantRows.map(p => ({...p, qty: '', inspectionDone: 'no', comments: ''})));
+    const [delays, setDelays] = useState<string[]>(Array(5).fill(''));
+    const [comments, setComments] = useState<string[]>(Array(5).fill(''));
+
 
     const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
@@ -138,6 +162,9 @@ export default function NewDailyDiaryPage() {
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
             const plainManpowerData = manpowerData.map(row => ({...row}));
+            const plainWorksData = works.filter(w => w.scope || w.area || w.timeStart || w.timeEnd || w.hrs).map(({id, ...rest}) => ({...rest, hrs: rest.hrs === undefined ? 0 : rest.hrs}));
+            const plainPlantData = plantData.filter(p => p.qty || p.comments).map(p => ({...p, qty: Number(p.qty)}));
+
             const finalDiaryData: Partial<DailyDiary> = { 
                 id: uniqueId,
                 date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
@@ -145,6 +172,10 @@ export default function NewDailyDiaryPage() {
                 incidents: incidentsText,
                 toolboxTalk: toolboxTalkText,
                 manpower: plainManpowerData,
+                works: plainWorksData,
+                plant: plainPlantData,
+                delays: delays.filter(d => d),
+                comments: comments.filter(c => c),
                 beforeWorkImages: beforeImageUrls,
                 afterWorkImages: afterImageUrls,
             };
@@ -174,6 +205,29 @@ export default function NewDailyDiaryPage() {
         // @ts-ignore
         newData[index][field] = parsedValue;
         setManpowerData(newData);
+    };
+
+    const handleWorkChange = (index: number, field: keyof Omit<WorkEntry, 'id'>, value: string) => {
+        const newWorks = [...works];
+        const item = newWorks[index];
+        // @ts-ignore
+        item[field] = value;
+        setWorks(newWorks);
+    };
+    
+    const handlePlantChange = (index: number, field: string, value: string) => {
+        const newData = [...plantData];
+        // @ts-ignore
+        newData[index][field] = value;
+        setPlantData(newData);
+    };
+
+    const handleArrayInputChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number, value: string) => {
+        setter(prev => {
+            const newArr = [...prev];
+            newArr[index] = value;
+            return newArr;
+        });
     };
 
     const { forecastTotal, actualTotal, normalHrsTotal, overtime1_5_Total, overtime2_0_Total, totalManHrsTotal } = useMemo(() => {
@@ -380,12 +434,12 @@ export default function NewDailyDiaryPage() {
                                 </TableRow>
                             </TableHeader>
                              <TableBody>
-                                {plantRows.map((row, i) => (
+                                {plantData.map((row, i) => (
                                     <TableRow key={i}>
                                         <TableCell>{row.description}</TableCell>
-                                        <TableCell><Input type="number" /></TableCell>
+                                        <TableCell><Input type="number" value={row.qty} onChange={(e) => handlePlantChange(i, 'qty', e.target.value)} /></TableCell>
                                         <TableCell>
-                                            <RadioGroup className="flex gap-4">
+                                            <RadioGroup className="flex gap-4" value={row.inspectionDone} onValueChange={val => handlePlantChange(i, 'inspectionDone', val)}>
                                                 <div className="flex items-center space-x-2">
                                                     <RadioGroupItem value="yes" id={`plant-y-${i}`} />
                                                     <Label htmlFor={`plant-y-${i}`}>Y</Label>
@@ -396,7 +450,7 @@ export default function NewDailyDiaryPage() {
                                                 </div>
                                             </RadioGroup>
                                         </TableCell>
-                                        <TableCell><Textarea rows={1} /></TableCell>
+                                        <TableCell><Textarea rows={1} value={row.comments} onChange={(e) => handlePlantChange(i, 'comments', e.target.value)}/></TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -420,13 +474,13 @@ export default function NewDailyDiaryPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {[...Array(5)].map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell><Input /></TableCell>
-                                        <TableCell><Textarea rows={1} /></TableCell>
-                                        <TableCell><Input type="time" /></TableCell>
-                                        <TableCell><Input type="time" /></TableCell>
-                                        <TableCell><Input type="number" className="w-[70px]" /></TableCell>
+                                {works.map((work, i) => (
+                                    <TableRow key={work.id}>
+                                        <TableCell><Input value={work.area} onChange={e => handleWorkChange(i, 'area', e.target.value)}/></TableCell>
+                                        <TableCell><Textarea rows={1} value={work.scope} onChange={e => handleWorkChange(i, 'scope', e.target.value)}/></TableCell>
+                                        <TableCell><Input type="time" value={work.timeStart} onChange={e => handleWorkChange(i, 'timeStart', e.target.value)}/></TableCell>
+                                        <TableCell><Input type="time" value={work.timeEnd} onChange={e => handleWorkChange(i, 'timeEnd', e.target.value)}/></TableCell>
+                                        <TableCell><Input type="number" className="w-[70px]" value={work.hrs === undefined ? '' : work.hrs} onChange={e => handleWorkChange(i, 'hrs', e.target.value)}/></TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -439,10 +493,10 @@ export default function NewDailyDiaryPage() {
                         <CardTitle className="text-sm">SECTION D: DELAYS</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 space-y-2">
-                         {[...Array(5)].map((_, i) => (
+                         {delays.map((delay, i) => (
                             <div key={i} className="flex items-center gap-2">
                                 <Label className="w-6 shrink-0">{i + 1}.</Label>
-                                <Textarea rows={1} />
+                                <Textarea rows={1} value={delay} onChange={e => handleArrayInputChange(setDelays, i, e.target.value)} />
                             </div>
                         ))}
                     </CardContent>
@@ -453,10 +507,10 @@ export default function NewDailyDiaryPage() {
                         <CardTitle className="text-sm">SECTION E: COMMENTS</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 space-y-2">
-                         {[...Array(5)].map((_, i) => (
+                         {comments.map((comment, i) => (
                             <div key={i} className="flex items-center gap-2">
                                 <Label className="w-6 shrink-0">{i + 1}.</Label>
-                                <Textarea rows={1} />
+                                <Textarea rows={1} value={comment} onChange={e => handleArrayInputChange(setComments, i, e.target.value)} />
                             </div>
                         ))}
                     </CardContent>

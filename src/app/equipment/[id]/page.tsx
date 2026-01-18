@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info, Fan, GitCommit } from 'lucide-react';
+import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info, Fan, GitCommit, FilePlus } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
@@ -160,6 +160,12 @@ export default function EquipmentDetailPage() {
                 <Button variant="outline">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
+                </Button>
+            </Link>
+            <Link href={`/reports/contractors-daily-diary?equipmentName=${encodeURIComponent(eq.name)}`} passHref>
+                <Button>
+                    <FilePlus className="mr-2 h-4 w-4" />
+                    Generate Daily Diary for Unscheduled work
                 </Button>
             </Link>
         </div>
