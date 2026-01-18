@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { doc, writeBatch } from 'firebase/firestore';
-import { pumpStations } from '@/lib/seed-data';
+import { equipmentToSeed } from '@/lib/seed-data';
 import type { Equipment, VSD } from '@/lib/types';
 import { useState } from 'react';
 import { Loader2, Database } from 'lucide-react';
@@ -17,7 +17,7 @@ export default function SeedPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSeeded, setIsSeeded] = useState(false);
 
-  const hasDataToSeed = pumpStations.length > 0;
+  const hasDataToSeed = equipmentToSeed.length > 0;
 
   async function seedDatabase() {
     if (!firestore) {
@@ -40,20 +40,17 @@ export default function SeedPage() {
     setIsLoading(true);
     const batch = writeBatch(firestore);
 
-    pumpStations.forEach((pump, index) => {
+    equipmentToSeed.forEach((item, index) => {
         // Use a more generic ID generation or ensure IDs are provided in the data
-        const equipmentId = `ps-${pump.location.slice(0,3).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
-        const vsdId = `vsd-ps-${pump.location.slice(0,3).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
+        const equipmentId = `${item.location.slice(0,3).toLowerCase()}-${item.name.replace(/\s/g, '').slice(0,4).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
+        const vsdId = `vsd-${equipmentId}`;
         
-        const { model, serialNumber, installationDate, driveType, manufacturer, ...baseEq } = pump;
+        const { model, serialNumber, installationDate, driveType, manufacturer, ...baseEq } = item;
 
         const equipmentDoc: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> = {
             ...baseEq,
             id: equipmentId,
             vsdId: vsdId,
-            uptime: 100,
-            powerConsumption: 0,
-            totalDowntimeHours: 0,
         };
         
         const vsdDoc: VSD = {
@@ -78,7 +75,7 @@ export default function SeedPage() {
       await batch.commit();
       toast({
         title: 'Database Seeded Successfully!',
-        description: `${pumpStations.length} records have been added to the database.`,
+        description: `${equipmentToSeed.length} records have been added to the database.`,
       });
       setIsSeeded(true);
     } catch (error: any) {
@@ -117,7 +114,7 @@ export default function SeedPage() {
               ) : (
                 <Database className="mr-2 h-4 w-4" />
               )}
-              {isSeeded ? 'Data Uploaded' : (hasDataToSeed ? `Upload ${pumpStations.length} Records` : 'No Data to Upload')}
+              {isSeeded ? 'Data Uploaded' : (hasDataToSeed ? `Upload ${equipmentToSeed.length} Records` : 'No Data to Upload')}
             </Button>
             {isSeeded && <p className="text-sm text-green-600">Seeding complete. You can clear the seed file now.</p>}
             {!hasDataToSeed && !isSeeded && <p className="text-sm text-muted-foreground">The seed file is currently empty.</p>}

@@ -109,7 +109,7 @@ const formSchema = z.object({
   pumpAssignedToId: z.string().optional(),
 });
 
-const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING"];
+const dredgerLocations = ['MPA','MPC','MPD','MPE', "MPC DRY MINING", "MPE Dry Mining"];
 
 export default function NewEquipmentPage() {
   const { toast } = useToast();
