@@ -22,6 +22,7 @@ const hazardIconSources = [
     { src: "/Vehicle%20Impact%20On%20person.png", alt: "Vehicle Impact On Person Hazard" },
     { src: "/entanglement.png", alt: "Entanglement Hazard" },
     { src: "/Falling%20From%20Heights.png", alt: "Falling From Heights Hazard" },
+    { src: "/slipping%20&%20falling.png", alt: "Slipping & Falling Hazard" },
 ];
 
 
@@ -97,7 +98,7 @@ export default function PermitToWorkPage() {
                             <Input id="work-carried-out" />
                         </div>
                         <div className="space-y-1">
-                             <Label htmlFor="company-name">Company Name & No. of persons in team:</Label>
+                             <Label htmlFor="company-name">Company Name &amp; No. of persons in team:</Label>
                             <Input id="company-name" />
                         </div>
                          <div className="space-y-1">
@@ -108,7 +109,7 @@ export default function PermitToWorkPage() {
                 </section>
                 
                 <section id="isolation-hazards" className="mt-4">
-                    <h2 className="text-lg font-bold bg-gray-300 px-2 py-1">B. ISOLATION & HAZARDS</h2>
+                    <h2 className="text-lg font-bold bg-gray-300 px-2 py-1">B. ISOLATION &amp; HAZARDS</h2>
                     <div className="p-2 border mt-1">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
@@ -194,7 +195,7 @@ export default function PermitToWorkPage() {
                          </div>
                          <div className="mt-4 border-t pt-4">
                             <h3 className="font-bold mb-2">B4. Permit Acceptance</h3>
-                            <p className="text-sm mb-2">I, the applicant, understand and will apply the precautions as detailed in B1 & B2. I will comply with the specialised control documents required under B1.3. I will ensure that myself and my crew apply personal locks on the isolation stations specified in B1.1 and verify that work will only be done as specified in section A.</p>
+                            <p className="text-sm mb-2">I, the applicant, understand and will apply the precautions as detailed in B1 &amp; B2. I will comply with the specialised control documents required under B1.3. I will ensure that myself and my crew apply personal locks on the isolation stations specified in B1.1 and verify that work will only be done as specified in section A.</p>
                             <div className="grid grid-cols-3 gap-2 items-end">
                                 <Input placeholder="Applicant"/>
                                 <Input placeholder="Employee No"/>
@@ -299,7 +300,3 @@ export default function PermitToWorkPage() {
         </div>
     );
 }
-
-    
-
-    
