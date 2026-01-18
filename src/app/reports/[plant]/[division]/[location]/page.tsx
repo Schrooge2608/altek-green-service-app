@@ -33,7 +33,7 @@ const chartConfig = {
 
 const getUptimeColor = (uptime: number) => {
     if (uptime < 60) {
-        return 'hsl(var(--destructive))';
+        return '#C00000';
     }
     if (uptime < 80) {
       return '#EE0000'; // Red for critical
