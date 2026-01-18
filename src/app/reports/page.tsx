@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -30,13 +29,13 @@ const powerChartConfig = {
 };
 
 const getUptimeColor = (uptime: number) => {
-    if (uptime >= 99) {
-      return 'hsl(var(--accent))'; // Green for excellent
+    if (uptime < 95) {
+      return 'hsl(var(--destructive))'; // Red for critical
     }
-    if (uptime >= 95) {
+    if (uptime < 100) {
       return '#ED7014'; // Orange for warning
     }
-    return 'hsl(var(--destructive))'; // Red for critical
+    return 'hsl(var(--accent))'; // Green for excellent
 };
 
 export default function ReportsPage() {
