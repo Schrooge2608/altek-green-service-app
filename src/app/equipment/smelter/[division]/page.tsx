@@ -164,7 +164,7 @@ function AuthenticatedSmelterDivisionPage() {
                 </CardContent>
             </Card>
         ) : isGroupedByLocation ? (
-             <Accordion type="multiple" className="w-full" defaultValue={locations.map(l => `item-${l}`)}>
+             <Accordion type="multiple" className="w-full">
                 {locations.map((location) => (
                     equipmentByLocation[location] && equipmentByLocation[location].length > 0 && (
                         <AccordionItem value={`item-${location}`} key={location}>
