@@ -31,6 +31,7 @@ const hazardIconSources = [
     { src: "/falling objects.png", alt: "Falling Objects Hazard" },
     { src: "/hazardous materials.png", alt: "Hazardous Materials Hazard" },
     { src: "/slope failure.png", alt: "Slope Failure Hazard" },
+    { src: "/drowning.png", alt: "Drowning Hazard" },
 ];
 
 
