@@ -9,8 +9,6 @@ export interface Equipment {
   vsdId: string;
   lastMaintenance: string;
   nextMaintenance: string;
-  uptime: number; // Represents current month's uptime
-  powerConsumption: number; // Represents current month's power consumption
   imageUrl?: string;
   // Motor fields
   motorModel?: string;

@@ -200,8 +200,6 @@ export default function NewEquipmentPage() {
       imageUrl: values.imageUrl,
       lastMaintenance: format(new Date(), "yyyy-MM-dd"),
       nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
-      uptime: 100,
-      powerConsumption: 0,
       totalDowntimeHours: 0,
       
       breakerAssetNumber: values.breakerAssetNumber,
