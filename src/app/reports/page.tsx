@@ -30,16 +30,19 @@ const powerChartConfig = {
 };
 
 const getUptimeColor = (uptime: number) => {
-    if (uptime < 90) {
+    if (uptime < 80) {
       return 'hsl(var(--destructive))'; // Red for critical
+    }
+    if (uptime < 90) {
+      return '#FFC000'; // Orange for warning
     }
     if (uptime < 95) {
       return '#FFFF00'; // Yellow for caution
     }
     if (uptime < 100) {
-      return '#92D050'; // Green for warning
+      return '#92D050'; // Light Green for good
     }
-    return 'hsl(var(--accent))'; // Green for excellent
+    return 'hsl(var(--accent))'; // Dark Green for excellent
 };
 
 export default function ReportsPage() {
