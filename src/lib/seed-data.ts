@@ -11,7 +11,7 @@ const nextMaintenanceDate = format(new Date(new Date().setMonth(new Date().getMo
 export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & { model: string; serialNumber: string, installationDate: string }> = [
     {
         name: 'C5 Conveyor',
-        location: 'Roaster 1',
+        location: 'Roaster 1&2',
         plant: 'Smelter',
         division: 'Roaster',
         lastMaintenance: todayFormatted,
@@ -22,7 +22,7 @@ export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & {
     },
     {
         name: 'Aerzen Blower',
-        location: 'Roaster 1',
+        location: 'Roaster 1&2',
         plant: 'Smelter',
         division: 'Roaster',
         lastMaintenance: todayFormatted,
@@ -33,7 +33,7 @@ export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & {
     },
     {
         name: 'Howden Blower 1',
-        location: 'Roaster 1',
+        location: 'Roaster 1&2',
         plant: 'Smelter',
         division: 'Roaster',
         lastMaintenance: todayFormatted,
@@ -44,7 +44,7 @@ export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & {
     },
     {
         name: 'Scrubber Fan 1',
-        location: 'Roaster 1',
+        location: 'Roaster 1&2',
         plant: 'Smelter',
         division: 'Roaster',
         lastMaintenance: todayFormatted,
@@ -55,7 +55,7 @@ export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & {
     },
     {
         name: 'C4 Conveyor',
-        location: 'Roaster 2',
+        location: 'Roaster 1&2',
         plant: 'Smelter',
         division: 'Roaster',
         lastMaintenance: todayFormatted,
@@ -66,7 +66,7 @@ export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & {
     },
     {
         name: 'Holmes Blower 2',
-        location: 'Roaster 2',
+        location: 'Roaster 1&2',
         plant: 'Smelter',
         division: 'Roaster',
         lastMaintenance: todayFormatted,
@@ -77,7 +77,7 @@ export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & {
     },
     {
         name: 'Howden Blower 2',
-        location: 'Roaster 2',
+        location: 'Roaster 1&2',
         plant: 'Smelter',
         division: 'Roaster',
         lastMaintenance: todayFormatted,
@@ -88,7 +88,7 @@ export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & {
     },
     {
         name: 'Scrubber Fan 2',
-        location: 'Roaster 2',
+        location: 'Roaster 1&2',
         plant: 'Smelter',
         division: 'Roaster',
         lastMaintenance: todayFormatted,
