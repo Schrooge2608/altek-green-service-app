@@ -14,11 +14,11 @@ export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & {
     location: "North Screen", 
     plant: 'Smelter', 
     division: 'North Screen', 
-    model: "SMC-FLEX", 
+    model: "PowerFlex 525", 
     serialNumber: "TBC", 
     installationDate: "2024-01-01", 
     assignedToName: "John Doe", 
-    driveType: 'Soft Starter', 
+    driveType: 'VSD', 
     manufacturer: 'Allen-Bradley' 
   },
 ];
