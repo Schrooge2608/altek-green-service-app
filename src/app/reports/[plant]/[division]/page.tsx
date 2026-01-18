@@ -64,6 +64,12 @@ export default function DivisionReportPage() {
 
     const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
 
+    const handleBarClick = () => {
+        if (plantSlug && divisionSlug) {
+            router.push(`/equipment/${plantSlug}/${divisionSlug}`);
+        }
+    };
+
     const locationSummary = useMemo(() => {
         if (!equipment) return [];
         
@@ -112,7 +118,7 @@ export default function DivisionReportPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Average Uptime by Sub-Location</CardTitle>
-                            <CardDescription>Comparing the average equipment uptime percentage for each location within {divisionName}.</CardDescription>
+                            <CardDescription>Click any bar to view the equipment list for the {divisionName} division.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
@@ -122,6 +128,8 @@ export default function DivisionReportPage() {
                                             accessibilityLayer 
                                             data={locationSummary} 
                                             margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
+                                            onClick={handleBarClick}
+                                            className="[&_.recharts-bar-rectangle]:cursor-pointer"
                                         >
                                             <XAxis
                                                 dataKey="name"
@@ -154,7 +162,7 @@ export default function DivisionReportPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Total Power Consumption by Sub-Location</CardTitle>
-                            <CardDescription>Comparing the total energy usage (in Megawatt-hours) for each location within {divisionName}.</CardDescription>
+                            <CardDescription>Click any bar to view the equipment list for the {divisionName} division.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
@@ -164,6 +172,8 @@ export default function DivisionReportPage() {
                                             accessibilityLayer 
                                             data={locationSummary} 
                                             margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
+                                            onClick={handleBarClick}
+                                            className="[&_.recharts-bar-rectangle]:cursor-pointer"
                                         >
                                             <XAxis
                                                 dataKey="name"
