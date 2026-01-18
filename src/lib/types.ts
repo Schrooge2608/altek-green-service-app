@@ -218,5 +218,3 @@ export interface DailyDiary {
   beforeWorkImages?: string[];
   afterWorkImages?: string[];
 }
-
-    

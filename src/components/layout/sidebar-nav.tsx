@@ -74,7 +74,6 @@ const smelterDivisions = [
     { href: '/equipment/smelter/stripping-crane', label: 'Stripping Crane' },
     { href: '/equipment/smelter/slag-plant', label: 'Slag plant' },
     { href: '/equipment/smelter/north-screen', label: 'North Screen' },
-    { href: '/equipment/smelter/ups-btus', label: 'UPS/BTU\'s' },
 ]
 
 const completedSchedulesCategories = [
