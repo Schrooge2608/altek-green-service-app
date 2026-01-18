@@ -8,17 +8,4 @@ const nextMaintenanceDate = format(new Date(new Date().setMonth(new Date().getMo
 
 // This file is ready for future data seeding.
 // To add new equipment, populate this array following the example structure.
-export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & { model: string; serialNumber: string, installationDate: string, driveType?: 'VSD' | 'Soft Starter', manufacturer?: string }> = [
-  { 
-    name: "Apron Feeder", 
-    location: "North Screen", 
-    plant: 'Smelter', 
-    division: 'North Screen', 
-    model: "PowerFlex 525", 
-    serialNumber: "TBC", 
-    installationDate: "2024-01-01", 
-    assignedToName: "John Doe", 
-    driveType: 'VSD', 
-    manufacturer: 'Allen-Bradley' 
-  },
-];
+export const pumpStations: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & { model: string; serialNumber: string, installationDate: string, driveType?: 'VSD' | 'Soft Starter', manufacturer?: string }> = [];
