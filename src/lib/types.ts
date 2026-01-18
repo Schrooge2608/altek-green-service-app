@@ -9,8 +9,8 @@ export interface Equipment {
   vsdId: string;
   lastMaintenance: string;
   nextMaintenance: string;
-  uptime: number;
-  powerConsumption: number;
+  uptime: number; // Represents current month's uptime
+  powerConsumption: number; // Represents current month's power consumption
   imageUrl?: string;
   // Motor fields
   motorModel?: string;
@@ -44,7 +44,7 @@ export interface Equipment {
   breakerAuxiliaryContacts?: string; // e.g., "2NO+2NC"
   protectionInstallationDate?: string;
   // Downtime
-  totalDowntimeHours?: number;
+  totalDowntimeHours?: number; // Represents current month's downtime
   // VSD is not a separate type but its fields are on Equipment
   status: 'active' | 'inactive' | 'maintenance';
   model: string;
@@ -217,4 +217,13 @@ export interface DailyDiary {
   clientDate?: string;
   beforeWorkImages?: string[];
   afterWorkImages?: string[];
+}
+
+export interface PerformanceRecord {
+  id: string;
+  equipmentId: string;
+  period: string; // e.g., '2024-07'
+  uptime: number;
+  downtimeHours: number;
+  powerConsumption: number;
 }

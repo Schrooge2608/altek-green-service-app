@@ -108,18 +108,18 @@ export default function EquipmentDetailPage() {
   const isClientManager = userData?.role === 'Client Manager';
 
   const uptimePercentage = useMemo(() => {
-    if (!vsd?.installationDate || !eq) return 100;
-    const installationDate = new Date(vsd.installationDate);
+    if (!eq) return 100;
+    
     const now = new Date();
-    const totalHours = (now.getTime() - installationDate.getTime()) / (1000 * 60 * 60);
-    if (totalHours <= 0) return 100;
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const totalHoursInMonth = daysInMonth * 24;
 
     const downtimeHours = eq.totalDowntimeHours || 0;
-    const uptimeHours = totalHours - downtimeHours;
+    const uptimeHours = totalHoursInMonth - downtimeHours;
     
-    return Math.max(0, (uptimeHours / totalHours) * 100);
-
-  }, [vsd, eq]);
+    const percentage = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
+    return percentage;
+  }, [eq]);
 
   const backLink = useMemo(() => {
     if (!eq) return '/equipment';
@@ -348,6 +348,7 @@ export default function EquipmentDetailPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Performance Metrics</CardTitle>
+                    <CardDescription>Metrics for the current month.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
                     <div className="flex items-center justify-between">
@@ -414,5 +415,3 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
-
-    

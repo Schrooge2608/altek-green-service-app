@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, CheckCircle, CalendarIcon, Trash2, Loader2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, runTransaction } from 'firebase/firestore';
 import type { Breakdown, Equipment, VSD, User as AppUser } from '@/lib/types';
 import Link from 'next/link';
 import {
@@ -152,45 +152,30 @@ export default function BreakdownsPage() {
     const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
     const equipmentRef = doc(firestore, 'equipment', breakdown.equipmentId);
 
-    // Calculate downtime
+    // Calculate downtime for this specific incident
     let downtimeHours = 0;
     if (breakdown.timeReported && resolutionDetails.timeBackInService) {
         const downtimeMillis = resolutionDetails.timeBackInService.getTime() - new Date(breakdown.timeReported).getTime();
         downtimeHours = downtimeMillis / (1000 * 60 * 60);
     }
     
-    // Update equipment's total downtime and uptime percentage
+    // Use a transaction to update the equipment's monthly downtime
     try {
-        const eqDoc = await getDoc(equipmentRef);
-        if (eqDoc.exists()) {
-            const eqData = eqDoc.data() as Equipment;
-            const vsdRef = doc(firestore, 'vsds', eqData.vsdId);
-            const vsdDoc = await getDoc(vsdRef);
-            
-            if (vsdDoc.exists()) {
-                const vsdData = vsdDoc.data() as VSD;
-                const currentDowntime = eqData.totalDowntimeHours || 0;
-                const newTotalDowntime = currentDowntime + downtimeHours;
-
-                // Calculate new uptime percentage
-                const installationDate = new Date(vsdData.installationDate);
-                const now = new Date();
-                const totalHours = (now.getTime() - installationDate.getTime()) / (1000 * 60 * 60);
-                
-                let newUptimePercentage = 100;
-                if (totalHours > 0) {
-                    const uptimeHours = totalHours - newTotalDowntime;
-                    newUptimePercentage = Math.max(0, (uptimeHours / totalHours) * 100);
-                }
-
-                updateDocumentNonBlocking(equipmentRef, { 
-                    totalDowntimeHours: newTotalDowntime,
-                    uptime: newUptimePercentage,
-                });
+        await runTransaction(firestore, async (transaction) => {
+            const eqDoc = await transaction.get(equipmentRef);
+            if (!eqDoc.exists()) {
+                throw "Equipment document not found!";
             }
-        }
+            const eqData = eqDoc.data() as Equipment;
+            const currentDowntime = eqData.totalDowntimeHours || 0;
+            const newTotalDowntime = currentDowntime + downtimeHours;
+
+            // Update the equipment with the new downtime for the current month.
+            // The uptime percentage is now calculated on the equipment detail page.
+            transaction.update(equipmentRef, { totalDowntimeHours: newTotalDowntime });
+        });
     } catch (e) {
-        console.error("Failed to update equipment downtime: ", e);
+        console.error("Failed to update equipment downtime in transaction: ", e);
         toast({
             variant: "destructive",
             title: "Update Failed",

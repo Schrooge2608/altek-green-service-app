@@ -33,8 +33,8 @@
         "vsdId": { "type": "string" },
         "lastMaintenance": { "type": "string", "format": "date" },
         "nextMaintenance": { "type": "string", "format": "date" },
-        "uptime": { "type": "number" },
-        "powerConsumption": { "type": "number" },
+        "uptime": { "type": "number", "description": "Uptime percentage for the current reporting period." },
+        "powerConsumption": { "type": "number", "description": "Power consumption for the current reporting period in kWh." },
         "imageUrl": { "type": "string", "description": "URL of the equipment image." },
         "motorModel": { "type": "string" },
         "motorPower": { "type": "number" },
@@ -44,7 +44,7 @@
         "motorInstallationDate": { "type": "string", "format": "date" },
         "motorAssignedToId": { "type": "string", "description": "The UID of the user assigned to the motor." },
         "motorAssignedToName": { "type": "string", "description": "The name of the user assigned to the motor." },
-        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours." },
+        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours for the current reporting period." },
         "breakerAssetNumber": { "type": "string", "description": "The unique asset number or tag ID for the breaker." },
         "breakerLocationHierarchy": { "type": "string", "description": "e.g., Substation > DB > Cubicle" },
         "breakerServiceDescription": { "type": "string", "description": "What the breaker feeds." },
@@ -98,6 +98,20 @@
         }
       },
       "required": ["id", "name", "location", "vsdId", "plant"]
+    },
+    "PerformanceRecord": {
+      "title": "PerformanceRecord",
+      "type": "object",
+      "description": "Stores a snapshot of equipment performance for a specific period (e.g., a month).",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "period": { "type": "string", "description": "The period this record represents, e.g., '2024-07' for July 2024." },
+        "uptime": { "type": "number" },
+        "downtimeHours": { "type": "number" },
+        "powerConsumption": { "type": "number" }
+      },
+      "required": ["id", "equipmentId", "period", "uptime", "downtimeHours", "powerConsumption"]
     },
     "MaintenanceTask": {
       "title": "MaintenanceTask",
@@ -290,6 +304,14 @@
         }
       },
       {
+        "path": "/equipment/{equipmentId}/performance_records/{recordId}",
+        "definition": {
+            "entityName": "PerformanceRecord",
+            "schema": { "$ref": "#/entities/PerformanceRecord" },
+            "description": "Stores monthly performance snapshots for a piece of equipment."
+        }
+      },
+      {
         "path": "/tasks/{taskId}",
         "definition": {
           "entityName": "MaintenanceTask",
@@ -332,4 +354,3 @@
     ]
   }
 }
-
