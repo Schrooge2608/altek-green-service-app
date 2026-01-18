@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SignaturePad } from '@/components/ui/signature-pad';
-import { Printer, CarCrash, PersonStanding, Wind, Crane, Box, Zap, Ear, Biohazard, Flame, TrainTrack, Thermometer, Footprints } from 'lucide-react';
+import { Printer, Car, PersonStanding, Wind, Crane, Box, Zap, Ear, Biohazard, Flame, TrainTrack, Thermometer, Footprints } from 'lucide-react';
 import React from 'react';
 import { RbmLogo } from '@/components/rbm-logo';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const hazardIcons = [
-  { icon: CarCrash, label: 'Vehicle Collision' },
+  { icon: Car, label: 'Vehicle Collision' },
   { icon: PersonStanding, label: 'Vehicle Impact on Person' },
   { icon: Wind, label: 'Entanglement & Crushing' }, // Placeholder icon
   { icon: PersonStanding, label: 'Fall From Height' }, // Placeholder icon
@@ -295,4 +295,3 @@ export default function PermitToWorkPage() {
         </div>
     );
 }
-
