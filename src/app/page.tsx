@@ -1,20 +1,17 @@
-
 'use client';
 
-import { PlantDashboard } from '@/components/plant-dashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { useUser } from '@/firebase';
 import { LogIn } from 'lucide-react';
 import Link from 'next/link';
+import { DivisionPerformanceDashboard } from '@/components/division-performance-dashboard';
 
 function AuthenticatedDashboard() {
   return (
     <div className="grid grid-cols-1 gap-8">
-      <PlantDashboard plantName="Mining" divisionName="Boosters" />
-      <PlantDashboard plantName="Mining" divisionName="Dredgers" />
-      <PlantDashboard plantName="Mining" divisionName="Pump Stations" />
-      <PlantDashboard plantName="Smelter" />
+      <DivisionPerformanceDashboard plantName="Mining" />
+      <DivisionPerformanceDashboard plantName="Smelter" />
     </div>
   );
 }
