@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -131,7 +130,7 @@ export default function PermitToWorkPage() {
                                 <div className="grid grid-cols-5 gap-2">
                                     <div className="relative aspect-square rounded-md border bg-muted/20 flex items-center justify-center p-2">
                                         <Checkbox className="absolute left-1 top-1 z-10" />
-                                        <Image src="/Vehicle collision.svg" alt="Vehicle Collision Hazard" layout="fill" objectFit="contain" />
+                                        <Image src="/Vehicle%20collision.svg" alt="Vehicle Collision Hazard" layout="fill" objectFit="contain" />
                                     </div>
                                     {[...Array(19)].map((_, i) => (
                                         <div key={i} className="relative aspect-square rounded-md border bg-muted/20">
