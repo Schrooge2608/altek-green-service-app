@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SignaturePad } from '@/components/ui/signature-pad';
-import { Printer, Car, PersonStanding, Wind, Construction, Box, Zap, Ear, Biohazard, Flame, TrainTrack, Thermometer, Footprints } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import React from 'react';
 import { RbmLogo } from '@/components/rbm-logo';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -132,10 +132,10 @@ export default function PermitToWorkPage() {
                                     </TableBody>
                                 </Table>
                             </div>
-                            <div>
+                           <div>
                                 <h3 className="font-bold text-center mb-2">B1.2. Applicable Risks / Hazards</h3>
-                                <div className="grid grid-cols-5 gap-2">
-                                    {[...Array(20)].map((_, i) => (
+                                 <div className="grid grid-cols-5 gap-2">
+                                    {Array.from({ length: 20 }).map((_, i) => (
                                         <div key={i} className="relative aspect-square rounded-md border bg-muted/20 flex items-center justify-center p-2">
                                             <Checkbox className="absolute left-1 top-1 z-10" />
                                             {hazardIconSources[i] ? (
