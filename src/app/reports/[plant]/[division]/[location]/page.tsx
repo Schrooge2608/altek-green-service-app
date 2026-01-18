@@ -67,11 +67,22 @@ export default function EquipmentReportPage() {
     const chartData = useMemo(() => {
         if (!equipmentList) return [];
         return equipmentList.map(eq => ({
+            id: eq.id,
             name: eq.name,
             uptime: eq.uptime || 0,
             power: parseFloat(((eq.powerConsumption || 0) / 1000).toFixed(2)), // Convert to MWh
         })).sort((a,b) => a.name.localeCompare(b.name));
     }, [equipmentList]);
+    
+    const handleBarClick = (data: any) => {
+        if (data && data.activePayload && data.activePayload.length > 0) {
+            const payload = data.activePayload[0].payload;
+            const equipmentId = payload.id;
+            if (equipmentId) {
+                router.push(`/equipment/${equipmentId}`);
+            }
+        }
+    };
 
     return (
         <div className="flex flex-col gap-8">
@@ -84,7 +95,7 @@ export default function EquipmentReportPage() {
                 </div>
                 <Button variant="outline" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Division Report
+                    Back
                 </Button>
             </header>
 
@@ -92,7 +103,7 @@ export default function EquipmentReportPage() {
                  <Card>
                     <CardHeader>
                         <CardTitle>Equipment Uptime</CardTitle>
-                        <CardDescription>Uptime percentage for each piece of equipment in {locationName.length <= 4 ? locationName.toUpperCase() : locationName}.</CardDescription>
+                        <CardDescription>Click a bar to view equipment details. Uptime percentage for each piece of equipment in {locationName.length <= 4 ? locationName.toUpperCase() : locationName}.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
@@ -102,6 +113,8 @@ export default function EquipmentReportPage() {
                                         accessibilityLayer
                                         data={chartData}
                                         margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
+                                        onClick={handleBarClick}
+                                        className="[&_.recharts-bar-rectangle]:cursor-pointer"
                                     >
                                         <XAxis
                                             dataKey="name"
@@ -136,7 +149,7 @@ export default function EquipmentReportPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Equipment Power Consumption</CardTitle>
-                         <CardDescription>Total power consumption (MWh) for each piece of equipment in {locationName.length <= 4 ? locationName.toUpperCase() : locationName}.</CardDescription>
+                         <CardDescription>Click a bar to view equipment details. Total power consumption (MWh) for each piece of equipment in {locationName.length <= 4 ? locationName.toUpperCase() : locationName}.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
@@ -146,6 +159,8 @@ export default function EquipmentReportPage() {
                                         accessibilityLayer
                                         data={chartData}
                                         margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
+                                        onClick={handleBarClick}
+                                        className="[&_.recharts-bar-rectangle]:cursor-pointer"
                                     >
                                         <XAxis
                                             dataKey="name"
