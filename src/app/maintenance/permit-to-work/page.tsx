@@ -16,6 +16,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Image from 'next/image';
 
+const hazardIconSources = [
+    { src: "/Vehicle%20Collision.png", alt: "Vehicle Collision Hazard" },
+    { src: "/Vehicle%20Impact%20On%20person.png", alt: "Vehicle Impact On Person Hazard" },
+];
+
+
 export default function PermitToWorkPage() {
 
     return (
@@ -128,13 +134,12 @@ export default function PermitToWorkPage() {
                             <div>
                                 <h3 className="font-bold text-center mb-2">B1.2. Applicable Risks / Hazards</h3>
                                 <div className="grid grid-cols-5 gap-2">
-                                    <div className="relative aspect-square rounded-md border bg-muted/20 flex items-center justify-center p-2">
-                                        <Checkbox className="absolute left-1 top-1 z-10" />
-                                        <Image src="/Vehicle%20Collision.png" alt="Vehicle Collision Hazard" layout="fill" objectFit="contain" />
-                                    </div>
-                                    {[...Array(19)].map((_, i) => (
-                                        <div key={i} className="relative aspect-square rounded-md border bg-muted/20">
-                                            <Checkbox className="absolute left-1 top-1" />
+                                    {[...Array(20)].map((_, i) => (
+                                        <div key={i} className="relative aspect-square rounded-md border bg-muted/20 flex items-center justify-center p-2">
+                                            <Checkbox className="absolute left-1 top-1 z-10" />
+                                            {hazardIconSources[i] ? (
+                                                <Image src={hazardIconSources[i].src} alt={hazardIconSources[i].alt} layout="fill" objectFit="contain" />
+                                            ) : null}
                                         </div>
                                     ))}
                                 </div>
