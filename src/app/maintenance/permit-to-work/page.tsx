@@ -8,13 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SignaturePad } from '@/components/ui/signature-pad';
-import { Printer, Car, PersonStanding, Wind, Construction, Box, Zap, Ear, Biohazard, Flame, TrainTrack, Thermometer, Footprints } from 'lucide-react';
+import { Printer, PersonStanding, Wind, Construction, Box, Zap, Ear, Biohazard, Flame, TrainTrack, Thermometer, Footprints } from 'lucide-react';
 import React from 'react';
 import { RbmLogo } from '@/components/rbm-logo';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import Image from 'next/image';
 
 // Wrapper component to create the yellow warning triangle around an icon
 const HazardIconWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -30,7 +31,7 @@ const HazardIconWrapper = ({ children }: { children: React.ReactNode }) => (
 
 
 const hazardIcons = [
-  { icon: Car, label: 'Vehicle Collision' },
+  { src: '/vehicle-collision.svg', label: 'Vehicle Collision' },
   { icon: PersonStanding, label: 'Vehicle Impact on Person' },
   { icon: Wind, label: 'Entanglement & Crushing' }, // Placeholder icon
   { icon: PersonStanding, label: 'Fall From Height' }, // Placeholder icon
@@ -165,14 +166,19 @@ export default function PermitToWorkPage() {
                                 <h3 className="font-bold text-center mb-2">B1.2. Applicable Risks / Hazards - Tick applicable</h3>
                                 <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-y-4 gap-x-2">
                                     {hazardIcons.map(hazard => {
-                                        const IconComponent = hazard.icon;
+                                        const IconComponent = (hazard as any).icon;
+                                        const iconSrc = (hazard as any).src;
                                         return (
-                                            <div key={hazard.label} className="flex flex-col items-center p-1 text-center space-y-1">
+                                            <div key={hazard.label} className="flex flex-col items-center p-1 text-center">
                                                 <HazardIconWrapper>
-                                                    <IconComponent className="h-7 w-7" />
+                                                    {iconSrc ? (
+                                                        <Image src={iconSrc} alt={hazard.label} width={32} height={32} className="h-8 w-8 object-contain" />
+                                                    ) : (
+                                                        IconComponent && <IconComponent className="h-7 w-7" />
+                                                    )}
+                                                    <Checkbox id={`hazard-${hazard.label}`} className="absolute top-0.5 left-0.5 z-20 bg-background/80 hover:bg-background" />
                                                 </HazardIconWrapper>
-                                                <Label htmlFor={`hazard-${hazard.label}`} className="text-xs h-8 flex items-center text-center leading-tight">{hazard.label}</Label>
-                                                <Checkbox id={`hazard-${hazard.label}`} />
+                                                <Label htmlFor={`hazard-${hazard.label}`} className="text-xs h-8 flex items-center text-center leading-tight mt-1">{hazard.label}</Label>
                                             </div>
                                         );
                                     })}
