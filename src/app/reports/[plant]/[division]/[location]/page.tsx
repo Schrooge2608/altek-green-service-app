@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -42,7 +43,7 @@ export default function EquipmentReportPage() {
 
     const plantName = useMemo(() => slugToTitle(plantSlug), [plantSlug]);
     const divisionName = useMemo(() => slugToTitle(divisionSlug), [divisionSlug]);
-    const locationName = useMemo(() => slugToTitle(locationSlug), [locationSlug]);
+    const locationName = useMemo(() => decodeURIComponent(locationSlug), [locationSlug]);
 
     const pageTitle = useMemo(() => {
         if (!plantName || !divisionName || !locationName) return 'Equipment Report';

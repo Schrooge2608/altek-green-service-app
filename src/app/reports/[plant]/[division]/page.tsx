@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -68,8 +69,8 @@ export default function DivisionReportPage() {
         if (data && data.activePayload && data.activePayload.length > 0) {
             const payload = data.activePayload[0].payload;
             const locationName = payload.name;
-            // Create a URL-friendly slug from the location name
-            const locationSlug = encodeURIComponent(locationName.toLowerCase().replace(/ /g, '-'));
+            // Create a URL-friendly slug from the location name, preserving case.
+            const locationSlug = encodeURIComponent(locationName);
             
             router.push(`/reports/${plantSlug}/${divisionSlug}/${locationSlug}`);
         }
@@ -101,7 +102,7 @@ export default function DivisionReportPage() {
 
     }, [equipment]);
 
-    const showCharts = divisionSlug === 'boosters';
+    const showCharts = true;
 
     return (
         <div className="flex flex-col gap-8">
