@@ -8,50 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SignaturePad } from '@/components/ui/signature-pad';
-import { Printer, PersonStanding, Wind, Construction, Box, Zap, Ear, Biohazard, Flame, TrainTrack, Thermometer, Footprints } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import React from 'react';
 import { RbmLogo } from '@/components/rbm-logo';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import Image from 'next/image';
-
-// Wrapper component to create the yellow warning triangle around an icon
-const HazardIconWrapper = ({ children }: { children: React.ReactNode }) => (
-    <div className="relative w-16 h-14 flex items-center justify-center">
-        <svg viewBox="0 0 64 56" className="absolute w-full h-full">
-            <path d="M32 4 L4 52 H60 Z" fill="#FFC700" stroke="black" strokeWidth="2" strokeLinejoin="round" />
-        </svg>
-        <div className="relative z-10 text-black">
-            {children}
-        </div>
-    </div>
-);
-
-
-const hazardIcons = [
-  { src: '/vehicle-collision.svg', label: 'Vehicle Collision' },
-  { icon: PersonStanding, label: 'Vehicle Impact on Person' },
-  { icon: Wind, label: 'Entanglement & Crushing' }, // Placeholder icon
-  { icon: PersonStanding, label: 'Fall From Height' }, // Placeholder icon
-  { icon: Footprints, label: 'Slipping & Tripping' },
-  { icon: Zap, label: 'Uncontrolled Release of Energy' },
-  { icon: Construction, label: 'Lifting Operations' },
-  { icon: Box, label: 'Confined Space' },
-  { icon: Zap, label: 'Contact with Electricity' },
-  { icon: Ear, label: 'Noise' },
-  { icon: Box, label: 'Falling Objects' }, // Placeholder icon
-  { icon: Biohazard, label: 'Exposure to Hazardous Substances' },
-  { icon: (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 16.2-6.52-8.62a2 2 0 0 0-3.24 0L4.36 16.2a2 2 0 0 0 1.62 3.2h12.04a2 2 0 0 0 1.62-3.2Z"/></svg>, label: 'Slope Failure' },
-  { icon: (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5Z"/><path d="M12 12c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5Z"/><path d="M7 7c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5Z"/></svg>, label: 'Drowning' },
-  { icon: (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 12s2.5-3 5-3 5 3 5 3-2.5 3-5 3-5-3-5-3Z"/><path d="M12 12s-2.5 3-5 3-5-3-5-3 2.5-3 5-3 5 3 5 3Z"/><circle cx="12" cy="12" r="3"/><path d="M12 4V2"/><path d="M12 22v-2"/><path d="m20 12-2 0"/><path d="m6 12-2 0"/><path d="m19 19-1.5-1.5"/><path d="m6.5 6.5-1.5-1.5"/><path d="m19 5-1.5 1.5"/><path d="m6.5 17.5-1.5 1.5"/></svg>, label: 'Radiation' },
-  { icon: Flame, label: 'Contact with Molten Metal' },
-  { icon: TrainTrack, label: 'Rail Collision' },
-  { icon: PersonStanding, label: 'Rail Impact on Person' },
-  { icon: Flame, label: 'Fire' },
-  { icon: Thermometer, label: 'Hot and Cold Surfaces' },
-];
 
 export default function PermitToWorkPage() {
 
@@ -164,24 +127,12 @@ export default function PermitToWorkPage() {
                             </div>
                             <div>
                                 <h3 className="font-bold text-center mb-2">B1.2. Applicable Risks / Hazards - Tick applicable</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-y-4 gap-x-2">
-                                    {hazardIcons.map(hazard => {
-                                        const IconComponent = (hazard as any).icon;
-                                        const iconSrc = (hazard as any).src;
-                                        return (
-                                            <div key={hazard.label} className="flex flex-col items-center p-1 text-center">
-                                                <HazardIconWrapper>
-                                                    {iconSrc ? (
-                                                        <Image src={iconSrc} alt={hazard.label} width={32} height={32} className="h-8 w-8 object-contain" />
-                                                    ) : (
-                                                        IconComponent && <IconComponent className="h-7 w-7" />
-                                                    )}
-                                                    <Checkbox id={`hazard-${hazard.label}`} className="absolute top-0.5 left-0.5 z-20 bg-background/80 hover:bg-background" />
-                                                </HazardIconWrapper>
-                                                <Label htmlFor={`hazard-${hazard.label}`} className="text-xs h-8 flex items-center text-center leading-tight mt-1">{hazard.label}</Label>
-                                            </div>
-                                        );
-                                    })}
+                                <div className="grid grid-cols-5 gap-2">
+                                    {[...Array(20)].map((_, i) => (
+                                        <div key={i} className="relative aspect-square border-2 border-dashed bg-muted/50 rounded-md">
+                                            <Checkbox id={`hazard-placeholder-${i}`} className="absolute top-1 left-1" />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
