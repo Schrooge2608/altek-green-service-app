@@ -31,7 +31,7 @@ import { VoiceTextarea } from '@/components/ui/voice-textarea';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { ImageUploader } from '@/components/image-uploader';
 import type { DailyDiary, User } from '@/lib/types';
-import backendConfig from '@/docs/backend.json';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const manpowerSchema = z.object({
   designation: z.string().optional(),
@@ -96,7 +96,6 @@ export default function NewDailyDiaryPage() {
     const [beforeWorkFiles, setBeforeWorkFiles] = useState<File[]>([]);
     const [afterWorkFiles, setAfterWorkFiles] = useState<File[]>([]);
 
-    // Data fetching
     const diaryRef = useMemoFirebase(() => diaryId ? doc(firestore, 'daily_diaries', diaryId) : null, [firestore, diaryId]);
     const { data: diaryData, isLoading: diaryLoading } = useDoc<DailyDiary>(diaryRef);
 
@@ -154,22 +153,23 @@ export default function NewDailyDiaryPage() {
             const delays = values.delays?.split('\n').filter(d => d.trim() !== '') || [];
             const comments = values.comments?.split('\n').filter(c => c.trim() !== '') || [];
             
-            let diaryDocId = diaryId;
-            if (!diaryDocId) {
-                // For new diaries, create a temporary ID for image path
-                diaryDocId = doc(collection(firestore, 'temp')).id;
-            }
-
-            const beforeWorkImageUrls = await uploadImages(beforeWorkFiles, diaryDocId, 'before');
-            const afterWorkImageUrls = await uploadImages(afterWorkFiles, diaryDocId, 'after');
+            const currentDocId = diaryId || doc(collection(firestore, 'temp')).id;
+            
+            const [beforeWorkImageUrls, afterWorkImageUrls] = await Promise.all([
+                uploadImages(beforeWorkFiles, currentDocId, 'before'),
+                uploadImages(afterWorkFiles, currentDocId, 'after')
+            ]);
+            
+            const existingBeforeImages = diaryData?.beforeWorkImages || [];
+            const existingAfterImages = diaryData?.afterWorkImages || [];
 
             const dataToSave: Partial<DailyDiary> = {
                 ...values,
                 delays,
                 comments,
                 userId: user.uid,
-                beforeWorkImages: beforeWorkImageUrls,
-                afterWorkImages: afterWorkImageUrls,
+                beforeWorkImages: [...existingBeforeImages, ...beforeWorkImageUrls],
+                afterWorkImages: [...existingAfterImages, ...afterWorkImageUrls],
             };
 
             if (diaryId) {
@@ -177,9 +177,10 @@ export default function NewDailyDiaryPage() {
                 await updateDocumentNonBlocking(docRef, dataToSave);
                 toast({ title: 'Diary Updated', description: 'Your changes have been saved successfully.' });
             } else {
+                dataToSave.id = currentDocId;
                 dataToSave.createdAt = serverTimestamp();
                 dataToSave.isSignedOff = false;
-                const newDocRef = doc(firestore, 'daily_diaries', diaryDocId);
+                const newDocRef = doc(firestore, 'daily_diaries', currentDocId);
                 await addDocumentNonBlocking(newDocRef, dataToSave);
                 toast({ title: 'Diary Created', description: 'The new daily diary has been saved.' });
             }
@@ -220,16 +221,16 @@ export default function NewDailyDiaryPage() {
                 <div className="grid md:grid-cols-3 gap-4 mt-4">
                     <FormField control={form.control} name="area" render={({ field }) => (<FormItem><FormLabel>Area</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select area..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="Mining">Mining</SelectItem><SelectItem value="Smelter">Smelter</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="hrs" render={({ field }) => (<FormItem><FormLabel>Total Hours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="shiftStart" render={({ field }) => (<FormItem><FormLabel>Shift Start</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="shiftEnd" render={({ field }) => (<FormItem><FormLabel>Shift End</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="hrs" render={({ field }) => (<FormItem><FormLabel>Total Hours</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="shiftStart" render={({ field }) => (<FormItem><FormLabel>Shift Start</FormLabel><FormControl><Input type="time" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="shiftEnd" render={({ field }) => (<FormItem><FormLabel>Shift End</FormLabel><FormControl><Input type="time" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 </div>
                 
-                 <Card className="mt-4">
+                <Card className="mt-4">
                     <CardHeader><CardTitle>HSE</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
-                        <FormField control={form.control} name="incidents" render={({ field }) => (<FormItem><FormLabel>Incidents / Accidents / Injuries</FormLabel><FormControl><VoiceTextarea {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={form.control} name="toolboxTalk" render={({ field }) => (<FormItem><FormLabel>Toolbox Talk</FormLabel><FormControl><VoiceTextarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="incidents" render={({ field }) => (<FormItem><FormLabel>Incidents / Accidents / Injuries</FormLabel><FormControl><VoiceTextarea {...field} value={field.value ?? ''} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="toolboxTalk" render={({ field }) => (<FormItem><FormLabel>Toolbox Talk</FormLabel><FormControl><VoiceTextarea {...field} value={field.value ?? ''} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
                     </CardContent>
                 </Card>
 
@@ -241,6 +242,43 @@ export default function NewDailyDiaryPage() {
                     </CardContent>
                 </Card>
 
+                <Card className="mt-4">
+                    <CardHeader>
+                        <CardTitle>Manpower Utilized</CardTitle>
+                        <CardDescription>Detail the personnel involved in the day's work.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Designation</TableHead>
+                                    <TableHead>Forecast</TableHead>
+                                    <TableHead>Actual</TableHead>
+                                    <TableHead>Normal Hrs</TableHead>
+                                    <TableHead>O/T 1.5</TableHead>
+                                    <TableHead>O/T 2.0</TableHead>
+                                    <TableHead>Comments</TableHead>
+                                    <TableHead></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {manpowerFields.map((field, index) => (
+                                    <TableRow key={field.id}>
+                                        <TableCell><FormField control={form.control} name={`manpower.${index}.designation`} render={({ field }) => <Input {...field} value={field.value ?? ''} />} /></TableCell>
+                                        <TableCell><FormField control={form.control} name={`manpower.${index}.forecast`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
+                                        <TableCell><FormField control={form.control} name={`manpower.${index}.actual`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
+                                        <TableCell><FormField control={form.control} name={`manpower.${index}.normalHrs`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
+                                        <TableCell><FormField control={form.control} name={`manpower.${index}.overtime1_5`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
+                                        <TableCell><FormField control={form.control} name={`manpower.${index}.overtime2_0`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
+                                        <TableCell><FormField control={form.control} name={`manpower.${index}.comments`} render={({ field }) => <Input {...field} value={field.value ?? ''} />} /></TableCell>
+                                        <TableCell><Button type="button" variant="ghost" size="icon" onClick={() => removeManpower(index)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => appendManpower({})}><PlusCircle className="mr-2 h-4 w-4" />Add Manpower</Button>
+                    </CardContent>
+                </Card>
             </Card>
 
             <div className="flex justify-end gap-2 mt-8">
@@ -255,3 +293,5 @@ export default function NewDailyDiaryPage() {
     </div>
   );
 }
+
+    

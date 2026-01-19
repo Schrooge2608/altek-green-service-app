@@ -4,6 +4,7 @@
 
 
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -196,8 +197,8 @@ export interface User {
 }
 
 export interface ManpowerEntry {
-    designation: string;
-    forecast: number;
+    designation?: string;
+    forecast?: number;
     actual?: number;
     normalHrs?: number;
     overtime1_5?: number;
@@ -207,7 +208,7 @@ export interface ManpowerEntry {
 }
 
 export interface PlantEntry {
-    description: string;
+    description?: string;
     qty?: number;
     inspectionDone?: 'yes' | 'no';
     comments?: string;
@@ -225,10 +226,10 @@ export interface WorkEntry {
 export interface DailyDiary {
   id: string;
   userId: string;
-  contractTitle?: string;
-  contractNumber?: string;
-  area?: 'Mining' | 'Smelter';
-  date?: string;
+  contractTitle: string;
+  contractNumber: string;
+  area: 'Mining' | 'Smelter';
+  date: string;
   shiftStart?: string;
   shiftEnd?: string;
   hrs?: number;
@@ -247,8 +248,8 @@ export interface DailyDiary {
   clientDate?: string;
   beforeWorkImages?: string[];
   afterWorkImages?: string[];
-  isSignedOff?: boolean;
-  createdAt?: any;
+  isSignedOff: boolean;
+  createdAt: any;
 }
 
 export interface PerformanceRecord {
@@ -280,3 +281,5 @@ export interface Timesheet {
     period: string; // YYYY-MM
     entries: TimesheetEntry[];
 }
+
+    
