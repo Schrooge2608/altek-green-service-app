@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -480,13 +481,38 @@ export function SidebarNav() {
                 )
             })}
 
-             {isAdmin && (
+             {isManager && (
+              <Collapsible open={isTeamOpen} onOpenChange={setIsTeamOpen}>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Team/Users" isActive={pathname.startsWith('/team')}>
+                          <Users />
+                          <span>Team/Users</span>
+                          <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                      </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                         {allUsers?.map((u) => (
+                            <SidebarMenuItem key={u.id}>
+                                <SidebarMenuSubButton asChild isActive={pathname === `/profile/${u.id}`}>
+                                    <Link href={`/profile/${u.id}`}>{u.name}</Link>
+                                </SidebarMenuSubButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {isAdmin && (
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip="Admin" isActive={pathname.startsWith('/admin')}>
+                      <SidebarMenuButton tooltip="Administration" isActive={pathname.startsWith('/admin')}>
                           <Shield />
-                          <span>Admin</span>
+                          <span>Administration</span>
                           <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
                       </SidebarMenuButton>
                   </CollapsibleTrigger>
@@ -508,30 +534,6 @@ export function SidebarNav() {
                                 <Link href="/admin/seed">Seed Data</Link>
                             </SidebarMenuSubButton>
                         </SidebarMenuItem>
-                    </SidebarMenuSub>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-             {isManager && (
-              <Collapsible open={isTeamOpen} onOpenChange={setIsTeamOpen}>
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip="Team/Users" isActive={pathname.startsWith('/team')}>
-                          <Users />
-                          <span>Team/Users</span>
-                          <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                      </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                </SidebarMenuItem>
-                <CollapsibleContent>
-                    <SidebarMenuSub>
-                         {allUsers?.map((u) => (
-                            <SidebarMenuItem key={u.id}>
-                                <SidebarMenuSubButton asChild isActive={pathname === `/profile/${u.id}`}>
-                                    <Link href={`/profile/${u.id}`}>{u.name}</Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuItem>
-                        ))}
                     </SidebarMenuSub>
                 </CollapsibleContent>
               </Collapsible>
