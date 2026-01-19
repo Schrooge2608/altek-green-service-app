@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -521,7 +520,7 @@ export function SidebarNav() {
                         <SidebarMenuItem>
                             <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance'}>
                                 <Link href="/time-attendance">
-                                    <Clock />
+                                    <Clock className="h-3 w-3" />
                                     <span>Time &amp; Attendance</span>
                                 </Link>
                             </SidebarMenuSubButton>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -76,7 +75,6 @@ export default function TimeAttendancePage() {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const { toast } = useToast();
 
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState<string>(
     format(new Date(), 'yyyy-MM')
   );
@@ -90,27 +88,43 @@ export default function TimeAttendancePage() {
   const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
   const timesheetId = useMemo(() => {
-    if (!selectedUserId || !selectedPeriod) return null;
-    return `${selectedUserId}_${selectedPeriod}`;
-  }, [selectedUserId, selectedPeriod]);
+    if (!user || !selectedPeriod) return null;
+    return `${user.uid}_${selectedPeriod}`;
+  }, [user, selectedPeriod]);
 
-  const timesheetRef = useMemoFirebase(
-    () => (timesheetId ? doc(firestore, 'timesheets', timesheetId) : null),
-    [timesheetId]
-  );
-  
   // Temporarily disable fetching to avoid permission errors. We will re-enable this later.
   const fetchedTimesheet = null;
   const timesheetLoading = false;
-  // const { data: fetchedTimesheet, isLoading: timesheetLoading } =
-  //   useDoc<Timesheet>(timesheetRef);
-
 
   useEffect(() => {
-    if (user && !selectedUserId) {
-      setSelectedUserId(user.uid);
-    }
-  }, [user, selectedUserId]);
+    if (timesheetLoading || !dateRange.length || !user) return;
+
+    const entriesMap = new Map(fetchedTimesheet?.entries.map((e) => [e.date, e]));
+    const newEntries: TimesheetEntry[] = dateRange.map((day) => {
+      const dateStr = format(day, 'yyyy-MM-dd');
+      const existingEntry = entriesMap.get(dateStr);
+      return existingEntry || { date: dateStr };
+    });
+
+    const selectedUser = users?.find((u) => u.id === user.uid);
+    const newTimesheet: Timesheet = {
+      id: timesheetId || `${user.uid}_${selectedPeriod}`,
+      userId: user.uid,
+      userName: selectedUser?.name || '',
+      period: selectedPeriod,
+      entries: newEntries,
+    };
+
+    setTimesheet(newTimesheet);
+  }, [
+    fetchedTimesheet,
+    timesheetLoading,
+    dateRange,
+    user,
+    selectedPeriod,
+    timesheetId,
+    users,
+  ]);
 
   const currentUserName = useMemo(() => {
     if (!users || !user) return '';
@@ -126,35 +140,6 @@ export default function TimeAttendancePage() {
     return eachDayOfInterval({ start, end });
   }, [selectedPeriod]);
 
-  useEffect(() => {
-    if (timesheetLoading || !dateRange.length) return;
-
-    const entriesMap = new Map(fetchedTimesheet?.entries.map((e) => [e.date, e]));
-    const newEntries: TimesheetEntry[] = dateRange.map((day) => {
-      const dateStr = format(day, 'yyyy-MM-dd');
-      const existingEntry = entriesMap.get(dateStr);
-      return existingEntry || { date: dateStr };
-    });
-
-    const selectedUser = users?.find((u) => u.id === selectedUserId);
-    const newTimesheet: Timesheet = {
-      id: timesheetId || `${selectedUserId}_${selectedPeriod}`,
-      userId: selectedUserId,
-      userName: selectedUser?.name || '',
-      period: selectedPeriod,
-      entries: newEntries,
-    };
-
-    setTimesheet(newTimesheet);
-  }, [
-    fetchedTimesheet,
-    timesheetLoading,
-    dateRange,
-    selectedUserId,
-    selectedPeriod,
-    timesheetId,
-    users,
-  ]);
 
   const handleEntryChange = (
     index: number,
@@ -169,7 +154,8 @@ export default function TimeAttendancePage() {
   };
 
   const handleSave = async () => {
-    if (!timesheet || !timesheetRef) return;
+    if (!timesheet || !timesheetId) return;
+    const timesheetRef = doc(firestore, 'timesheets', timesheetId);
     setIsLoading(true);
     try {
       await setDocumentNonBlocking(timesheetRef, { ...timesheet }, { merge: true });
@@ -191,14 +177,17 @@ export default function TimeAttendancePage() {
   };
 
   const totals = useMemo(() => {
-    if (!timesheet) return { normal: 0, overtime: 0 };
+    if (!timesheet) return { normal: 0, overtime: 0, total: 0 };
     return timesheet.entries.reduce(
       (acc, entry) => {
-        acc.normal += Number(entry.normalHrs || 0);
-        acc.overtime += Number(entry.overtimeHrs || 0);
+        const normal = Number(entry.normalHrs || 0);
+        const overtime = Number(entry.overtimeHrs || 0);
+        acc.normal += normal;
+        acc.overtime += overtime;
+        acc.total += normal + overtime;
         return acc;
       },
-      { normal: 0, overtime: 0 }
+      { normal: 0, overtime: 0, total: 0 }
     );
   }, [timesheet]);
 
@@ -260,26 +249,29 @@ export default function TimeAttendancePage() {
               <TableRow>
                 <TableHead className="w-[120px]">Date</TableHead>
                 <TableHead className="w-[100px]">Day</TableHead>
-                <TableHead className="w-[100px]">Time In</TableHead>
-                <TableHead className="w-[100px]">Lunch Out</TableHead>
-                <TableHead className="w-[100px]">Lunch In</TableHead>
-                <TableHead className="w-[100px]">Time Out</TableHead>
+                <TableHead className="w-[90px]">Time In</TableHead>
+                <TableHead className="w-[90px]">Lunch Out</TableHead>
+                <TableHead className="w-[90px]">Lunch In</TableHead>
+                <TableHead className="w-[90px]">Time Out</TableHead>
                 <TableHead className="w-[120px]">Normal Hrs</TableHead>
                 <TableHead className="w-[120px]">Overtime Hrs</TableHead>
+                <TableHead className="w-[120px]">Total Hrs</TableHead>
                 <TableHead>Overtime Reason</TableHead>
-                <TableHead className="w-[150px]">Signature</TableHead>
+                <TableHead className="w-[120px]">Signature</TableHead>
                 <TableHead>Comments</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {timesheetLoading ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-48 text-center">
+                  <TableCell colSpan={12} className="h-48 text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : (
-                timesheet?.entries.map((entry, index) => (
+                timesheet?.entries.map((entry, index) => {
+                  const totalDailyHours = (Number(entry.normalHrs) || 0) + (Number(entry.overtimeHrs) || 0);
+                  return (
                   <TableRow key={entry.date}>
                     <TableCell>
                       {format(new Date(entry.date), 'yyyy-MM-dd')}
@@ -342,6 +334,15 @@ export default function TimeAttendancePage() {
                       />
                     </TableCell>
                     <TableCell>
+                        <Input
+                            type="number"
+                            step="0.1"
+                            value={totalDailyHours > 0 ? totalDailyHours.toFixed(2) : ''}
+                            readOnly
+                            className="font-bold bg-muted"
+                        />
+                    </TableCell>
+                    <TableCell>
                       <Input
                         value={entry.overtimeReason || ''}
                         onChange={(e) =>
@@ -373,7 +374,7 @@ export default function TimeAttendancePage() {
                       />
                     </TableCell>
                   </TableRow>
-                ))
+                )})
               )}
             </TableBody>
             <TableFooter>
@@ -391,6 +392,13 @@ export default function TimeAttendancePage() {
                 <TableCell>
                   <Input
                     value={totals.overtime.toFixed(2)}
+                    readOnly
+                    className="font-bold bg-muted"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={totals.total.toFixed(2)}
                     readOnly
                     className="font-bold bg-muted"
                   />
