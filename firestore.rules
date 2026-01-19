@@ -10,6 +10,7 @@ service cloud.firestore {
     match /equipment/{equipmentId} { allow read, write: if isAuthenticated(); }
     match /vsds/{vsdId} { allow read, write: if isAuthenticated(); }
     match /completed_schedules/{scheduleId} { allow read, write: if isAuthenticated(); }
+    match /breakdown_reports/{breakdownReportId} { allow read, write: if isAuthenticated(); }
     
     // DAILY DIARIES - FIXED FOR SAVING
     match /daily_diaries/{diaryId} {
@@ -20,4 +21,3 @@ service cloud.firestore {
     }
   }
 }
-
