@@ -61,16 +61,17 @@ service cloud.firestore {
       allow write: if isManagement();
     }
 
-    // 2. DAILY DIARIES (TEST MODE)
+    // 2. DAILY DIARIES (NUCLEAR TEST)
     match /daily_diaries/{diaryId} {
-      // Allow Read/List for everyone
+      // Allow Read/List
       allow read, list: if isAuthenticated();
       
-      // TEST MODE: Remove the "userId" check. 
-      // If this works, your App Code is sending the wrong ID.
-      allow create: if isAuthenticated(); 
+      // NUCLEAR OPTION: Allow create even if NOT logged in.
+      // If this fails, your internet or project setup is broken.
+      // If this works, your Auth/Login system is broken.
+      allow create: if true; 
       
-      // Keep Update/Delete secure for now
+      // Keep Update/Delete secure
       allow update: if isAuthenticated() && (
           (resource.data.userId == request.auth.uid && resource.data.isSignedOff != true)
           ||
