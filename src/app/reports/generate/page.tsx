@@ -13,12 +13,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
 interface AggregatedData {
-    breakdowns: Breakdown[];
+    newBreakdowns: Breakdown[];
+    closedBreakdowns: Breakdown[];
     completedSchedules: CompletedSchedule[];
     dailyDiaries: DailyDiary[];
 }
@@ -53,31 +54,45 @@ export default function GenerateReportPage() {
         try {
             const startDate = format(date.from, 'yyyy-MM-dd');
             const endDate = format(date.to, 'yyyy-MM-dd');
+            
+            const startDateISO = startOfDay(date.from).toISOString();
+            const endDateISO = endOfDay(date.to).toISOString();
 
-            const breakdownQuery = query(
+            const newBreakdownsQuery = query(
                 collection(firestore, 'breakdown_reports'),
                 where('date', '>=', startDate),
                 where('date', '<=', endDate)
             );
+            
+            const closedBreakdownsQuery = query(
+                collection(firestore, 'breakdown_reports'),
+                where('resolved', '==', true),
+                where('timeBackInService', '>=', startDateISO),
+                where('timeBackInService', '<=', endDateISO)
+            );
+
             const schedulesQuery = query(
                 collection(firestore, 'completed_schedules'),
                 where('completionDate', '>=', startDate),
                 where('completionDate', '<=', endDate)
             );
+            
             const diariesQuery = query(
                 collection(firestore, 'daily_diaries'),
                 where('date', '>=', startDate),
                 where('date', '<=', endDate)
             );
 
-            const [breakdownSnap, schedulesSnap, diariesSnap] = await Promise.all([
-                getDocs(breakdownQuery),
+            const [newBreakdownsSnap, closedBreakdownsSnap, schedulesSnap, diariesSnap] = await Promise.all([
+                getDocs(newBreakdownsQuery),
+                getDocs(closedBreakdownsQuery),
                 getDocs(schedulesQuery),
                 getDocs(diariesQuery),
             ]);
 
             const fetchedData: AggregatedData = {
-                breakdowns: breakdownSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Breakdown)),
+                newBreakdowns: newBreakdownsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Breakdown)),
+                closedBreakdowns: closedBreakdownsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Breakdown)),
                 completedSchedules: schedulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompletedSchedule)),
                 dailyDiaries: diariesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyDiary)),
             };
@@ -108,7 +123,8 @@ export default function GenerateReportPage() {
         const reportInput: ReportInput = {
             startDate: format(date.from, 'yyyy-MM-dd'),
             endDate: format(date.to, 'yyyy-MM-dd'),
-            breakdowns: aggregatedData.breakdowns,
+            newBreakdowns: aggregatedData.newBreakdowns,
+            closedBreakdowns: aggregatedData.closedBreakdowns,
             completedSchedules: aggregatedData.completedSchedules,
             dailyDiaries: aggregatedData.dailyDiaries,
         };
@@ -198,11 +214,12 @@ export default function GenerateReportPage() {
                         <CardTitle>2. Data Summary</CardTitle>
                         <CardDescription>A summary of the data found for the selected period.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid md:grid-cols-3 gap-4">
-                        <p><strong>Breakdowns Found:</strong> {aggregatedData.breakdowns.length}</p>
+                    <CardContent className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <p><strong>New Breakdowns:</strong> {aggregatedData.newBreakdowns.length}</p>
+                        <p><strong>Closed Breakdowns:</strong> {aggregatedData.closedBreakdowns.length}</p>
                         <p><strong>Schedules Completed:</strong> {aggregatedData.completedSchedules.length}</p>
                         <p><strong>Daily Diaries Logged:</strong> {aggregatedData.dailyDiaries.length}</p>
-                        <div className="md:col-span-3">
+                        <div className="md:col-span-full">
                              <Button onClick={handleGenerateReport} disabled={isGenerating}>
                                 {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                                 {isGenerating ? 'Generating...' : 'Generate AI Report'}

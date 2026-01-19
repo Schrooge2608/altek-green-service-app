@@ -47,7 +47,8 @@ const DailyDiarySchema = z.object({
 const ReportInputSchema = z.object({
   startDate: z.string().describe('The start date for the report period (e.g., yyyy-MM-dd).'),
   endDate: z.string().describe('The end date for the report period (e.g., yyyy-MM-dd).'),
-  breakdowns: z.array(BreakdownReportSchema).describe("A list of all breakdown incidents reported during the period."),
+  newBreakdowns: z.array(BreakdownReportSchema).describe("A list of all breakdown incidents reported during the period."),
+  closedBreakdowns: z.array(BreakdownReportSchema).describe("A list of all breakdown incidents resolved during the period."),
   completedSchedules: z.array(CompletedScheduleSchema).describe("A list of all scheduled maintenance documents completed during the period."),
   dailyDiaries: z.array(DailyDiarySchema).describe("A list of all daily diaries, which may contain unscheduled work."),
 });
@@ -76,24 +77,37 @@ The report MUST have the following structure exactly. For each section, if no da
 **Subject Line:** "Weekly Operations & Maintenance Report: {{{startDate}}} to {{{endDate}}}"
 
 **1. Executive Summary:**
-A brief, high-level overview of the week's key activities based on the data provided below. Mention the total number of breakdowns, completed maintenance tasks, and any unscheduled work. Highlight any critical issues or notable successes.
+A brief, high-level overview of the week's key activities based on the data provided below. Mention the total number of new and resolved breakdowns, completed maintenance tasks, and any unscheduled work. Highlight any critical issues or notable successes.
 
 ---
 
-**2. Breakdown Incidents:**
-{{#if breakdowns}}
-| Equipment Name      | Component  | Date Reported | Status   | Resolution Notes                  |
-|---------------------|------------|---------------|----------|-------------------------------------|
-{{#each breakdowns}}
-| {{{this.equipmentName}}} | {{{this.component}}} | {{{this.date}}}      | {{#if this.resolved}}Resolved{{else}}Active{{/if}} | {{#if this.resolution}}{{this.resolution}}{{else}}N/A{{/if}} |
+**2. Newly Reported Breakdowns:**
+{{#if newBreakdowns}}
+| Equipment Name      | Component  | Date Reported | Status   |
+|---------------------|------------|---------------|----------|
+{{#each newBreakdowns}}
+| {{{this.equipmentName}}} | {{{this.component}}} | {{{this.date}}}      | {{#if this.resolved}}Resolved{{else}}Active{{/if}} |
 {{/each}}
 {{else}}
-No breakdown incidents to report for this period.
+No new breakdown incidents were reported for this period.
 {{/if}}
 
 ---
 
-**3. Completed Scheduled Maintenance:**
+**3. Resolved Breakdowns:**
+{{#if closedBreakdowns}}
+| Equipment Name      | Component  | Date Reported | Resolution Notes                  |
+|---------------------|------------|---------------|-------------------------------------|
+{{#each closedBreakdowns}}
+| {{{this.equipmentName}}} | {{{this.component}}} | {{{this.date}}}      | {{#if this.resolution}}{{this.resolution}}{{else}}Work completed.{{/if}} |
+{{/each}}
+{{else}}
+No breakdown incidents were resolved during this period.
+{{/if}}
+
+---
+
+**4. Completed Scheduled Maintenance:**
 {{#if completedSchedules}}
 | Equipment Name      | Maintenance Type  | Frequency | Completion Date | Inspected By      |
 |---------------------|-------------------|-----------|-----------------|-------------------|
@@ -106,7 +120,7 @@ No scheduled maintenance was completed during this period.
 
 ---
 
-**4. Unscheduled Work & Other Activities (from Daily Diaries):**
+**5. Unscheduled Work & Other Activities (from Daily Diaries):**
 {{#if dailyDiaries}}
 | Date       | Scope of Work                                |
 |------------|----------------------------------------------|
@@ -121,26 +135,9 @@ No scheduled maintenance was completed during this period.
 No unscheduled work or other activities were logged in daily diaries for this period.
 {{/if}}
 
-{{#if dailyDiaries}}
-{{#each dailyDiaries}}
-{{#if this.beforeWorkImages}}
-
-**Attached Images for Diary {{{this.id}}}:**
-{{#each this.beforeWorkImages}}
-- Before Work Image: {{{this}}}
-{{/each}}
-{{/if}}
-{{#if this.afterWorkImages}}
-{{#each this.afterWorkImages}}
-- After Work Image: {{{this}}}
-{{/each}}
-{{/if}}
-{{/each}}
-{{/if}}
-
 ---
 
-**5. Closing Remarks:**
+**6. Closing Remarks:**
 A brief, positive closing statement about the commitment to reliability and proactive maintenance.
 `,
 });
