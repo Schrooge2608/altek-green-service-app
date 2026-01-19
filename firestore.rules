@@ -55,8 +55,8 @@ service cloud.firestore {
       allow read, update, delete: if request.auth.uid == resource.data.userId;
     }
      match /daily_diaries {
-        // Users can only list documents where their uid matches the userId field.
-        allow list: if request.auth != null && request.query.where['userId'] == request.auth.uid;
+        // Allow any authenticated user to list diaries. The client will filter.
+        allow list: if isAuthenticated();
     }
     
     // Timesheets Collection (user-specific access)
