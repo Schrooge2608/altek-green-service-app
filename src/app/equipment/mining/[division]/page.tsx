@@ -40,6 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
+import { AssignTechnicianDropdown } from '@/components/equipment/assign-technician-dropdown';
 
 const validDivisions: Record<string, string> = {
     'boosters': 'Boosters',
@@ -73,12 +74,18 @@ function AuthenticatedMiningDivisionPage() {
     );
   }, [firestore, memoizedDivisionName, user]);
 
-  const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
+  const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
+
+  const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+  const { data: allUsers, isLoading: usersLoading } = useCollection<User>(usersQuery);
+  
   const canDelete = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
   const isClientManager = userData?.role === 'Client Manager';
+
+  const isLoading = equipmentLoading || usersLoading;
   
   const equipmentByLocation = useMemo(() => {
     if (!equipment) return {};
@@ -196,7 +203,13 @@ function AuthenticatedMiningDivisionPage() {
                                                                 {eq.name}
                                                             </Link>
                                                             </TableCell>
-                                                            <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
+                                                            <TableCell>
+                                                                {canDelete ? (
+                                                                    <AssignTechnicianDropdown equipment={eq} users={allUsers} usersLoading={usersLoading} />
+                                                                ) : (
+                                                                    eq.assignedToName || 'Unassigned'
+                                                                )}
+                                                            </TableCell>
                                                             <TableCell>
                                                                 <Badge variant={getStatusVariant(eq.breakdownStatus)}>
                                                                     {eq.breakdownStatus || 'None'}
@@ -278,7 +291,13 @@ function AuthenticatedMiningDivisionPage() {
                                 </Link>
                                 </TableCell>
                                 <TableCell>{eq.location}</TableCell>
-                                <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
+                                <TableCell>
+                                    {canDelete ? (
+                                        <AssignTechnicianDropdown equipment={eq} users={allUsers} usersLoading={usersLoading} />
+                                    ) : (
+                                        eq.assignedToName || 'Unassigned'
+                                    )}
+                                </TableCell>
                                 <TableCell>
                                     <Badge variant={getStatusVariant(eq.breakdownStatus)}>
                                         {eq.breakdownStatus || 'None'}

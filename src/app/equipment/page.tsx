@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import React from 'react';
+import { AssignTechnicianDropdown } from '@/components/equipment/assign-technician-dropdown';
 
 function AuthenticatedEquipmentPage() {
   const firestore = useFirestore();
@@ -46,13 +47,18 @@ function AuthenticatedEquipmentPage() {
     return query(collection(firestore, 'equipment'), where('plant', '==', 'Mining'));
   }, [firestore, user]);
 
-  const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
+  const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
   
+  const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+  const { data: allUsers, isLoading: usersLoading } = useCollection<User>(usersQuery);
+
   const canDelete = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
   const isClientManager = userData?.role === 'Client Manager';
+
+  const isLoading = equipmentLoading || usersLoading;
 
   const handleDeleteEquipment = (item: Equipment) => {
     if (!item.id || !item.vsdId) {
@@ -146,7 +152,13 @@ function AuthenticatedEquipmentPage() {
                             </TableCell>
                             <TableCell>{eq.division || 'N/A'}</TableCell>
                             <TableCell>{eq.location}</TableCell>
-                            <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
+                            <TableCell>
+                                {canDelete ? (
+                                    <AssignTechnicianDropdown equipment={eq} users={allUsers} usersLoading={usersLoading} />
+                                ) : (
+                                    eq.assignedToName || 'Unassigned'
+                                )}
+                            </TableCell>
                             <TableCell>
                                 <Badge variant={getStatusVariant(eq.breakdownStatus)}>
                                     {eq.breakdownStatus || 'None'}
