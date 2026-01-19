@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useRef, useState, useEffect } from 'react';
@@ -26,7 +27,9 @@ export function SignaturePad({ value, onSign, onClear }: SignaturePadProps) {
   const handleSign = () => {
     if (sigCanvas.current) {
         if(sigCanvas.current.isEmpty()) {
-            alert("Please provide a signature first.");
+            // Don't show an alert, just call onSign with an empty string
+            onSign('');
+            setIsEditing(false);
             return;
         }
         const dataUrl = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
@@ -51,7 +54,7 @@ export function SignaturePad({ value, onSign, onClear }: SignaturePadProps) {
     return (
         <div className="relative group w-full h-full min-h-[50px]">
             <Image src={value} alt="signature" width={100} height={50} className="w-full h-auto" />
-            <Button variant="ghost" size="icon" onClick={handleEdit} className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" onClick={handleEdit} className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
                 <Pen className="h-4 w-4" />
             </Button>
         </div>
@@ -67,7 +70,7 @@ export function SignaturePad({ value, onSign, onClear }: SignaturePadProps) {
                 canvasProps={{ className: 'w-full h-full rounded-lg' }}
             />
         </Card>
-      <div className="flex justify-end gap-2 mt-2">
+      <div className="flex justify-end gap-2 mt-2 print:hidden">
         <Button variant="ghost" size="sm" onClick={handleClear}>
             <Eraser className="mr-2 h-4 w-4" />
             Clear

@@ -1,5 +1,6 @@
 
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -252,3 +253,26 @@ export interface PerformanceRecord {
   downtimeHours: number;
   powerConsumption: number;
 }
+
+export interface TimesheetEntry {
+    date: string;
+    timeIn?: string;
+    lunchOut?: string;
+    lunchIn?: string;
+    timeOut?: string;
+    normalHrs?: number;
+    overtimeHrs?: number;
+    overtimeReason?: string;
+    signature?: string | null;
+    comments?: string;
+}
+
+export interface Timesheet {
+    id: string; // {userId}_{period}
+    userId: string;
+    userName: string;
+    period: string; // YYYY-MM
+    entries: TimesheetEntry[];
+}
+
+    
