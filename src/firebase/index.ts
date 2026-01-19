@@ -12,9 +12,9 @@ import { DependencyList, useMemo } from 'react';
 // This bypasses any issues with environment variable loading.
 const firebaseConfig = {
   apiKey: "AIzaSyCYugYlB7XHdQxB6GQ3omRv9a0n7fBG6Yg",
-  authDomain: "studio-8966443065.firebaseapp.com",
-  projectId: "studio-8966443065",
-  storageBucket: "studio-8966443065.appspot.com",
+  authDomain: "studio-8966443065-8fafa.firebaseapp.com",
+  projectId: "studio-8966443065-8fafa",
+  storageBucket: "studio-8966443065-8fafa.appspot.com",
   messagingSenderId: "1080999162704",
   appId: "1:1080999162704:web:7d15f613f892c50fc7f255",
 };
@@ -61,4 +61,3 @@ export * from './non-blocking-updates';
 export * from './non-blocking-login';
 export * from './errors';
 export * from './error-emitter';
-
