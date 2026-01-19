@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,7 +30,7 @@ import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase
 import { doc, collection } from 'firebase/firestore';
 import type { Equipment, User } from '@/lib/types';
 import { Loader2, Pencil } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import backendConfig from '@/docs/backend.json';
 
 
@@ -114,18 +115,131 @@ export function EditGeneralInfoForm({ equipment }: EditGeneralInfoFormProps) {
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <div className="grid gap-4 py-4">
-                        <FormField control={form.control} name="name" render={({ field }) => ( <FormItem> <FormLabel>Equipment Name</FormLabel> <FormControl> <Input placeholder="e.g., Coolant Pump B" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                        <FormField control={form.control} name="plant" render={({ field }) => ( <FormItem> <FormLabel>Plant</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl> <SelectTrigger> <SelectValue placeholder="Select a plant" /> </SelectTrigger> </FormControl> <SelectContent> <SelectItem value="Mining">Mining</SelectItem> <SelectItem value="Smelter">Smelter</SelectItem> </SelectContent> </Select> <FormMessage /> </FormItem> )}/>
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Equipment Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., Coolant Pump B" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="plant"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Plant</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a plant" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Mining">Mining</SelectItem>
+                                  <SelectItem value="Smelter">Smelter</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         {watchedPlant === 'Mining' && (
-                            <FormField control={form.control} name="division" render={({ field }) => ( <FormItem> <FormLabel>Division</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl> <SelectTrigger> <SelectValue placeholder="Select a division" /> </SelectTrigger> </FormControl> <SelectContent> {miningDivisions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)} </SelectContent> </Select> <FormMessage /> </FormItem> )}/>
+                          <FormField
+                            control={form.control}
+                            name="division"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Division</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a division" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {miningDivisions.map((d) => (
+                                      <SelectItem key={d} value={d}>
+                                        {d}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         )}
                         {watchedPlant === 'Smelter' && (
-                            <FormField control={form.control} name="division" render={({ field }) => ( <FormItem> <FormLabel>Division</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl> <SelectTrigger> <SelectValue placeholder="Select a division" /> </SelectTrigger> </FormControl> <SelectContent> {smelterDivisions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)} </SelectContent> </Select> <FormMessage /> </FormItem> )}/>
+                          <FormField
+                            control={form.control}
+                            name="division"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Division</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a division" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {smelterDivisions.map((d) => (
+                                      <SelectItem key={d} value={d}>
+                                        {d}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         )}
                         {watchedPlant === 'Mining' && watchedDivision === 'Dredgers' ? (
-                            <FormField control={form.control} name="location" render={({ field }) => ( <FormItem> <FormLabel>Location (Plant Heading)</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl> <SelectTrigger> <SelectValue placeholder="Select a location" /> </SelectTrigger> </FormControl> <SelectContent> {dredgerLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)} </SelectContent> </Select> <FormMessage /> </FormItem> )}/>
+                          <FormField
+                            control={form.control}
+                            name="location"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Location (Plant Heading)</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a location" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {dredgerLocations.map((loc) => (
+                                      <SelectItem key={loc} value={loc}>
+                                        {loc}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         ) : (
-                            <FormField control={form.control} name="location" render={({ field }) => ( <FormItem> <FormLabel>Location</FormLabel> <FormControl> <Input placeholder="e.g., Sector C, Line 2" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                          <FormField
+                            control={form.control}
+                            name="location"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Location</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g., Sector C, Line 2" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         )}
                          <FormField
                             control={form.control}
@@ -143,10 +257,10 @@ export function EditGeneralInfoForm({ equipment }: EditGeneralInfoFormProps) {
                                         {usersLoading ? (
                                             <SelectItem value="loading" disabled>Loading users...</SelectItem>
                                         ) : (
-                                            <>
-                                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                            </>
+                                            [
+                                                <SelectItem key="unassigned" value="unassigned">Unassigned</SelectItem>,
+                                                ...(users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>) || [])
+                                            ]
                                         )}
                                     </SelectContent>
                                 </Select>
@@ -167,4 +281,3 @@ export function EditGeneralInfoForm({ equipment }: EditGeneralInfoFormProps) {
     </Dialog>
   );
 }
-    
