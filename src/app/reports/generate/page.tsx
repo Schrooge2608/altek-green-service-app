@@ -4,10 +4,10 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, FileText, Copy, Calendar as CalendarIcon } from 'lucide-react';
-import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import type { Breakdown, CompletedSchedule, DailyDiary } from '@/lib/types';
+import { Loader2, Sparkles, FileText, Copy, Calendar as CalendarIcon, Save } from 'lucide-react';
+import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import type { Breakdown, CompletedSchedule, DailyDiary, GeneratedReport } from '@/lib/types';
 import { generateReport, type ReportInput } from '@/ai/flows/generate-report-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -15,11 +15,16 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 export default function GenerateReportPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
+    const { user, isUserLoading } = useUser();
+    const router = useRouter();
+
     const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [generatedReport, setGeneratedReport] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [date, setDate] = useState<DateRange | undefined>({
@@ -31,6 +36,34 @@ export default function GenerateReportPage() {
         if (!generatedReport) return;
         navigator.clipboard.writeText(generatedReport);
         toast({ title: 'Report Copied', description: 'The report text has been copied to your clipboard.' });
+    };
+
+    const handleSaveReport = async () => {
+        if (!generatedReport || !date?.from || !date?.to || !user) {
+            toast({ variant: 'destructive', title: 'Cannot Save', description: 'No report, date range, or user session found.' });
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const reportsRef = collection(firestore, 'generated_reports');
+            const reportData: Omit<GeneratedReport, 'id'> = {
+                reportText: generatedReport,
+                startDate: format(date.from, 'yyyy-MM-dd'),
+                endDate: format(date.to, 'yyyy-MM-dd'),
+                generatedAt: serverTimestamp(),
+                generatedByUserId: user.uid,
+                generatedByUserName: user.displayName || user.email || 'Unknown User',
+            };
+            const newDoc = await addDocumentNonBlocking(reportsRef, reportData);
+            toast({ title: 'Report Saved', description: 'The generated report has been saved to the history.' });
+            router.push(`/reports/history/${newDoc.id}`);
+        } catch (e: any) {
+            console.error(e);
+            toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the report to the database.' });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleGenerateReport = async () => {
@@ -183,12 +216,18 @@ export default function GenerateReportPage() {
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2"><FileText /> Generated Report</CardTitle>
-                            <CardDescription>Review the report below. You can copy it to your clipboard.</CardDescription>
+                            <CardDescription>Review the report below. You can copy it or save it to the report history.</CardDescription>
                         </div>
-                        <Button variant="outline" onClick={handleCopy}>
-                            <Copy className="mr-2 h-4 w-4" />
-                            Copy Report
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={handleCopy}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Copy Report
+                            </Button>
+                            <Button onClick={handleSaveReport} disabled={isSaving || isUserLoading}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Save Report
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="p-4 bg-muted rounded-md border font-mono text-sm whitespace-pre-wrap">

@@ -1,5 +1,3 @@
-
-
 {
   "entities": {
     "VSD": {
@@ -344,6 +342,21 @@
         }
       },
       "required": ["id", "userId", "userName", "period"]
+    },
+    "GeneratedReport": {
+      "title": "GeneratedReport",
+      "type": "object",
+      "description": "Represents an AI-generated weekly report.",
+      "properties": {
+        "id": { "type": "string" },
+        "reportText": { "type": "string", "description": "The full text of the generated report." },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "generatedByUserId": { "type": "string", "description": "The UID of the user who generated the report." },
+        "generatedByUserName": { "type": "string", "description": "The name of the user who generated the report." }
+      },
+      "required": ["id", "reportText", "startDate", "endDate", "generatedAt", "generatedByUserId"]
     }
   },
   "auth": {
@@ -422,8 +435,15 @@
           "schema": { "$ref": "#/entities/Timesheet" },
           "description": "Stores user timesheet data."
         }
+      },
+      {
+        "path": "/generated_reports/{reportId}",
+        "definition": {
+          "entityName": "GeneratedReport",
+          "schema": { "$ref": "#/entities/GeneratedReport" },
+          "description": "Stores saved AI-generated weekly reports."
+        }
       }
     ]
   }
 }
-

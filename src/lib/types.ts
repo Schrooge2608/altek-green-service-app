@@ -1,11 +1,3 @@
-
-
-
-
-
-
-
-
 export interface Equipment {
   id: string;
   name: string;
@@ -281,4 +273,14 @@ export interface Timesheet {
     userName: string;
     period: string; // YYYY-MM
     entries: TimesheetEntry[];
+}
+
+export interface GeneratedReport {
+  id: string;
+  reportText: string;
+  startDate: string;
+  endDate: string;
+  generatedAt: any; // Firestore Timestamp
+  generatedByUserId: string;
+  generatedByUserName: string;
 }

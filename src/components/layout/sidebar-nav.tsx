@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -38,6 +37,7 @@ import {
   Power,
   ScanLine,
   Sparkles,
+  History,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -148,7 +148,7 @@ export function SidebarNav() {
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
   const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library') || pathname === '/scan');
-  const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed'));
+  const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed') && !pathname.startsWith('/maintenance/vsds') && !pathname.startsWith('/maintenance/protection'));
   const [isProceduresOpen, setIsProceduresOpen] = React.useState(pathname.startsWith('/maintenance/vsds') || pathname.startsWith('/maintenance/protection'));
   const [isReportsOpen, setIsReportsOpen] = React.useState(pathname.startsWith('/reports'));
 
@@ -271,6 +271,14 @@ export function SidebarNav() {
                                 <Link href="/reports/generate">
                                     <Sparkles />
                                     <span>AI Report Generator</span>
+                                </Link>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
+                         <SidebarMenuItem>
+                            <SidebarMenuSubButton asChild isActive={pathname.startsWith('/reports/history')}>
+                                <Link href="/reports/history">
+                                    <History />
+                                    <span>Report History</span>
                                 </Link>
                             </SidebarMenuSubButton>
                         </SidebarMenuItem>
