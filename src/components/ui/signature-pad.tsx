@@ -27,7 +27,6 @@ export function SignaturePad({ value, onSign, onClear }: SignaturePadProps) {
   const handleSign = () => {
     if (sigCanvas.current) {
         if(sigCanvas.current.isEmpty()) {
-            // Don't show an alert, just call onSign with an empty string
             onSign('');
             setIsEditing(false);
             return;
@@ -52,10 +51,10 @@ export function SignaturePad({ value, onSign, onClear }: SignaturePadProps) {
 
   if (!isEditing && value) {
     return (
-        <div className="relative group w-full h-full min-h-[50px]">
-            <Image src={value} alt="signature" width={100} height={50} className="w-full h-auto" />
-            <Button variant="ghost" size="icon" onClick={handleEdit} className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
-                <Pen className="h-4 w-4" />
+        <div className="relative group w-full h-full min-h-[40px] flex items-center">
+            <Image src={value} alt="signature" width={100} height={40} className="w-full h-auto" />
+            <Button variant="ghost" size="icon" onClick={handleEdit} className="absolute top-0 right-0 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
+                <Pen className="h-3 w-3" />
             </Button>
         </div>
     )
@@ -63,25 +62,23 @@ export function SignaturePad({ value, onSign, onClear }: SignaturePadProps) {
 
   return (
     <div>
-        <Card className="relative w-full aspect-[2/1] border-dashed">
+        <Card className="relative w-full h-14 border-dashed">
             <SignatureCanvas
                 ref={sigCanvas}
                 penColor="black"
                 canvasProps={{ className: 'w-full h-full rounded-lg' }}
             />
         </Card>
-      <div className="flex justify-end gap-2 mt-2 print:hidden">
-        <Button variant="ghost" size="sm" onClick={handleClear}>
-            <Eraser className="mr-2 h-4 w-4" />
+      <div className="flex justify-end gap-1 mt-1 print:hidden">
+        <Button variant="ghost" size="sm" onClick={handleClear} className="h-7 px-2 text-xs">
+            <Eraser className="mr-1 h-3 w-3" />
             Clear
         </Button>
-        <Button variant="outline" size="sm" onClick={handleSign}>
-            <Pen className="mr-2 h-4 w-4" />
+        <Button variant="outline" size="sm" onClick={handleSign} className="h-7 px-2 text-xs">
+            <Pen className="mr-1 h-3 w-3" />
             Sign
         </Button>
       </div>
     </div>
   );
 }
-
-    

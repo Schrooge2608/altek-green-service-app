@@ -2,7 +2,10 @@
 'use client';
 
 import {
-  Card
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
@@ -264,7 +267,7 @@ export default function TimeAttendancePage() {
                 <TableHead className="w-[120px]">Normal Hrs</TableHead>
                 <TableHead className="w-[120px]">Overtime Hrs</TableHead>
                 <TableHead>Overtime Reason</TableHead>
-                <TableHead className="w-[200px]">Signature</TableHead>
+                <TableHead className="w-[150px]">Signature</TableHead>
                 <TableHead>Comments</TableHead>
               </TableRow>
             </TableHeader>
