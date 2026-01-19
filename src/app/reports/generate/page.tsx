@@ -3,32 +3,29 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, FileText, Copy } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import type { Equipment, Breakdown } from '@/lib/types';
-import { generateReport } from '@/ai/flows/generate-report-flow';
+import { Loader2, Sparkles, FileText, Copy, Calendar as CalendarIcon } from 'lucide-react';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import type { Breakdown, CompletedSchedule, DailyDiary } from '@/lib/types';
+import { generateReport, type ReportInput } from '@/ai/flows/generate-report-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function GenerateReportPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
-    const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
     const [generatedReport, setGeneratedReport] = useState('');
     const [error, setError] = useState<string | null>(null);
-    
-    const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
-    const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
-
-    const breakdownQuery = useMemoFirebase(() => {
-        if (!selectedEquipmentId) return null;
-        return query(collection(firestore, 'breakdown_reports'), where('equipmentId', '==', selectedEquipmentId));
-    }, [firestore, selectedEquipmentId]);
-
-    const { data: breakdowns } = useCollection<Breakdown>(breakdownQuery);
+    const [date, setDate] = useState<DateRange | undefined>({
+      from: startOfWeek(new Date(), { weekStartsOn: 1 }),
+      to: endOfWeek(new Date(), { weekStartsOn: 1 }),
+    });
 
     const handleCopy = () => {
         if (!generatedReport) return;
@@ -37,8 +34,8 @@ export default function GenerateReportPage() {
     };
 
     const handleGenerateReport = async () => {
-        if (!selectedEquipmentId) {
-            toast({ variant: 'destructive', title: 'No Equipment Selected', description: 'Please select a piece of equipment to generate a report.' });
+        if (!date?.from || !date?.to) {
+            toast({ variant: 'destructive', title: 'No Date Range Selected', description: 'Please select a start and end date for the report.' });
             return;
         }
 
@@ -47,23 +44,57 @@ export default function GenerateReportPage() {
         setGeneratedReport('');
 
         try {
-            const selectedEquipment = equipmentList?.find(e => e.id === selectedEquipmentId);
-            if (!selectedEquipment) throw new Error('Selected equipment not found.');
+            const startDateStr = format(date.from, 'yyyy-MM-dd');
+            const endDateStr = format(date.to, 'yyyy-MM-dd');
 
-            const breakdownHistory = breakdowns?.map(b => 
-                `- On ${b.date}, an issue was reported: "${b.description}". It was ${b.resolved ? `resolved, spending ${b.normalHours || 0} normal hours and ${b.overtimeHours || 0} overtime hours.` : 'is still pending.'}`
-            ).join('\n') || 'No breakdown history available.';
+            // Fetch Breakdowns
+            const breakdownsQuery = query(collection(firestore, 'breakdown_reports'), where('date', '>=', startDateStr), where('date', '<=', endDateStr));
+            const breakdownSnap = await getDocs(breakdownsQuery);
+            const breakdowns = breakdownSnap.docs.map(doc => doc.data() as Breakdown);
 
-            const result = await generateReport({
-                equipmentName: selectedEquipment.name,
-                breakdownHistory: breakdownHistory,
-            });
+            // Fetch Completed Schedules
+            const schedulesQuery = query(collection(firestore, 'completed_schedules'), where('completionDate', '>=', startDateStr), where('completionDate', '<=', endDateStr));
+            const schedulesSnap = await getDocs(schedulesQuery);
+            const completedSchedules = schedulesSnap.docs.map(doc => doc.data() as CompletedSchedule);
+
+            // Fetch Daily Diaries for Unscheduled Work
+            const diariesQuery = query(collection(firestore, 'daily_diaries'), where('date', '>=', startDateStr), where('date', '<=', endDateStr));
+            const diariesSnap = await getDocs(diariesQuery);
+            const dailyDiaries = diariesSnap.docs.map(doc => doc.data() as DailyDiary);
+            
+            const unscheduledWork = dailyDiaries.flatMap(diary =>
+                diary.works?.filter(w => w.scope && w.scope.toLowerCase().includes('unscheduled'))
+                .map(w => ({
+                    scope: w.scope || 'No scope provided',
+                    date: diary.date,
+                })) || []
+            );
+
+            const reportInput: ReportInput = {
+                startDate: startDateStr,
+                endDate: endDateStr,
+                breakdowns: breakdowns.map(b => ({
+                    equipmentName: b.equipmentName,
+                    date: b.date,
+                    description: b.description,
+                    status: b.resolved ? 'Resolved' : 'Pending',
+                })),
+                completedSchedules: completedSchedules.map(s => ({
+                    equipmentName: s.equipmentName,
+                    maintenanceType: s.maintenanceType,
+                    frequency: s.frequency,
+                    completionDate: s.completionDate,
+                })),
+                unscheduledWork: unscheduledWork,
+            };
+            
+            const result = await generateReport(reportInput);
 
             setGeneratedReport(result.report);
-            toast({ title: 'Report Generated', description: 'The client-facing report has been created below.' });
+            toast({ title: 'Report Generated', description: 'The weekly summary report has been created below.' });
         } catch (e: any) {
             console.error(e);
-            setError('Failed to generate the report. The AI model may be temporarily unavailable.');
+            setError('Failed to generate the report. The AI model may be temporarily unavailable or the data could not be fetched.');
             toast({ variant: 'destructive', title: 'Generation Failed', description: e.message || 'An unknown error occurred.' });
         } finally {
             setIsLoading(false);
@@ -73,34 +104,60 @@ export default function GenerateReportPage() {
     return (
         <div className="flex flex-col gap-8">
             <header>
-                <h1 className="text-3xl font-bold tracking-tight">AI Report Generator</h1>
+                <h1 className="text-3xl font-bold tracking-tight">AI Weekly Report Generator</h1>
                 <p className="text-muted-foreground">
-                    Generate a client-friendly summary report for a piece of equipment.
+                    Generate a comprehensive, client-friendly summary report for a selected period.
                 </p>
             </header>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Report Details</CardTitle>
-                    <CardDescription>Select the equipment to generate a report for.</CardDescription>
+                    <CardTitle>Report Period</CardTitle>
+                    <CardDescription>Select the date range for the report. It defaults to the current week.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <Select onValueChange={setSelectedEquipmentId} value={selectedEquipmentId} disabled={equipmentLoading}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select equipment..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {equipmentLoading ? (
-                                <SelectItem value="loading" disabled>Loading equipment...</SelectItem>
-                            ) : (
-                                equipmentList?.map(eq => <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>)
+                     <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                            "w-[300px] justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
                             )}
-                        </SelectContent>
-                    </Select>
-                    <Button onClick={handleGenerateReport} disabled={isLoading || !selectedEquipmentId}>
-                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        {isLoading ? 'Generating...' : 'Generate Report'}
-                    </Button>
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {date?.from ? (
+                            date.to ? (
+                                <>
+                                {format(date.from, "LLL dd, y")} -{" "}
+                                {format(date.to, "LLL dd, y")}
+                                </>
+                            ) : (
+                                format(date.from, "LLL dd, y")
+                            )
+                            ) : (
+                            <span>Pick a date range</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={date?.from}
+                            selected={date}
+                            onSelect={setDate}
+                            numberOfMonths={2}
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <div>
+                        <Button onClick={handleGenerateReport} disabled={isLoading || !date?.from || !date?.to}>
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            {isLoading ? 'Gathering Data & Generating...' : 'Generate Weekly Report'}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
