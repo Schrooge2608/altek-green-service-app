@@ -61,23 +61,21 @@ service cloud.firestore {
       allow write: if isManagement();
     }
 
-    // 2. DAILY DIARIES (The Workflow Logic)
+    // 2. DAILY DIARIES (TEST MODE)
     match /daily_diaries/{diaryId} {
-      // VIEW: Everyone can see all diaries
+      // Allow Read/List for everyone
       allow read, list: if isAuthenticated();
       
-      // CREATE: User can create, but MUST stamp it with their own ID
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // TEST MODE: Remove the "userId" check. 
+      // If this works, your App Code is sending the wrong ID.
+      allow create: if isAuthenticated(); 
       
-      // UPDATE: The "Lock" Logic
-      // Works even if 'isSignedOff' is missing (defaults to allowed)
+      // Keep Update/Delete secure for now
       allow update: if isAuthenticated() && (
           (resource.data.userId == request.auth.uid && resource.data.isSignedOff != true)
           ||
           isManagement()
       );
-
-      // DELETE: Only Management can delete
       allow delete: if isManagement();
     }
 
