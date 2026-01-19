@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -69,9 +70,9 @@ const smelterDivisions = [
     { href: '/equipment/smelter/roaster', label: 'Roaster' },
     { href: '/equipment/smelter/char-plant', label: 'Char Plant' },
     { href: '/equipment/smelter/smelter', label: 'Smelter' },
-    { href: '/equipment/smelter/iron-injection', label: 'Iron injection' },
+    { href: '/equipment/smelter/iron-injection', label: 'Iron Injection' },
     { href: '/equipment/smelter/stripping-crane', label: 'Stripping Crane' },
-    { href: '/equipment/smelter/slag-plant', label: 'Slag plant' },
+    { href: '/equipment/smelter/slag-plant', label: 'Slag Plant' },
     { href: '/equipment/smelter/north-screen', label: 'North Screen' },
     { href: '/equipment/smelter/ups-btus', label: "UPS/BTU's" },
 ]

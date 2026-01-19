@@ -25,9 +25,9 @@ const plantDivisionMap = {
         'roaster': 'Roaster',
         'char-plant': 'Char Plant',
         'smelter': 'Smelter',
-        'iron-injection': 'Iron injection',
+        'iron-injection': 'Iron Injection',
         'stripping-crane': 'Stripping Crane',
-        'slag-plant': 'Slag plant',
+        'slag-plant': 'Slag Plant',
         'north-screen': 'North Screen',
         'ups-btus': "UPS/BTU's",
     }
