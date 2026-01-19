@@ -17,8 +17,8 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
-import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
+import { doc, collection, setDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -180,97 +180,39 @@ export default function NewDailyDiaryPage() {
         }
     }, [manpowerData]);
     
-    const uploadImages = async (files: File[], folder: 'before' | 'after'): Promise<string[]> => {
-        if (!firebaseApp || files.length === 0) return [];
-        
-        const storage = getStorage(firebaseApp);
-        
-        const uploadPromises = files.map(file => {
-            const storagePath = `daily_diaries/${uniqueId}/${folder}/${file.name}`;
-            const storageRef = ref(storage, storagePath);
-            return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
-        });
-    
-        try {
-            const downloadedUrls = await Promise.all(uploadPromises);
-            return downloadedUrls;
-        } catch (error) {
-            console.error("Image upload failed:", error);
-            toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload one or more images." });
-            throw error;
-        }
-    };
-
     const handleSave = async () => {
-        if (!firestore || !uniqueId || !user) {
-            toast({ variant: 'destructive', title: 'Error', description: 'User not logged in or database not available.' });
-            return;
+      // BB's debug function - do not change
+      try {
+        // Using user from useUser() hook.
+    
+        // 1. SAFETY CHECK: Are we logged in?
+        if (!user) {
+          alert("STOP: You are not logged in. The app cannot save.");
+          return;
         }
-
-        setIsSaving(true);
-        try {
-            const newBeforeImageUrls = await uploadImages(beforeFiles, 'before');
-            const newAfterImageUrls = await uploadImages(afterFiles, 'after');
-
-            const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
-            
-            const plainManpowerData = manpowerData.map(({id, ...rest}) => ({
-                ...rest,
-                forecast: Number(rest.forecast || 0),
-                actual: Number(rest.actual || 0),
-                normalHrs: Number(rest.normalHrs || 0),
-                overtime1_5: Number(rest.overtime1_5 || 0),
-                overtime2_0: Number(rest.overtime2_0 || 0),
-                totalManHrs: Number(rest.totalManHrs || 0),
-            }));
-            const plainWorksData = works.map(({id, ...rest}) => ({...rest, hrs: Number(rest.hrs || 0)}));
-            const plainPlantData = plantData.map(p => ({...p, qty: Number(p.qty || 0)}));
-
-            const finalDiaryData: Partial<DailyDiary> = { 
-                id: uniqueId,
-                userId: user.uid,
-                date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
-                contractTitle,
-                contractNumber,
-                area,
-                shiftStart,
-                shiftEnd,
-                hrs: hrs || 0,
-                incidents: incidentsText,
-                toolboxTalk: toolboxTalkText,
-                manpower: plainManpowerData.filter(m => m.designation),
-                works: plainWorksData.filter(w => w.scope || w.area),
-                plant: plainPlantData.filter(p => p.qty || p.comments),
-                delays: delays.filter(d => d),
-                comments: comments.filter(c => c),
-                beforeWorkImages: [...(diaryData?.beforeWorkImages || []), ...newBeforeImageUrls],
-                afterWorkImages: [...(diaryData?.afterWorkImages || []), ...newAfterImageUrls],
-            };
-
-            // Add creation-only fields if this is a new diary
-            if (!diaryId) {
-                finalDiaryData.createdAt = serverTimestamp();
-                finalDiaryData.isSignedOff = false;
-            }
-
-            await setDoc(diaryDocRef, finalDiaryData, { merge: true });
-            
-            toast({
-                title: 'Diary Saved',
-                description: `Document ${uniqueId} has been saved successfully.`,
-            });
-            
-            router.push(`/reports/diary-tracker`);
-        } catch (error: any) {
-            console.error("Failed to save diary:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Save Failed',
-                description: error.message || 'An unexpected error occurred while saving the diary.',
-            });
-        } finally {
-            setIsSaving(false);
-        }
+    
+        console.log("1. User Found:", user.uid);
+    
+        // 2. PREPARE THE DATA (The "Key")
+        const newDiaryData = {
+          userId: user.uid,            // <--- CRITICAL: Must match auth.uid
+          isSignedOff: false,          // <--- CRITICAL: Must be false
+          createdAt: serverTimestamp(), // <--- CRITICAL: Timestamp
+          content: "New Entry",        // Placeholder content
+          status: "Draft"
+        };
+    
+        console.log("2. Sending this data:", newDiaryData);
+    
+        // 3. SEND TO FIREBASE
+        await addDoc(collection(firestore, 'daily_diaries'), newDiaryData);
+        
+        alert("SUCCESS! The document was saved.");
+    
+      } catch (error) {
+        console.error("SAVE FAILED:", error);
+        alert("STILL FAILING: " + (error as Error).message);
+      }
     };
 
     const handleManpowerChange = (index: number, field: keyof typeof manpowerData[0], value: string | number) => {
@@ -650,3 +592,4 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
+
