@@ -47,7 +47,7 @@ import {
   endOfMonth,
   setDate,
 } from 'date-fns';
-import { Loader2, Save, CalendarIcon, Clock } from 'lucide-react';
+import { Loader2, Save, CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import {
@@ -251,24 +251,24 @@ export default function TimeAttendancePage() {
           <Table className="min-w-full">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px]">Date</TableHead>
-                <TableHead className="w-[100px]">Day</TableHead>
-                <TableHead className="w-[70px]">Time In</TableHead>
-                <TableHead className="w-[70px]">Lunch Out</TableHead>
-                <TableHead className="w-[70px]">Lunch In</TableHead>
-                <TableHead className="w-[70px]">Time Out</TableHead>
-                <TableHead className="w-[120px]">Normal Hrs</TableHead>
-                <TableHead className="w-[120px]">Overtime Hrs</TableHead>
-                <TableHead className="w-[120px]">Total Hrs</TableHead>
-                <TableHead>Overtime Reason</TableHead>
-                <TableHead className="w-[60px]">Signature</TableHead>
-                <TableHead>Comments</TableHead>
+                <TableHead className="w-[120px] py-2 px-2 h-auto">Date</TableHead>
+                <TableHead className="w-[100px] py-2 px-2 h-auto">Day</TableHead>
+                <TableHead className="w-[70px] py-2 px-2 h-auto">Time In</TableHead>
+                <TableHead className="w-[70px] py-2 px-2 h-auto">Lunch Out</TableHead>
+                <TableHead className="w-[70px] py-2 px-2 h-auto">Lunch In</TableHead>
+                <TableHead className="w-[70px] py-2 px-2 h-auto">Time Out</TableHead>
+                <TableHead className="w-[120px] py-2 px-2 h-auto">Normal Hrs</TableHead>
+                <TableHead className="w-[120px] py-2 px-2 h-auto">Overtime Hrs</TableHead>
+                <TableHead className="w-[120px] py-2 px-2 h-auto">Total Hrs</TableHead>
+                <TableHead className="py-2 px-2 h-auto">Overtime Reason</TableHead>
+                <TableHead className="w-[60px] py-2 px-2 h-auto">Signature</TableHead>
+                <TableHead className="py-2 px-2 h-auto">Comments</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {timesheetLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="h-48 text-center">
+                  <TableCell colSpan={12} className="h-48 text-center py-1 px-2">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
                   </TableCell>
                 </TableRow>
@@ -277,47 +277,51 @@ export default function TimeAttendancePage() {
                   const totalDailyHours = (Number(entry.normalHrs) || 0) + (Number(entry.overtimeHrs) || 0);
                   return (
                   <TableRow key={entry.date}>
-                    <TableCell>
-                      {format(new Date(entry.date + 'T00:00:00'), 'yyyy-MM-dd')}
+                    <TableCell className="py-1 px-2">
+                      {format(new Date(entry.date), 'yyyy-MM-dd')}
                     </TableCell>
-                    <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'EEE')}</TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">{format(new Date(entry.date), 'EEE')}</TableCell>
+                    <TableCell className="py-1 px-2">
                       <Input
                         type="time"
                         value={entry.timeIn || ''}
                         onChange={(e) =>
                           handleEntryChange(index, 'timeIn', e.target.value)
                         }
+                        className="h-8"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">
                       <Input
                         type="time"
                         value={entry.lunchOut || ''}
                         onChange={(e) =>
                           handleEntryChange(index, 'lunchOut', e.target.value)
                         }
+                        className="h-8"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">
                       <Input
                         type="time"
                         value={entry.lunchIn || ''}
                         onChange={(e) =>
                           handleEntryChange(index, 'lunchIn', e.target.value)
                         }
+                        className="h-8"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">
                       <Input
                         type="time"
                         value={entry.timeOut || ''}
                         onChange={(e) =>
                           handleEntryChange(index, 'timeOut', e.target.value)
                         }
+                        className="h-8"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">
                       <Input
                         type="number"
                         step="0.1"
@@ -325,9 +329,10 @@ export default function TimeAttendancePage() {
                         onChange={(e) =>
                           handleEntryChange(index, 'normalHrs', e.target.value)
                         }
+                        className="h-8"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">
                       <Input
                         type="number"
                         step="0.1"
@@ -335,18 +340,19 @@ export default function TimeAttendancePage() {
                         onChange={(e) =>
                           handleEntryChange(index, 'overtimeHrs', e.target.value)
                         }
+                        className="h-8"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">
                         <Input
                             type="number"
                             step="0.1"
                             value={totalDailyHours > 0 ? totalDailyHours.toFixed(2) : ''}
                             readOnly
-                            className="font-bold bg-muted"
+                            className="font-bold bg-muted h-8"
                         />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">
                       <Input
                         value={entry.overtimeReason || ''}
                         onChange={(e) =>
@@ -356,9 +362,10 @@ export default function TimeAttendancePage() {
                             e.target.value
                           )
                         }
+                        className="h-8"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">
                       <SignaturePad
                         value={entry.signature}
                         onSign={(dataUrl) =>
@@ -369,12 +376,13 @@ export default function TimeAttendancePage() {
                         }
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1 px-2">
                       <Input
                         value={entry.comments || ''}
                         onChange={(e) =>
                           handleEntryChange(index, 'comments', e.target.value)
                         }
+                        className="h-8"
                       />
                     </TableCell>
                   </TableRow>
@@ -383,31 +391,31 @@ export default function TimeAttendancePage() {
             </TableBody>
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={6} className="text-right font-bold">
+                <TableCell colSpan={6} className="text-right font-bold py-1 px-2">
                   Totals
                 </TableCell>
-                <TableCell>
+                <TableCell className="py-1 px-2">
                   <Input
                     value={totals.normal.toFixed(2)}
                     readOnly
-                    className="font-bold bg-muted"
+                    className="font-bold bg-muted h-8"
                   />
                 </TableCell>
-                <TableCell>
+                <TableCell className="py-1 px-2">
                   <Input
                     value={totals.overtime.toFixed(2)}
                     readOnly
-                    className="font-bold bg-muted"
+                    className="font-bold bg-muted h-8"
                   />
                 </TableCell>
-                <TableCell>
+                <TableCell className="py-1 px-2">
                   <Input
                     value={totals.total.toFixed(2)}
                     readOnly
-                    className="font-bold bg-muted"
+                    className="font-bold bg-muted h-8"
                   />
                 </TableCell>
-                <TableCell colSpan={3}></TableCell>
+                <TableCell colSpan={3} className="py-1 px-2"></TableCell>
               </TableRow>
             </TableFooter>
           </Table>
