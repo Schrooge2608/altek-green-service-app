@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,7 +57,7 @@ export default function NewDailyDiaryPage() {
     const [date, setDate] = React.useState<Date | undefined>();
     const [shiftStart, setShiftStart] = useState('');
     const [shiftEnd, setShiftEnd] = useState('');
-    const [hrs, setHrs] = useState<number | undefined>();
+    const [hrs, setHrs] = useState<number | undefined>(0);
     const [incidentsText, setIncidentsText] = useState('');
     const [toolboxTalkText, setToolboxTalkText] = useState('');
     const [manpowerData, setManpowerData] = useState(initialManpowerData);
@@ -78,7 +77,7 @@ export default function NewDailyDiaryPage() {
             scope: '',
             timeStart: '',
             timeEnd: '',
-            hrs: undefined,
+            hrs: 0,
         }));
         if (equipmentNameFromQuery && !diaryId) { // Only apply query param for new diaries
             works[0].scope = `Unscheduled work on: ${equipmentNameFromQuery}`;
@@ -115,7 +114,7 @@ export default function NewDailyDiaryPage() {
             if (diaryData.date && diaryData.date !== 'N/A') setDate(new Date(diaryData.date));
             setShiftStart(diaryData.shiftStart || '');
             setShiftEnd(diaryData.shiftEnd || '');
-            setHrs(diaryData.hrs);
+            setHrs(diaryData.hrs || 0);
             setIncidentsText(diaryData.incidents || '');
             setToolboxTalkText(diaryData.toolboxTalk || '');
             
@@ -124,7 +123,7 @@ export default function NewDailyDiaryPage() {
             setManpowerData(populatedManpower);
 
             const populatedWorks = diaryData.works?.map((w, i) => ({ ...w, id: i })) || [];
-            while(populatedWorks.length < 5) populatedWorks.push({ id: populatedWorks.length, area: '', scope: '', timeStart: '', timeEnd: '', hrs: undefined });
+            while(populatedWorks.length < 5) populatedWorks.push({ id: populatedWorks.length, area: '', scope: '', timeStart: '', timeEnd: '', hrs: 0 });
             setWorks(populatedWorks);
 
             const populatedPlant = diaryData.plant?.map(p => ({...p, qty: p.qty || ''})) || [];
@@ -180,39 +179,43 @@ export default function NewDailyDiaryPage() {
         }
     }, [manpowerData]);
     
-    const saveNewDiaryEntry = async () => {
-      try {
-        const user = auth.currentUser;
-    
-        // 1. SAFETY CHECK: Are we logged in?
-        if (!user) {
-          alert("STOP: You are not logged in. The app cannot save.");
-          return;
-        }
-    
-        console.log("1. User Found:", user.uid);
-    
-        // 2. PREPARE THE DATA (The "Key")
-        const newDiaryData = {
-          userId: user.uid,            // <--- CRITICAL: Must match auth.uid
-          isSignedOff: false,          // <--- CRITICAL: Must be false
-          createdAt: serverTimestamp(), // <--- CRITICAL: Timestamp
-          content: "New Entry",        // Placeholder content
-          status: "Draft"
-        };
-    
-        console.log("2. Sending this data:", newDiaryData);
-    
-        // 3. SEND TO FIREBASE
-        await addDoc(collection(firestore, 'daily_diaries'), newDiaryData);
-        
-        alert("SUCCESS! The document was saved.");
-    
-      } catch (error: any) {
-        console.error("SAVE FAILED:", error);
-        alert("STILL FAILING: " + error.message);
-      }
+const saveNewDiaryEntry = async () => {
+  try {
+    const user = auth.currentUser;
+
+    // 1. SAFETY CHECK: Are we logged in?
+    if (!user) {
+      alert("STOP: You are not logged in. The app cannot save.");
+      return;
+    }
+
+    console.log("1. User Found:", user.uid);
+
+    // 2. PREPARE THE DATA (The "Key")
+    const newDiaryData = {
+      userId: user.uid,            // <--- CRITICAL: Must match auth.uid
+      isSignedOff: false,          // <--- CRITICAL: Must be false
+      createdAt: serverTimestamp(), // <--- CRITICAL: Timestamp
+      content: "New Entry",        // Placeholder content
+      status: "Draft"
     };
+
+    console.log("2. Sending this data:", newDiaryData);
+
+    // BB's requested check:
+    const collectionName = 'daily_diaries';
+    alert(`BB CHECK: Attempting to save to collection named: "${collectionName}"`);
+
+    // 3. SEND TO FIREBASE
+    await addDoc(collection(firestore, collectionName), newDiaryData);
+    
+    alert("SUCCESS! The document was saved.");
+
+  } catch (error: any) {
+    console.error("SAVE FAILED:", error);
+    alert("STILL FAILING: " + error.message);
+  }
+};
 
     const handleManpowerChange = (index: number, field: keyof typeof manpowerData[0], value: string | number) => {
         const newData = [...manpowerData];
@@ -591,4 +594,3 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
-
