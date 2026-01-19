@@ -19,7 +19,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880-07-210A-7',
-    serialNumber: 'DRYMILL-MSP-001',
+    serialNumber: 'DRYMILL-001',
     installationDate: todayFormatted,
   },
   {
@@ -32,7 +32,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-002',
+    serialNumber: 'DRYMILL-002',
     installationDate: todayFormatted,
   },
   {
@@ -45,7 +45,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880-07-210A-7',
-    serialNumber: 'DRYMILL-MSP-003',
+    serialNumber: 'DRYMILL-003',
     installationDate: todayFormatted,
   },
   {
@@ -58,7 +58,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880-07-084A-7',
-    serialNumber: 'DRYMILL-MSP-004',
+    serialNumber: 'DRYMILL-004',
     installationDate: todayFormatted,
   },
   {
@@ -71,7 +71,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Midimaster Vector',
-    serialNumber: 'DRYMILL-MSP-005',
+    serialNumber: 'DRYMILL-005',
     installationDate: todayFormatted,
   },
   {
@@ -84,7 +84,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Midimaster Vector',
-    serialNumber: 'DRYMILL-MSP-006',
+    serialNumber: 'DRYMILL-006',
     installationDate: todayFormatted,
   },
   {
@@ -97,7 +97,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Control Techniques',
     model: 'UNIDSP',
-    serialNumber: 'DRYMILL-MSP-007',
+    serialNumber: 'DRYMILL-007',
     installationDate: todayFormatted,
   },
   {
@@ -110,7 +110,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-008',
+    serialNumber: 'DRYMILL-008',
     installationDate: todayFormatted,
   },
   {
@@ -123,7 +123,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-009',
+    serialNumber: 'DRYMILL-009',
     installationDate: todayFormatted,
   },
   {
@@ -136,7 +136,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-010',
+    serialNumber: 'DRYMILL-010',
     installationDate: todayFormatted,
   },
   {
@@ -149,7 +149,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-011',
+    serialNumber: 'DRYMILL-011',
     installationDate: todayFormatted,
   },
   {
@@ -162,7 +162,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-012',
+    serialNumber: 'DRYMILL-012',
     installationDate: todayFormatted,
   },
   {
@@ -175,7 +175,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-013',
+    serialNumber: 'DRYMILL-013',
     installationDate: todayFormatted,
   },
   {
@@ -188,7 +188,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-014',
+    serialNumber: 'DRYMILL-014',
     installationDate: todayFormatted,
   },
   {
@@ -201,7 +201,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-015',
+    serialNumber: 'DRYMILL-015',
     installationDate: todayFormatted,
   },
   {
@@ -214,7 +214,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-016',
+    serialNumber: 'DRYMILL-016',
     installationDate: todayFormatted,
   },
   {
@@ -227,7 +227,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-017',
+    serialNumber: 'DRYMILL-017',
     installationDate: todayFormatted,
   },
   {
@@ -240,7 +240,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Siliconics',
     model: 'GPS-2',
-    serialNumber: 'DRYMILL-MSP-018',
+    serialNumber: 'DRYMILL-018',
     installationDate: todayFormatted,
   },
   {
@@ -253,7 +253,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-019',
+    serialNumber: 'DRYMILL-019',
     installationDate: todayFormatted,
   },
   {
@@ -266,7 +266,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-020',
+    serialNumber: 'DRYMILL-020',
     installationDate: todayFormatted,
   },
   {
@@ -279,7 +279,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-021',
+    serialNumber: 'DRYMILL-021',
     installationDate: todayFormatted,
   },
   {
@@ -292,7 +292,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-022',
+    serialNumber: 'DRYMILL-022',
     installationDate: todayFormatted,
   },
   {
@@ -305,7 +305,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-023',
+    serialNumber: 'DRYMILL-023',
     installationDate: todayFormatted,
   },
   {
@@ -318,7 +318,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-024',
+    serialNumber: 'DRYMILL-024',
     installationDate: todayFormatted,
   },
   {
@@ -331,7 +331,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-025',
+    serialNumber: 'DRYMILL-025',
     installationDate: todayFormatted,
   },
   {
@@ -344,7 +344,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-026',
+    serialNumber: 'DRYMILL-026',
     installationDate: todayFormatted,
   },
   {
@@ -357,7 +357,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-027',
+    serialNumber: 'DRYMILL-027',
     installationDate: todayFormatted,
   },
   {
@@ -370,7 +370,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-028',
+    serialNumber: 'DRYMILL-028',
     installationDate: todayFormatted,
   },
   {
@@ -383,7 +383,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-029',
+    serialNumber: 'DRYMILL-029',
     installationDate: todayFormatted,
   },
   {
@@ -396,7 +396,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-030',
+    serialNumber: 'DRYMILL-030',
     installationDate: todayFormatted,
   },
   {
@@ -409,7 +409,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-031',
+    serialNumber: 'DRYMILL-031',
     installationDate: todayFormatted,
   },
   {
@@ -422,7 +422,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-032',
+    serialNumber: 'DRYMILL-032',
     installationDate: todayFormatted,
   },
   {
@@ -435,7 +435,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-033',
+    serialNumber: 'DRYMILL-033',
     installationDate: todayFormatted,
   },
   {
@@ -448,7 +448,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-034',
+    serialNumber: 'DRYMILL-034',
     installationDate: todayFormatted,
   },
   {
@@ -461,7 +461,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-035',
+    serialNumber: 'DRYMILL-035',
     installationDate: todayFormatted,
   },
   {
@@ -474,7 +474,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-036',
+    serialNumber: 'DRYMILL-036',
     installationDate: todayFormatted,
   },
   {
@@ -487,7 +487,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-037',
+    serialNumber: 'DRYMILL-037',
     installationDate: todayFormatted,
   },
   {
@@ -500,7 +500,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-038',
+    serialNumber: 'DRYMILL-038',
     installationDate: todayFormatted,
   },
   {
@@ -513,7 +513,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-039',
+    serialNumber: 'DRYMILL-039',
     installationDate: todayFormatted,
   },
   {
@@ -526,7 +526,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-040',
+    serialNumber: 'DRYMILL-040',
     installationDate: todayFormatted,
   },
   {
@@ -539,7 +539,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-041',
+    serialNumber: 'DRYMILL-041',
     installationDate: todayFormatted,
   },
   {
@@ -552,7 +552,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-042',
+    serialNumber: 'DRYMILL-042',
     installationDate: todayFormatted,
   },
   {
@@ -565,7 +565,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-043',
+    serialNumber: 'DRYMILL-043',
     installationDate: todayFormatted,
   },
   {
@@ -578,7 +578,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-044',
+    serialNumber: 'DRYMILL-044',
     installationDate: todayFormatted,
   },
   {
@@ -591,7 +591,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-045',
+    serialNumber: 'DRYMILL-045',
     installationDate: todayFormatted,
   },
   {
@@ -604,7 +604,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-046',
+    serialNumber: 'DRYMILL-046',
     installationDate: todayFormatted,
   },
   {
@@ -617,7 +617,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-047',
+    serialNumber: 'DRYMILL-047',
     installationDate: todayFormatted,
   },
   {
@@ -630,7 +630,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-048',
+    serialNumber: 'DRYMILL-048',
     installationDate: todayFormatted,
   },
   {
@@ -643,7 +643,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-049',
+    serialNumber: 'DRYMILL-049',
     installationDate: todayFormatted,
   },
   {
@@ -656,7 +656,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-050',
+    serialNumber: 'DRYMILL-050',
     installationDate: todayFormatted,
   },
   {
@@ -669,7 +669,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-051',
+    serialNumber: 'DRYMILL-051',
     installationDate: todayFormatted,
   },
   {
@@ -682,7 +682,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-052',
+    serialNumber: 'DRYMILL-052',
     installationDate: todayFormatted,
   },
   {
@@ -695,7 +695,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-053',
+    serialNumber: 'DRYMILL-053',
     installationDate: todayFormatted,
   },
   {
@@ -708,7 +708,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-054',
+    serialNumber: 'DRYMILL-054',
     installationDate: todayFormatted,
   },
   {
@@ -721,7 +721,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-055',
+    serialNumber: 'DRYMILL-055',
     installationDate: todayFormatted,
   },
   {
@@ -734,7 +734,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-056',
+    serialNumber: 'DRYMILL-056',
     installationDate: todayFormatted,
   },
   {
@@ -747,7 +747,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-057',
+    serialNumber: 'DRYMILL-057',
     installationDate: todayFormatted,
   },
   {
@@ -760,7 +760,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-058',
+    serialNumber: 'DRYMILL-058',
     installationDate: todayFormatted,
   },
   {
@@ -773,7 +773,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-059',
+    serialNumber: 'DRYMILL-059',
     installationDate: todayFormatted,
   },
   {
@@ -786,7 +786,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-060',
+    serialNumber: 'DRYMILL-060',
     installationDate: todayFormatted,
   },
   {
@@ -799,7 +799,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-061',
+    serialNumber: 'DRYMILL-061',
     installationDate: todayFormatted,
   },
   {
@@ -812,7 +812,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-062',
+    serialNumber: 'DRYMILL-062',
     installationDate: todayFormatted,
   },
   {
@@ -825,7 +825,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-063',
+    serialNumber: 'DRYMILL-063',
     installationDate: todayFormatted,
   },
   {
@@ -838,7 +838,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-064',
+    serialNumber: 'DRYMILL-064',
     installationDate: todayFormatted,
   },
   {
@@ -851,7 +851,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-065',
+    serialNumber: 'DRYMILL-065',
     installationDate: todayFormatted,
   },
   {
@@ -864,7 +864,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-066',
+    serialNumber: 'DRYMILL-066',
     installationDate: todayFormatted,
   },
   {
@@ -877,7 +877,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-067',
+    serialNumber: 'DRYMILL-067',
     installationDate: todayFormatted,
   },
   {
@@ -890,7 +890,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-068',
+    serialNumber: 'DRYMILL-068',
     installationDate: todayFormatted,
   },
   {
@@ -903,7 +903,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-069',
+    serialNumber: 'DRYMILL-069',
     installationDate: todayFormatted,
   },
   {
@@ -916,7 +916,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-070',
+    serialNumber: 'DRYMILL-070',
     installationDate: todayFormatted,
   },
   {
@@ -929,7 +929,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-071',
+    serialNumber: 'DRYMILL-071',
     installationDate: todayFormatted,
   },
   {
@@ -942,7 +942,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-072',
+    serialNumber: 'DRYMILL-072',
     installationDate: todayFormatted,
   },
   {
@@ -955,7 +955,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-073',
+    serialNumber: 'DRYMILL-073',
     installationDate: todayFormatted,
   },
   {
@@ -968,7 +968,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-074',
+    serialNumber: 'DRYMILL-074',
     installationDate: todayFormatted,
   },
   {
@@ -981,7 +981,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-075',
+    serialNumber: 'DRYMILL-075',
     installationDate: todayFormatted,
   },
   {
@@ -994,7 +994,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-076',
+    serialNumber: 'DRYMILL-076',
     installationDate: todayFormatted,
   },
   {
@@ -1007,7 +1007,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-077',
+    serialNumber: 'DRYMILL-077',
     installationDate: todayFormatted,
   },
   {
@@ -1020,7 +1020,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-078',
+    serialNumber: 'DRYMILL-078',
     installationDate: todayFormatted,
   },
   {
@@ -1033,7 +1033,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-079',
+    serialNumber: 'DRYMILL-079',
     installationDate: todayFormatted,
   },
   {
@@ -1046,7 +1046,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-080',
+    serialNumber: 'DRYMILL-080',
     installationDate: todayFormatted,
   },
   {
@@ -1059,7 +1059,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-081',
+    serialNumber: 'DRYMILL-081',
     installationDate: todayFormatted,
   },
   {
@@ -1072,7 +1072,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-082',
+    serialNumber: 'DRYMILL-082',
     installationDate: todayFormatted,
   },
   {
@@ -1085,7 +1085,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-083',
+    serialNumber: 'DRYMILL-083',
     installationDate: todayFormatted,
   },
   {
@@ -1098,7 +1098,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-084',
+    serialNumber: 'DRYMILL-084',
     installationDate: todayFormatted,
   },
   {
@@ -1111,7 +1111,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-085',
+    serialNumber: 'DRYMILL-085',
     installationDate: todayFormatted,
   },
   {
@@ -1124,7 +1124,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-086',
+    serialNumber: 'DRYMILL-086',
     installationDate: todayFormatted,
   },
   {
@@ -1137,7 +1137,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-087',
+    serialNumber: 'DRYMILL-087',
     installationDate: todayFormatted,
   },
   {
@@ -1150,7 +1150,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-088',
+    serialNumber: 'DRYMILL-088',
     installationDate: todayFormatted,
   },
   {
@@ -1163,7 +1163,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-089',
+    serialNumber: 'DRYMILL-089',
     installationDate: todayFormatted,
   },
   {
@@ -1176,7 +1176,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-090',
+    serialNumber: 'DRYMILL-090',
     installationDate: todayFormatted,
   },
   {
@@ -1189,7 +1189,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-091',
+    serialNumber: 'DRYMILL-091',
     installationDate: todayFormatted,
   },
   {
@@ -1202,7 +1202,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-092',
+    serialNumber: 'DRYMILL-092',
     installationDate: todayFormatted,
   },
   {
@@ -1215,7 +1215,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-093',
+    serialNumber: 'DRYMILL-093',
     installationDate: todayFormatted,
   },
   {
@@ -1228,7 +1228,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen Bradley',
     model: 'Powerflex 40',
-    serialNumber: 'DRYMILL-MSP-094',
+    serialNumber: 'DRYMILL-094',
     installationDate: todayFormatted,
   },
   {
@@ -1241,7 +1241,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-095',
+    serialNumber: 'DRYMILL-095',
     installationDate: todayFormatted,
   },
   {
@@ -1254,7 +1254,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-096',
+    serialNumber: 'DRYMILL-096',
     installationDate: todayFormatted,
   },
   {
@@ -1267,7 +1267,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-097',
+    serialNumber: 'DRYMILL-097',
     installationDate: todayFormatted,
   },
   {
@@ -1280,7 +1280,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-098',
+    serialNumber: 'DRYMILL-098',
     installationDate: todayFormatted,
   },
   {
@@ -1293,7 +1293,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-099',
+    serialNumber: 'DRYMILL-099',
     installationDate: todayFormatted,
   },
   {
@@ -1306,7 +1306,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-100',
+    serialNumber: 'DRYMILL-100',
     installationDate: todayFormatted,
   },
   {
@@ -1319,7 +1319,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-101',
+    serialNumber: 'DRYMILL-101',
     installationDate: todayFormatted,
   },
   {
@@ -1332,7 +1332,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-102',
+    serialNumber: 'DRYMILL-102',
     installationDate: todayFormatted,
   },
   {
@@ -1345,7 +1345,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-103',
+    serialNumber: 'DRYMILL-103',
     installationDate: todayFormatted,
   },
   {
@@ -1358,7 +1358,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Siemens',
     model: 'Micromaster 440',
-    serialNumber: 'DRYMILL-MSP-104',
+    serialNumber: 'DRYMILL-104',
     installationDate: todayFormatted,
   },
   {
@@ -1371,7 +1371,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Allen-Bradley',
     model: 'SMC FLEX',
-    serialNumber: 'DRYMILL-MSP-105',
+    serialNumber: 'DRYMILL-105',
     installationDate: todayFormatted,
   },
   {
@@ -1384,7 +1384,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Allen-Bradley',
     model: 'SMC-FLEX',
-    serialNumber: 'DRYMILL-MSP-106',
+    serialNumber: 'DRYMILL-106',
     installationDate: todayFormatted,
   },
   {
@@ -1397,7 +1397,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-107',
+    serialNumber: 'DRYMILL-107',
     installationDate: todayFormatted,
   },
   {
@@ -1410,7 +1410,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-108',
+    serialNumber: 'DRYMILL-108',
     installationDate: todayFormatted,
   },
   {
@@ -1423,7 +1423,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-109',
+    serialNumber: 'DRYMILL-109',
     installationDate: todayFormatted,
   },
   {
@@ -1436,7 +1436,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-110',
+    serialNumber: 'DRYMILL-110',
     installationDate: todayFormatted,
   },
   {
@@ -1449,7 +1449,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-111',
+    serialNumber: 'DRYMILL-111',
     installationDate: todayFormatted,
   },
   {
@@ -1462,7 +1462,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-112',
+    serialNumber: 'DRYMILL-112',
     installationDate: todayFormatted,
   },
   {
@@ -1475,7 +1475,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-113',
+    serialNumber: 'DRYMILL-113',
     installationDate: todayFormatted,
   },
   {
@@ -1488,7 +1488,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Smart start',
     model: 'HSMD170',
-    serialNumber: 'DRYMILL-MSP-114',
+    serialNumber: 'DRYMILL-114',
     installationDate: todayFormatted,
   },
   {
@@ -1501,7 +1501,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Smart start',
     model: 'HSMD170',
-    serialNumber: 'DRYMILL-MSP-115',
+    serialNumber: 'DRYMILL-115',
     installationDate: todayFormatted,
   },
   {
@@ -1514,7 +1514,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Natronics',
     model: 'TC900',
-    serialNumber: 'DRYMILL-MSP-116',
+    serialNumber: 'DRYMILL-116',
     installationDate: todayFormatted,
   },
   {
@@ -1527,7 +1527,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Natronics',
     model: 'TC900',
-    serialNumber: 'DRYMILL-MSP-117',
+    serialNumber: 'DRYMILL-117',
     installationDate: todayFormatted,
   },
   {
@@ -1540,7 +1540,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Natronics',
     model: 'TC900',
-    serialNumber: 'DRYMILL-MSP-118',
+    serialNumber: 'DRYMILL-118',
     installationDate: todayFormatted,
   },
   {
@@ -1553,7 +1553,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Natronics',
     model: 'TC900',
-    serialNumber: 'DRYMILL-MSP-119',
+    serialNumber: 'DRYMILL-119',
     installationDate: todayFormatted,
   },
   {
@@ -1566,7 +1566,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Natronics',
     model: 'TC900',
-    serialNumber: 'DRYMILL-MSP-120',
+    serialNumber: 'DRYMILL-120',
     installationDate: todayFormatted,
   },
   {
@@ -1579,7 +1579,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'Soft starter',
     manufacturer: 'Natronics',
     model: 'TC900',
-    serialNumber: 'DRYMILL-MSP-121',
+    serialNumber: 'DRYMILL-121',
     installationDate: todayFormatted,
   },
   {
@@ -1592,7 +1592,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen-Bradley',
     model: 'SMC-FLEX',
-    serialNumber: 'DRYMILL-MSP-122',
+    serialNumber: 'DRYMILL-122',
     installationDate: todayFormatted,
   },
   {
@@ -1605,7 +1605,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-123',
+    serialNumber: 'DRYMILL-123',
     installationDate: todayFormatted,
   },
   {
@@ -1618,7 +1618,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-124',
+    serialNumber: 'DRYMILL-124',
     installationDate: todayFormatted,
   },
   {
@@ -1631,7 +1631,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-125',
+    serialNumber: 'DRYMILL-125',
     installationDate: todayFormatted,
   },
   {
@@ -1644,7 +1644,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-126',
+    serialNumber: 'DRYMILL-126',
     installationDate: todayFormatted,
   },
   {
@@ -1657,7 +1657,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-127',
+    serialNumber: 'DRYMILL-127',
     installationDate: todayFormatted,
   },
   {
@@ -1670,7 +1670,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen-Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-128',
+    serialNumber: 'DRYMILL-128',
     installationDate: todayFormatted,
   },
   {
@@ -1683,7 +1683,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen-Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-129',
+    serialNumber: 'DRYMILL-129',
     installationDate: todayFormatted,
   },
   {
@@ -1696,7 +1696,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen-Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-130',
+    serialNumber: 'DRYMILL-130',
     installationDate: todayFormatted,
   },
   {
@@ -1709,7 +1709,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen-Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-131',
+    serialNumber: 'DRYMILL-131',
     installationDate: todayFormatted,
   },
   {
@@ -1722,7 +1722,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen-Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-132',
+    serialNumber: 'DRYMILL-132',
     installationDate: todayFormatted,
   },
   {
@@ -1735,7 +1735,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen-Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-133',
+    serialNumber: 'DRYMILL-133',
     installationDate: todayFormatted,
   },
   {
@@ -1748,7 +1748,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen-Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-134',
+    serialNumber: 'DRYMILL-134',
     installationDate: todayFormatted,
   },
   {
@@ -1761,7 +1761,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'Allen-Bradley',
     model: 'Powerflex 525',
-    serialNumber: 'DRYMILL-MSP-135',
+    serialNumber: 'DRYMILL-135',
     installationDate: todayFormatted,
   },
   {
@@ -1774,7 +1774,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-136',
+    serialNumber: 'DRYMILL-136',
     installationDate: todayFormatted,
   },
   {
@@ -1787,9 +1787,7 @@ export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > 
     driveType: 'VSD',
     manufacturer: 'ABB',
     model: 'ACS880',
-    serialNumber: 'DRYMILL-MSP-137',
+    serialNumber: 'DRYMILL-137',
     installationDate: todayFormatted,
   },
 ];
-
-    
