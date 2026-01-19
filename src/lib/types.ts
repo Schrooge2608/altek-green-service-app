@@ -5,6 +5,7 @@
 
 
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -249,7 +250,7 @@ export interface DailyDiary {
   beforeWorkImages?: string[];
   afterWorkImages?: string[];
   isSignedOff: boolean;
-  createdAt: any;
+  createdAt?: any;
 }
 
 export interface PerformanceRecord {
@@ -281,5 +282,3 @@ export interface Timesheet {
     period: string; // YYYY-MM
     entries: TimesheetEntry[];
 }
-
-    

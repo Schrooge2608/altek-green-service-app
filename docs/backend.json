@@ -242,6 +242,7 @@
         "description": "Represents a contractor's daily diary entry.",
         "properties": {
             "id": { "type": "string" },
+            "userId": { "type": "string", "description": "The UID of the user who created the entry." },
             "contractTitle": { "type": "string" },
             "contractNumber": { "type": "string" },
             "area": { "type": "string", "enum": ["Mining", "Smelter"] },
@@ -252,45 +253,16 @@
             "incidents": { "type": "string" },
             "toolboxTalk": { "type": "string" },
             "manpower": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                "designation": { "type": "string" },
-                "forecast": { "type": "number" },
-                "actual": { "type": "number" },
-                "normalHrs": { "type": "number" },
-                "overtime1_5": { "type": "number" },
-                "overtime2_0": { "type": "number" },
-                "totalManHrs": { "type": "number" },
-                "comments": { "type": "string" }
-                }
-            }
+              "type": "array",
+              "items": { "$ref": "#/entities/ManpowerEntry" }
             },
             "plant": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                "description": { "type": "string" },
-                "qty": { "type": "number" },
-                "inspectionDone": { "type": "string", "enum": ["yes", "no"] },
-                "comments": { "type": "string" }
-                }
-            }
+              "type": "array",
+              "items": { "$ref": "#/entities/PlantEntry" }
             },
             "works": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                "area": { "type": "string" },
-                "scope": { "type": "string" },
-                "timeStart": { "type": "string" },
-                "timeEnd": { "type": "string" },
-                "hrs": { "type": "number" }
-                }
-            }
+              "type": "array",
+              "items": { "$ref": "#/entities/WorkEntry" }
             },
             "delays": { "type": "array", "items": { "type": "string" } },
             "comments": { "type": "array", "items": { "type": "string" } },
@@ -299,9 +271,79 @@
             "contractorDate": { "type": "string", "format": "date" },
             "clientName": { "type": "string" },
             "clientSignature": { "type": "string" },
-            "clientDate": { "type": "string", "format": "date" }
+            "clientDate": { "type": "string", "format": "date" },
+            "beforeWorkImages": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images taken before work." },
+            "afterWorkImages": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images taken after work." },
+            "isSignedOff": { "type": "boolean", "description": "True if the diary has been signed off and locked from editing." },
+            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the document was created." }
         },
-        "required": ["id", "date", "contractTitle", "contractNumber"]
+        "required": ["id", "userId", "date", "contractTitle", "contractNumber"]
+    },
+    "ManpowerEntry": {
+        "title": "ManpowerEntry",
+        "type": "object",
+        "properties": {
+            "designation": { "type": "string" },
+            "forecast": { "type": "number" },
+            "actual": { "type": "number" },
+            "normalHrs": { "type": "number" },
+            "overtime1_5": { "type": "number" },
+            "overtime2_0": { "type": "number" },
+            "totalManHrs": { "type": "number" },
+            "comments": { "type": "string" }
+        }
+    },
+    "PlantEntry": {
+        "title": "PlantEntry",
+        "type": "object",
+        "properties": {
+            "description": { "type": "string" },
+            "qty": { "type": "number" },
+            "inspectionDone": { "type": "string", "enum": ["yes", "no"] },
+            "comments": { "type": "string" }
+        }
+    },
+    "WorkEntry": {
+        "title": "WorkEntry",
+        "type": "object",
+        "properties": {
+            "area": { "type": "string" },
+            "scope": { "type": "string" },
+            "timeStart": { "type": "string" },
+            "timeEnd": { "type": "string" },
+            "hrs": { "type": "number" }
+        }
+    },
+    "Timesheet": {
+      "title": "Timesheet",
+      "type": "object",
+      "description": "Represents a monthly timesheet for a user.",
+      "properties": {
+        "id": { "type": "string", "description": "Composite key: {userId}_{period}" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "period": { "type": "string", "description": "The end month of the timesheet period, e.g., '2026-01'." },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string", "format": "date" },
+              "timeIn": { "type": "string" },
+              "lunchOut": { "type": "string" },
+              "lunchIn": { "type": "string" },
+              "timeOut": { "type": "string" },
+              "normalHrs": { "type": "number" },
+              "overtimeHrs": { "type": "number" },
+              "overtimeReason": { "type": "string" },
+              "signature": { "type": "string", "description": "Base64 encoded signature image." },
+              "comments": { "type": "string" }
+            },
+            "required": ["date"]
+          }
+        }
+      },
+      "required": ["id", "userId", "userName", "period"]
     }
   },
   "auth": {
@@ -371,6 +413,14 @@
           "entityName": "DailyDiary",
           "schema": { "$ref": "#/entities/DailyDiary" },
           "description": "Stores contractor daily diary entries."
+        }
+      },
+      {
+        "path": "/timesheets/{timesheetId}",
+        "definition": {
+          "entityName": "Timesheet",
+          "schema": { "$ref": "#/entities/Timesheet" },
+          "description": "Stores user timesheet data."
         }
       }
     ]
