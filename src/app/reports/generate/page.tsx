@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -87,14 +88,22 @@ export default function GenerateReportPage() {
                 getDocs(newBreakdownsQuery),
                 getDocs(closedBreakdownsQuery),
                 getDocs(schedulesQuery),
-                getDocs(diariesQuery),
+                getDocs(diariesSnap),
             ]);
 
             const fetchedData: AggregatedData = {
                 newBreakdowns: newBreakdownsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Breakdown)),
                 closedBreakdowns: closedBreakdownsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Breakdown)),
                 completedSchedules: schedulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompletedSchedule)),
-                dailyDiaries: diariesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyDiary)),
+                dailyDiaries: diariesSnap.docs.map(doc => {
+                    const data = doc.data();
+                    // Firestore Timestamps are not serializable for Server Actions.
+                    // We must convert them to a primitive type like a string before passing them.
+                    if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+                        data.createdAt = data.createdAt.toDate().toISOString();
+                    }
+                    return { id: doc.id, ...data } as DailyDiary;
+                }),
             };
 
             setAggregatedData(fetchedData);
