@@ -214,8 +214,16 @@ export default function NewDailyDiaryPage() {
 
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
-            const plainManpowerData = manpowerData.map(({id, ...rest}) => rest);
-            const plainWorksData = works.map(({id, ...rest}) => ({...rest, hrs: rest.hrs === undefined ? 0 : rest.hrs}));
+            const plainManpowerData = manpowerData.map(({id, ...rest}) => ({
+                ...rest,
+                forecast: Number(rest.forecast || 0),
+                actual: Number(rest.actual || 0),
+                normalHrs: Number(rest.normalHrs || 0),
+                overtime1_5: Number(rest.overtime1_5 || 0),
+                overtime2_0: Number(rest.overtime2_0 || 0),
+                totalManHrs: Number(rest.totalManHrs || 0),
+            }));
+            const plainWorksData = works.map(({id, ...rest}) => ({...rest, hrs: Number(rest.hrs || 0)}));
             const plainPlantData = plantData.map(p => ({...p, qty: Number(p.qty || 0)}));
 
             const finalDiaryData: Partial<DailyDiary> = { 
@@ -227,7 +235,7 @@ export default function NewDailyDiaryPage() {
                 area,
                 shiftStart,
                 shiftEnd,
-                hrs,
+                hrs: hrs || 0,
                 incidents: incidentsText,
                 toolboxTalk: toolboxTalkText,
                 manpower: plainManpowerData.filter(m => m.designation),
