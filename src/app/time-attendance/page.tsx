@@ -98,9 +98,10 @@ export default function TimeAttendancePage() {
   const fetchedTimesheet = null;
   const timesheetLoading = false;
   
-    const dateRange = useMemo(() => {
+  const dateRange = useMemo(() => {
     const [year, month] = selectedPeriod.split('-').map(Number);
-    const targetMonthDate = new Date(year, month - 1, 1);
+    // Use UTC to avoid timezone shifts affecting the month.
+    const targetMonthDate = new Date(Date.UTC(year, month - 1, 1));
     const prevMonth = subMonths(targetMonthDate, 1);
     const start = setDate(prevMonth, 19);
     const end = setDate(targetMonthDate, 22);
@@ -252,12 +253,12 @@ export default function TimeAttendancePage() {
               <TableRow>
                 <TableHead className="w-[120px] py-1 px-2 h-auto">Date</TableHead>
                 <TableHead className="w-[100px] py-1 px-2 h-auto">Day</TableHead>
-                <TableHead className="w-[70px] py-1 px-2 h-auto">Time In</TableHead>
-                <TableHead className="w-[70px] py-1 px-2 h-auto">Lunch Out</TableHead>
-                <TableHead className="w-[70px] py-1 px-2 h-auto">Lunch In</TableHead>
-                <TableHead className="w-[70px] py-1 px-2 h-auto">Time Out</TableHead>
-                <TableHead className="w-[70px] py-1 px-2 h-auto">Normal Hrs</TableHead>
-                <TableHead className="w-[70px] py-1 px-2 h-auto">Overtime Hrs</TableHead>
+                <TableHead className="w-[60px] py-1 px-2 h-auto">Time In</TableHead>
+                <TableHead className="w-[60px] py-1 px-2 h-auto">Lunch Out</TableHead>
+                <TableHead className="w-[60px] py-1 px-2 h-auto">Lunch In</TableHead>
+                <TableHead className="w-[60px] py-1 px-2 h-auto">Time Out</TableHead>
+                <TableHead className="w-[60px] py-1 px-2 h-auto">Normal Hrs</TableHead>
+                <TableHead className="w-[60px] py-1 px-2 h-auto">Overtime Hrs</TableHead>
                 <TableHead className="w-[70px] py-1 px-2 h-auto">Total Hrs</TableHead>
                 <TableHead className="py-1 px-2 h-auto">Overtime Reason</TableHead>
                 <TableHead className="w-[60px] py-1 px-2 h-auto">Signature</TableHead>
@@ -287,7 +288,7 @@ export default function TimeAttendancePage() {
                         onChange={(e) =>
                           handleEntryChange(index, 'timeIn', e.target.value)
                         }
-                        className="h-8"
+                        className="h-8 py-1 px-2 text-xs"
                       />
                     </TableCell>
                     <TableCell className="py-1 px-2">
@@ -297,7 +298,7 @@ export default function TimeAttendancePage() {
                         onChange={(e) =>
                           handleEntryChange(index, 'lunchOut', e.target.value)
                         }
-                        className="h-8"
+                        className="h-8 py-1 px-2 text-xs"
                       />
                     </TableCell>
                     <TableCell className="py-1 px-2">
@@ -307,7 +308,7 @@ export default function TimeAttendancePage() {
                         onChange={(e) =>
                           handleEntryChange(index, 'lunchIn', e.target.value)
                         }
-                        className="h-8"
+                        className="h-8 py-1 px-2 text-xs"
                       />
                     </TableCell>
                     <TableCell className="py-1 px-2">
@@ -317,7 +318,7 @@ export default function TimeAttendancePage() {
                         onChange={(e) =>
                           handleEntryChange(index, 'timeOut', e.target.value)
                         }
-                        className="h-8"
+                        className="h-8 py-1 px-2 text-xs"
                       />
                     </TableCell>
                     <TableCell className="py-1 px-2">
@@ -328,7 +329,7 @@ export default function TimeAttendancePage() {
                         onChange={(e) =>
                           handleEntryChange(index, 'normalHrs', e.target.value)
                         }
-                        className="h-8"
+                        className="h-8 py-1 px-1 text-[10px]"
                       />
                     </TableCell>
                     <TableCell className="py-1 px-2">
@@ -339,7 +340,7 @@ export default function TimeAttendancePage() {
                         onChange={(e) =>
                           handleEntryChange(index, 'overtimeHrs', e.target.value)
                         }
-                        className="h-8"
+                        className="h-8 py-1 px-1 text-[10px]"
                       />
                     </TableCell>
                     <TableCell className="py-1 px-2">
@@ -348,7 +349,7 @@ export default function TimeAttendancePage() {
                             step="0.1"
                             value={totalDailyHours > 0 ? totalDailyHours.toFixed(2) : ''}
                             readOnly
-                            className="font-bold bg-muted h-8"
+                            className="font-bold bg-muted h-8 py-1 px-1 text-[10px]"
                         />
                     </TableCell>
                     <TableCell className="py-1 px-2">
@@ -361,7 +362,7 @@ export default function TimeAttendancePage() {
                             e.target.value
                           )
                         }
-                        className="h-8"
+                        className="h-8 py-1 px-2 text-xs"
                       />
                     </TableCell>
                     <TableCell className="py-1 px-2">
@@ -381,7 +382,7 @@ export default function TimeAttendancePage() {
                         onChange={(e) =>
                           handleEntryChange(index, 'comments', e.target.value)
                         }
-                        className="h-8"
+                        className="h-8 py-1 px-2 text-xs"
                       />
                     </TableCell>
                   </TableRow>
@@ -397,21 +398,21 @@ export default function TimeAttendancePage() {
                   <Input
                     value={totals.normal.toFixed(2)}
                     readOnly
-                    className="font-bold bg-muted h-8"
+                    className="font-bold bg-muted h-8 py-1 px-1 text-[10px]"
                   />
                 </TableCell>
                 <TableCell className="py-1 px-2">
                   <Input
                     value={totals.overtime.toFixed(2)}
                     readOnly
-                    className="font-bold bg-muted h-8"
+                    className="font-bold bg-muted h-8 py-1 px-1 text-[10px]"
                   />
                 </TableCell>
                 <TableCell className="py-1 px-2">
                   <Input
                     value={totals.total.toFixed(2)}
                     readOnly
-                    className="font-bold bg-muted h-8"
+                    className="font-bold bg-muted h-8 py-1 px-1 text-[10px]"
                   />
                 </TableCell>
                 <TableCell colSpan={3} className="py-1 px-2"></TableCell>
