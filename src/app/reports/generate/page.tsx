@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -5,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, FileText, Copy, Calendar as CalendarIcon, Save } from 'lucide-react';
-import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, query, where, getDocs, serverTimestamp, addDoc } from 'firebase/firestore';
 import type { Breakdown, CompletedSchedule, DailyDiary, GeneratedReport } from '@/lib/types';
 import { generateReport, type ReportInput } from '@/ai/flows/generate-report-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -55,9 +56,9 @@ export default function GenerateReportPage() {
                 generatedByUserId: user.uid,
                 generatedByUserName: user.displayName || user.email || 'Unknown User',
             };
-            const newDoc = await addDocumentNonBlocking(reportsRef, reportData);
+            const newDocRef = await addDoc(reportsRef, reportData);
             toast({ title: 'Report Saved', description: 'The generated report has been saved to the history.' });
-            router.push(`/reports/history/${newDoc.id}`);
+            router.push(`/reports/history/${newDocRef.id}`);
         } catch (e: any) {
             console.error(e);
             toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the report to the database.' });
@@ -102,16 +103,6 @@ export default function GenerateReportPage() {
                     date: diary.date,
                 })) || []
             );
-            
-            const hasData = breakdowns.length > 0 || completedSchedules.length > 0 || unscheduledWork.length > 0;
-            if (!hasData) {
-                toast({
-                    title: 'No Data to Report',
-                    description: 'There were no breakdowns, completed schedules, or unscheduled work found for the selected period.',
-                });
-                setIsLoading(false);
-                return;
-            }
 
             const reportInput: ReportInput = {
                 startDate: startDateStr,
