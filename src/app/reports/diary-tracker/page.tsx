@@ -7,12 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function DiaryTrackerPage() {
-  // Data fetching is temporarily disabled to prevent permission errors.
-  // This ensures the app loads without crashing while the underlying issue is investigated.
-  const diaries: DailyDiary[] = [];
-  const isLoading = false;
+  const firestore = useFirestore();
+  const diariesQuery = useMemoFirebase(() => collection(firestore, 'daily_diaries'), [firestore]);
+  const { data: diaries, isLoading } = useCollection<DailyDiary>(diariesQuery);
 
   return (
     <div className="flex flex-col gap-8">
@@ -33,7 +34,7 @@ export default function DiaryTrackerPage() {
       <Card>
         <CardHeader>
             <CardTitle>Submitted Diaries</CardTitle>
-            <CardDescription>A log of all contractor daily diaries. (Note: Data loading is temporarily paused.)</CardDescription>
+            <CardDescription>A log of all contractor daily diaries.</CardDescription>
         </CardHeader>
         <CardContent>
             <Table>
@@ -56,10 +57,27 @@ export default function DiaryTrackerPage() {
                                 </div>
                             </TableCell>
                         </TableRow>
+                    ) : diaries && diaries.length > 0 ? (
+                        diaries.map(diary => (
+                            <TableRow key={diary.id}>
+                                <TableCell className="font-mono">{diary.id}</TableCell>
+                                <TableCell>{diary.contractTitle}</TableCell>
+                                <TableCell>{diary.date}</TableCell>
+                                <TableCell>{diary.area}</TableCell>
+                                <TableCell className="text-right">
+                                    <Link href={`/reports/contractors-daily-diary/${diary.id}`} passHref>
+                                        <Button variant="ghost" size="icon">
+                                            <FileText className="h-4 w-4" />
+                                            <span className="sr-only">View Diary</span>
+                                        </Button>
+                                    </Link>
+                                </TableCell>
+                            </TableRow>
+                        ))
                     ) : (
                         <TableRow>
                             <TableCell colSpan={5} className="h-24 text-center">
-                                Diary list is temporarily unavailable while we resolve a data access issue.
+                                No submitted diaries found.
                             </TableCell>
                         </TableRow>
                     )}
