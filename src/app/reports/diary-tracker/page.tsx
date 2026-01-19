@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -6,14 +5,30 @@ import type { DailyDiary, User } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { FileText, Loader2, PlusCircle, Pencil } from 'lucide-react';
+import { FileText, Loader2, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast';
 
 export default function DiaryTrackerPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { toast } = useToast();
+
+  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: currentUserData, isLoading: currentUserLoading } = useDoc<User>(userRoleRef);
 
   const diariesQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -23,6 +38,11 @@ export default function DiaryTrackerPage() {
   
   const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
+  
+  const canDelete = useMemo(() => {
+    if (!currentUserData) return false;
+    return ['Admin', 'Superadmin'].includes(currentUserData.role);
+  }, [currentUserData]);
 
   const diariesWithCreator = useMemo(() => {
       if (!diaries || !users) return [];
@@ -35,7 +55,24 @@ export default function DiaryTrackerPage() {
           }));
   }, [diaries, users]);
 
-  const isLoading = diariesLoading || usersLoading;
+  const handleDeleteDiary = (diaryToDelete: DailyDiary) => {
+    if (!diaryToDelete.id) {
+        toast({
+            variant: "destructive",
+            title: 'Error',
+            description: `Diary ID is missing, cannot delete.`,
+        });
+        return;
+    }
+    const diaryRef = doc(firestore, 'daily_diaries', diaryToDelete.id);
+    deleteDocumentNonBlocking(diaryRef);
+    toast({
+        title: 'Diary Deleted',
+        description: `The daily diary ${diaryToDelete.id} has been removed from the database.`,
+    });
+  }
+
+  const isLoading = diariesLoading || usersLoading || currentUserLoading;
 
   return (
     <div className="flex flex-col gap-8">
@@ -102,6 +139,34 @@ export default function DiaryTrackerPage() {
                                                 <span className="sr-only">Edit Diary</span>
                                             </Button>
                                         </Link>
+                                    )}
+                                    {canDelete && (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80" disabled={!diary.id}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Delete Diary</span>
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action will permanently delete the diary record <strong>{diary.id}</strong>. 
+                                                        This cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                                        onClick={() => handleDeleteDiary(diary)}
+                                                    >
+                                                        Yes, delete diary
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     )}
                                 </TableCell>
                             </TableRow>
