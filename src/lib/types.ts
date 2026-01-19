@@ -2,6 +2,7 @@
 
 
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -245,6 +246,8 @@ export interface DailyDiary {
   clientDate?: string;
   beforeWorkImages?: string[];
   afterWorkImages?: string[];
+  isSignedOff?: boolean;
+  createdAt?: any;
 }
 
 export interface PerformanceRecord {

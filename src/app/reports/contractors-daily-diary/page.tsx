@@ -18,7 +18,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
-import { doc, collection, setDoc } from 'firebase/firestore';
+import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -246,6 +246,12 @@ export default function NewDailyDiaryPage() {
                 beforeWorkImages: [...(diaryData?.beforeWorkImages || []), ...newBeforeImageUrls],
                 afterWorkImages: [...(diaryData?.afterWorkImages || []), ...newAfterImageUrls],
             };
+
+            // Add creation-only fields if this is a new diary
+            if (!diaryId) {
+                finalDiaryData.createdAt = serverTimestamp();
+                finalDiaryData.isSignedOff = false;
+            }
 
             await setDoc(diaryDocRef, finalDiaryData, { merge: true });
             
