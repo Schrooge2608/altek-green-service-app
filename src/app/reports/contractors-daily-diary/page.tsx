@@ -221,7 +221,7 @@ export default function NewDailyDiaryPage() {
             const finalDiaryData: Partial<DailyDiary> = { 
                 id: uniqueId,
                 userId: user.uid,
-                date: date ? format(date, 'yyyy-MM-dd') : undefined,
+                date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
                 contractTitle,
                 contractNumber,
                 area,
@@ -249,14 +249,11 @@ export default function NewDailyDiaryPage() {
             router.push(`/reports/diary-tracker`);
         } catch (error: any) {
             console.error("Failed to save diary:", error);
-            // The uploadImages function toasts its own error, so we check if the error is from there.
-            if (!error.message || !error.message.includes("upload")) {
-                 toast({
-                    variant: 'destructive',
-                    title: 'Save Failed',
-                    description: error.message || 'An unexpected error occurred while saving the diary.',
-                });
-            }
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: error.message || 'An unexpected error occurred while saving the diary.',
+            });
         } finally {
             setIsSaving(false);
         }
