@@ -69,6 +69,16 @@ export default function GenerateReportPage() {
                     date: diary.date,
                 })) || []
             );
+            
+            const hasData = breakdowns.length > 0 || completedSchedules.length > 0 || unscheduledWork.length > 0;
+            if (!hasData) {
+                toast({
+                    title: 'No Data to Report',
+                    description: 'There were no breakdowns, completed schedules, or unscheduled work found for the selected period.',
+                });
+                setIsLoading(false);
+                return;
+            }
 
             const reportInput: ReportInput = {
                 startDate: startDateStr,
