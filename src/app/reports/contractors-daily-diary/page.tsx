@@ -12,13 +12,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useFieldArray, useForm, Controller } from 'react-hook-form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from '@/firebase';
 import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
@@ -241,22 +242,26 @@ export default function NewDailyDiaryPage() {
                             control={form.control}
                             name="contractTitle"
                             render={({ field }) => (
-                                <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+                                <FormItem className="lg:col-span-2 grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <Label htmlFor="contract-title">Contract Title</Label>
-                                    <Input id="contract-title" {...field} />
+                                    <FormLabel>Contract Title</FormLabel>
+                                    <FormControl>
+                                      <Input id="contract-title" {...field} />
+                                    </FormControl>
                                 </div>
                                 <FormField
                                     control={form.control}
                                     name="contractNumber"
                                     render={({ field: fieldNum }) => (
-                                        <div className="space-y-1">
-                                            <Label htmlFor="contract-number">Contract Number</Label>
-                                            <Input id="contract-number" {...fieldNum} />
-                                        </div>
+                                        <FormItem>
+                                            <FormLabel>Contract Number</FormLabel>
+                                            <FormControl>
+                                              <Input id="contract-number" {...fieldNum} />
+                                            </FormControl>
+                                        </FormItem>
                                     )}
                                 />
-                                </div>
+                                </FormItem>
                             )}
                         />
 
@@ -264,19 +269,25 @@ export default function NewDailyDiaryPage() {
                             control={form.control}
                             name="area"
                             render={({ field }) => (
-                                <div className="space-y-1">
-                                    <Label>Area</Label>
-                                    <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="Mining" id="mining" />
-                                            <Label htmlFor="mining">Mining</Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="Smelter" id="smelter" />
-                                            <Label htmlFor="smelter">Smelter</Label>
-                                        </div>
-                                    </RadioGroup>
-                                </div>
+                                <FormItem className="space-y-1">
+                                    <FormLabel>Area</FormLabel>
+                                    <FormControl>
+                                      <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+                                          <FormItem className="flex items-center space-x-2">
+                                              <FormControl>
+                                                <RadioGroupItem value="Mining" id="mining" />
+                                              </FormControl>
+                                              <FormLabel htmlFor="mining">Mining</FormLabel>
+                                          </FormItem>
+                                          <FormItem className="flex items-center space-x-2">
+                                              <FormControl>
+                                                <RadioGroupItem value="Smelter" id="smelter" />
+                                              </FormControl>
+                                              <FormLabel htmlFor="smelter">Smelter</FormLabel>
+                                          </FormItem>
+                                      </RadioGroup>
+                                    </FormControl>
+                                </FormItem>
                             )}
                         />
 
@@ -284,20 +295,22 @@ export default function NewDailyDiaryPage() {
                             control={form.control}
                             name="date"
                             render={({ field }) => (
-                                <div className="space-y-1">
-                                <Label htmlFor="date">Date</Label>
+                                <FormItem className="space-y-1">
+                                <FormLabel>Date</FormLabel>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-                                    </Button>
+                                    <FormControl>
+                                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                                      </Button>
+                                    </FormControl>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0">
                                     <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={field.onChange} initialFocus />
                                     </PopoverContent>
                                 </Popover>
-                                </div>
+                                </FormItem>
                             )}
                         />
                     </div>
@@ -306,30 +319,36 @@ export default function NewDailyDiaryPage() {
                             control={form.control}
                             name="shiftStart"
                             render={({ field }) => (
-                                <div className="space-y-1">
-                                    <Label htmlFor="shift-start">Shift Start</Label>
-                                    <Input id="shift-start" type="time" {...field} />
-                                </div>
+                                <FormItem className="space-y-1">
+                                    <FormLabel>Shift Start</FormLabel>
+                                    <FormControl>
+                                      <Input id="shift-start" type="time" {...field} />
+                                    </FormControl>
+                                </FormItem>
                             )}
                         />
                          <FormField
                             control={form.control}
                             name="shiftEnd"
                             render={({ field }) => (
-                                <div className="space-y-1">
-                                    <Label htmlFor="shift-end">Shift End</Label>
-                                    <Input id="shift-end" type="time" {...field} />
-                                </div>
+                                <FormItem className="space-y-1">
+                                    <FormLabel>Shift End</FormLabel>
+                                    <FormControl>
+                                      <Input id="shift-end" type="time" {...field} />
+                                    </FormControl>
+                                </FormItem>
                             )}
                         />
                          <FormField
                             control={form.control}
                             name="hrs"
                             render={({ field }) => (
-                                <div className="space-y-1">
-                                    <Label htmlFor="hrs">Hrs</Label>
-                                    <Input id="hrs" type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} value={field.value ?? ''} />
-                                </div>
+                                <FormItem className="space-y-1">
+                                    <FormLabel>Hrs</FormLabel>
+                                    <FormControl>
+                                      <Input id="hrs" type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} value={field.value ?? ''} />
+                                    </FormControl>
+                                </FormItem>
                             )}
                         />
                     </div>
@@ -343,20 +362,24 @@ export default function NewDailyDiaryPage() {
                                 control={form.control}
                                 name="incidents"
                                 render={({ field }) => (
-                                    <div className="space-y-1">
-                                        <Label htmlFor="incidents">Incidents/Accidents/Injuries</Label>
-                                        <VoiceTextarea id="incidents" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
-                                    </div>
+                                    <FormItem className="space-y-1">
+                                        <FormLabel>Incidents/Accidents/Injuries</FormLabel>
+                                        <FormControl>
+                                          <VoiceTextarea id="incidents" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
+                                        </FormControl>
+                                    </FormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="toolboxTalk"
                                 render={({ field }) => (
-                                    <div className="space-y-1">
-                                        <Label htmlFor="toolbox-talk">Toolbox Talk</Label>
-                                        <VoiceTextarea id="toolbox-talk" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
-                                    </div>
+                                    <FormItem className="space-y-1">
+                                        <FormLabel>Toolbox Talk</FormLabel>
+                                        <FormControl>
+                                          <VoiceTextarea id="toolbox-talk" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
+                                        </FormControl>
+                                    </FormItem>
                                 )}
                             />
                         </CardContent>
@@ -480,10 +503,12 @@ export default function NewDailyDiaryPage() {
                                         control={form.control}
                                         name={`delays.${index}`}
                                         render={({ field }) => (
-                                            <div className="flex items-center gap-2">
-                                                <Label className="w-6 shrink-0">{index + 1}.</Label>
-                                                <Textarea rows={1} {...field} />
-                                            </div>
+                                            <FormItem className="flex items-center gap-2">
+                                                <FormLabel className="w-6 shrink-0">{index + 1}.</FormLabel>
+                                                <FormControl>
+                                                  <Textarea rows={1} {...field} />
+                                                </FormControl>
+                                            </FormItem>
                                         )}
                                     />
                                 ))}
@@ -501,10 +526,12 @@ export default function NewDailyDiaryPage() {
                                         control={form.control}
                                         name={`comments.${index}`}
                                         render={({ field }) => (
-                                             <div className="flex items-center gap-2">
-                                                <Label className="w-6 shrink-0">{index + 1}.</Label>
-                                                <Textarea rows={1} {...field} />
-                                            </div>
+                                             <FormItem className="flex items-center gap-2">
+                                                <FormLabel className="w-6 shrink-0">{index + 1}.</FormLabel>
+                                                <FormControl>
+                                                  <Textarea rows={1} {...field} />
+                                                </FormControl>
+                                            </FormItem>
                                         )}
                                     />
                                 ))}
@@ -595,3 +622,4 @@ export default function NewDailyDiaryPage() {
     );
 }
 
+    
