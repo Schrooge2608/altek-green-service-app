@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const DocumentScanInputSchema = z.object({
+const DocumentScanInputSchema = z.object({
   imageDataUri: z
     .string()
     .describe(
@@ -19,7 +19,7 @@ export const DocumentScanInputSchema = z.object({
 });
 export type DocumentScanInput = z.infer<typeof DocumentScanInputSchema>;
 
-export const DocumentScanOutputSchema = z.object({
+const DocumentScanOutputSchema = z.object({
   equipmentName: z.string().describe('The name of the equipment being serviced.'),
   area: z.string().describe('The area or location where the service took place.'),
   completionDate: z.string().describe('The date the service was completed, in yyyy-MM-dd format.'),

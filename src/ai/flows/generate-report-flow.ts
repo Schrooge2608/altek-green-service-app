@@ -11,13 +11,13 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const ReportInputSchema = z.object({
+const ReportInputSchema = z.object({
   equipmentName: z.string().describe('The name of the equipment.'),
   breakdownHistory: z.string().describe('A summary of the breakdown history for the equipment.'),
 });
 export type ReportInput = z.infer<typeof ReportInputSchema>;
 
-export const ReportOutputSchema = z.object({
+const ReportOutputSchema = z.object({
   report: z.string().describe('The generated client-facing report in plain text.'),
 });
 export type ReportOutput = z.infer<typeof ReportOutputSchema>;
