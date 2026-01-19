@@ -99,7 +99,9 @@ export default function TimeAttendancePage() {
   
   const dateRange = useMemo(() => {
     const [year, month] = selectedPeriod.split('-').map(Number);
-    const targetMonthDate = new Date(year, month - 1, 1);
+    // Use UTC to avoid timezone-related date shifts. This ensures that creating a date
+    // like '2026-01-01' doesn't accidentally become '2025-12-31' in another timezone.
+    const targetMonthDate = new Date(Date.UTC(year, month - 1, 1));
     const prevMonth = subMonths(targetMonthDate, 1);
     const start = setDate(prevMonth, 19);
     const end = setDate(targetMonthDate, 22);
@@ -109,6 +111,7 @@ export default function TimeAttendancePage() {
   useEffect(() => {
     if (timesheetLoading || !dateRange.length || !user) return;
 
+    // This logic now only runs to create a *new* timesheet, since fetching is disabled.
     const entriesMap = new Map(fetchedTimesheet?.entries.map((e) => [e.date, e]));
     const newEntries: TimesheetEntry[] = dateRange.map((day) => {
       const dateStr = format(day, 'yyyy-MM-dd');
@@ -277,7 +280,7 @@ export default function TimeAttendancePage() {
                     <TableCell>
                       {format(new Date(entry.date + 'T00:00:00'), 'yyyy-MM-dd')}
                     </TableCell>
-                    <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'EEEE')}</TableCell>
+                    <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'EEE')}</TableCell>
                     <TableCell>
                       <Input
                         type="time"
