@@ -214,14 +214,14 @@ export default function NewDailyDiaryPage() {
 
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
-            const plainManpowerData = manpowerData.filter(m => m.designation).map(({id, ...rest}) => rest);
-            const plainWorksData = works.filter(w => w.scope || w.area).map(({id, ...rest}) => ({...rest, hrs: rest.hrs === undefined ? 0 : rest.hrs}));
-            const plainPlantData = plantData.filter(p => p.qty || p.comments).map(p => ({...p, qty: Number(p.qty)}));
+            const plainManpowerData = manpowerData.map(({id, ...rest}) => rest);
+            const plainWorksData = works.map(({id, ...rest}) => ({...rest, hrs: rest.hrs === undefined ? 0 : rest.hrs}));
+            const plainPlantData = plantData.map(p => ({...p, qty: Number(p.qty || 0)}));
 
             const finalDiaryData: Partial<DailyDiary> = { 
                 id: uniqueId,
                 userId: user.uid,
-                date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
+                date: date ? format(date, 'yyyy-MM-dd') : undefined,
                 contractTitle,
                 contractNumber,
                 area,
@@ -230,9 +230,9 @@ export default function NewDailyDiaryPage() {
                 hrs,
                 incidents: incidentsText,
                 toolboxTalk: toolboxTalkText,
-                manpower: plainManpowerData,
-                works: plainWorksData,
-                plant: plainPlantData,
+                manpower: plainManpowerData.filter(m => m.designation),
+                works: plainWorksData.filter(w => w.scope || w.area),
+                plant: plainPlantData.filter(p => p.qty || p.comments),
                 delays: delays.filter(d => d),
                 comments: comments.filter(c => c),
                 beforeWorkImages: [...(diaryData?.beforeWorkImages || []), ...newBeforeImageUrls],
@@ -247,8 +247,16 @@ export default function NewDailyDiaryPage() {
             });
             
             router.push(`/reports/diary-tracker`);
-        } catch (error) {
-            // Error is already handled and toasted inside uploadImages
+        } catch (error: any) {
+            console.error("Failed to save diary:", error);
+            // The uploadImages function toasts its own error, so we check if the error is from there.
+            if (!error.message || !error.message.includes("upload")) {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Save Failed',
+                    description: error.message || 'An unexpected error occurred while saving the diary.',
+                });
+            }
         } finally {
             setIsSaving(false);
         }
