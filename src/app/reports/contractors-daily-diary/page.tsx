@@ -1,378 +1,597 @@
 
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { z } from 'zod';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription
-} from '@/components/ui/form';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { useFirebase, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useStorage } from '@/firebase';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import React, { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, PlusCircle, Save, Trash2 } from 'lucide-react';
-import { AltekLogo } from '@/components/altek-logo';
-import { format } from 'date-fns';
-import { Textarea } from '@/components/ui/textarea';
 import { VoiceTextarea } from '@/components/ui/voice-textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { CalendarIcon, Printer, Save, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useFieldArray, useForm } from 'react-hook-form';
+import { cn } from '@/lib/utils';
+import { AltekLogo } from '@/components/altek-logo';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
+import { Textarea } from '@/components/ui/textarea';
+import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
+import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { DailyDiary, User as AppUser, User, WorkEntry, PlantEntry, ManpowerEntry } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUploader } from '@/components/image-uploader';
-import type { DailyDiary, User, ManpowerEntry, PlantEntry, WorkEntry } from '@/lib/types';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-const manpowerSchema = z.object({
-  designation: z.string().optional(),
-  forecast: z.coerce.number().optional(),
-  actual: z.coerce.number().optional(),
-  normalHrs: z.coerce.number().optional(),
-  overtime1_5: z.coerce.number().optional(),
-  overtime2_0: z.coerce.number().optional(),
-  totalManHrs: z.coerce.number().optional(),
-  comments: z.string().optional(),
-});
-
-const plantSchema = z.object({
-  description: z.string().optional(),
-  qty: z.coerce.number().optional(),
-  inspectionDone: z.enum(['yes', 'no']).optional(),
-  comments: z.string().optional(),
-});
-
-const workSchema = z.object({
-  area: z.string().optional(),
-  scope: z.string().optional(),
-  timeStart: z.string().optional(),
-  timeEnd: z.string().optional(),
-  hrs: z.coerce.number().optional(),
-});
-
-const formSchema = z.object({
-  contractTitle: z.string().min(1, 'Contract title is required.'),
-  contractNumber: z.string().min(1, 'Contract number is required.'),
-  area: z.enum(['Mining', 'Smelter']),
-  date: z.string().min(1, 'Date is required.'),
-  shiftStart: z.string().optional(),
-  shiftEnd: z.string().optional(),
-  hrs: z.coerce.number().optional(),
-  incidents: z.string().optional(),
-  toolboxTalk: z.string().optional(),
-  manpower: z.array(manpowerSchema).optional(),
-  plant: z.array(plantSchema).optional(),
-  works: z.array(workSchema).optional(),
-  delays: z.string().optional(),
-  comments: z.string().optional(),
-  contractorName: z.string().optional(),
-  contractorSignature: z.string().optional(),
-  contractorDate: z.string().optional(),
-  clientName: z.string().optional(),
-  clientSignature: z.string().optional(),
-  clientDate: z.string().optional(),
-});
 
 export default function NewDailyDiaryPage() {
-    const { toast } = useToast();
-    const router = useRouter();
     const searchParams = useSearchParams();
-    const { firestore, auth } = useFirebase();
-    const { user } = useUser();
-    const storage = useStorage();
+    const router = useRouter();
+    const { toast } = useToast();
+    const { firestore, firebaseApp, auth } = useFirebase();
+    const { user, isUserLoading } = useUser();
 
     const diaryId = searchParams.get('id');
+    const equipmentNameFromQuery = searchParams.get('equipmentName');
 
+    const [uniqueId, setUniqueId] = useState('');
+    const [isIdLoading, setIsIdLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [beforeWorkFiles, setBeforeWorkFiles] = useState<File[]>([]);
-    const [afterWorkFiles, setAfterWorkFiles] = useState<File[]>([]);
+    const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
+    const [afterFiles, setAfterFiles] = useState<File[]>([]);
+    const [contractorSignature, setContractorSignature] = useState<string | null>(null);
+    const [clientSignature, setClientSignature] = useState<string | null>(null);
+    const [contractorName, setContractorName] = useState('');
+    const [clientName, setClientName] = useState('');
+    const [contractorDate, setContractorDate] = useState<Date>();
+    const [clientDate, setClientDate] = useState<Date>();
 
-    const diaryRef = useMemoFirebase(() => diaryId ? doc(firestore, 'daily_diaries', diaryId) : null, [firestore, diaryId]);
-    const { data: diaryData, isLoading: diaryLoading } = useDoc<DailyDiary>(diaryRef);
+    const { data: diaryData, isLoading: diaryLoading } = useDoc<DailyDiary>(
+        useMemoFirebase(() => diaryId ? doc(firestore, 'daily_diaries', diaryId) : null, [firestore, diaryId])
+    );
+    
+    const { data: users, isLoading: usersLoading } = useCollection<User>(
+        useMemoFirebase(() => collection(firestore, 'users'), [firestore])
+    );
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            contractTitle: '',
-            contractNumber: '',
-            date: format(new Date(), 'yyyy-MM-dd'),
-            manpower: [{ designation: 'Supervisor' }, { designation: 'Technician' }],
-            plant: [{}],
-            works: [{}],
-        },
+    const { data: userRole } = useDoc<AppUser>(
+        useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user])
+    );
+    const isClientManager = userRole?.role === 'Client Manager';
+
+    const defaultValues = useMemo(() => {
+        const works = Array(5).fill(null).map(() => ({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: undefined }));
+        if (equipmentNameFromQuery && !diaryId) {
+            works[0].scope = `Unscheduled work on: ${equipmentNameFromQuery}`;
+        }
+        return {
+            contractTitle: 'VSD MAINTENANCE',
+            contractNumber: 'CW 22038313',
+            area: 'Mining' as 'Mining' | 'Smelter',
+            date: new Date(),
+            shiftStart: '',
+            shiftEnd: '',
+            hrs: undefined,
+            incidents: '',
+            toolboxTalk: '',
+            manpower: [
+                { designation: 'Site Supervisor', forecast: 1, actual: 1, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 9, comments: '' },
+                { designation: 'Electrician', forecast: 1, actual: 1, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 9, comments: '' },
+                { designation: 'Assistant', forecast: 2, actual: 2, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 18, comments: '' },
+                { designation: 'Safety Officer', forecast: 1, actual: 1, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 9, comments: '' },
+            ] as ManpowerEntry[],
+            plant: [
+                { description: 'LDV - Single Cab', qty: 1, inspectionDone: 'yes', comments: '' },
+                { description: 'LDV - Double Cab', qty: 1, inspectionDone: 'yes', comments: '' },
+            ] as PlantEntry[],
+            works: works,
+            delays: Array(5).fill(''),
+            comments: Array(5).fill('')
+        }
+    }, [equipmentNameFromQuery, diaryId]);
+
+    const form = useForm<DailyDiary>({
+        defaultValues,
     });
-
+    
     const { fields: manpowerFields, append: appendManpower, remove: removeManpower } = useFieldArray({ control: form.control, name: "manpower" });
     const { fields: plantFields, append: appendPlant, remove: removePlant } = useFieldArray({ control: form.control, name: "plant" });
     const { fields: workFields, append: appendWork, remove: removeWork } = useFieldArray({ control: form.control, name: "works" });
 
+
     useEffect(() => {
         if (diaryData) {
-            const delaysString = Array.isArray(diaryData.delays) ? diaryData.delays.join('\n') : '';
-            const commentsString = Array.isArray(diaryData.comments) ? diaryData.comments.join('\n') : '';
             form.reset({
+                ...defaultValues,
                 ...diaryData,
-                delays: delaysString,
-                comments: commentsString,
+                date: diaryData.date ? new Date(diaryData.date) : new Date(),
             });
-        } else if (user) {
-            form.setValue('contractorName', user.displayName || '');
+            setContractorSignature(diaryData.contractorSignature || null);
+            setClientSignature(diaryData.clientSignature || null);
+            setContractorName(diaryData.contractorName || '');
+            setClientName(diaryData.clientName || '');
+            setContractorDate(diaryData.contractorDate ? new Date(diaryData.contractorDate) : undefined);
+            setClientDate(diaryData.clientDate ? new Date(diaryData.clientDate) : undefined);
         }
-    }, [diaryData, form, user]);
+    }, [diaryData, form, defaultValues]);
+    
+    useEffect(() => {
+        if (diaryId) {
+            setUniqueId(diaryId);
+            setIsIdLoading(false);
+        } else {
+            setIsIdLoading(true);
+            const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+            setUniqueId(`AG-RBM-DD-${randomPart}`);
+            setIsIdLoading(false);
+        }
+    }, [diaryId]);
 
-    const uploadImages = async (files: File[], diaryDocId: string, folder: string): Promise<string[]> => {
-        if (!storage) return [];
-        const urls: string[] = [];
-        for (const file of files) {
-            const filePath = `diary_images/${diaryDocId}/${folder}/${file.name}`;
-            const fileRef = ref(storage, filePath);
-            await uploadBytes(fileRef, file);
-            const url = await getDownloadURL(fileRef);
-            urls.push(url);
+    const uploadImages = async (files: File[], folder: 'before' | 'after'): Promise<string[]> => {
+        if (!firebaseApp || files.length === 0) return [];
+        
+        const storage = getStorage(firebaseApp);
+        
+        const uploadPromises = files.map(file => {
+            const storagePath = `daily_diaries/${uniqueId}/${folder}/${file.name}`;
+            const storageRef = ref(storage, storagePath);
+            return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+        });
+    
+        try {
+            const downloadedUrls = await Promise.all(uploadPromises);
+            return downloadedUrls;
+        } catch (error) {
+            console.error("Image upload failed:", error);
+            toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload one or more images." });
+            throw error;
         }
-        return urls;
     };
 
-    const onSubmit = async (values: z.infer<typeof formSchema>) => {
-        if (!user || !auth) {
-            toast({ variant: 'destructive', title: 'Not authenticated', description: 'You must be logged in to save a diary.' });
+    const handleSave = async (data: DailyDiary) => {
+        if (!firestore || !uniqueId || !user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'User not logged in or database not available.' });
             return;
         }
 
         setIsSaving(true);
         try {
-            const delays = values.delays?.split('\n').filter(d => d.trim() !== '') || [];
-            const comments = values.comments?.split('\n').filter(c => c.trim() !== '') || [];
-            
-            const currentDocId = diaryId || doc(collection(firestore, 'temp')).id;
-            
-            const [beforeWorkImageUrls, afterWorkImageUrls] = await Promise.all([
-                uploadImages(beforeWorkFiles, currentDocId, 'before'),
-                uploadImages(afterWorkFiles, currentDocId, 'after')
-            ]);
-            
-            const existingBeforeImages = diaryData?.beforeWorkImages || [];
-            const existingAfterImages = diaryData?.afterWorkImages || [];
+            const newBeforeImageUrls = await uploadImages(beforeFiles, 'before');
+            const newAfterImageUrls = await uploadImages(afterFiles, 'after');
 
-            const dataToSave = {
-                ...values,
-                delays,
-                comments,
+            const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
+
+            const finalDiaryData: Partial<DailyDiary> = { 
+                ...data,
+                id: uniqueId,
                 userId: user.uid,
-                beforeWorkImages: [...existingBeforeImages, ...beforeWorkImageUrls],
-                afterWorkImages: [...existingAfterImages, ...afterWorkImageUrls],
+                isSignedOff: diaryData?.isSignedOff || false,
+                createdAt: diaryData?.createdAt || serverTimestamp(),
+                date: data.date ? format(new Date(data.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+                beforeWorkImages: [...(diaryData?.beforeWorkImages || []), ...newBeforeImageUrls],
+                afterWorkImages: [...(diaryData?.afterWorkImages || []), ...newAfterImageUrls],
+                contractorSignature,
+                clientSignature,
+                contractorName,
+                clientName,
+                contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
+                clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
             };
 
-            if (diaryId) {
-                const docRef = doc(firestore, 'daily_diaries', diaryId);
-                updateDocumentNonBlocking(docRef, dataToSave);
-                toast({ title: 'Diary Updated', description: 'Your changes have been saved successfully.' });
-            } else {
-                const docToCreate = {
-                    ...dataToSave,
-                    id: currentDocId,
-                    createdAt: serverTimestamp(),
-                    isSignedOff: false,
-                }
-                const newDocRef = doc(firestore, 'daily_diaries', currentDocId);
-                addDocumentNonBlocking(newDocRef, docToCreate);
-                toast({ title: 'Diary Created', description: 'The new daily diary has been saved.' });
-            }
-            router.push('/reports/diary-tracker');
-
+            await setDoc(diaryDocRef, finalDiaryData, { merge: true });
+            
+            toast({
+                title: 'Diary Saved',
+                description: `Document ${uniqueId} has been saved successfully.`,
+            });
+            
+            router.push(`/reports/diary-tracker`);
         } catch (error: any) {
-            console.error('Error saving diary:', error);
-            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
+            console.error("Failed to save diary:", error);
+            if (!error.message || !error.message.includes("upload")) {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Save Failed',
+                    description: error.message || 'An unexpected error occurred while saving the diary.',
+                });
+            }
         } finally {
             setIsSaving(false);
         }
     };
     
-    if (diaryLoading) {
-        return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+    if (isUserLoading || diaryLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="ml-2">Loading Diary...</p>
+            </div>
+        );
     }
 
-  return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <Card className="p-8 shadow-lg" id="diary-form">
-                <header className="flex items-start justify-between mb-4 border-b pb-4">
-                    <AltekLogo className="h-10" />
-                    <div className="text-right">
-                        <h1 className="text-2xl font-bold tracking-tight text-primary">CONTRACTOR'S DAILY DIARY</h1>
-                    </div>
-                </header>
-                
-                <Card>
-                    <CardHeader><CardTitle>Contract Details</CardTitle></CardHeader>
-                    <CardContent className="grid md:grid-cols-2 gap-4">
-                        <FormField control={form.control} name="contractTitle" render={({ field }) => (<FormItem><FormLabel>Contract Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={form.control} name="contractNumber" render={({ field }) => (<FormItem><FormLabel>Contract Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    </CardContent>
-                </Card>
-
-                <div className="grid md:grid-cols-3 gap-4 mt-4">
-                    <FormField control={form.control} name="area" render={({ field }) => (<FormItem><FormLabel>Area</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select area..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="Mining">Mining</SelectItem><SelectItem value="Smelter">Smelter</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="hrs" render={({ field }) => (<FormItem><FormLabel>Total Hours</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="shiftStart" render={({ field }) => (<FormItem><FormLabel>Shift Start</FormLabel><FormControl><Input type="time" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="shiftEnd" render={({ field }) => (<FormItem><FormLabel>Shift End</FormLabel><FormControl><Input type="time" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                </div>
-                
-                <Card className="mt-4">
-                    <CardHeader><CardTitle>HSE</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
-                        <FormField control={form.control} name="incidents" render={({ field }) => (<FormItem><FormLabel>Incidents / Accidents / Injuries</FormLabel><FormControl><VoiceTextarea {...field} value={field.value ?? ''} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={form.control} name="toolboxTalk" render={({ field }) => (<FormItem><FormLabel>Toolbox Talk</FormLabel><FormControl><VoiceTextarea {...field} value={field.value ?? ''} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
-                    </CardContent>
-                </Card>
-                
-                {/* MANPOWER */}
-                <Card className="mt-4">
-                    <CardHeader>
-                        <CardTitle>Manpower Utilized</CardTitle>
-                        <CardDescription>Detail the personnel involved in the day's work.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Designation</TableHead>
-                                    <TableHead>Forecast</TableHead>
-                                    <TableHead>Actual</TableHead>
-                                    <TableHead>Normal Hrs</TableHead>
-                                    <TableHead>O/T 1.5</TableHead>
-                                    <TableHead>O/T 2.0</TableHead>
-                                    <TableHead>Comments</TableHead>
-                                    <TableHead></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {manpowerFields.map((field, index) => (
-                                    <TableRow key={field.id}>
-                                        <TableCell><FormField control={form.control} name={`manpower.${index}.designation`} render={({ field }) => <Input {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`manpower.${index}.forecast`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`manpower.${index}.actual`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`manpower.${index}.normalHrs`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`manpower.${index}.overtime1_5`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`manpower.${index}.overtime2_0`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`manpower.${index}.comments`} render={({ field }) => <Input {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><Button type="button" variant="ghost" size="icon" onClick={() => removeManpower(index)}><Trash2 className="h-4 w-4" /></Button></TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                        <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => appendManpower({})}><PlusCircle className="mr-2 h-4 w-4" />Add Manpower</Button>
-                    </CardContent>
-                </Card>
-
-                {/* PLANT */}
-                <Card className="mt-4">
-                    <CardHeader><CardTitle>Plant & Equipment</CardTitle></CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow><TableHead>Description</TableHead><TableHead>Qty</TableHead><TableHead>Insp. Done</TableHead><TableHead>Comments</TableHead><TableHead></TableHead></TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {plantFields.map((field, index) => (
-                                    <TableRow key={field.id}>
-                                        <TableCell><FormField control={form.control} name={`plant.${index}.description`} render={({ field }) => <Input {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`plant.${index}.qty`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell>
-                                            <FormField control={form.control} name={`plant.${index}.inspectionDone`} render={({ field }) => (
-                                                <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="yes">Yes</SelectItem><SelectItem value="no">No</SelectItem></SelectContent></Select>
-                                            )} />
-                                        </TableCell>
-                                        <TableCell><FormField control={form.control} name={`plant.${index}.comments`} render={({ field }) => <Input {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><Button type="button" variant="ghost" size="icon" onClick={() => removePlant(index)}><Trash2 className="h-4 w-4" /></Button></TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                        <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => appendPlant({})}><PlusCircle className="mr-2 h-4 w-4" />Add Plant/Equipment</Button>
-                    </CardContent>
-                </Card>
-
-                {/* WORKS */}
-                <Card className="mt-4">
-                    <CardHeader><CardTitle>Description of Works</CardTitle></CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow><TableHead>Area</TableHead><TableHead>Scope</TableHead><TableHead>Start</TableHead><TableHead>End</TableHead><TableHead>Hrs</TableHead><TableHead></TableHead></TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {workFields.map((field, index) => (
-                                    <TableRow key={field.id}>
-                                        <TableCell><FormField control={form.control} name={`works.${index}.area`} render={({ field }) => <Input {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`works.${index}.scope`} render={({ field }) => <Input {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`works.${index}.timeStart`} render={({ field }) => <Input type="time" {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`works.${index}.timeEnd`} render={({ field }) => <Input type="time" {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><FormField control={form.control} name={`works.${index}.hrs`} render={({ field }) => <Input type="number" {...field} value={field.value ?? ''} />} /></TableCell>
-                                        <TableCell><Button type="button" variant="ghost" size="icon" onClick={() => removeWork(index)}><Trash2 className="h-4 w-4" /></Button></TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                        <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => appendWork({})}><PlusCircle className="mr-2 h-4 w-4" />Add Work Item</Button>
-                    </CardContent>
-                </Card>
-                
-                <Card className="mt-4">
-                    <CardHeader><CardTitle>Delays & Comments</CardTitle></CardHeader>
-                    <CardContent className="grid md:grid-cols-2 gap-4">
-                        <FormField control={form.control} name="delays" render={({ field }) => (<FormItem><FormLabel>Delays Encountered</FormLabel><FormControl><Textarea rows={5} placeholder="List each delay on a new line." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={form.control} name="comments" render={({ field }) => (<FormItem><FormLabel>General Comments</FormLabel><FormControl><Textarea rows={5} placeholder="List each comment on a new line." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                    </CardContent>
-                </Card>
-
-                <Card className="mt-4">
-                    <CardHeader><CardTitle>Gallery</CardTitle></CardHeader>
-                    <CardContent className="grid md:grid-cols-2 gap-4">
-                        <ImageUploader title="Before Work" onImagesChange={setBeforeWorkFiles} />
-                        <ImageUploader title="After Work" onImagesChange={setAfterWorkFiles} />
-                    </CardContent>
-                </Card>
-
-                <Card className="mt-4">
-                    <CardHeader><CardTitle>Signatures</CardTitle></CardHeader>
-                    <CardContent className="grid md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                            <h3 className="font-medium text-center">CONTRACTOR</h3>
-                            <FormField control={form.control} name="contractorName" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name="contractorDate" render={({ field }) => (<FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name="contractorSignature" render={({ field }) => (<FormItem><FormLabel>Signature</FormLabel><FormControl><SignaturePad value={field.value} onSign={field.onChange} onClear={() => field.onChange('')} /></FormControl><FormMessage /></FormItem>)} />
-                        </div>
-                         <div className="space-y-4">
-                            <h3 className="font-medium text-center">CLIENT</h3>
-                            <FormField control={form.control} name="clientName" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name="clientDate" render={({ field }) => (<FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name="clientSignature" render={({ field }) => (<FormItem><FormLabel>Signature</FormLabel><FormControl><SignaturePad value={field.value} onSign={field.onChange} onClear={() => field.onChange('')} /></FormControl><FormMessage /></FormItem>)} />
-                        </div>
-                    </CardContent>
-                </Card>
-            </Card>
-
-            <div className="flex justify-end gap-2 mt-8">
-                <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-                <Button type="submit" disabled={isSaving}>
+    return (
+        <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
+            <div className="flex justify-end mb-4 gap-2 print:hidden">
+                 <Button onClick={form.handleSubmit(handleSave)} disabled={!uniqueId || isIdLoading || isClientManager || isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    {diaryId ? 'Save Changes' : 'Create Diary'}
+                    {isSaving ? 'Saving...' : 'Save Diary'}
+                </Button>
+                <Button onClick={() => window.print()} variant="outline">
+                    <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
                 </Button>
             </div>
-        </form>
-      </Form>
-    </div>
-  );
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSave)}>
+                <Card className="p-8 shadow-lg" id="diary-form">
+                    <header className="flex items-start justify-between mb-4 border-b pb-4">
+                        <AltekLogo className="h-10" />
+                        <div className="text-right">
+                            <h1 className="text-2xl font-bold tracking-tight text-primary">{diaryId ? 'Edit Daily Diary' : 'DAILY DIARY'}</h1>
+                            <p className="text-sm text-muted-foreground font-mono">ID: {isIdLoading ? 'Generating...' : uniqueId}</p>
+                        </div>
+                    </header>
+
+                    {/* Form fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 text-sm items-end">
+                       <FormField
+                            control={form.control}
+                            name="contractTitle"
+                            render={({ field }) => (
+                                <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <Label htmlFor="contract-title">Contract Title</Label>
+                                    <Input id="contract-title" {...field} />
+                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="contractNumber"
+                                    render={({ field: fieldNum }) => (
+                                        <div className="space-y-1">
+                                            <Label htmlFor="contract-number">Contract Number</Label>
+                                            <Input id="contract-number" {...fieldNum} />
+                                        </div>
+                                    )}
+                                />
+                                </div>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="area"
+                            render={({ field }) => (
+                                <div className="space-y-1">
+                                    <Label>Area</Label>
+                                    <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="Mining" id="mining" />
+                                            <Label htmlFor="mining">Mining</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="Smelter" id="smelter" />
+                                            <Label htmlFor="smelter">Smelter</Label>
+                                        </div>
+                                    </RadioGroup>
+                                </div>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="date"
+                            render={({ field }) => (
+                                <div className="space-y-1">
+                                <Label htmlFor="date">Date</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                                    </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                    <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={field.onChange} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                                </div>
+                            )}
+                        />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
+                         <FormField
+                            control={form.control}
+                            name="shiftStart"
+                            render={({ field }) => (
+                                <div className="space-y-1">
+                                    <Label htmlFor="shift-start">Shift Start</Label>
+                                    <Input id="shift-start" type="time" {...field} />
+                                </div>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="shiftEnd"
+                            render={({ field }) => (
+                                <div className="space-y-1">
+                                    <Label htmlFor="shift-end">Shift End</Label>
+                                    <Input id="shift-end" type="time" {...field} />
+                                </div>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="hrs"
+                            render={({ field }) => (
+                                <div className="space-y-1">
+                                    <Label htmlFor="hrs">Hrs</Label>
+                                    <Input id="hrs" type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} value={field.value ?? ''} />
+                                </div>
+                            )}
+                        />
+                    </div>
+
+                    <Card className="mb-4">
+                        <CardHeader className="bg-muted p-2 rounded-t-lg">
+                            <CardTitle className="text-sm">SECTION A: HSE</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-4">
+                             <FormField
+                                control={form.control}
+                                name="incidents"
+                                render={({ field }) => (
+                                    <div className="space-y-1">
+                                        <Label htmlFor="incidents">Incidents/Accidents/Injuries</Label>
+                                        <VoiceTextarea id="incidents" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
+                                    </div>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="toolboxTalk"
+                                render={({ field }) => (
+                                    <div className="space-y-1">
+                                        <Label htmlFor="toolbox-talk">Toolbox Talk</Label>
+                                        <VoiceTextarea id="toolbox-talk" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
+                                    </div>
+                                )}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    <Card className="mb-4">
+                        <CardHeader className="bg-muted p-2 rounded-t-lg flex flex-row items-center justify-between">
+                            <CardTitle className="text-sm">SECTION B: MANPOWER AND PLANT</CardTitle>
+                            <Button size="sm" type="button" onClick={() => appendManpower({ designation: '', forecast: 1, actual: 1, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 9, comments: '' })}><Plus className="mr-2 h-4 w-4"/>Add Manpower</Button>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-4">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[200px]">Designation</TableHead>
+                                        <TableHead>Forecast</TableHead>
+                                        <TableHead>Actual</TableHead>
+                                        <TableHead>Normal</TableHead>
+                                        <TableHead>1.5 OT</TableHead>
+                                        <TableHead>2.0 OT</TableHead>
+                                        <TableHead>Total</TableHead>
+                                        <TableHead>Comments</TableHead>
+                                        <TableHead />
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {manpowerFields.map((field, index) => (
+                                        <TableRow key={field.id}>
+                                            <TableCell><Input {...form.register(`manpower.${index}.designation`)}/></TableCell>
+                                            <TableCell><Input type="number" {...form.register(`manpower.${index}.forecast`, { valueAsNumber: true })}/></TableCell>
+                                            <TableCell><Input type="number" {...form.register(`manpower.${index}.actual`, { valueAsNumber: true })}/></TableCell>
+                                            <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.normalHrs`, { valueAsNumber: true })}/></TableCell>
+                                            <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.overtime1_5`, { valueAsNumber: true })}/></TableCell>
+                                            <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.overtime2_0`, { valueAsNumber: true })}/></TableCell>
+                                            <TableCell><Input type="number" {...form.register(`manpower.${index}.totalManHrs`, { valueAsNumber: true })} readOnly className="bg-muted"/></TableCell>
+                                            <TableCell><Input {...form.register(`manpower.${index}.comments`)}/></TableCell>
+                                            <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removeManpower(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                             <Button size="sm" type="button" onClick={() => appendPlant({ description: '', qty: 1, inspectionDone: 'no', comments: '' })}><Plus className="mr-2 h-4 w-4"/>Add Plant</Button>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Plant description</TableHead>
+                                        <TableHead>Qty</TableHead>
+                                        <TableHead>Daily Inspection Done</TableHead>
+                                        <TableHead>Comments</TableHead>
+                                        <TableHead />
+                                    </TableRow>
+                                </TableHeader>
+                                 <TableBody>
+                                    {plantFields.map((field, index) => (
+                                        <TableRow key={field.id}>
+                                            <TableCell><Input {...form.register(`plant.${index}.description`)}/></TableCell>
+                                            <TableCell><Input type="number" {...form.register(`plant.${index}.qty`, { valueAsNumber: true })}/></TableCell>
+                                            <TableCell>
+                                                 <Controller
+                                                    control={form.control}
+                                                    name={`plant.${index}.inspectionDone`}
+                                                    render={({ field: radioField }) => (
+                                                        <RadioGroup className="flex gap-4" onValueChange={radioField.onChange} value={radioField.value}>
+                                                            <div className="flex items-center space-x-2"><RadioGroupItem value="yes" id={`plant-y-${index}`} /><Label htmlFor={`plant-y-${index}`}>Y</Label></div>
+                                                            <div className="flex items-center space-x-2"><RadioGroupItem value="no" id={`plant-n-${index}`} /><Label htmlFor={`plant-n-${index}`}>N</Label></div>
+                                                        </RadioGroup>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell><Input {...form.register(`plant.${index}.comments`)}/></TableCell>
+                                            <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removePlant(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="mb-4">
+                        <CardHeader className="bg-muted p-2 rounded-t-lg flex flex-row items-center justify-between">
+                            <CardTitle className="text-sm">SECTION C: DESCRIPTION OF WORKS</CardTitle>
+                             <Button size="sm" type="button" onClick={() => appendWork({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: 0 })}><Plus className="mr-2 h-4 w-4"/>Add Work</Button>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Area of Work</TableHead>
+                                        <TableHead className="w-[40%]">Scope of Work</TableHead>
+                                        <TableHead>Time Start</TableHead>
+                                        <TableHead>Time End</TableHead>
+                                        <TableHead>Hrs</TableHead>
+                                        <TableHead />
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {workFields.map((field, index) => (
+                                        <TableRow key={field.id}>
+                                            <TableCell><Input {...form.register(`works.${index}.area`)}/></TableCell>
+                                            <TableCell><Textarea {...form.register(`works.${index}.scope`)}/></TableCell>
+                                            <TableCell><Input type="time" {...form.register(`works.${index}.timeStart`)}/></TableCell>
+                                            <TableCell><Input type="time" {...form.register(`works.${index}.timeEnd`)}/></TableCell>
+                                            <TableCell><Input type="number" className="w-[70px]" {...form.register(`works.${index}.hrs`, { valueAsNumber: true })}/></TableCell>
+                                            <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removeWork(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <Card className="mb-4">
+                            <CardHeader className="bg-muted p-2 rounded-t-lg">
+                                <CardTitle className="text-sm">SECTION D: DELAYS</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 space-y-2">
+                                {form.getValues().delays?.map((_, index) => (
+                                    <FormField
+                                        key={index}
+                                        control={form.control}
+                                        name={`delays.${index}`}
+                                        render={({ field }) => (
+                                            <div className="flex items-center gap-2">
+                                                <Label className="w-6 shrink-0">{index + 1}.</Label>
+                                                <Textarea rows={1} {...field} />
+                                            </div>
+                                        )}
+                                    />
+                                ))}
+                            </CardContent>
+                        </Card>
+
+                        <Card className="mb-4">
+                            <CardHeader className="bg-muted p-2 rounded-t-lg">
+                                <CardTitle className="text-sm">SECTION E: COMMENTS</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 space-y-2">
+                                {form.getValues().comments?.map((_, index) => (
+                                    <FormField
+                                        key={index}
+                                        control={form.control}
+                                        name={`comments.${index}`}
+                                        render={({ field }) => (
+                                             <div className="flex items-center gap-2">
+                                                <Label className="w-6 shrink-0">{index + 1}.</Label>
+                                                <Textarea rows={1} {...field} />
+                                            </div>
+                                        )}
+                                    />
+                                ))}
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <Card>
+                        <CardHeader className="bg-muted p-2 rounded-t-lg">
+                            <CardTitle className="text-sm">SECTION F: GALLERY</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-6">
+                            <div className="space-y-2">
+                                <h4 className="font-semibold">Before Work</h4>
+                                <ImageUploader onImagesChange={setBeforeFiles} title="Before Work" />
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="font-semibold">After Work</h4>
+                                <ImageUploader onImagesChange={setAfterFiles} title="After Work" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <div className="grid grid-cols-2 gap-8 mt-8">
+                        <Card>
+                             <CardHeader className="p-4">
+                                <CardTitle className="text-base text-center">CONTRACTOR</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 space-y-4">
+                                <div className="space-y-1">
+                                    <Label>Name</Label>
+                                    <Input value={contractorName} onChange={(e) => setContractorName(e.target.value)} />
+                                </div>
+                                 <div className="space-y-1">
+                                    <Label>Signature</Label>
+                                    <SignaturePad value={contractorSignature} onSign={setContractorSignature} onClear={() => setContractorSignature(null)} />
+                                </div>
+                                 <div className="space-y-1">
+                                    <Label>Date</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {contractorDate ? format(contractorDate, "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                        <Calendar mode="single" selected={contractorDate} onSelect={setContractorDate} initialFocus />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </CardContent>
+                        </Card>
+                         <Card>
+                             <CardHeader className="p-4">
+                                <CardTitle className="text-base text-center">CLIENT</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 space-y-4">
+                                 <div className="space-y-1">
+                                    <Label>Name</Label>
+                                    <Input value={clientName} onChange={(e) => setClientName(e.target.value)}/>
+                                </div>
+                                 <div className="space-y-1">
+                                    <Label>Signature</Label>
+                                    <SignaturePad value={clientSignature} onSign={setClientSignature} onClear={() => setClientSignature(null)} />
+                                </div>
+                                 <div className="space-y-1">
+                                    <Label>Date</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {clientDate ? format(clientDate, "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                        <Calendar mode="single" selected={clientDate} onSelect={setClientDate} initialFocus />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </Card>
+            </form>
+            </Form>
+        </div>
+    );
 }
+
