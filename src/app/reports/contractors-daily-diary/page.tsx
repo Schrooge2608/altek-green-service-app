@@ -1,10 +1,11 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AltekLogo } from '@/components/altek-logo';
-import { useFirebase, useUser } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
@@ -20,11 +21,11 @@ export default function NewDailyDiaryPage() {
 
             // 1. SAFETY CHECK: Are we logged in?
             if (!currentUser) {
-                toast({ variant: "destructive", title: "STOP", description: "You are not logged in. The app cannot save." });
+                alert("STOP: You are not logged in. The app cannot save.");
                 return;
             }
-            
-            toast({ title: "Debug Step 1", description: `User Found: ${currentUser.uid}` });
+
+            console.log("1. User Found:", currentUser.uid);
 
             // 2. PREPARE THE DATA (The "Key")
             const newDiaryData = {
@@ -34,26 +35,26 @@ export default function NewDailyDiaryPage() {
                 content: "New Entry",        // Placeholder content
                 status: "Draft"
             };
-            
-            toast({ title: "Debug Step 2", description: `Sending this data: ${JSON.stringify(newDiaryData, null, 2)}` });
 
+            console.log("2. Sending this data:", newDiaryData);
+            
+            // BB's SPY code
+            console.log("BB SPY: Connected to Project ID:", firestore.app.options.projectId);
+            alert("BB SPY: Connected to Project ID: " + firestore.app.options.projectId);
+            
             // BB's requested check:
             const collectionName = 'daily_diaries';
             toast({ title: "BB CHECK", description: `Attempting to save to collection named: "${collectionName}"` });
 
-            // BB's SPY code
-            console.log("BB SPY: Connected to Project ID:", firestore.app.options.projectId);
-            alert("BB SPY: Connected to Project ID: " + firestore.app.options.projectId);
-
             // 3. SEND TO FIREBASE
             await addDoc(collection(firestore, collectionName), newDiaryData);
             
-            toast({ title: "SUCCESS!", description: "The document was saved." });
+            alert("SUCCESS! The document was saved.");
             router.push('/reports/diary-tracker');
 
         } catch (error: any) {
             console.error("SAVE FAILED:", error);
-            toast({ variant: "destructive", title: "STILL FAILING", description: error.message });
+            alert("STILL FAILING: " + error.message);
         }
     };
 

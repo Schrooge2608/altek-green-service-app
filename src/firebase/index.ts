@@ -8,7 +8,8 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { DependencyList, useMemo } from 'react';
 
-// Hardcoded Firebase configuration to ensure the correct project is used.
+// Hardcoded Firebase configuration to ensure the correct project is used for debugging.
+// This bypasses any issues with environment variable loading.
 const firebaseConfig = {
   apiKey: "AIzaSyCYugYlB7XHdQxB6GQ3omRv9a0n7fBG6Yg",
   authDomain: "studio-8966443065-8fafa.firebaseapp.com",
