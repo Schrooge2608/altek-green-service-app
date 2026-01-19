@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { VoiceTextarea } from '@/components/ui/voice-textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { CalendarIcon, Printer, Save, Loader2 } from 'lucide-react';
+import { CalendarIcon, Printer, Save, Loader2, Pencil } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -41,25 +41,35 @@ const initialPlantRows = [
 ];
 
 export default function NewDailyDiaryPage() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const { toast } = useToast();
+    const { firestore, firebaseApp } = useFirebase();
+    const { user, isUserLoading } = useUser();
+
+    const diaryId = searchParams.get('id');
+    const equipmentNameFromQuery = searchParams.get('equipmentName');
+
+    // State for all form fields
+    const [uniqueId, setUniqueId] = useState('');
+    const [contractTitle, setContractTitle] = useState('VSD MAINTENANCE');
+    const [contractNumber, setContractNumber] = useState('CW 22038313');
+    const [area, setArea] = useState<'Mining' | 'Smelter'>('Mining');
     const [date, setDate] = React.useState<Date>();
+    const [shiftStart, setShiftStart] = useState('');
+    const [shiftEnd, setShiftEnd] = useState('');
+    const [hrs, setHrs] = useState<number | undefined>();
     const [incidentsText, setIncidentsText] = useState('');
     const [toolboxTalkText, setToolboxTalkText] = useState('');
-    const [uniqueId, setUniqueId] = useState('');
-    const [isIdLoading, setIsIdLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-
-    const { firestore, firebaseApp } = useFirebase();
-    const { toast } = useToast();
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const { user, isUserLoading } = useUser();
-    
-    // Manpower state
     const [manpowerData, setManpowerData] = useState(initialManpowerData);
+    const [plantData, setPlantData] = useState(initialPlantRows.map(p => ({...p, qty: '', inspectionDone: 'no', comments: ''})));
+    const [delays, setDelays] = useState<string[]>(Array(5).fill(''));
+    const [comments, setComments] = useState<string[]>(Array(5).fill(''));
     const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
     const [afterFiles, setAfterFiles] = useState<File[]>([]);
     
-    const equipmentNameFromQuery = searchParams.get('equipmentName');
+    const [isIdLoading, setIsIdLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
 
     const initialWorks = useMemo(() => {
         const works = Array(5).fill(null).map((_, i) => ({
@@ -70,17 +80,17 @@ export default function NewDailyDiaryPage() {
             timeEnd: '',
             hrs: undefined,
         }));
-        if (equipmentNameFromQuery) {
+        if (equipmentNameFromQuery && !diaryId) { // Only apply query param for new diaries
             works[0].scope = `Unscheduled work on: ${equipmentNameFromQuery}`;
         }
         return works;
-    }, [equipmentNameFromQuery]);
+    }, [equipmentNameFromQuery, diaryId]);
 
     const [works, setWorks] = useState(initialWorks);
-    const [plantData, setPlantData] = useState(initialPlantRows.map(p => ({...p, qty: '', inspectionDone: 'no', comments: ''})));
-    const [delays, setDelays] = useState<string[]>(Array(5).fill(''));
-    const [comments, setComments] = useState<string[]>(Array(5).fill(''));
 
+    // Data fetching
+    const diaryRef = useMemoFirebase(() => diaryId ? doc(firestore, 'daily_diaries', diaryId) : null, [firestore, diaryId]);
+    const { data: diaryData, isLoading: diaryLoading } = useDoc<DailyDiary>(diaryRef);
 
     const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
@@ -96,13 +106,56 @@ export default function NewDailyDiaryPage() {
             .map(u => ({ label: u.name, value: u.name }));
     }, [users]);
     
+    // Effect for setting form state from fetched data (edit mode)
     useEffect(() => {
-        setIsIdLoading(true);
-        const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-        setUniqueId(`AG-RBM-DD-${randomPart}`);
-        setIsIdLoading(false);
-    }, []);
+        if (diaryData) {
+            setContractTitle(diaryData.contractTitle || 'VSD MAINTENANCE');
+            setContractNumber(diaryData.contractNumber || 'CW 22038313');
+            setArea(diaryData.area || 'Mining');
+            if (diaryData.date && diaryData.date !== 'N/A') setDate(new Date(diaryData.date));
+            setShiftStart(diaryData.shiftStart || '');
+            setShiftEnd(diaryData.shiftEnd || '');
+            setHrs(diaryData.hrs);
+            setIncidentsText(diaryData.incidents || '');
+            setToolboxTalkText(diaryData.toolboxTalk || '');
+            
+            const populatedManpower = diaryData.manpower?.map((m, i) => ({ ...m, id: i })) || [];
+            while(populatedManpower.length < 4) populatedManpower.push({ id: populatedManpower.length, ...initialManpowerData[0], designation: '' });
+            setManpowerData(populatedManpower);
 
+            const populatedWorks = diaryData.works?.map((w, i) => ({ ...w, id: i })) || [];
+            while(populatedWorks.length < 5) populatedWorks.push({ id: populatedWorks.length, area: '', scope: '', timeStart: '', timeEnd: '', hrs: undefined });
+            setWorks(populatedWorks);
+
+            const populatedPlant = diaryData.plant?.map(p => ({...p, qty: p.qty || ''})) || [];
+            while(populatedPlant.length < 2) populatedPlant.push({ description: initialPlantRows[populatedPlant.length]?.description || '', qty: '', inspectionDone: 'no', comments: '' });
+            setPlantData(populatedPlant);
+
+            const paddedDelays = diaryData.delays ? [...diaryData.delays] : [];
+            while (paddedDelays.length < 5) paddedDelays.push('');
+            setDelays(paddedDelays);
+            
+            const paddedComments = diaryData.comments ? [...diaryData.comments] : [];
+            while (paddedComments.length < 5) paddedComments.push('');
+            setComments(paddedComments);
+        }
+    }, [diaryData]);
+
+
+    // Effect for setting the document ID
+    useEffect(() => {
+        if (diaryId) {
+            setUniqueId(diaryId);
+            setIsIdLoading(false);
+        } else {
+            setIsIdLoading(true);
+            const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+            setUniqueId(`AG-RBM-DD-${randomPart}`);
+            setIsIdLoading(false);
+        }
+    }, [diaryId]);
+
+    // Effect for calculating total manpower hours
     useEffect(() => {
         const needsUpdate = manpowerData.some(row => {
             const normal = Number(row.normalHrs || 0);
@@ -156,20 +209,25 @@ export default function NewDailyDiaryPage() {
 
         setIsSaving(true);
         try {
-            const beforeImageUrls = await uploadImages(beforeFiles, 'before');
-            const afterImageUrls = await uploadImages(afterFiles, 'after');
+            const newBeforeImageUrls = await uploadImages(beforeFiles, 'before');
+            const newAfterImageUrls = await uploadImages(afterFiles, 'after');
 
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
-            const plainManpowerData = manpowerData.map(row => ({...row}));
-            const plainWorksData = works.filter(w => w.scope || w.area || w.timeStart || w.timeEnd || w.hrs).map(({id, ...rest}) => ({...rest, hrs: rest.hrs === undefined ? 0 : rest.hrs}));
+            const plainManpowerData = manpowerData.filter(m => m.designation).map(({id, ...rest}) => rest);
+            const plainWorksData = works.filter(w => w.scope || w.area).map(({id, ...rest}) => ({...rest, hrs: rest.hrs === undefined ? 0 : rest.hrs}));
             const plainPlantData = plantData.filter(p => p.qty || p.comments).map(p => ({...p, qty: Number(p.qty)}));
 
             const finalDiaryData: Partial<DailyDiary> = { 
                 id: uniqueId,
                 userId: user.uid,
                 date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
-                contractTitle: 'VSD MAINTENANCE', // Placeholder
+                contractTitle,
+                contractNumber,
+                area,
+                shiftStart,
+                shiftEnd,
+                hrs,
                 incidents: incidentsText,
                 toolboxTalk: toolboxTalkText,
                 manpower: plainManpowerData,
@@ -177,8 +235,8 @@ export default function NewDailyDiaryPage() {
                 plant: plainPlantData,
                 delays: delays.filter(d => d),
                 comments: comments.filter(c => c),
-                beforeWorkImages: beforeImageUrls,
-                afterWorkImages: afterImageUrls,
+                beforeWorkImages: [...(diaryData?.beforeWorkImages || []), ...newBeforeImageUrls],
+                afterWorkImages: [...(diaryData?.afterWorkImages || []), ...newAfterImageUrls],
             };
 
             await setDoc(diaryDocRef, finalDiaryData, { merge: true });
@@ -188,7 +246,7 @@ export default function NewDailyDiaryPage() {
                 description: `Document ${uniqueId} has been saved successfully.`,
             });
             
-            router.push(`/reports/contractors-daily-diary/${uniqueId}`);
+            router.push(`/reports/diary-tracker`);
         } catch (error) {
             // Error is already handled and toasted inside uploadImages
         } finally {
@@ -196,15 +254,10 @@ export default function NewDailyDiaryPage() {
         }
     };
 
-    const handleManpowerChange = (index: number, field: keyof typeof manpowerData[0], value: string) => {
+    const handleManpowerChange = (index: number, field: keyof typeof manpowerData[0], value: string | number) => {
         const newData = [...manpowerData];
-        // For numeric fields, allow empty string to clear the input, otherwise parse to number
-        const parsedValue = (field !== 'designation' && field !== 'comments')
-            ? (value === '' ? '' : Number(value))
-            : value;
-
         // @ts-ignore
-        newData[index][field] = parsedValue;
+        newData[index][field] = value;
         setManpowerData(newData);
     };
 
@@ -250,10 +303,11 @@ export default function NewDailyDiaryPage() {
         });
     }, [manpowerData]);
 
-     if (isUserLoading) {
+     if (isUserLoading || diaryLoading) {
         return (
             <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="ml-2">Loading Diary...</p>
             </div>
         );
     }
@@ -274,7 +328,7 @@ export default function NewDailyDiaryPage() {
                 <header className="flex items-start justify-between mb-4 border-b pb-4">
                     <AltekLogo className="h-10" />
                     <div className="text-right">
-                        <h1 className="text-2xl font-bold tracking-tight text-primary">DAILY DIARY</h1>
+                        <h1 className="text-2xl font-bold tracking-tight text-primary">{diaryId ? 'Edit Daily Diary' : 'DAILY DIARY'}</h1>
                         <p className="text-sm text-muted-foreground font-mono">ID: {isIdLoading ? 'Generating...' : uniqueId}</p>
                     </div>
                 </header>
@@ -283,22 +337,22 @@ export default function NewDailyDiaryPage() {
                     <div className="lg:col-span-2 grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <Label htmlFor="contract-title">Contract Title</Label>
-                            <Input id="contract-title" defaultValue="VSD MAINTENANCE" />
+                            <Input id="contract-title" value={contractTitle} onChange={e => setContractTitle(e.target.value)} />
                         </div>
                          <div className="space-y-1">
                             <Label htmlFor="contract-number">Contract Number</Label>
-                            <Input id="contract-number" defaultValue="CW 22038313" />
+                            <Input id="contract-number" value={contractNumber} onChange={e => setContractNumber(e.target.value)} />
                         </div>
                     </div>
                      <div className="space-y-1">
                         <Label>Area</Label>
-                        <RadioGroup defaultValue="mining" className="flex gap-4 pt-2">
+                        <RadioGroup value={area} onValueChange={(v) => setArea(v as 'Mining' | 'Smelter')} className="flex gap-4 pt-2">
                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="mining" id="mining" />
+                                <RadioGroupItem value="Mining" id="mining" />
                                 <Label htmlFor="mining">Mining</Label>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="smelter" id="smelter" />
+                                <RadioGroupItem value="Smelter" id="smelter" />
                                 <Label htmlFor="smelter">Smelter</Label>
                             </div>
                         </RadioGroup>
@@ -321,15 +375,15 @@ export default function NewDailyDiaryPage() {
                 <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
                     <div className="space-y-1">
                         <Label htmlFor="shift-start">Shift Start</Label>
-                        <Input id="shift-start" type="time" />
+                        <Input id="shift-start" type="time" value={shiftStart} onChange={e => setShiftStart(e.target.value)} />
                     </div>
                     <div className="space-y-1">
                         <Label htmlFor="shift-end">Shift End</Label>
-                        <Input id="shift-end" type="time" />
+                        <Input id="shift-end" type="time" value={shiftEnd} onChange={e => setShiftEnd(e.target.value)} />
                     </div>
                     <div className="space-y-1">
                         <Label htmlFor="hrs">Hrs</Label>
-                        <Input id="hrs" type="number" />
+                        <Input id="hrs" type="number" value={hrs} onChange={e => setHrs(Number(e.target.value))} />
                     </div>
                 </div>
 

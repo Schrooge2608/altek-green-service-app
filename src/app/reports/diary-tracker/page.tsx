@@ -6,7 +6,7 @@ import type { DailyDiary, User } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { FileText, Loader2, PlusCircle } from 'lucide-react';
+import { FileText, Loader2, PlusCircle, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -24,26 +24,12 @@ export default function DiaryTrackerPage() {
   const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
-  const technicianRoles = [
-      'Technician', 'Technician (Beta)',
-      'Junior Technician', 'Junior Technician (Beta)',
-      'Technologist', 'Technologist (Beta)',
-      'Power systems engineer', 'Power systems engineer (Beta)',
-      'HVAC product specialist', 'HVAC product specialist (Beta)'
-  ];
-
-  const filteredDiaries = useMemo(() => {
+  const diariesWithCreator = useMemo(() => {
       if (!diaries || !users) return [];
 
-      const userRoleMap = new Map(users.map(u => [u.id, u.role]));
       const userNameMap = new Map(users.map(u => [u.id, u.name]));
 
-      return diaries
-          .filter(diary => {
-              const userRole = userRoleMap.get(diary.userId);
-              return userRole && technicianRoles.includes(userRole);
-          })
-          .map(diary => ({
+      return diaries.map(diary => ({
               ...diary,
               creatorName: userNameMap.get(diary.userId) || 'Unknown User'
           }));
@@ -70,7 +56,7 @@ export default function DiaryTrackerPage() {
       <Card>
         <CardHeader>
             <CardTitle>Submitted Diaries</CardTitle>
-            <CardDescription>A log of all daily diaries submitted by technicians and technologists.</CardDescription>
+            <CardDescription>A log of all daily diaries submitted by all users.</CardDescription>
         </CardHeader>
         <CardContent>
             <Table>
@@ -94,8 +80,8 @@ export default function DiaryTrackerPage() {
                                 </div>
                             </TableCell>
                         </TableRow>
-                    ) : filteredDiaries && filteredDiaries.length > 0 ? (
-                        filteredDiaries.map(diary => (
+                    ) : diariesWithCreator && diariesWithCreator.length > 0 ? (
+                        diariesWithCreator.map(diary => (
                             <TableRow key={diary.id}>
                                 <TableCell className="font-mono">{diary.id}</TableCell>
                                 <TableCell>{diary.creatorName}</TableCell>
@@ -109,6 +95,14 @@ export default function DiaryTrackerPage() {
                                             <span className="sr-only">View Diary</span>
                                         </Button>
                                     </Link>
+                                     {user?.uid === diary.userId && (
+                                        <Link href={`/reports/contractors-daily-diary?id=${diary.id}`} passHref>
+                                            <Button variant="ghost" size="icon">
+                                                <Pencil className="h-4 w-4" />
+                                                <span className="sr-only">Edit Diary</span>
+                                            </Button>
+                                        </Link>
+                                    )}
                                 </TableCell>
                             </TableRow>
                         ))
