@@ -53,7 +53,6 @@ const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
   { href: '/reports', label: 'Reports', icon: FileText },
-  { href: '/time-attendance', label: 'Time &amp; Attendance', icon: Clock },
   { href: '/messages', label: 'Messages', icon: Mail, beta: true },
   { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, beta: true },
   { href: '/meters', label: 'Meters', icon: Gauge, beta: true },
@@ -161,8 +160,7 @@ export function SidebarNav() {
 
   const dashboardLink = mainLinks.find(link => link.label === 'Dashboard');
   const breakdownLink = mainLinks.find(link => link.label === 'Breakdowns');
-  const timeAttendanceLink = mainLinks.find(link => link.label === 'Time &amp; Attendance');
-  const otherMainLinks = mainLinks.filter(link => !['Dashboard', 'Breakdowns', 'Reports', 'Time &amp; Attendance'].includes(link.label));
+  const otherMainLinks = mainLinks.filter(link => !['Dashboard', 'Breakdowns', 'Reports'].includes(link.label));
 
 
   return (
@@ -296,17 +294,6 @@ export function SidebarNav() {
                     </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>
-            
-            {timeAttendanceLink && (
-                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === timeAttendanceLink.href} tooltip={timeAttendanceLink.label}>
-                        <Link href={timeAttendanceLink.href}>
-                            <timeAttendanceLink.icon />
-                            <span>{timeAttendanceLink.label}</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            )}
 
             <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
                 <SidebarMenuItem>
@@ -522,34 +509,44 @@ export function SidebarNav() {
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip="Administration" isActive={pathname.startsWith('/admin')}>
+                      <SidebarMenuButton tooltip="Administration" isActive={pathname.startsWith('/admin') || pathname.startsWith('/time-attendance')}>
                           <Shield />
                           <span>Administration</span>
                           <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
                       </SidebarMenuButton>
                   </CollapsibleTrigger>
                 </SidebarMenuItem>
-                {isAdmin && (
-                    <CollapsibleContent>
-                        <SidebarMenuSub>
-                            <SidebarMenuItem>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
-                                    <Link href="/admin/users">User Management</Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuItem>
-                            <SidebarMenuItem>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
-                                    <Link href="/seed-admin">Seed Admin</Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuItem>
-                            <SidebarMenuItem>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
-                                    <Link href="/admin/seed">Seed Data</Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuItem>
-                        </SidebarMenuSub>
-                    </CollapsibleContent>
-                )}
+                <CollapsibleContent>
+                    <SidebarMenuSub>
+                        <SidebarMenuItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance'}>
+                                <Link href="/time-attendance">
+                                    <Clock />
+                                    <span>Time &amp; Attendance</span>
+                                </Link>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
+                        {isAdmin && (
+                            <>
+                                <SidebarMenuItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
+                                        <Link href="/admin/users">User Management</Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
+                                        <Link href="/seed-admin">Seed Admin</Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
+                                        <Link href="/admin/seed">Seed Data</Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuItem>
+                            </>
+                        )}
+                    </SidebarMenuSub>
+                </CollapsibleContent>
               </Collapsible>
         </SidebarMenu>
       </SidebarContent>
