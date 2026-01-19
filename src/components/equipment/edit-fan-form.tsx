@@ -75,14 +75,13 @@ export function EditFanForm({ equipment }: EditFanFormProps) {
     const equipmentRef = doc(firestore, 'equipment', equipment.id);
     const assignedUser = users?.find(u => u.id === values.fanAssignedToId);
 
-    const processedValues = {
-        ...values,
-        fanAssignedToName: assignedUser?.name,
+    const updateData: Partial<Equipment> = {
+      ...values,
+      fanAssignedToId: values.fanAssignedToId === 'unassigned' ? '' : values.fanAssignedToId,
+      fanAssignedToName: assignedUser?.name || '',
     };
     
-    const updateData: Partial<Equipment> = removeUndefinedProps(processedValues);
-
-    updateDocumentNonBlocking(equipmentRef, updateData);
+    updateDocumentNonBlocking(equipmentRef, removeUndefinedProps(updateData));
 
     toast({
       title: 'Fan Details Updated',
@@ -133,3 +132,4 @@ export function EditFanForm({ equipment }: EditFanFormProps) {
     </Dialog>
   );
 }
+    

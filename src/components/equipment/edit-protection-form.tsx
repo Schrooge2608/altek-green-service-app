@@ -115,18 +115,15 @@ export function EditProtectionForm({ equipment }: EditProtectionFormProps) {
     const equipmentRef = doc(firestore, 'equipment', equipment.id);
     const assignedUser = users?.find(u => u.id === values.protectionAssignedToId);
 
-    const processedValues = {
+    const updateData = {
         ...values,
-        breakerServiceDescription: values.breakerServiceDescription || '',
         breakerNumberOfPoles: values.breakerNumberOfPoles ? parseInt(values.breakerNumberOfPoles, 10) as 3 | 4 : undefined,
         protectionInstallationDate: values.protectionInstallationDate ? format(values.protectionInstallationDate, "yyyy-MM-dd") : undefined,
-        protectionAssignedToName: assignedUser?.name,
+        protectionAssignedToId: values.protectionAssignedToId === 'unassigned' ? '' : values.protectionAssignedToId,
+        protectionAssignedToName: assignedUser?.name || '',
     };
     
-    const updateData: Partial<Equipment> = removeUndefinedProps(processedValues);
-
-
-    updateDocumentNonBlocking(equipmentRef, updateData);
+    updateDocumentNonBlocking(equipmentRef, removeUndefinedProps(updateData));
 
     toast({
       title: 'Protection Details Updated',
@@ -275,3 +272,4 @@ export function EditProtectionForm({ equipment }: EditProtectionFormProps) {
     </Dialog>
   );
 }
+    

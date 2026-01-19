@@ -75,14 +75,13 @@ export function EditGearboxForm({ equipment }: EditGearboxFormProps) {
     const equipmentRef = doc(firestore, 'equipment', equipment.id);
     const assignedUser = users?.find(u => u.id === values.gearboxAssignedToId);
 
-    const processedValues = {
-        ...values,
-        gearboxAssignedToName: assignedUser?.name,
+    const updateData: Partial<Equipment> = {
+      ...values,
+      gearboxAssignedToId: values.gearboxAssignedToId === 'unassigned' ? '' : values.gearboxAssignedToId,
+      gearboxAssignedToName: assignedUser?.name || '',
     };
     
-    const updateData: Partial<Equipment> = removeUndefinedProps(processedValues);
-
-    updateDocumentNonBlocking(equipmentRef, updateData);
+    updateDocumentNonBlocking(equipmentRef, removeUndefinedProps(updateData));
 
     toast({
       title: 'Gearbox Details Updated',
@@ -133,3 +132,4 @@ export function EditGearboxForm({ equipment }: EditGearboxFormProps) {
     </Dialog>
   );
 }
+    

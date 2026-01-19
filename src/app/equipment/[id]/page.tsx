@@ -181,10 +181,11 @@ export default function EquipmentDetailPage() {
                     <EditGeneralInfoForm equipment={eq} />
                 )}
             </CardHeader>
-            <CardContent className="grid md:grid-cols-3 gap-6 text-sm">
+            <CardContent className="grid md:grid-cols-2 gap-6 text-sm">
                 <DetailRow label="ID" value={eq.id} />
                 <DetailRow label="Location" value={eq.location} />
                 <DetailRow label="Plant" value={`${eq.plant} ${eq.division ? `> ${eq.division}` : ''}`} />
+                <DetailRow label="Assigned Technician" value={eq.assignedToName} />
             </CardContent>
         </Card>
 
@@ -480,3 +481,5 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
+    

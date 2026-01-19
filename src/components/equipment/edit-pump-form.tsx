@@ -92,15 +92,14 @@ export function EditPumpForm({ equipment }: EditPumpFormProps) {
     const equipmentRef = doc(firestore, 'equipment', equipment.id);
     const assignedUser = users?.find(u => u.id === values.pumpAssignedToId);
 
-    const processedValues = {
-        ...values,
-        pumpCommissionDate: values.pumpCommissionDate ? format(values.pumpCommissionDate, "yyyy-MM-dd") : undefined,
-        pumpAssignedToName: assignedUser?.name,
+    const updateData: Partial<Equipment> = {
+      ...values,
+      pumpCommissionDate: values.pumpCommissionDate ? format(values.pumpCommissionDate, "yyyy-MM-dd") : undefined,
+      pumpAssignedToId: values.pumpAssignedToId === 'unassigned' ? '' : values.pumpAssignedToId,
+      pumpAssignedToName: assignedUser?.name || '',
     };
     
-    const updateData: Partial<Equipment> = removeUndefinedProps(processedValues);
-
-    updateDocumentNonBlocking(equipmentRef, updateData);
+    updateDocumentNonBlocking(equipmentRef, removeUndefinedProps(updateData));
 
     toast({
       title: 'Pump Details Updated',
@@ -162,3 +161,4 @@ export function EditPumpForm({ equipment }: EditPumpFormProps) {
     </Dialog>
   );
 }
+    

@@ -75,14 +75,13 @@ export function EditValveForm({ equipment }: EditValveFormProps) {
     const equipmentRef = doc(firestore, 'equipment', equipment.id);
     const assignedUser = users?.find(u => u.id === values.valveAssignedToId);
 
-    const processedValues = {
-        ...values,
-        valveAssignedToName: assignedUser?.name,
+    const updateData: Partial<Equipment> = {
+      ...values,
+      valveAssignedToId: values.valveAssignedToId === 'unassigned' ? '' : values.valveAssignedToId,
+      valveAssignedToName: assignedUser?.name || '',
     };
     
-    const updateData: Partial<Equipment> = removeUndefinedProps(processedValues);
-
-    updateDocumentNonBlocking(equipmentRef, updateData);
+    updateDocumentNonBlocking(equipmentRef, removeUndefinedProps(updateData));
 
     toast({
       title: 'Valve Details Updated',
@@ -133,3 +132,4 @@ export function EditValveForm({ equipment }: EditValveFormProps) {
     </Dialog>
   );
 }
+    

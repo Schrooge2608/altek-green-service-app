@@ -80,15 +80,14 @@ export function EditVsdForm({ vsd }: EditVsdFormProps) {
     const vsdRef = doc(firestore, 'vsds', vsd.id);
     const assignedUser = users?.find(u => u.id === values.assignedToId);
 
-    const processedValues = {
-        ...values,
-        installationDate: values.installationDate ? format(values.installationDate, "yyyy-MM-dd") : undefined,
-        assignedToName: assignedUser?.name,
+    const updateData: Partial<VSD> = {
+      ...values,
+      installationDate: values.installationDate ? format(values.installationDate, "yyyy-MM-dd") : undefined,
+      assignedToId: values.assignedToId === 'unassigned' ? '' : values.assignedToId,
+      assignedToName: assignedUser?.name || '',
     };
     
-    const updateData: Partial<VSD> = removeUndefinedProps(processedValues);
-
-    updateDocumentNonBlocking(vsdRef, updateData);
+    updateDocumentNonBlocking(vsdRef, removeUndefinedProps(updateData));
 
     toast({
       title: 'Controller Details Updated',
@@ -163,5 +162,4 @@ export function EditVsdForm({ vsd }: EditVsdFormProps) {
     </Dialog>
   );
 }
-
     

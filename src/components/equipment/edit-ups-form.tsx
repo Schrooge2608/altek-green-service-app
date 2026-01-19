@@ -79,16 +79,15 @@ export function EditUpsForm({ equipment }: EditUpsFormProps) {
     const equipmentRef = doc(firestore, 'equipment', equipment.id);
     const assignedUser = users?.find(u => u.id === values.upsAssignedToId);
 
-    const processedValues = {
-        ...values,
-        upsInstallationDate: values.upsInstallationDate ? format(values.upsInstallationDate, "yyyy-MM-dd") : undefined,
-        lastBatteryReplacement: values.lastBatteryReplacement ? format(values.lastBatteryReplacement, "yyyy-MM-dd") : undefined,
-        upsAssignedToName: assignedUser?.name,
+    const updateData: Partial<Equipment> = {
+      ...values,
+      upsInstallationDate: values.upsInstallationDate ? format(values.upsInstallationDate, "yyyy-MM-dd") : undefined,
+      lastBatteryReplacement: values.lastBatteryReplacement ? format(values.lastBatteryReplacement, "yyyy-MM-dd") : undefined,
+      upsAssignedToId: values.upsAssignedToId === 'unassigned' ? '' : values.upsAssignedToId,
+      upsAssignedToName: assignedUser?.name || '',
     };
     
-    const updateData: Partial<Equipment> = removeUndefinedProps(processedValues);
-
-    updateDocumentNonBlocking(equipmentRef, updateData);
+    updateDocumentNonBlocking(equipmentRef, removeUndefinedProps(updateData));
 
     toast({
       title: 'UPS/BTU Details Updated',
@@ -253,3 +252,4 @@ export function EditUpsForm({ equipment }: EditUpsFormProps) {
     </Dialog>
   );
 }
+    

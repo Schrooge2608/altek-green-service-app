@@ -80,15 +80,14 @@ export function EditMotorForm({ equipment }: EditMotorFormProps) {
     const equipmentRef = doc(firestore, 'equipment', equipment.id);
     const assignedUser = users?.find(u => u.id === values.motorAssignedToId);
 
-    const processedValues = {
-        ...values,
-        motorInstallationDate: values.motorInstallationDate ? format(values.motorInstallationDate, "yyyy-MM-dd") : undefined,
-        motorAssignedToName: assignedUser?.name,
+    const updateData: Partial<Equipment> = {
+      ...values,
+      motorInstallationDate: values.motorInstallationDate ? format(values.motorInstallationDate, "yyyy-MM-dd") : undefined,
+      motorAssignedToId: values.motorAssignedToId === 'unassigned' ? '' : values.motorAssignedToId,
+      motorAssignedToName: assignedUser?.name || '',
     };
     
-    const updateData: Partial<Equipment> = removeUndefinedProps(processedValues);
-
-    updateDocumentNonBlocking(equipmentRef, updateData);
+    updateDocumentNonBlocking(equipmentRef, removeUndefinedProps(updateData));
 
     toast({
       title: 'Motor Details Updated',
@@ -184,3 +183,4 @@ export function EditMotorForm({ equipment }: EditMotorFormProps) {
     </Dialog>
   );
 }
+    
