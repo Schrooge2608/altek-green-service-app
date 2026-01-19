@@ -52,17 +52,27 @@ export function DivisionPerformanceDashboard({ plantName }: DivisionPerformanceD
         if (!equipment) return [];
         
         const divisions: { [key: string]: { totalUptime: number; totalPower: number; count: number } } = {};
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const totalHoursInMonth = daysInMonth * 24;
 
         equipment.forEach(eq => {
             if (!eq.division) return;
             
-            const key = eq.division; // Only group by division now
+            const key = eq.division;
             if (!divisions[key]) {
                 divisions[key] = { totalUptime: 0, totalPower: 0, count: 0 };
             }
-            
-            divisions[key].totalUptime += eq.uptime || 0;
-            divisions[key].totalPower += eq.powerConsumption || 0;
+
+            const downtimeHours = eq.totalDowntimeHours || 0;
+            const uptimeHours = totalHoursInMonth - downtimeHours;
+            const currentUptime = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
+
+            const runningHours = totalHoursInMonth - downtimeHours;
+            const currentPowerConsumption = (eq.motorPower || 0) * runningHours;
+
+            divisions[key].totalUptime += currentUptime;
+            divisions[key].totalPower += currentPowerConsumption;
             divisions[key].count += 1;
         });
 
@@ -92,13 +102,31 @@ export function DivisionPerformanceDashboard({ plantName }: DivisionPerformanceD
 
     const avgUptime = useMemo(() => {
         if (!equipment || equipment.length === 0) return 0;
-        const total = equipment.reduce((acc, eq) => acc + (eq.uptime || 0), 0);
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const totalHoursInMonth = daysInMonth * 24;
+
+        const total = equipment.reduce((acc, eq) => {
+            const downtimeHours = eq.totalDowntimeHours || 0;
+            const uptimeHours = totalHoursInMonth - downtimeHours;
+            const currentUptime = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
+            return acc + currentUptime;
+        }, 0);
         return total / equipment.length;
     }, [equipment]);
     
     const totalPowerConsumption = useMemo(() => {
         if (!equipment) return 0;
-        return equipment.reduce((acc, eq) => acc + (eq.powerConsumption || 0), 0);
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const totalHoursInMonth = daysInMonth * 24;
+        
+        return equipment.reduce((acc, eq) => {
+            const downtimeHours = eq.totalDowntimeHours || 0;
+            const runningHours = totalHoursInMonth - downtimeHours;
+            const currentPowerConsumption = (eq.motorPower || 0) * runningHours;
+            return acc + currentPowerConsumption;
+        }, 0);
     }, [equipment]);
 
     return (

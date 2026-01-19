@@ -179,50 +179,61 @@ function AuthenticatedMiningDivisionPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {equipmentByLocation[location].map((eq) => (
-                                                  <TableRow key={eq.id}>
-                                                    <TableCell className="font-medium">
-                                                      <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
-                                                        {eq.name}
-                                                      </Link>
-                                                    </TableCell>
-                                                    <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={getStatusVariant(eq.breakdownStatus)}>
-                                                            {eq.breakdownStatus || 'None'}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                      <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
-                                                        {eq.uptime}%
-                                                      </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
-                                                    {canDelete && (
-                                                        <TableCell className="text-right">
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                                        <AlertDialogDescription>
-                                                                            This will permanently delete the equipment <strong>{eq.name}</strong> and its associated VSD. This action cannot be undone.
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                        <AlertDialogAction onClick={() => handleDeleteEquipment(eq)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        </TableCell>
-                                                    )}
-                                                  </TableRow>
-                                                ))}
+                                                {equipmentByLocation[location].map((eq) => {
+                                                    const now = new Date();
+                                                    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                                                    const totalHoursInMonth = daysInMonth * 24;
+                                                    const downtimeHours = eq.totalDowntimeHours || 0;
+                                                    const uptimeHours = totalHoursInMonth - downtimeHours;
+                                                    const uptime = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
+                                                    const runningHours = totalHoursInMonth - downtimeHours;
+                                                    const powerConsumption = (eq.motorPower || 0) * runningHours;
+
+                                                    return (
+                                                        <TableRow key={eq.id}>
+                                                            <TableCell className="font-medium">
+                                                            <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
+                                                                {eq.name}
+                                                            </Link>
+                                                            </TableCell>
+                                                            <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
+                                                            <TableCell>
+                                                                <Badge variant={getStatusVariant(eq.breakdownStatus)}>
+                                                                    {eq.breakdownStatus || 'None'}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                            <Badge variant={uptime > 99 ? 'default' : 'destructive'}>
+                                                                {uptime.toFixed(2)}%
+                                                            </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">{powerConsumption.toLocaleString()}</TableCell>
+                                                            {canDelete && (
+                                                                <TableCell className="text-right">
+                                                                    <AlertDialog>
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </AlertDialogTrigger>
+                                                                        <AlertDialogContent>
+                                                                            <AlertDialogHeader>
+                                                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                                                <AlertDialogDescription>
+                                                                                    This will permanently delete the equipment <strong>{eq.name}</strong> and its associated VSD. This action cannot be undone.
+                                                                                </AlertDialogDescription>
+                                                                            </AlertDialogHeader>
+                                                                            <AlertDialogFooter>
+                                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                                <AlertDialogAction onClick={() => handleDeleteEquipment(eq)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                                                            </AlertDialogFooter>
+                                                                        </AlertDialogContent>
+                                                                    </AlertDialog>
+                                                                </TableCell>
+                                                            )}
+                                                        </TableRow>
+                                                    );
+                                                })}
                                             </TableBody>
                                         </Table>
                                     </CardContent>
@@ -249,51 +260,62 @@ function AuthenticatedMiningDivisionPage() {
                 </TableHeader>
                 <TableBody>
                   {equipment && equipment.length > 0 ? (
-                    equipment.map((eq) => (
-                      <TableRow key={eq.id}>
-                        <TableCell className="font-medium">
-                          <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
-                            {eq.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{eq.location}</TableCell>
-                        <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
-                        <TableCell>
-                            <Badge variant={getStatusVariant(eq.breakdownStatus)}>
-                                {eq.breakdownStatus || 'None'}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={eq.uptime > 99 ? 'default' : 'destructive'}>
-                            {eq.uptime}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{eq.powerConsumption.toLocaleString()}</TableCell>
-                         {canDelete && (
-                            <TableCell className="text-right">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This will permanently delete the equipment <strong>{eq.name}</strong> and its associated VSD. This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteEquipment(eq)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </TableCell>
-                        )}
-                      </TableRow>
-                    ))
+                    equipment.map((eq) => {
+                        const now = new Date();
+                        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                        const totalHoursInMonth = daysInMonth * 24;
+                        const downtimeHours = eq.totalDowntimeHours || 0;
+                        const uptimeHours = totalHoursInMonth - downtimeHours;
+                        const uptime = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
+                        const runningHours = totalHoursInMonth - downtimeHours;
+                        const powerConsumption = (eq.motorPower || 0) * runningHours;
+
+                        return (
+                            <TableRow key={eq.id}>
+                                <TableCell className="font-medium">
+                                <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
+                                    {eq.name}
+                                </Link>
+                                </TableCell>
+                                <TableCell>{eq.location}</TableCell>
+                                <TableCell>{eq.assignedToName || 'Unassigned'}</TableCell>
+                                <TableCell>
+                                    <Badge variant={getStatusVariant(eq.breakdownStatus)}>
+                                        {eq.breakdownStatus || 'None'}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                <Badge variant={uptime > 99 ? 'default' : 'destructive'}>
+                                    {uptime.toFixed(2)}%
+                                </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">{powerConsumption.toLocaleString()}</TableCell>
+                                {canDelete && (
+                                    <TableCell className="text-right">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will permanently delete the equipment <strong>{eq.name}</strong> and its associated VSD. This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteEquipment(eq)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                )}
+                            </TableRow>
+                        );
+                    })
                   ) : (
                     <TableRow>
                       <TableCell colSpan={canDelete ? 7 : 6} className="text-center h-24">No equipment found for this division.</TableCell>
@@ -343,5 +365,3 @@ export default function MiningDivisionPage() {
 
     return <AuthenticatedMiningDivisionPage />;
 }
-
-    

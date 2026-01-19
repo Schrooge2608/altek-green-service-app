@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -114,6 +115,9 @@ export default function DivisionReportPage() {
         if (!equipment) return [];
         
         const locations: { [key: string]: { totalUptime: number; totalPower: number; count: number } } = {};
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const totalHoursInMonth = daysInMonth * 24;
 
         equipment.forEach(eq => {
             if (!eq.location) return;
@@ -123,8 +127,15 @@ export default function DivisionReportPage() {
                 locations[key] = { totalUptime: 0, totalPower: 0, count: 0 };
             }
             
-            locations[key].totalUptime += eq.uptime || 0;
-            locations[key].totalPower += eq.powerConsumption || 0;
+            const downtimeHours = eq.totalDowntimeHours || 0;
+            const uptimeHours = totalHoursInMonth - downtimeHours;
+            const currentUptime = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
+
+            const runningHours = totalHoursInMonth - downtimeHours;
+            const currentPowerConsumption = (eq.motorPower || 0) * runningHours;
+
+            locations[key].totalUptime += currentUptime;
+            locations[key].totalPower += currentPowerConsumption;
             locations[key].count += 1;
         });
 

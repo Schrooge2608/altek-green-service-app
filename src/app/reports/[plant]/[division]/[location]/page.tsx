@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -100,12 +101,25 @@ export default function EquipmentReportPage() {
 
     const chartData = useMemo(() => {
         if (!equipmentList) return [];
-        return equipmentList.map(eq => ({
-            id: eq.id,
-            name: eq.name,
-            uptime: eq.uptime || 0,
-            power: parseFloat(((eq.powerConsumption || 0) / 1000).toFixed(2)), // Convert to MWh
-        })).sort((a,b) => a.name.localeCompare(b.name));
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const totalHoursInMonth = daysInMonth * 24;
+
+        return equipmentList.map(eq => {
+            const downtimeHours = eq.totalDowntimeHours || 0;
+            const uptimeHours = totalHoursInMonth - downtimeHours;
+            const currentUptime = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
+
+            const runningHours = totalHoursInMonth - downtimeHours;
+            const currentPowerConsumption = (eq.motorPower || 0) * runningHours;
+
+            return {
+                id: eq.id,
+                name: eq.name,
+                uptime: parseFloat(currentUptime.toFixed(2)),
+                power: parseFloat((currentPowerConsumption / 1000).toFixed(2)), // Convert to MWh
+            };
+        }).sort((a,b) => a.name.localeCompare(b.name));
     }, [equipmentList]);
     
     const handleBarClick = (data: any) => {
