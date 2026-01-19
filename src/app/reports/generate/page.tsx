@@ -1,13 +1,11 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, FileText } from 'lucide-react';
+import { Loader2, Sparkles, FileText, Copy } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Equipment, Breakdown } from '@/lib/types';
@@ -31,6 +29,12 @@ export default function GenerateReportPage() {
     }, [firestore, selectedEquipmentId]);
 
     const { data: breakdowns } = useCollection<Breakdown>(breakdownQuery);
+
+    const handleCopy = () => {
+        if (!generatedReport) return;
+        navigator.clipboard.writeText(generatedReport);
+        toast({ title: 'Report Copied', description: 'The report text has been copied to your clipboard.' });
+    };
 
     const handleGenerateReport = async () => {
         if (!selectedEquipmentId) {
@@ -108,13 +112,21 @@ export default function GenerateReportPage() {
             )}
 
             {generatedReport && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><FileText /> Generated Report</CardTitle>
-                        <CardDescription>Below is the generated report. You can copy and paste this into an email or document.</CardDescription>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2"><FileText /> Generated Report</CardTitle>
+                            <CardDescription>Review the report below. You can copy it to your clipboard.</CardDescription>
+                        </div>
+                        <Button variant="outline" onClick={handleCopy}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy Report
+                        </Button>
                     </CardHeader>
                     <CardContent>
-                        <Textarea value={generatedReport} readOnly rows={15} className="font-mono bg-muted" />
+                        <div className="p-4 bg-muted rounded-md border font-mono text-sm whitespace-pre-wrap">
+                            {generatedReport}
+                        </div>
                     </CardContent>
                 </Card>
             )}
