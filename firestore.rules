@@ -3,25 +3,25 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- HELPER FUNCTIONS (To keep code clean) ---
+    // --- HELPER FUNCTIONS ---
 
     // 1. Check if user is logged in
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // 2. Get the User's Role from the 'users' collection
+    // 2. Get the User's Role
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    // 3. Check if the user is Management (Admin, Superadmin, or Supervisor)
+    // 3. Check if user is Management 
+    // FIXED: Added 'Site Supervisor' to match your database data
     function isManagement() {
-      return getUserRole() in ['Admin', 'Superadmin', 'Supervisor'];
+      return getUserRole() in ['Admin', 'Superadmin', 'Supervisor', 'Site Supervisor'];
     }
 
     // --- SIMPLE COLLECTIONS ---
-    // Read: All Users | Write: Management Only
 
     match /equipment/{equipmentId} {
       allow read: if isAuthenticated();
@@ -57,7 +57,6 @@ service cloud.firestore {
 
     // 1. USERS COLLECTION
     match /users/{userId} {
-      // Users can read their own profile. Management can read/write all profiles.
       allow read: if request.auth.uid == userId || isManagement();
       allow write: if isManagement();
     }
@@ -71,26 +70,21 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       
       // UPDATE: The "Lock" Logic
+      // Works even if 'isSignedOff' is missing (defaults to allowed)
       allow update: if isAuthenticated() && (
-          // Option A: The Owner is editing, AND it is NOT signed off yet
           (resource.data.userId == request.auth.uid && resource.data.isSignedOff != true)
           ||
-          // Option B: A Supervisor/Admin is editing (to sign it off or fix mistakes)
           isManagement()
       );
 
-      // DELETE: Only Management can delete (Prevents users from hiding evidence)
+      // DELETE: Only Management can delete
       allow delete: if isManagement();
     }
 
-    // 3. TIMESHEETS (Fixed)
+    // 3. TIMESHEETS
     match /timesheets/{timesheetId} {
       allow read: if isAuthenticated();
-      
-      // Create: User must own the new document
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      
-      // Update/Delete: User must own the existing document OR be management
       allow update, delete: if isAuthenticated() && (
           resource.data.userId == request.auth.uid || isManagement()
       );
