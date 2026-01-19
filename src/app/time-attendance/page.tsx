@@ -2,8 +2,8 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { AltekLogo } from '@/components/altek-logo';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,8 +13,12 @@ import { collection, doc } from 'firebase/firestore';
 import type { Timesheet, TimesheetEntry, User } from '@/lib/types';
 import React, { useState, useEffect, useMemo } from 'react';
 import { subMonths, addMonths, format, eachDayOfInterval, startOfMonth, endOfMonth, setDate } from 'date-fns';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 function generateMonthOptions() {
     const options = [];
@@ -230,5 +234,3 @@ export default function TimeAttendancePage() {
         </div>
     );
 }
-
-    
