@@ -4,7 +4,7 @@ import 'dotenv/config';
 
 export const ai = genkit({
   plugins: [
-    googleAI(),
+    googleAI({apiKey: process.env.GOOGLE_GENAI_API_KEY}),
   ],
   model: 'googleai/gemini-2.5-flash',
 });
