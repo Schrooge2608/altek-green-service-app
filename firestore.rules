@@ -6,16 +6,17 @@ service cloud.firestore {
 
     match /users/{userId} { allow read, write: if isAuthenticated(); }
     
-    // ALLOW READS FOR EQUIPMENT SO YOUR LIST COMES BACK
-    match /equipment/{equipmentId} { allow read, write: if isAuthenticated(); }
     match /vsds/{vsdId} { allow read, write: if isAuthenticated(); }
     match /completed_schedules/{scheduleId} { allow read, write: if isAuthenticated(); }
     
-    match /breakdown_reports/{breakdownReportId} {
-      allow read, list: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+    // Allow access to Equipment for all logged-in users
+    match /equipment/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow access to Breakdown Reports for all logged-in users
+    match /breakdown_reports/{document=**} {
+      allow read, write: if request.auth != null;
     }
     
     // DAILY DIARIES - FIXED FOR SAVING
