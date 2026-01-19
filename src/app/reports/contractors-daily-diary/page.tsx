@@ -165,11 +165,48 @@ export default function NewDailyDiaryPage() {
             const newAfterImageUrls = await uploadImages(afterFiles, 'after');
 
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
+            
+            // Sanitize data before saving
+            const sanitizedData: Partial<DailyDiary> = {
+                ...data,
+                // Ensure number fields are not undefined
+                hrs: data.hrs || 0,
+                // Ensure string fields are not undefined
+                incidents: data.incidents || '',
+                toolboxTalk: data.toolboxTalk || '',
+                // Sanitize arrays of objects
+                manpower: (data.manpower || []).map(m => ({
+                    designation: m.designation || '',
+                    forecast: m.forecast || 0,
+                    actual: m.actual || 0,
+                    normalHrs: m.normalHrs || 0,
+                    overtime1_5: m.overtime1_5 || 0,
+                    overtime2_0: m.overtime2_0 || 0,
+                    totalManHrs: m.totalManHrs || 0,
+                    comments: m.comments || '',
+                })),
+                plant: (data.plant || []).map(p => ({
+                    description: p.description || '',
+                    qty: p.qty || 0,
+                    inspectionDone: p.inspectionDone || 'no',
+                    comments: p.comments || '',
+                })),
+                works: (data.works || []).map(w => ({
+                    area: w.area || '',
+                    scope: w.scope || '',
+                    timeStart: w.timeStart || '',
+                    timeEnd: w.timeEnd || '',
+                    hrs: w.hrs || 0,
+                })),
+                 // Sanitize arrays of strings
+                delays: (data.delays || []).map(d => d || ''),
+                comments: (data.comments || []).map(c => c || ''),
+            };
 
             const finalDiaryData: Partial<DailyDiary> = { 
-                ...data,
+                ...sanitizedData,
                 id: uniqueId,
-                userId: user.uid,
+                userId: user.uid, // Enforce ownership
                 isSignedOff: diaryData?.isSignedOff || false,
                 createdAt: diaryData?.createdAt || serverTimestamp(),
                 date: data.date ? format(new Date(data.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
@@ -621,5 +658,7 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
+
+    
 
     
