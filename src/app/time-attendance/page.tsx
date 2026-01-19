@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -97,11 +98,9 @@ export default function TimeAttendancePage() {
   const fetchedTimesheet = null;
   const timesheetLoading = false;
   
-  const dateRange = useMemo(() => {
+    const dateRange = useMemo(() => {
     const [year, month] = selectedPeriod.split('-').map(Number);
-    // Use UTC to avoid timezone-related date shifts. This ensures that creating a date
-    // like '2026-01-01' doesn't accidentally become '2025-12-31' in another timezone.
-    const targetMonthDate = new Date(Date.UTC(year, month - 1, 1));
+    const targetMonthDate = new Date(year, month - 1, 1);
     const prevMonth = subMonths(targetMonthDate, 1);
     const start = setDate(prevMonth, 19);
     const end = setDate(targetMonthDate, 22);
@@ -251,18 +250,18 @@ export default function TimeAttendancePage() {
           <Table className="min-w-full">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px] py-2 px-2 h-auto">Date</TableHead>
-                <TableHead className="w-[100px] py-2 px-2 h-auto">Day</TableHead>
-                <TableHead className="w-[70px] py-2 px-2 h-auto">Time In</TableHead>
-                <TableHead className="w-[70px] py-2 px-2 h-auto">Lunch Out</TableHead>
-                <TableHead className="w-[70px] py-2 px-2 h-auto">Lunch In</TableHead>
-                <TableHead className="w-[70px] py-2 px-2 h-auto">Time Out</TableHead>
-                <TableHead className="w-[120px] py-2 px-2 h-auto">Normal Hrs</TableHead>
-                <TableHead className="w-[120px] py-2 px-2 h-auto">Overtime Hrs</TableHead>
-                <TableHead className="w-[120px] py-2 px-2 h-auto">Total Hrs</TableHead>
-                <TableHead className="py-2 px-2 h-auto">Overtime Reason</TableHead>
-                <TableHead className="w-[60px] py-2 px-2 h-auto">Signature</TableHead>
-                <TableHead className="py-2 px-2 h-auto">Comments</TableHead>
+                <TableHead className="w-[120px] py-1 px-2 h-auto">Date</TableHead>
+                <TableHead className="w-[100px] py-1 px-2 h-auto">Day</TableHead>
+                <TableHead className="w-[70px] py-1 px-2 h-auto">Time In</TableHead>
+                <TableHead className="w-[70px] py-1 px-2 h-auto">Lunch Out</TableHead>
+                <TableHead className="w-[70px] py-1 px-2 h-auto">Lunch In</TableHead>
+                <TableHead className="w-[70px] py-1 px-2 h-auto">Time Out</TableHead>
+                <TableHead className="w-[70px] py-1 px-2 h-auto">Normal Hrs</TableHead>
+                <TableHead className="w-[70px] py-1 px-2 h-auto">Overtime Hrs</TableHead>
+                <TableHead className="w-[70px] py-1 px-2 h-auto">Total Hrs</TableHead>
+                <TableHead className="py-1 px-2 h-auto">Overtime Reason</TableHead>
+                <TableHead className="w-[60px] py-1 px-2 h-auto">Signature</TableHead>
+                <TableHead className="py-1 px-2 h-auto">Comments</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

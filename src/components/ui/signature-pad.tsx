@@ -70,11 +70,11 @@ export function SignaturePad({ value, onSign, onClear }: SignaturePadProps) {
             />
         </Card>
       <div className="flex justify-end gap-1 mt-1 print:hidden">
-        <Button variant="ghost" size="sm" onClick={handleClear} className="h-7 px-2 text-xs">
+        <Button variant="ghost" onClick={handleClear} className="h-6 px-1 text-[10px]">
             <Eraser className="mr-1 h-3 w-3" />
             Clear
         </Button>
-        <Button variant="outline" size="sm" onClick={handleSign} className="h-7 px-2 text-xs">
+        <Button variant="outline" onClick={handleSign} className="h-6 px-1 text-[10px]">
             <Pen className="mr-1 h-3 w-3" />
             Sign
         </Button>
