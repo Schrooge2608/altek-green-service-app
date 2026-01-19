@@ -44,7 +44,7 @@ const DailyDiarySchema = z.object({
 });
 
 
-export const ReportInputSchema = z.object({
+const ReportInputSchema = z.object({
   startDate: z.string().describe('The start date for the report period (e.g., yyyy-MM-dd).'),
   endDate: z.string().describe('The end date for the report period (e.g., yyyy-MM-dd).'),
   breakdowns: z.array(BreakdownReportSchema).describe("A list of all breakdown incidents reported during the period."),
@@ -53,7 +53,7 @@ export const ReportInputSchema = z.object({
 });
 export type ReportInput = z.infer<typeof ReportInputSchema>;
 
-export const ReportOutputSchema = z.object({
+const ReportOutputSchema = z.object({
   report: z.string().describe('The generated professional, client-facing report in plain text format, using markdown for tables.'),
 });
 export type ReportOutput = z.infer<typeof ReportOutputSchema>;
