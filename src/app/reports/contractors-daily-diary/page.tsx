@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +41,10 @@ export default function NewDailyDiaryPage() {
             // BB's requested check:
             const collectionName = 'daily_diaries';
             toast({ title: "BB CHECK", description: `Attempting to save to collection named: "${collectionName}"` });
+
+            // BB's SPY code
+            console.log("BB SPY: Connected to Project ID:", firestore.app.options.projectId);
+            alert("BB SPY: Connected to Project ID: " + firestore.app.options.projectId);
 
             // 3. SEND TO FIREBASE
             await addDoc(collection(firestore, collectionName), newDiaryData);
