@@ -149,8 +149,8 @@ export default function NewDailyDiaryPage() {
     };
 
     const handleSave = async () => {
-        if (!firestore || !uniqueId) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Database not available or ID not generated.' });
+        if (!firestore || !uniqueId || !user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'User not logged in or database not available.' });
             return;
         }
 
@@ -167,6 +167,7 @@ export default function NewDailyDiaryPage() {
 
             const finalDiaryData: Partial<DailyDiary> = { 
                 id: uniqueId,
+                userId: user.uid,
                 date: date ? format(date, 'yyyy-MM-dd') : 'N/A',
                 contractTitle: 'VSD MAINTENANCE', // Placeholder
                 incidents: incidentsText,

@@ -1,6 +1,7 @@
 
 
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -221,6 +222,7 @@ export interface WorkEntry {
 
 export interface DailyDiary {
   id: string;
+  userId: string;
   contractTitle?: string;
   contractNumber?: string;
   area?: 'Mining' | 'Smelter';
@@ -274,5 +276,3 @@ export interface Timesheet {
     period: string; // YYYY-MM
     entries: TimesheetEntry[];
 }
-
-    

@@ -9,17 +9,11 @@ service cloud.firestore {
     }
 
     // VSDs Collection
-    match /vsds {
-      allow list: if isAuthenticated();
-    }
     match /vsds/{vsdId} {
       allow read, write: if isAuthenticated();
     }
 
     // Equipment Collection
-    match /equipment {
-      allow list: if isAuthenticated();
-    }
     match /equipment/{equipmentId} {
       allow read, write: if isAuthenticated();
     }
@@ -28,53 +22,50 @@ service cloud.firestore {
     }
 
     // Tasks Collection
-    match /tasks {
-      allow list: if isAuthenticated();
-    }
     match /tasks/{taskId} {
       allow read, write: if isAuthenticated();
     }
 
     // BreakdownReports Collection
-    match /breakdown_reports {
-      allow list: if isAuthenticated();
-    }
     match /breakdown_reports/{breakdownReportId} {
       allow read, write: if isAuthenticated();
     }
 
     // CompletedSchedules Collection
-    match /completed_schedules {
-      allow list: if isAuthenticated();
-    }
     match /completed_schedules/{scheduleId} {
       allow read, write: if isAuthenticated();
     }
 
     // Users Collection
-    match /users {
-      allow list: if isAuthenticated();
-    }
     match /users/{userId} {
-      allow read, write: if isAuthenticated();
+      // Users can read their own profile
+      allow read: if request.auth.uid == userId;
+      // Admins can read and write any user profile
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Superadmin'];
     }
+     match /users {
+        allow list: if isAuthenticated();
+     }
+
 
     // DailyDiaries Collection
-    match /daily_diaries {
-      allow list: if isAuthenticated();
-    }
     match /daily_diaries/{diaryId} {
-      allow read, write: if isAuthenticated();
+      // Users can create and manage their own diary entries.
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow read, update, delete: if request.auth.uid == resource.data.userId;
+    }
+     match /daily_diaries {
+        // Users can only list documents where their uid matches the userId field.
+        allow list: if request.auth != null && request.query.where['userId'] == request.auth.uid;
     }
     
     // Timesheets Collection (user-specific access)
     match /timesheets/{timesheetId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == timesheetId.split('_')[0];
+      // Allow read/write if the user's UID matches the first part of the document ID.
+      allow read, write: if request.auth != null && timesheetId.split('_')[0] == request.auth.uid;
     }
-    match /timesheets {
-        // Users can only list their own timesheets, which isn't possible with a simple collection query.
-        // This rule is restrictive by default. The application should query based on user ID.
-        allow list: if false; 
+     match /timesheets {
+        allow list: if false; // Disallow broad collection queries for security.
     }
   }
 }

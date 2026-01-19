@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -7,12 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 export default function DiaryTrackerPage() {
   const firestore = useFirestore();
-  const diariesQuery = useMemoFirebase(() => collection(firestore, 'daily_diaries'), [firestore]);
+  const { user } = useUser();
+  const diariesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'daily_diaries'), where('userId', '==', user.uid));
+  }, [firestore, user]);
   const { data: diaries, isLoading } = useCollection<DailyDiary>(diariesQuery);
 
   return (
