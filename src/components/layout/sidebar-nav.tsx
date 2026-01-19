@@ -37,6 +37,7 @@ import {
   Droplets,
   Power,
   ScanLine,
+  Sparkles,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -262,6 +263,14 @@ export function SidebarNav() {
                             <SidebarMenuSubButton asChild isActive={pathname === '/reports'}>
                                 <Link href="/reports">
                                     <span>Performance Reports</span>
+                                </Link>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
+                         <SidebarMenuItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/reports/generate'}>
+                                <Link href="/reports/generate">
+                                    <Sparkles />
+                                    <span>AI Report Generator</span>
                                 </Link>
                             </SidebarMenuSubButton>
                         </SidebarMenuItem>
