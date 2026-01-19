@@ -24,7 +24,7 @@ import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { DailyDiary, User as AppUser, User, WorkEntry, PlantEntry, ManpowerEntry } from '@/lib/types';
+import type { DailyDiary, User as AppUser, User, WorkEntry, PlantEntry, ManpowerEntry, Equipment } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUploader } from '@/components/image-uploader';
 
@@ -50,6 +50,10 @@ export default function NewDailyDiaryPage() {
     const [clientName, setClientName] = useState('');
     const [contractorDate, setContractorDate] = useState<Date>();
     const [clientDate, setClientDate] = useState<Date>();
+    
+    const [selectedLocation, setSelectedLocation] = useState('');
+    const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
+    const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
     const { data: diaryData, isLoading: diaryLoading } = useDoc<DailyDiary>(
         useMemoFirebase(() => diaryId ? doc(firestore, 'daily_diaries', diaryId) : null, [firestore, diaryId])
@@ -63,6 +67,22 @@ export default function NewDailyDiaryPage() {
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user])
     );
     const isClientManager = userRole?.role === 'Client Manager';
+
+    const locationOptions = useMemo(() => {
+        if (!equipmentList) return [];
+        return [...new Set(equipmentList.map(eq => eq.location))].sort().map(loc => ({
+            value: loc,
+            label: loc,
+        }));
+    }, [equipmentList]);
+
+    const equipmentOptions = useMemo(() => {
+        if (!selectedLocation || !equipmentList) return [];
+        return equipmentList
+            .filter(eq => eq.location === selectedLocation)
+            .map(eq => ({ value: eq.id, label: eq.name }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+    }, [selectedLocation, equipmentList]);
 
     const defaultValues = useMemo(() => {
         const works = Array(5).fill(null).map(() => ({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: undefined }));
@@ -102,6 +122,15 @@ export default function NewDailyDiaryPage() {
     const { fields: manpowerFields, append: appendManpower, remove: removeManpower } = useFieldArray({ control: form.control, name: "manpower" });
     const { fields: plantFields, append: appendPlant, remove: removePlant } = useFieldArray({ control: form.control, name: "plant" });
     const { fields: workFields, append: appendWork, remove: removeWork } = useFieldArray({ control: form.control, name: "works" });
+
+    const handleEquipmentSelect = (equipmentId: string) => {
+        const equipment = equipmentList?.find(eq => eq.id === equipmentId);
+        if (equipment) {
+            form.setValue('works.0.scope', `Unscheduled work on: ${equipment.name}`);
+            form.setValue('works.0.area', equipment.location);
+            form.setValue('area', equipment.plant);
+        }
+    };
 
 
     useEffect(() => {
@@ -272,6 +301,36 @@ export default function NewDailyDiaryPage() {
                             <p className="text-sm text-muted-foreground font-mono">ID: {isIdLoading ? 'Generating...' : uniqueId}</p>
                         </div>
                     </header>
+
+                    <Card className="mb-4">
+                        <CardHeader className="bg-muted p-2 rounded-t-lg">
+                            <CardTitle className="text-sm">SELECT EQUIPMENT (OPTIONAL)</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                            <div className="space-y-1">
+                                <Label>Location</Label>
+                                <Select onValueChange={setSelectedLocation} value={selectedLocation} disabled={equipmentLoading}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Location..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {equipmentLoading ? <SelectItem value="loading" disabled>Loading locations...</SelectItem> : locationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1">
+                                <Label>Equipment Name</Label>
+                                <Select onValueChange={handleEquipmentSelect} disabled={!selectedLocation || equipmentLoading}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Equipment..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {equipmentLoading || !selectedLocation ? <SelectItem value="loading" disabled>Select a location first...</SelectItem> : equipmentOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </CardContent>
+                    </Card>
 
                     {/* Form fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 text-sm items-end">
@@ -658,7 +717,5 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
-
-    
 
     
