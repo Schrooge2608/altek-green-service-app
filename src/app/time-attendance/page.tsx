@@ -33,6 +33,7 @@ import {
   useUser,
   useCollection,
   useMemoFirebase,
+  useDoc,
 } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Timesheet, TimesheetEntry, User } from '@/lib/types';
@@ -46,7 +47,7 @@ import {
   endOfMonth,
   setDate,
 } from 'date-fns';
-import { Loader2, Save, CalendarIcon } from 'lucide-react';
+import { Loader2, Save, CalendarIcon, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import {
@@ -95,7 +96,7 @@ export default function TimeAttendancePage() {
   // Temporarily disable fetching to avoid permission errors. We will re-enable this later.
   const fetchedTimesheet = null;
   const timesheetLoading = false;
-
+  
   const dateRange = useMemo(() => {
     const [year, month] = selectedPeriod.split('-').map(Number);
     const targetMonthDate = new Date(year, month - 1, 1);
@@ -257,7 +258,7 @@ export default function TimeAttendancePage() {
                 <TableHead className="w-[120px]">Overtime Hrs</TableHead>
                 <TableHead className="w-[120px]">Total Hrs</TableHead>
                 <TableHead>Overtime Reason</TableHead>
-                <TableHead className="w-[100px]">Signature</TableHead>
+                <TableHead className="w-[60px]">Signature</TableHead>
                 <TableHead>Comments</TableHead>
               </TableRow>
             </TableHeader>
@@ -274,9 +275,9 @@ export default function TimeAttendancePage() {
                   return (
                   <TableRow key={entry.date}>
                     <TableCell>
-                      {format(new Date(entry.date), 'yyyy-MM-dd')}
+                      {format(new Date(entry.date + 'T00:00:00'), 'yyyy-MM-dd')}
                     </TableCell>
-                    <TableCell>{format(new Date(entry.date), 'EEEE')}</TableCell>
+                    <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'EEEE')}</TableCell>
                     <TableCell>
                       <Input
                         type="time"
