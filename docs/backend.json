@@ -302,28 +302,6 @@
             "clientDate": { "type": "string", "format": "date" }
         },
         "required": ["id", "date", "contractTitle", "contractNumber"]
-    },
-    "DailyAttendance": {
-      "title": "DailyAttendance",
-      "type": "object",
-      "description": "Represents a daily attendance sheet.",
-      "properties": {
-        "id": { "type": "string", "description": "The date of the attendance sheet, in YYYY-MM-DD format." },
-        "attendees": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "userId": { "type": "string" },
-              "userName": { "type": "string" },
-              "signInTime": { "type": "string", "format": "date-time" },
-              "signOutTime": { "type": "string", "format": "date-time" }
-            },
-            "required": ["userId", "userName", "signInTime"]
-          }
-        }
-      },
-      "required": ["id", "attendees"]
     }
   },
   "auth": {
@@ -394,16 +372,7 @@
           "schema": { "$ref": "#/entities/DailyDiary" },
           "description": "Stores contractor daily diary entries."
         }
-      },
-      {
-        "path": "/attendance/{date}",
-        "definition": {
-          "entityName": "DailyAttendance",
-          "schema": { "$ref": "#/entities/DailyAttendance" },
-          "description": "Stores daily attendance records."
-        }
       }
     ]
   }
 }
-
