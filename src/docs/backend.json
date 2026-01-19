@@ -33,8 +33,6 @@
         "vsdId": { "type": "string" },
         "lastMaintenance": { "type": "string", "format": "date" },
         "nextMaintenance": { "type": "string", "format": "date" },
-        "uptime": { "type": "number", "description": "Uptime percentage for the current reporting period." },
-        "powerConsumption": { "type": "number", "description": "Power consumption for the current reporting period in kWh." },
         "imageUrl": { "type": "string", "description": "URL of the equipment image." },
         "motorModel": { "type": "string" },
         "motorPower": { "type": "number" },
@@ -304,6 +302,37 @@
             "clientDate": { "type": "string", "format": "date" }
         },
         "required": ["id", "date", "contractTitle", "contractNumber"]
+    },
+    "Timesheet": {
+      "title": "Timesheet",
+      "type": "object",
+      "description": "Represents a monthly timesheet for a user.",
+      "properties": {
+        "id": { "type": "string", "description": "Composite key: {userId}_{period}" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "period": { "type": "string", "description": "The end month of the timesheet period, e.g., '2026-01'." },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string", "format": "date" },
+              "timeIn": { "type": "string" },
+              "lunchOut": { "type": "string" },
+              "lunchIn": { "type": "string" },
+              "timeOut": { "type": "string" },
+              "normalHrs": { "type": "number" },
+              "overtimeHrs": { "type": "number" },
+              "overtimeReason": { "type": "string" },
+              "signature": { "type": "string", "description": "Base64 encoded signature image." },
+              "comments": { "type": "string" }
+            },
+            "required": ["date"]
+          }
+        }
+      },
+      "required": ["id", "userId", "userName", "period"]
     }
   },
   "auth": {
@@ -374,7 +403,18 @@
           "schema": { "$ref": "#/entities/DailyDiary" },
           "description": "Stores contractor daily diary entries."
         }
+      },
+      {
+        "path": "/timesheets/{timesheetId}",
+        "definition": {
+          "entityName": "Timesheet",
+          "schema": { "$ref": "#/entities/Timesheet" },
+          "description": "Stores user timesheet data."
+        }
       }
     ]
   }
 }
+
+
+    
