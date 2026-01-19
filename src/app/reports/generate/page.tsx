@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, FileText, Copy, Save, Calendar as CalendarIcon, Shield, Power, Cpu } from 'lucide-react';
+import { Loader2, Sparkles, FileText, Copy, Save, Calendar as CalendarIcon, Shield, Power, Cpu, Droplets, BatteryCharging } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, serverTimestamp, addDoc } from 'firebase/firestore';
 import type { GeneratedReport } from '@/lib/types';
@@ -22,105 +22,46 @@ import { useRouter } from 'next/navigation';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-
-const sectionSchema = z.object({
-  nothingToReport: z.boolean(),
-  breakdownDetails: z.string().optional(),
-  pmCompleted: z.string().optional(),
-  technicianNotes: z.string().optional(),
-});
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const formSchema = z.object({
-  vsds: sectionSchema,
-  upsSystems: sectionSchema,
-  btus: sectionSchema,
-  protectionUnits: sectionSchema,
+  vsds: z.object({
+    include: z.boolean().default(false),
+    avgTemp: z.coerce.number().optional(),
+    maxCurrent: z.coerce.number().optional(),
+    filtersCleaned: z.boolean().default(false),
+    tripHistory: z.string().optional(),
+  }),
+  upsSystems: z.object({
+    include: z.boolean().default(false),
+    load: z.string().optional(),
+    outputVoltage: z.coerce.number().optional(),
+    roomTemp: z.coerce.number().optional(),
+    visualOk: z.boolean().default(false),
+    terminalsClean: z.boolean().default(false),
+  }),
+  btus: z.object({
+    include: z.boolean().default(false),
+    floatVoltage: z.coerce.number().optional(),
+    loadCurrent: z.coerce.number().optional(),
+    earthFaultStatus: z.enum(['Healthy', 'Positive Fault', 'Negative Fault']).optional(),
+  }),
+  protectionRelays: z.object({
+    include: z.boolean().default(false),
+    lastTripEvent: z.string().optional(),
+    lastTestDate: z.date().optional(),
+  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-const ReportSection = ({ control, name, title, icon: Icon }: { control: any, name: keyof FormValues, title: string, icon: React.ElementType }) => {
-    const watchNothingToReport = useWatch({
-        control,
-        name: `${name}.nothingToReport`,
-    });
-
-    return (
-        <Card>
-            <CardHeader>
-                <FormField
-                    control={control}
-                    name={`${name}.nothingToReport`}
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                                <FormLabel className="text-base flex items-center gap-2"><Icon className="h-5 w-5" />{title}</FormLabel>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                <FormLabel>Nothing to report</FormLabel>
-                            </div>
-                        </FormItem>
-                    )}
-                />
-            </CardHeader>
-            {!watchNothingToReport && (
-                <CardContent className="space-y-4 pt-0">
-                    <FormField
-                        control={control}
-                        name={`${name}.breakdownDetails`}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Breakdown Details</FormLabel>
-                                <FormControl>
-                                    <Textarea placeholder="Describe any breakdowns..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={control}
-                        name={`${name}.pmCompleted`}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>PM Completed</FormLabel>
-                                <FormControl>
-                                    <Textarea placeholder="Detail preventative maintenance completed..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={control}
-                        name={`${name}.technicianNotes`}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Technician Notes</FormLabel>
-                                <FormControl>
-                                    <Textarea placeholder="Add any other relevant notes..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </CardContent>
-            )}
-        </Card>
-    );
-};
-
-
 export default function GenerateReportPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
-    const { user, isUserLoading } = useUser();
+    const { user } = useUser();
     const router = useRouter();
 
     const [isLoading, setIsLoading] = useState(false);
@@ -135,10 +76,10 @@ export default function GenerateReportPage() {
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            vsds: { nothingToReport: true, breakdownDetails: '', pmCompleted: '', technicianNotes: '' },
-            upsSystems: { nothingToReport: true, breakdownDetails: '', pmCompleted: '', technicianNotes: '' },
-            btus: { nothingToReport: true, breakdownDetails: '', pmCompleted: '', technicianNotes: '' },
-            protectionUnits: { nothingToReport: true, breakdownDetails: '', pmCompleted: '', technicianNotes: '' },
+            vsds: { include: false, filtersCleaned: false },
+            upsSystems: { include: false, visualOk: false, terminalsClean: false },
+            btus: { include: false },
+            protectionRelays: { include: false },
         },
     });
 
@@ -189,19 +130,19 @@ export default function GenerateReportPage() {
         const reportInput: ReportInput = {
             startDate: format(date.from, 'yyyy-MM-dd'),
             endDate: format(date.to, 'yyyy-MM-dd'),
-            vsds: data.vsds.nothingToReport ? null : data.vsds,
-            upsSystems: data.upsSystems.nothingToReport ? null : data.upsSystems,
-            btus: data.btus.nothingToReport ? null : data.btus,
-            protectionUnits: data.protectionUnits.nothingToReport ? null : data.protectionUnits,
+            vsds: data.vsds.include ? data.vsds : null,
+            upsSystems: data.upsSystems.include ? data.upsSystems : null,
+            btus: data.btus.include ? data.btus : null,
+            protectionRelays: data.protectionRelays.include ? { ...data.protectionRelays, lastTestDate: data.protectionRelays.lastTestDate ? format(data.protectionRelays.lastTestDate, 'yyyy-MM-dd') : undefined } : null,
         };
-
+        
         try {
             const result = await generateReport(reportInput);
             setGeneratedReport(result.report);
             toast({ title: 'Report Generated', description: 'The weekly summary report has been created below.' });
         } catch (e: any) {
             console.error(e);
-            setError('Failed to generate the report. The AI model may be temporarily unavailable.');
+            setError('Failed to generate the report. The AI model may be temporarily unavailable or encountered an error.');
             toast({ variant: 'destructive', title: 'Generation Failed', description: e.message || 'An unknown error occurred.' });
         } finally {
             setIsLoading(false);
@@ -211,64 +152,118 @@ export default function GenerateReportPage() {
     return (
         <div className="flex flex-col gap-8">
             <header>
-                <h1 className="text-3xl font-bold tracking-tight">AI Weekly Report Generator</h1>
+                <h1 className="text-3xl font-bold tracking-tight">AI Weekly Technical Report</h1>
                 <p className="text-muted-foreground">
-                    Manually enter details for each section to generate a comprehensive weekly report.
+                    Enter technical data for each section to generate a comprehensive weekly report.
                 </p>
             </header>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Report Period</CardTitle>
-                    <CardDescription>Select the date range for the report. It defaults to the current week.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                            "w-[300px] justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date?.from ? (
-                            date.to ? (
-                                <>
-                                {format(date.from, "LLL dd, y")} -{" "}
-                                {format(date.to, "LLL dd, y")}
-                                </>
-                            ) : (
-                                format(date.from, "LLL dd, y")
-                            )
-                            ) : (
-                            <span>Pick a date range</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={date?.from}
-                            selected={date}
-                            onSelect={setDate}
-                            numberOfMonths={2}
-                        />
-                        </PopoverContent>
-                    </Popover>
-                </CardContent>
-            </Card>
-
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    <ReportSection control={form.control} name="vsds" title="VSDs (Variable Speed Drives)" icon={Cpu} />
-                    <ReportSection control={form.control} name="upsSystems" title="UPS Systems" icon={Power} />
-                    <ReportSection control={form.control} name="btus" title="BTUs (Battery Tripping Units)" icon={Power} />
-                    <ReportSection control={form.control} name="protectionUnits" title="Protection Units" icon={Shield} />
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Report Period</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                <Button id="date" variant={"outline"} className={cn("w-[300px] justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date?.from ? (date.to ? (<>{format(date.from, "LLL dd, y")} - {format(date.to, "LLL dd, y")}</>) : (format(date.from, "LLL dd, y"))) : (<span>Pick a date range</span>)}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2}/>
+                                </PopoverContent>
+                            </Popover>
+                        </CardContent>
+                    </Card>
+
+                    {/* VSD Section */}
+                    <Collapsible defaultOpen>
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <div className="space-y-1.5">
+                            <CardTitle className="flex items-center gap-2"><Cpu />VSDs (Variable Speed Drives)</CardTitle>
+                          </div>
+                          <FormField control={form.control} name="vsds.include" render={({ field }) => (
+                              <FormItem className="flex items-center gap-2 space-y-0">
+                                <FormLabel>Include in Report?</FormLabel>
+                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              </FormItem>
+                          )} />
+                        </CardHeader>
+                        <CollapsibleContent asChild>
+                          <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <FormField control={form.control} name="vsds.avgTemp" render={({ field }) => (<FormItem><FormLabel>Avg. Operating Temp (°C)</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="vsds.maxCurrent" render={({ field }) => (<FormItem><FormLabel>Max Current (Amps)</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="vsds.filtersCleaned" render={({ field }) => (<FormItem className="flex flex-row items-end space-x-2 pb-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="leading-none">Fan Filters Cleaned?</FormLabel></FormItem>)} />
+                            <FormField control={form.control} name="vsds.tripHistory" render={({ field }) => (<FormItem className="col-span-full"><FormLabel>Trip History / Notes</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
+
+                    {/* UPS Section */}
+                     <Collapsible defaultOpen>
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <div className="space-y-1.5">
+                            <CardTitle className="flex items-center gap-2"><Power />UPS Systems</CardTitle>
+                          </div>
+                           <FormField control={form.control} name="upsSystems.include" render={({ field }) => (<FormItem className="flex items-center gap-2 space-y-0"><FormLabel>Include in Report?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                        </CardHeader>
+                        <CollapsibleContent asChild>
+                          <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <FormField control={form.control} name="upsSystems.load" render={({ field }) => (<FormItem><FormLabel>Load % (L1/L2/L3)</FormLabel><FormControl><Input placeholder="e.g. 80/82/81" {...field} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="upsSystems.outputVoltage" render={({ field }) => (<FormItem><FormLabel>Output Voltage (V)</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="upsSystems.roomTemp" render={({ field }) => (<FormItem><FormLabel>Room Temp (°C)</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                             <div className="col-span-full grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="upsSystems.visualOk" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-2 pt-6"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="leading-none">Visual Inspection OK</FormLabel></FormItem>)} />
+                                <FormField control={form.control} name="upsSystems.terminalsClean" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-2 pt-6"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="leading-none">Terminals Clean</FormLabel></FormItem>)} />
+                            </div>
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
                     
+                     {/* BTU Section */}
+                     <Collapsible defaultOpen>
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <div className="space-y-1.5">
+                            <CardTitle className="flex items-center gap-2"><BatteryCharging />BTUs (DC System)</CardTitle>
+                          </div>
+                           <FormField control={form.control} name="btus.include" render={({ field }) => (<FormItem className="flex items-center gap-2 space-y-0"><FormLabel>Include in Report?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                        </CardHeader>
+                        <CollapsibleContent asChild>
+                          <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <FormField control={form.control} name="btus.floatVoltage" render={({ field }) => (<FormItem><FormLabel>Float Voltage (V)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="btus.loadCurrent" render={({ field }) => (<FormItem><FormLabel>Load Current (A)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="btus.earthFaultStatus" render={({ field }) => (<FormItem className="lg:col-span-full"><FormLabel>Earth Fault Status</FormLabel><FormControl><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2"><FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Healthy" id="healthy" /></FormControl><FormLabel htmlFor="healthy">Healthy</FormLabel></FormItem><FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Positive Fault" id="pos" /></FormControl><FormLabel htmlFor="pos">Positive Fault</FormLabel></FormItem><FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Negative Fault" id="neg" /></FormControl><FormLabel htmlFor="neg">Negative Fault</FormLabel></FormItem></RadioGroup></FormControl></FormItem>)} />
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
+                    
+                    {/* Protection Relays Section */}
+                    <Collapsible defaultOpen>
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <div className="space-y-1.5">
+                            <CardTitle className="flex items-center gap-2"><Shield />Protection Relays</CardTitle>
+                          </div>
+                          <FormField control={form.control} name="protectionRelays.include" render={({ field }) => (<FormItem className="flex items-center gap-2 space-y-0"><FormLabel>Include in Report?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                        </CardHeader>
+                        <CollapsibleContent asChild>
+                          <CardContent className="grid md:grid-cols-2 gap-6">
+                            <FormField control={form.control} name="protectionRelays.lastTripEvent" render={({ field }) => (<FormItem><FormLabel>Last Trip Event (Feeder Name)</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="protectionRelays.lastTestDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Secondary Injection Test Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover></FormItem>)} />
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
+
                     <div className="flex justify-end">
                         <Button type="submit" disabled={isLoading}>
                             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
@@ -293,20 +288,14 @@ export default function GenerateReportPage() {
                             <CardDescription>Review the report below. You can copy it or save it to the report history.</CardDescription>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" onClick={handleCopy}>
-                                <Copy className="mr-2 h-4 w-4" />
-                                Copy Report
-                            </Button>
-                            <Button onClick={handleSaveReport} disabled={isSaving || isUserLoading}>
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Save Report
-                            </Button>
+                            <Button variant="outline" onClick={handleCopy}><Copy className="mr-2 h-4 w-4" />Copy</Button>
+                            <Button onClick={handleSaveReport} disabled={isSaving}><Save className="mr-2 h-4 w-4" />Save</Button>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="p-4 bg-muted rounded-md border font-mono text-sm whitespace-pre-wrap">
+                        <pre className="p-4 bg-muted rounded-md border font-mono text-sm whitespace-pre-wrap overflow-x-auto">
                             {generatedReport}
-                        </div>
+                        </pre>
                     </CardContent>
                 </Card>
             )}
