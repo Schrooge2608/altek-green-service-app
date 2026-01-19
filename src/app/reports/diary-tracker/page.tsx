@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -49,10 +50,19 @@ export default function DiaryTrackerPage() {
 
       const userNameMap = new Map(users.map(u => [u.id, u.name]));
 
-      return diaries.map(diary => ({
-              ...diary,
-              creatorName: userNameMap.get(diary.userId) || 'Unknown User'
-          }));
+      return diaries.map(diary => {
+        let equipmentName = 'General';
+        const workWithEquipment = diary.works?.find(w => w.scope?.startsWith('Unscheduled work on: '));
+        if (workWithEquipment?.scope) {
+          equipmentName = workWithEquipment.scope.replace('Unscheduled work on: ', '');
+        }
+
+        return {
+          ...diary,
+          creatorName: userNameMap.get(diary.userId) || 'Unknown User',
+          equipmentName,
+        };
+      });
   }, [diaries, users]);
 
   const handleDeleteDiary = (diaryToDelete: DailyDiary) => {
@@ -102,6 +112,7 @@ export default function DiaryTrackerPage() {
                         <TableHead>Document ID</TableHead>
                         <TableHead>Creator</TableHead>
                         <TableHead>Contract Title</TableHead>
+                        <TableHead>Equipment</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Area</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -110,7 +121,7 @@ export default function DiaryTrackerPage() {
                 <TableBody>
                     {isLoading ? (
                         <TableRow>
-                            <TableCell colSpan={6} className="h-24 text-center">
+                            <TableCell colSpan={7} className="h-24 text-center">
                                 <div className="flex justify-center items-center">
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Loading diaries...
@@ -123,6 +134,7 @@ export default function DiaryTrackerPage() {
                                 <TableCell className="font-mono">{diary.id}</TableCell>
                                 <TableCell>{diary.creatorName}</TableCell>
                                 <TableCell>{diary.contractTitle}</TableCell>
+                                <TableCell>{diary.equipmentName}</TableCell>
                                 <TableCell>{diary.date}</TableCell>
                                 <TableCell>{diary.area}</TableCell>
                                 <TableCell className="text-right">
@@ -173,7 +185,7 @@ export default function DiaryTrackerPage() {
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={6} className="h-24 text-center">
+                            <TableCell colSpan={7} className="h-24 text-center">
                                 No submitted diaries found.
                             </TableCell>
                         </TableRow>
