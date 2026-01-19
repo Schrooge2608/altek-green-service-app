@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -28,11 +29,10 @@ import {
 import { SignaturePad } from '@/components/ui/signature-pad';
 import {
   useFirestore,
+  setDocumentNonBlocking,
+  useUser,
   useCollection,
   useMemoFirebase,
-  useUser,
-  useDoc,
-  setDocumentNonBlocking,
 } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Timesheet, TimesheetEntry, User } from '@/lib/types';
@@ -96,6 +96,15 @@ export default function TimeAttendancePage() {
   const fetchedTimesheet = null;
   const timesheetLoading = false;
 
+  const dateRange = useMemo(() => {
+    const [year, month] = selectedPeriod.split('-').map(Number);
+    const targetMonthDate = new Date(year, month - 1, 1);
+    const prevMonth = subMonths(targetMonthDate, 1);
+    const start = setDate(prevMonth, 19);
+    const end = setDate(targetMonthDate, 22);
+    return eachDayOfInterval({ start, end });
+  }, [selectedPeriod]);
+  
   useEffect(() => {
     if (timesheetLoading || !dateRange.length || !user) return;
 
@@ -130,15 +139,6 @@ export default function TimeAttendancePage() {
     if (!users || !user) return '';
     return users.find(u => u.id === user.uid)?.name || user.displayName || 'Loading...';
   }, [users, user]);
-
-  const dateRange = useMemo(() => {
-    const [year, month] = selectedPeriod.split('-').map(Number);
-    const targetMonthDate = new Date(year, month - 1, 1);
-    const prevMonth = subMonths(targetMonthDate, 1);
-    const start = setDate(prevMonth, 19);
-    const end = setDate(targetMonthDate, 22);
-    return eachDayOfInterval({ start, end });
-  }, [selectedPeriod]);
 
 
   const handleEntryChange = (
@@ -249,15 +249,15 @@ export default function TimeAttendancePage() {
               <TableRow>
                 <TableHead className="w-[120px]">Date</TableHead>
                 <TableHead className="w-[100px]">Day</TableHead>
-                <TableHead className="w-[90px]">Time In</TableHead>
-                <TableHead className="w-[90px]">Lunch Out</TableHead>
-                <TableHead className="w-[90px]">Lunch In</TableHead>
-                <TableHead className="w-[90px]">Time Out</TableHead>
+                <TableHead className="w-[70px]">Time In</TableHead>
+                <TableHead className="w-[70px]">Lunch Out</TableHead>
+                <TableHead className="w-[70px]">Lunch In</TableHead>
+                <TableHead className="w-[70px]">Time Out</TableHead>
                 <TableHead className="w-[120px]">Normal Hrs</TableHead>
                 <TableHead className="w-[120px]">Overtime Hrs</TableHead>
                 <TableHead className="w-[120px]">Total Hrs</TableHead>
                 <TableHead>Overtime Reason</TableHead>
-                <TableHead className="w-[120px]">Signature</TableHead>
+                <TableHead className="w-[100px]">Signature</TableHead>
                 <TableHead>Comments</TableHead>
               </TableRow>
             </TableHeader>
