@@ -252,3 +252,15 @@ export interface PerformanceRecord {
   downtimeHours: number;
   powerConsumption: number;
 }
+
+export interface AttendanceEntry {
+  userId: string;
+  userName: string;
+  signInTime: string; // ISO string
+  signOutTime?: string; // ISO string
+}
+
+export interface DailyAttendance {
+  id: string; // YYYY-MM-DD
+  attendees: AttendanceEntry[];
+}

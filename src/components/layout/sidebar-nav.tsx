@@ -37,6 +37,7 @@ import {
   Droplets,
   Power,
   ScanLine,
+  Clock,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -52,6 +53,7 @@ const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/breakdowns', label: 'Breakdowns', icon: TriangleAlert },
   { href: '/reports', label: 'Reports', icon: FileText },
+  { href: '/time-attendance', label: 'Time &amp; Attendance', icon: Clock },
   { href: '/messages', label: 'Messages', icon: Mail, beta: true },
   { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, beta: true },
   { href: '/meters', label: 'Meters', icon: Gauge, beta: true },
@@ -159,8 +161,8 @@ export function SidebarNav() {
 
   const dashboardLink = mainLinks.find(link => link.label === 'Dashboard');
   const breakdownLink = mainLinks.find(link => link.label === 'Breakdowns');
-  const reportsLink = mainLinks.find(link => link.label === 'Reports');
-  const otherLinks = mainLinks.filter(link => !['Dashboard', 'Breakdowns', 'Reports'].includes(link.label));
+  const timeAttendanceLink = mainLinks.find(link => link.label === 'Time &amp; Attendance');
+  const otherMainLinks = mainLinks.filter(link => !['Dashboard', 'Breakdowns', 'Reports', 'Time &amp; Attendance'].includes(link.label));
 
 
   return (
@@ -294,6 +296,17 @@ export function SidebarNav() {
                     </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>
+            
+            {timeAttendanceLink && (
+                 <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === timeAttendanceLink.href} tooltip={timeAttendanceLink.label}>
+                        <Link href={timeAttendanceLink.href}>
+                            <timeAttendanceLink.icon />
+                            <span>{timeAttendanceLink.label}</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            )}
 
             <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
                 <SidebarMenuItem>
@@ -465,7 +478,7 @@ export function SidebarNav() {
                 </CollapsibleContent>
             </Collapsible>
             
-            {otherLinks.map((link) => {
+            {otherMainLinks.map((link) => {
                 if (link.beta && !canViewBeta) {
                     return null;
                 }
@@ -506,7 +519,6 @@ export function SidebarNav() {
               </Collapsible>
             )}
 
-            {isAdmin && (
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
@@ -517,27 +529,28 @@ export function SidebarNav() {
                       </SidebarMenuButton>
                   </CollapsibleTrigger>
                 </SidebarMenuItem>
-                <CollapsibleContent>
-                    <SidebarMenuSub>
-                        <SidebarMenuItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
-                                <Link href="/admin/users">User Management</Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
-                         <SidebarMenuItem>
-                             <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
-                                <Link href="/seed-admin">Seed Admin</Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                             <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
-                                <Link href="/admin/seed">Seed Data</Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
-                    </SidebarMenuSub>
-                </CollapsibleContent>
+                {isAdmin && (
+                    <CollapsibleContent>
+                        <SidebarMenuSub>
+                            <SidebarMenuItem>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/users'}>
+                                    <Link href="/admin/users">User Management</Link>
+                                </SidebarMenuSubButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
+                                    <Link href="/seed-admin">Seed Admin</Link>
+                                </SidebarMenuSubButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/seed'}>
+                                    <Link href="/admin/seed">Seed Data</Link>
+                                </SidebarMenuSubButton>
+                            </SidebarMenuItem>
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+                )}
               </Collapsible>
-            )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
