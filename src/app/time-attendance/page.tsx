@@ -95,8 +95,13 @@ export default function TimeAttendancePage() {
     () => (timesheetId ? doc(firestore, 'timesheets', timesheetId) : null),
     [timesheetId]
   );
-  const { data: fetchedTimesheet, isLoading: timesheetLoading } =
-    useDoc<Timesheet>(timesheetRef);
+  
+  // Temporarily disable fetching to avoid permission errors. We will re-enable this later.
+  const fetchedTimesheet = null;
+  const timesheetLoading = false;
+  // const { data: fetchedTimesheet, isLoading: timesheetLoading } =
+  //   useDoc<Timesheet>(timesheetRef);
+
 
   useEffect(() => {
     if (user && !selectedUserId) {
