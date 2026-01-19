@@ -8,33 +8,21 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
-const BreakdownInfoSchema = z.object({
-  equipmentName: z.string(),
-  date: z.string(),
-  description: z.string(),
-  status: z.string(),
-});
-
-const CompletedScheduleInfoSchema = z.object({
-  equipmentName: z.string(),
-  maintenanceType: z.string(),
-  frequency: z.string(),
-  completionDate: z.string(),
-});
-
-const UnscheduledWorkInfoSchema = z.object({
-  scope: z.string(),
-  date: z.string(),
+const SectionInputSchema = z.object({
+  breakdownDetails: z.string().optional().describe("Details of any breakdowns that occurred."),
+  pmCompleted: z.string().optional().describe("Details of any preventative maintenance that was completed."),
+  technicianNotes: z.string().optional().describe("Any additional notes from the technician."),
 });
 
 const ReportInputSchema = z.object({
   startDate: z.string().describe('The start date for the report period (e.g., yyyy-MM-dd).'),
   endDate: z.string().describe('The end date for the report period (e.g., yyyy-MM-dd).'),
-  breakdowns: z.array(BreakdownInfoSchema).describe('A list of all breakdowns that occurred during the week.'),
-  completedSchedules: z.array(CompletedScheduleInfoSchema).describe('A list of all scheduled maintenance tasks that were completed.'),
-  unscheduledWork: z.array(UnscheduledWorkInfoSchema).describe('A list of all unscheduled work or interventions.'),
+  vsds: SectionInputSchema.nullable().describe("Report section for VSDs. Null if nothing to report."),
+  upsSystems: SectionInputSchema.nullable().describe("Report section for UPS Systems. Null if nothing to report."),
+  btus: SectionInputSchema.nullable().describe("Report section for BTUs. Null if nothing to report."),
+  protectionUnits: SectionInputSchema.nullable().describe("Report section for Protection Units. Null if nothing to report."),
 });
 export type ReportInput = z.infer<typeof ReportInputSchema>;
 
@@ -56,53 +44,49 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert technical writer for Altek Green, an industrial maintenance company.
 Your task is to generate a professional and clear weekly summary report for a client based on the data provided for the period from {{{startDate}}} to {{{endDate}}}.
 
-The report MUST have the following structure exactly. If a section has no data, state that clearly and positively as instructed.
+The report MUST have the following structure exactly. For each section, use the provided details. If a section has no data (i.e., 'Nothing to report' was checked), state that clearly.
 
 1.  **Subject Line:** "Weekly Maintenance & Operations Report: {{{startDate}}} to {{{endDate}}}"
-2.  **Executive Summary:** A brief, high-level overview of the week's activities. Mention the number of breakdowns, completed maintenances, and any major highlights or concerns.
-3.  **Breakdown Incidents:**
-{{#if breakdowns}}
-A list of all equipment breakdowns. For each, clearly state the equipment name, the date it was reported, and the issue.
+
+2.  **Executive Summary:** A brief, high-level overview of the week's activities based on the details provided below.
+
+3.  **VSDs (Variable Speed Drives)**
+{{#if vsds}}
+    - **Breakdowns:** {{{vsds.breakdownDetails}}}
+    - **Preventative Maintenance:** {{{vsds.pmCompleted}}}
+    - **Technician Notes:** {{{vsds.technicianNotes}}}
 {{else}}
-No breakdown incidents were reported during this period, indicating excellent equipment stability.
+    Nothing to report for this period.
 {{/if}}
-4.  **Completed Scheduled Maintenance:**
-{{#if completedSchedules}}
-A list of all planned maintenance tasks that were successfully completed.
+
+4.  **UPS Systems**
+{{#if upsSystems}}
+    - **Breakdowns:** {{{upsSystems.breakdownDetails}}}
+    - **Preventative Maintenance:** {{{upsSystems.pmCompleted}}}
+    - **Technician Notes:** {{{upsSystems.technicianNotes}}}
 {{else}}
-No scheduled maintenance was completed during this reporting period.
+    Nothing to report for this period.
 {{/if}}
-5.  **Unscheduled Work & Interventions:**
-{{#if unscheduledWork}}
-A summary of any work performed outside of the regular schedule.
+
+5.  **BTUs (Battery Tripping Units)**
+{{#if btus}}
+    - **Breakdowns:** {{{btus.breakdownDetails}}}
+    - **Preventative Maintenance:** {{{btus.pmCompleted}}}
+    - **Technician Notes:** {{{btus.technicianNotes}}}
 {{else}}
-No unscheduled work or interventions were required this week.
+    Nothing to report for this period.
 {{/if}}
-6.  **Closing Remarks:** A brief, positive closing statement about the commitment to reliability and proactive maintenance.
 
-**CRITICAL INSTRUCTIONS:**
-- Do not just list the raw data. Synthesize it into readable sentences.
-- Maintain a professional and client-friendly tone throughout.
-- Do not invent any information not present in the data below.
+6.  **Protection Units**
+{{#if protectionUnits}}
+    - **Breakdowns:** {{{protectionUnits.breakdownDetails}}}
+    - **Preventative Maintenance:** {{{protectionUnits.pmCompleted}}}
+    - **Technician Notes:** {{{protectionUnits.technicianNotes}}}
+{{else}}
+    Nothing to report for this period.
+{{/if}}
 
-**DATA FOR REPORT:**
-
-**Breakdowns:**
-{{#each breakdowns}}
-- Equipment: {{{this.equipmentName}}}, Date: {{{this.date}}}, Description: {{{this.description}}}, Status: {{{this.status}}}
-{{/each}}
-
-**Completed Scheduled Maintenance:**
-{{#each completedSchedules}}
-- Equipment: {{{this.equipmentName}}}, Type: {{{this.maintenanceType}}}, Frequency: {{{this.frequency}}}, Completed On: {{{this.completionDate}}}
-{{/each}}
-
-**Unscheduled Work:**
-{{#each unscheduledWork}}
-- Scope: {{{this.scope}}}, Date: {{{this.date}}}
-{{/each}}
-
-Now, generate the final report based on these instructions and data.
+7.  **Closing Remarks:** A brief, positive closing statement about the commitment to reliability and proactive maintenance.
 `,
 });
 

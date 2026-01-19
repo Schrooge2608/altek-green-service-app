@@ -1,14 +1,16 @@
-
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, FileText, Copy, Calendar as CalendarIcon, Save } from 'lucide-react';
+import { Loader2, Sparkles, FileText, Copy, Save, Calendar as CalendarIcon, Shield, Power, Cpu } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, where, getDocs, serverTimestamp, addDoc } from 'firebase/firestore';
-import type { Breakdown, CompletedSchedule, DailyDiary, GeneratedReport } from '@/lib/types';
+import { collection, serverTimestamp, addDoc } from 'firebase/firestore';
+import type { GeneratedReport } from '@/lib/types';
 import { generateReport, type ReportInput } from '@/ai/flows/generate-report-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -17,6 +19,103 @@ import { DateRange } from 'react-day-picker';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+
+const sectionSchema = z.object({
+  nothingToReport: z.boolean(),
+  breakdownDetails: z.string().optional(),
+  pmCompleted: z.string().optional(),
+  technicianNotes: z.string().optional(),
+});
+
+const formSchema = z.object({
+  vsds: sectionSchema,
+  upsSystems: sectionSchema,
+  btus: sectionSchema,
+  protectionUnits: sectionSchema,
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+const ReportSection = ({ control, name, title, icon: Icon }: { control: any, name: keyof FormValues, title: string, icon: React.ElementType }) => {
+    const watchNothingToReport = useWatch({
+        control,
+        name: `${name}.nothingToReport`,
+    });
+
+    return (
+        <Card>
+            <CardHeader>
+                <FormField
+                    control={control}
+                    name={`${name}.nothingToReport`}
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base flex items-center gap-2"><Icon className="h-5 w-5" />{title}</FormLabel>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <FormLabel>Nothing to report</FormLabel>
+                            </div>
+                        </FormItem>
+                    )}
+                />
+            </CardHeader>
+            {!watchNothingToReport && (
+                <CardContent className="space-y-4 pt-0">
+                    <FormField
+                        control={control}
+                        name={`${name}.breakdownDetails`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Breakdown Details</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Describe any breakdowns..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={control}
+                        name={`${name}.pmCompleted`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>PM Completed</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Detail preventative maintenance completed..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={control}
+                        name={`${name}.technicianNotes`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Technician Notes</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Add any other relevant notes..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </CardContent>
+            )}
+        </Card>
+    );
+};
+
 
 export default function GenerateReportPage() {
     const { toast } = useToast();
@@ -31,6 +130,16 @@ export default function GenerateReportPage() {
     const [date, setDate] = useState<DateRange | undefined>({
       from: startOfWeek(new Date(), { weekStartsOn: 1 }),
       to: endOfWeek(new Date(), { weekStartsOn: 1 }),
+    });
+
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            vsds: { nothingToReport: true, breakdownDetails: '', pmCompleted: '', technicianNotes: '' },
+            upsSystems: { nothingToReport: true, breakdownDetails: '', pmCompleted: '', technicianNotes: '' },
+            btus: { nothingToReport: true, breakdownDetails: '', pmCompleted: '', technicianNotes: '' },
+            protectionUnits: { nothingToReport: true, breakdownDetails: '', pmCompleted: '', technicianNotes: '' },
+        },
     });
 
     const handleCopy = () => {
@@ -67,7 +176,7 @@ export default function GenerateReportPage() {
         }
     };
 
-    const handleGenerateReport = async () => {
+    const onSubmit = async (data: FormValues) => {
         if (!date?.from || !date?.to) {
             toast({ variant: 'destructive', title: 'No Date Range Selected', description: 'Please select a start and end date for the report.' });
             return;
@@ -77,58 +186,22 @@ export default function GenerateReportPage() {
         setError(null);
         setGeneratedReport('');
 
+        const reportInput: ReportInput = {
+            startDate: format(date.from, 'yyyy-MM-dd'),
+            endDate: format(date.to, 'yyyy-MM-dd'),
+            vsds: data.vsds.nothingToReport ? null : data.vsds,
+            upsSystems: data.upsSystems.nothingToReport ? null : data.upsSystems,
+            btus: data.btus.nothingToReport ? null : data.btus,
+            protectionUnits: data.protectionUnits.nothingToReport ? null : data.protectionUnits,
+        };
+
         try {
-            const startDateStr = format(date.from, 'yyyy-MM-dd');
-            const endDateStr = format(date.to, 'yyyy-MM-dd');
-
-            // Fetch Breakdowns
-            const breakdownsQuery = query(collection(firestore, 'breakdown_reports'), where('date', '>=', startDateStr), where('date', '<=', endDateStr));
-            const breakdownSnap = await getDocs(breakdownsQuery);
-            const breakdowns = breakdownSnap.docs.map(doc => doc.data() as Breakdown);
-
-            // Fetch Completed Schedules
-            const schedulesQuery = query(collection(firestore, 'completed_schedules'), where('completionDate', '>=', startDateStr), where('completionDate', '<=', endDateStr));
-            const schedulesSnap = await getDocs(schedulesQuery);
-            const completedSchedules = schedulesSnap.docs.map(doc => doc.data() as CompletedSchedule);
-
-            // Fetch Daily Diaries for Unscheduled Work
-            const diariesQuery = query(collection(firestore, 'daily_diaries'), where('date', '>=', startDateStr), where('date', '<=', endDateStr));
-            const diariesSnap = await getDocs(diariesQuery);
-            const dailyDiaries = diariesSnap.docs.map(doc => doc.data() as DailyDiary);
-            
-            const unscheduledWork = dailyDiaries.flatMap(diary =>
-                diary.works?.filter(w => w.scope && w.scope.toLowerCase().includes('unscheduled'))
-                .map(w => ({
-                    scope: w.scope || 'No scope provided',
-                    date: diary.date,
-                })) || []
-            );
-
-            const reportInput: ReportInput = {
-                startDate: startDateStr,
-                endDate: endDateStr,
-                breakdowns: breakdowns.map(b => ({
-                    equipmentName: b.equipmentName,
-                    date: b.date,
-                    description: b.description,
-                    status: b.resolved ? 'Resolved' : 'Pending',
-                })),
-                completedSchedules: completedSchedules.map(s => ({
-                    equipmentName: s.equipmentName,
-                    maintenanceType: s.maintenanceType,
-                    frequency: s.frequency,
-                    completionDate: s.completionDate,
-                })),
-                unscheduledWork: unscheduledWork,
-            };
-            
             const result = await generateReport(reportInput);
-
             setGeneratedReport(result.report);
             toast({ title: 'Report Generated', description: 'The weekly summary report has been created below.' });
         } catch (e: any) {
             console.error(e);
-            setError('Failed to generate the report. The AI model may be temporarily unavailable or the data could not be fetched.');
+            setError('Failed to generate the report. The AI model may be temporarily unavailable.');
             toast({ variant: 'destructive', title: 'Generation Failed', description: e.message || 'An unknown error occurred.' });
         } finally {
             setIsLoading(false);
@@ -140,7 +213,7 @@ export default function GenerateReportPage() {
             <header>
                 <h1 className="text-3xl font-bold tracking-tight">AI Weekly Report Generator</h1>
                 <p className="text-muted-foreground">
-                    Generate a comprehensive, client-friendly summary report for a selected period.
+                    Manually enter details for each section to generate a comprehensive weekly report.
                 </p>
             </header>
 
@@ -149,7 +222,7 @@ export default function GenerateReportPage() {
                     <CardTitle>Report Period</CardTitle>
                     <CardDescription>Select the date range for the report. It defaults to the current week.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent>
                      <Popover>
                         <PopoverTrigger asChild>
                         <Button
@@ -186,14 +259,24 @@ export default function GenerateReportPage() {
                         />
                         </PopoverContent>
                     </Popover>
-                    <div>
-                        <Button onClick={handleGenerateReport} disabled={isLoading || !date?.from || !date?.to}>
-                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                            {isLoading ? 'Gathering Data & Generating...' : 'Generate Weekly Report'}
-                        </Button>
-                    </div>
                 </CardContent>
             </Card>
+
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                    <ReportSection control={form.control} name="vsds" title="VSDs (Variable Speed Drives)" icon={Cpu} />
+                    <ReportSection control={form.control} name="upsSystems" title="UPS Systems" icon={Power} />
+                    <ReportSection control={form.control} name="btus" title="BTUs (Battery Tripping Units)" icon={Power} />
+                    <ReportSection control={form.control} name="protectionUnits" title="Protection Units" icon={Shield} />
+                    
+                    <div className="flex justify-end">
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            {isLoading ? 'Generating...' : 'Generate Report'}
+                        </Button>
+                    </div>
+                </form>
+            </Form>
 
             {error && (
                 <Alert variant="destructive">
