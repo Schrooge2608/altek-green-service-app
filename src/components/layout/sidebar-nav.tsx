@@ -37,7 +37,6 @@ import {
   Droplets,
   Power,
   ScanLine,
-  Clock,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -143,7 +142,7 @@ export function SidebarNav() {
   const [isAssetsOpen, setIsAssetsOpen] = React.useState(isEquipmentPath);
   const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment/mining'));
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(pathname.startsWith('/equipment/smelter'));
-  const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin'));
+  const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin') || pathname.startsWith('/time-attendance'));
   const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
