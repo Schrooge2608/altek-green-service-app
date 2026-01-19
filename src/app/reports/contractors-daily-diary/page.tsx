@@ -17,7 +17,7 @@ import { AltekLogo } from '@/components/altek-logo';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
+import { useFirestore, useDoc, useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { doc, collection, setDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
@@ -44,7 +44,7 @@ export default function NewDailyDiaryPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { toast } = useToast();
-    const { firestore, firebaseApp } = useFirebase();
+    const { firestore, auth, firebaseApp } = useFirebase();
     const { user, isUserLoading } = useUser();
 
     const diaryId = searchParams.get('id');
@@ -55,7 +55,7 @@ export default function NewDailyDiaryPage() {
     const [contractTitle, setContractTitle] = useState('VSD MAINTENANCE');
     const [contractNumber, setContractNumber] = useState('CW 22038313');
     const [area, setArea] = useState<'Mining' | 'Smelter'>('Mining');
-    const [date, setDate] = React.useState<Date>();
+    const [date, setDate] = React.useState<Date | undefined>();
     const [shiftStart, setShiftStart] = useState('');
     const [shiftEnd, setShiftEnd] = useState('');
     const [hrs, setHrs] = useState<number | undefined>();
@@ -180,10 +180,9 @@ export default function NewDailyDiaryPage() {
         }
     }, [manpowerData]);
     
-    const handleSave = async () => {
-      // BB's debug function - do not change
+    const saveNewDiaryEntry = async () => {
       try {
-        // Using user from useUser() hook.
+        const user = auth.currentUser;
     
         // 1. SAFETY CHECK: Are we logged in?
         if (!user) {
@@ -209,9 +208,9 @@ export default function NewDailyDiaryPage() {
         
         alert("SUCCESS! The document was saved.");
     
-      } catch (error) {
+      } catch (error: any) {
         console.error("SAVE FAILED:", error);
-        alert("STILL FAILING: " + (error as Error).message);
+        alert("STILL FAILING: " + error.message);
       }
     };
 
@@ -277,7 +276,7 @@ export default function NewDailyDiaryPage() {
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
             <div className="flex justify-end mb-4 gap-2 print:hidden">
-                 <Button onClick={handleSave} disabled={!uniqueId || isIdLoading || isClientManager || isSaving}>
+                 <Button onClick={saveNewDiaryEntry} disabled={!uniqueId || isIdLoading || isClientManager || isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     {isSaving ? 'Saving...' : 'Save Diary'}
                 </Button>
@@ -344,7 +343,7 @@ export default function NewDailyDiaryPage() {
                     </div>
                     <div className="space-y-1">
                         <Label htmlFor="hrs">Hrs</Label>
-                        <Input id="hrs" type="number" value={hrs} onChange={e => setHrs(Number(e.target.value))} />
+                        <Input id="hrs" type="number" value={hrs === undefined ? '' : hrs} onChange={e => setHrs(Number(e.target.value))} />
                     </div>
                 </div>
 
