@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -28,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Equipment, User } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -40,7 +39,7 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
   return (
     <TableRow>
       <TableCell>
-        <Select disabled={usersLoading}>
+         <Select disabled={usersLoading}>
             <SelectTrigger>
                 <SelectValue placeholder="Select crew member..." />
             </SelectTrigger>
@@ -97,6 +96,24 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
   );
 }
 
+const qualityControlItems = [
+    { text: "Visual inspection for physical damage, cracks, or signs of overheating on the breaker." },
+    { text: "Manually operate the breaker (trip and reset) to ensure mechanical function is smooth." },
+    { text: "Check torque on all load and line terminal connections." },
+    { text: "Clean the breaker exterior and the surrounding area inside the panel." },
+    { text: "Inspect auxiliary contacts and wiring for tightness and condition." },
+    { text: "Verify that the amperage rating of the breaker is correct for the protected load." },
+];
+
+const commissioningItems = [
+    { text: "Ensure downstream equipment is ready for power." },
+    { text: "Close breaker and confirm it latches correctly." },
+    { text: "With the load running, measure the current on all phases to check for balance." },
+    { text: "Use a thermal imager to scan the breaker and connections for any hot spots under load." },
+    { text: "Confirm any remote trip/close signals or status indicators are functioning correctly." },
+    { text: "Leave area clean and ensure all panel covers are securely fastened." },
+];
+
 export function Vsd3MonthlyScopeDocument() {
     const title = "VSDs 3-Monthly Service Scope";
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
@@ -107,7 +124,7 @@ export function Vsd3MonthlyScopeDocument() {
 
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
-
+    
     const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
@@ -332,7 +349,7 @@ export function Vsd3MonthlyScopeDocument() {
                         <strong>Performance & Data Analysis</strong>
                         <ul className="list-disc pl-5 mt-2">
                             <li><strong>Fault Log Review:</strong> Download the last 3 months of fault history. Look for recurring "Under-voltage" or "Over-current" warnings that didn't trip the drive but indicate a brewing problem.</li>
-                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically >5V AC), your capacitors are starting to fail.</li>
+                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically &gt;5V AC), your capacitors are starting to fail.</li>
                             <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
                         </ul>
                     </li>
