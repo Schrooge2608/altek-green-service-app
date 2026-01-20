@@ -4,11 +4,11 @@ service cloud.firestore {
     function isAuthenticated() { return request.auth != null; }
     function isManagement() { return request.auth.token.email.matches('.*admin.*'); } // Fallback if roles fail
 
-    match /users/{userId} { allow read, write: if isAuthenticated(); }
+    match /users/{userId} { allow read, write, list: if isAuthenticated(); }
     
     match /vsds/{vsdId} { allow read, write: if isAuthenticated(); }
-    match /completed_schedules/{scheduleId} { allow read, write: if isAuthenticated(); }
-    match /upcoming_schedules/{scheduleId} { allow read, write: if isAuthenticated(); }
+    match /completed_schedules/{scheduleId} { allow read, write, list: if isAuthenticated(); }
+    match /upcoming_schedules/{scheduleId} { allow read, write, list: if isAuthenticated(); }
     
     // Allow access to Equipment for all logged-in users
     match /equipment/{document=**} {
