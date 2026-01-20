@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -236,10 +235,10 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
-                                variant={'outline'}
+                                variant={"outline"}
                                 className={cn(
-                                    'w-full justify-start text-left font-normal',
-                                    !inspectionDate && 'text-muted-foreground'
+                                    "w-full justify-start text-left font-normal",
+                                    !inspectionDate && "text-muted-foreground"
                                 )}
                                 disabled={isEditMode}
                                 >
@@ -397,7 +396,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         <strong>Performance & Data Analysis</strong>
                         <ul className="list-disc pl-5 mt-2">
                             <li><strong>Fault Log Review:</strong> Download the last 3 months of fault history. Look for recurring "Under-voltage" or "Over-current" warnings that didn't trip the drive but indicate a brewing problem.</li>
-                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically >5V AC), your capacitors are starting to fail.</li>
+                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically &gt;5V AC), your capacitors are starting to fail.</li>
                             <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
                         </ul>
                     </li>
