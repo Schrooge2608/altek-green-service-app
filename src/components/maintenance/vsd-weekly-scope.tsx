@@ -220,7 +220,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
           <div className="text-right">
             <h2 className="text-2xl font-bold text-primary">{title}</h2>
             <p className="text-muted-foreground">Service Document</p>
-            {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: {schedule.id}</p>}
+            {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-WS-{schedule.id.slice(-6).toUpperCase()}</p>}
           </div>
         </header>
 

@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -100,29 +100,11 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
   );
 }
 
-const qualityControlItems = [
-    { text: "Visual inspection for physical damage, cracks, or signs of overheating on the breaker." },
-    { text: "Manually operate the breaker (trip and reset) to ensure mechanical function is smooth." },
-    { text: "Check torque on all load and line terminal connections." },
-    { text: "Clean the breaker exterior and the surrounding area inside the panel." },
-    { text: "Inspect auxiliary contacts and wiring for tightness and condition." },
-    { text: "Verify that the amperage rating of the breaker is correct for the protected load." },
-];
-
-const commissioningItems = [
-    { text: "Ensure downstream equipment is ready for power." },
-    { text: "Close breaker and confirm it latches correctly." },
-    { text: "With the load running, measure the current on all phases to check for balance." },
-    { text: "Use a thermal imager to scan the breaker and connections for any hot spots under load." },
-    { text: "Confirm any remote trip/close signals or status indicators are functioning correctly." },
-    { text: "Leave area clean and ensure all panel covers are securely fastened." },
-];
-
-export function Vsd3MonthlyScopeDocument() {
+export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask }) {
     const title = "VSDs 3-Monthly Service Scope";
-    const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
-    const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>();
-    const [inspectedById, setInspectedById] = React.useState<string | undefined>();
+    const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
+    const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>(schedule ? new Date(schedule.scheduledFor) : undefined);
+    const [inspectedById, setInspectedById] = React.useState<string | undefined>(schedule?.assignedToId);
     const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
     const [isSaving, setIsSaving] = React.useState(false);
     const firestore = useFirestore();
@@ -180,7 +162,9 @@ export function Vsd3MonthlyScopeDocument() {
 
         try {
             const schedulesRef = collection(firestore, 'upcoming_schedules');
-            await addDocumentNonBlocking(schedulesRef, newScheduledTask);
+            const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
+            await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
+            
             toast({
                 title: 'Schedule Saved',
                 description: 'The task has been added to the upcoming schedules list.'
@@ -193,14 +177,34 @@ export function Vsd3MonthlyScopeDocument() {
             setIsSaving(false);
         }
     };
+    
+    const handleComplete = async () => {
+        if (!schedule) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No schedule data to complete.' });
+            return;
+        }
+        // In a real app, this would collect all the form data (checklist, signatures, etc.)
+        // and save it to a 'completed_schedules' collection.
+        toast({ title: 'Functionality Pending', description: 'Completing and finalizing schedules is not yet fully implemented.' });
+    };
+
+    const isEditMode = !!schedule;
+
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
-            <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
-                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                {isSaving ? 'Saving...' : 'Save to Upcoming Schedule List'}
-            </Button>
+             {isEditMode ? (
+                <Button onClick={handleComplete} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    {isSaving ? 'Saving...' : 'Save & Complete'}
+                </Button>
+            ) : (
+                 <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    {isSaving ? 'Saving...' : 'Save to Upcoming Schedule List'}
+                </Button>
+            )}
             <Button onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
             </Button>
@@ -215,6 +219,7 @@ export function Vsd3MonthlyScopeDocument() {
                 <div className="text-right">
                     <h2 className="text-2xl font-bold text-primary">{title}</h2>
                     <p className="text-muted-foreground">Service Document</p>
+                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-WS-{schedule.id.slice(-6).toUpperCase()}</p>}
                 </div>
             </header>
 
@@ -225,7 +230,7 @@ export function Vsd3MonthlyScopeDocument() {
                 <CardContent className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                         <Label htmlFor="equipment-select">Select Equipment for Inspection</Label>
-                        <Select onValueChange={setSelectedEquipment} value={selectedEquipment} disabled={equipmentLoading}>
+                        <Select onValueChange={setSelectedEquipment} value={selectedEquipment} disabled={equipmentLoading || isEditMode}>
                             <SelectTrigger id="equipment-select">
                                 <SelectValue placeholder="Select the equipment..." />
                             </SelectTrigger>
@@ -252,6 +257,7 @@ export function Vsd3MonthlyScopeDocument() {
                                     'w-full justify-start text-left font-normal',
                                     !inspectionDate && 'text-muted-foreground'
                                 )}
+                                disabled={isEditMode}
                                 >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {inspectionDate ? format(inspectionDate, 'PPP') : <span>Pick a date</span>}
@@ -269,7 +275,7 @@ export function Vsd3MonthlyScopeDocument() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
-                        <Select onValueChange={setInspectedById} value={inspectedById} disabled={usersLoading || !user}>
+                        <Select onValueChange={setInspectedById} value={inspectedById} disabled={usersLoading || !user || isEditMode}>
                             <SelectTrigger id="inspected-by">
                                 <SelectValue placeholder="Select technician..." />
                             </SelectTrigger>
