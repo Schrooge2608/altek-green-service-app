@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -315,29 +314,6 @@ export function SidebarNav() {
                 </Collapsible>
             )}
 
-            <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
-                <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Completed Schedules" isActive={pathname.startsWith('/maintenance/completed')}>
-                            <FileText />
-                            <span>Completed Schedules</span>
-                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                        </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                </SidebarMenuItem>
-                <CollapsibleContent>
-                     <SidebarMenuSub>
-                        {completedSchedulesCategories.map((category) => (
-                            <SidebarMenuItem key={category.href}>
-                                <SidebarMenuSubButton asChild isActive={pathname === category.href}>
-                                    <Link href={category.href}>{category.label}</Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenuSub>
-                </CollapsibleContent>
-            </Collapsible>
-            
            <Collapsible open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
@@ -389,6 +365,29 @@ export function SidebarNav() {
                 </CollapsibleContent>
            </Collapsible>
 
+            <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Completed Schedules" isActive={pathname.startsWith('/maintenance/completed')}>
+                            <FileText />
+                            <span>Completed Schedules</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                     <SidebarMenuSub>
+                        {completedSchedulesCategories.map((category) => (
+                            <SidebarMenuItem key={category.href}>
+                                <SidebarMenuSubButton asChild isActive={pathname === category.href}>
+                                    <Link href={category.href}>{category.label}</Link>
+                                </SidebarMenuSubButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenuSub>
+                </CollapsibleContent>
+            </Collapsible>
+            
            <Collapsible open={isProceduresOpen} onOpenChange={setIsProceduresOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
