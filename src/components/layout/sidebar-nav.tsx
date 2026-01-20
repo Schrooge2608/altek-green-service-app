@@ -247,69 +247,77 @@ export function SidebarNav() {
                 </CollapsibleContent>
            </Collapsible>
 
-            <Collapsible open={isReportsOpen} onOpenChange={setIsReportsOpen}>
-                <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Reports" isActive={pathname.startsWith('/reports')}>
-                            <FileText />
-                            <span>Reports</span>
-                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                        </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                </SidebarMenuItem>
-                <CollapsibleContent>
-                    <SidebarMenuSub>
-                        <SidebarMenuItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === '/reports'}>
-                                <Link href="/reports">
-                                    <span>Performance Reports</span>
-                                </Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
-                         <SidebarMenuItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === '/reports/generate'}>
-                                <Link href="/reports/generate">
-                                    <Sparkles />
-                                    <span>AI Report Generator</span>
-                                </Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
-                         <SidebarMenuItem>
-                            <SidebarMenuSubButton asChild isActive={pathname.startsWith('/reports/history')}>
-                                <Link href="/reports/history">
-                                    <History />
-                                    <span>Report History</span>
-                                </Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
-                        <Collapsible>
-                             <SidebarMenuItem>
-                                <CollapsibleTrigger asChild>
-                                    <SidebarMenuButton isActive={pathname.startsWith('/reports/contractors-daily-diary') || pathname === '/reports/diary-tracker'}>
-                                        <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
-                                        <span>Daily Diary</span>
-                                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                                    </SidebarMenuButton>
-                                </CollapsibleTrigger>
-                            </SidebarMenuItem>
-                            <CollapsibleContent>
-                                <SidebarMenuSub>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuSubButton asChild isActive={pathname === '/reports/contractors-daily-diary'}>
-                                            <Link href="/reports/contractors-daily-diary">New Diary</Link>
-                                        </SidebarMenuSubButton>
-                                    </SidebarMenuItem>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuSubButton asChild isActive={pathname === '/reports/diary-tracker'}>
-                                            <Link href="/reports/diary-tracker">Diary Tracker</Link>
-                                        </SidebarMenuSubButton>
-                                    </SidebarMenuItem>
-                                </SidebarMenuSub>
-                            </CollapsibleContent>
-                        </Collapsible>
-                    </SidebarMenuSub>
-                </CollapsibleContent>
-            </Collapsible>
+           {(isAdmin || isManager || isClientManager) && (
+                <Collapsible open={isReportsOpen} onOpenChange={setIsReportsOpen}>
+                    <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton tooltip="Reports" isActive={pathname.startsWith('/reports')}>
+                                <FileText />
+                                <span>Reports</span>
+                                <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                    </SidebarMenuItem>
+                    <CollapsibleContent>
+                        <SidebarMenuSub>
+                            {(isAdmin || isManager) && (
+                                <SidebarMenuItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname === '/reports'}>
+                                        <Link href="/reports">
+                                            <span>Performance Reports</span>
+                                        </Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuItem>
+                            )}
+                            {(isAdmin || isManager || isClientManager) && (
+                                <SidebarMenuItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname === '/reports/generate'}>
+                                        <Link href="/reports/generate">
+                                            <Sparkles />
+                                            <span>AI Report Generator</span>
+                                        </Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuItem>
+                            )}
+                            {(isAdmin || isManager || isClientManager) && (
+                                <SidebarMenuItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname.startsWith('/reports/history')}>
+                                        <Link href="/reports/history">
+                                            <History />
+                                            <span>Report History</span>
+                                        </Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuItem>
+                            )}
+                            <Collapsible>
+                                 <SidebarMenuItem>
+                                    <CollapsibleTrigger asChild>
+                                        <SidebarMenuButton isActive={pathname.startsWith('/reports/contractors-daily-diary') || pathname === '/reports/diary-tracker'}>
+                                            <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} />
+                                            <span>Daily Diary</span>
+                                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                        </SidebarMenuButton>
+                                    </CollapsibleTrigger>
+                                </SidebarMenuItem>
+                                <CollapsibleContent>
+                                    <SidebarMenuSub>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuSubButton asChild isActive={pathname === '/reports/contractors-daily-diary'}>
+                                                <Link href="/reports/contractors-daily-diary">New Diary</Link>
+                                            </SidebarMenuSubButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuSubButton asChild isActive={pathname === '/reports/diary-tracker'}>
+                                                <Link href="/reports/diary-tracker">Diary Tracker</Link>
+                                            </SidebarMenuSubButton>
+                                        </SidebarMenuItem>
+                                    </SidebarMenuSub>
+                                </CollapsibleContent>
+                            </Collapsible>
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+                </Collapsible>
+            )}
 
             <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
                 <SidebarMenuItem>
