@@ -1,10 +1,9 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Printer, Plus, Trash2, AlertTriangle, Save } from 'lucide-react';
+import { CalendarIcon, Printer, Plus, Trash2, AlertTriangle, Save, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
 import { Label } from './ui/label';
@@ -14,13 +13,15 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from './ui/calendar';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import type { Equipment, User } from '@/lib/types';
+import type { Equipment, User, ScheduledTask } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Checkbox } from './ui/checkbox';
 import { SignaturePad } from './ui/signature-pad';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 
 interface MaintenanceScopeDocumentProps {
@@ -83,9 +84,13 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
 export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProps) {
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
     const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>();
+    const [inspectedById, setInspectedById] = React.useState<string | undefined>();
     const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
+    const [isSaving, setIsSaving] = React.useState(false);
     const firestore = useFirestore();
     const { user } = useUser();
+    const router = useRouter();
+    const { toast } = useToast();
 
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -101,12 +106,61 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
         setCrew(c => c.filter(member => member.id !== id));
     };
 
+    const handleSaveToUpcoming = async () => {
+        if (!selectedEquipment || !inspectionDate || !inspectedById) {
+            toast({
+                variant: 'destructive',
+                title: 'Missing Information',
+                description: 'Please select an equipment, date, and inspector before saving.'
+            });
+            return;
+        }
+        setIsSaving(true);
+        
+        const equipmentData = equipment?.find(e => e.id === selectedEquipment);
+        const inspectorData = users?.find(u => u.id === inspectedById);
+        
+        if (!equipmentData || !inspectorData) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected equipment or user.' });
+            setIsSaving(false);
+            return;
+        }
+
+        const newScheduledTask: Omit<ScheduledTask, 'id'> = {
+            originalTaskId: `${equipmentData.id}-${title.toLowerCase().replace(/ /g, '-')}`,
+            equipmentId: equipmentData.id,
+            equipmentName: equipmentData.name,
+            task: title,
+            scheduledFor: format(inspectionDate, 'yyyy-MM-dd'),
+            status: 'Pending',
+            assignedToId: inspectorData.id,
+            assignedToName: inspectorData.name,
+            completionNotes: '',
+        };
+
+        try {
+            const schedulesRef = collection(firestore, 'upcoming_schedules');
+            await addDocumentNonBlocking(schedulesRef, newScheduledTask);
+            toast({
+                title: 'Schedule Saved',
+                description: 'The task has been added to the upcoming schedules list.'
+            });
+            router.push('/maintenance/upcoming-schedules');
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the schedule.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
-            <Button variant="outline">
-                <Save className="mr-2 h-4 w-4" />
-                Save to Upcoming Schedule List
+            <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isSaving ? 'Saving...' : 'Save to Upcoming Schedule List'}
             </Button>
             <Button onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
@@ -176,7 +230,7 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
-                        <Select disabled={usersLoading || !user}>
+                        <Select onValueChange={setInspectedById} value={inspectedById} disabled={usersLoading || !user}>
                             <SelectTrigger id="inspected-by">
                                 <SelectValue placeholder="Select technician..." />
                             </SelectTrigger>

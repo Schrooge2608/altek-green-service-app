@@ -16,6 +16,7 @@ import {
   Trash2,
   AlertTriangle,
   Save,
+  Loader2,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
@@ -26,13 +27,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import type { Equipment, User } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Equipment, User, ScheduledTask } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SignaturePad } from '@/components/ui/signature-pad';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, users: User[] | null, usersLoading: boolean }) {
   const [date, setDate] = React.useState<Date | undefined>();
@@ -118,9 +121,13 @@ export function Vsd3MonthlyScopeDocument() {
     const title = "VSDs 3-Monthly Service Scope";
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
     const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>();
+    const [inspectedById, setInspectedById] = React.useState<string | undefined>();
     const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
+    const [isSaving, setIsSaving] = React.useState(false);
     const firestore = useFirestore();
     const { user } = useUser();
+    const { toast } = useToast();
+    const router = useRouter();
 
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -136,12 +143,60 @@ export function Vsd3MonthlyScopeDocument() {
         setCrew(c => c.filter(member => member.id !== id));
     };
 
+    const handleSaveToUpcoming = async () => {
+        if (!selectedEquipment || !inspectionDate || !inspectedById) {
+            toast({
+                variant: 'destructive',
+                title: 'Missing Information',
+                description: 'Please select an equipment, date, and inspector before saving.'
+            });
+            return;
+        }
+        setIsSaving(true);
+        
+        const equipmentData = equipment?.find(e => e.id === selectedEquipment);
+        const inspectorData = users?.find(u => u.id === inspectedById);
+        
+        if (!equipmentData || !inspectorData) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected equipment or user.' });
+            setIsSaving(false);
+            return;
+        }
+
+        const newScheduledTask: Omit<ScheduledTask, 'id'> = {
+            originalTaskId: `${equipmentData.id}-vsd-3-monthly`,
+            equipmentId: equipmentData.id,
+            equipmentName: equipmentData.name,
+            task: 'VSD 3-Monthly Service',
+            scheduledFor: format(inspectionDate, 'yyyy-MM-dd'),
+            status: 'Pending',
+            assignedToId: inspectorData.id,
+            assignedToName: inspectorData.name,
+            completionNotes: '',
+        };
+
+        try {
+            const schedulesRef = collection(firestore, 'upcoming_schedules');
+            await addDocumentNonBlocking(schedulesRef, newScheduledTask);
+            toast({
+                title: 'Schedule Saved',
+                description: 'The task has been added to the upcoming schedules list.'
+            });
+            router.push('/maintenance/upcoming-schedules');
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the schedule.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
-            <Button variant="outline">
-                <Save className="mr-2 h-4 w-4" />
-                Save to Upcoming Schedule List
+            <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isSaving ? 'Saving...' : 'Save to Upcoming Schedule List'}
             </Button>
             <Button onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
@@ -211,7 +266,7 @@ export function Vsd3MonthlyScopeDocument() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
-                        <Select disabled={usersLoading || !user}>
+                        <Select onValueChange={setInspectedById} value={inspectedById} disabled={usersLoading || !user}>
                             <SelectTrigger id="inspected-by">
                                 <SelectValue placeholder="Select technician..." />
                             </SelectTrigger>
