@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -26,24 +27,24 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '../ui/input';
-import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
-import type { Equipment, User, ScheduledTask, MaintenanceTask } from '@/lib/types';
+import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '../ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
-const monthlyChecklist = [
+const monthlyChecklistItems = [
     { task: 'Filter Inspection', action: 'If your VSD cabinet has air filters, check for clogs. A clogged filter is the #1 cause of over-temperature trips.' },
     { task: 'Cleaning', action: 'Use a vacuum (not compressed air, which can push conductive dust deeper into circuits) to remove dust from the heat sink fins.' },
     { task: 'Check Connections', action: 'Visually inspect power and control wiring for any signs of discoloration or pitting, which indicates loose connections causing heat.' },
     { task: 'Fan Operation', action: 'Verify that the internal cooling fans are moving air effectively and aren\'t wobbling.' },
 ];
 
-const annualChecklist = [
+const annualChecklistItems = [
     { component: 'Terminal Torque', action: 'Retighten all power connections to spec.', reason: 'Vibrations over time loosen screws, leading to arcing.' },
     { component: 'Capacitor Check', action: 'Look for bulging or leaking electrolyte.', reason: 'DC bus capacitors have a finite life (usually 5–10 years).' },
     { component: 'Voltage Balance', action: 'Measure input voltage phase-to-phase.', reason: 'Imbalance > 2% can cause significant internal heating.' },
@@ -51,12 +52,18 @@ const annualChecklist = [
     { component: 'Software/Firmware', action: 'Check for manufacturer updates.', reason: 'Updates often include better motor control algorithms or bug fixes.' },
 ];
 
-function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, users: User[] | null, usersLoading: boolean }) {
-    const [date, setDate] = React.useState<Date | undefined>();
+function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: { member: Partial<WorkCrewMember> & { localId: number }, onRemove: () => void, onChange: (field: keyof WorkCrewMember, value: string) => void, users: User[] | null, usersLoading: boolean }) {
     return (
         <TableRow>
             <TableCell>
-                <Select disabled={usersLoading}>
+                <Select
+                    disabled={usersLoading}
+                    value={users?.find(u => u.name === member.name)?.id}
+                    onValueChange={(userId) => {
+                        const user = users?.find(u => u.id === userId);
+                        onChange('name', user?.name || '');
+                    }}
+                >
                     <SelectTrigger>
                         <SelectValue placeholder="Select crew member..." />
                     </SelectTrigger>
@@ -69,7 +76,7 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
                     </SelectContent>
                 </Select>
             </TableCell>
-            <TableCell><Input placeholder="RTBS No..." /></TableCell>
+            <TableCell><Input placeholder="RTBS No..." value={member.rtbsNo || ''} onChange={(e) => onChange('rtbsNo', e.target.value)}/></TableCell>
             <TableCell className="w-[180px]">
                  <Popover>
                     <PopoverTrigger asChild>
@@ -77,24 +84,24 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
                         variant={"outline"}
                         className={cn(
                             "w-full justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
+                            !member.date && "text-muted-foreground"
                         )}
                         >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                        {member.date ? format(new Date(member.date), "PPP") : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                         <Calendar
                         mode="single"
-                        selected={date}
-                        onSelect={setDate}
+                        selected={member.date ? new Date(member.date) : undefined}
+                        onSelect={(date) => onChange('date', date ? format(date, 'yyyy-MM-dd') : '')}
                         initialFocus
                         />
                     </PopoverContent>
                 </Popover>
             </TableCell>
-            <TableCell className="w-[250px]"><SignaturePad /></TableCell>
+            <TableCell className="w-[250px]"><SignaturePad value={member.signature} onSign={(sig) => onChange('signature', sig)} onClear={() => onChange('signature', '')} /></TableCell>
             <TableCell className="text-right">
                 <Button variant="ghost" size="icon" onClick={onRemove} className="print:hidden">
                     <Trash2 className="h-4 w-4" />
@@ -106,7 +113,6 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
 
 export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask }) {
   const title = "VSDs Monthly & Annual Service Scope";
-  const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
   const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
   const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>(schedule ? new Date(schedule.scheduledFor) : undefined);
   const [inspectedById, setInspectedById] = React.useState<string | undefined>(schedule?.assignedToId);
@@ -116,20 +122,50 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
   const { toast } = useToast();
   const router = useRouter();
 
+  const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
+    (schedule?.workCrew && schedule.workCrew.length > 0)
+    ? schedule.workCrew.map((m, i) => ({ ...m, localId: i }))
+    : [{ localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]
+  );
+
+  const initialChecklist = React.useMemo(() => [
+      ...monthlyChecklistItems.map(item => ({ task: item.task, status: 'not-checked' as const, comments: '' })),
+      ...annualChecklistItems.map(item => ({ task: item.component, status: 'not-checked' as const, comments: '' })),
+  ], []);
+
+  const [checklist, setChecklist] = React.useState<ChecklistItem[]>(() => {
+      if (schedule?.checklist && schedule.checklist.length > 0) {
+          return schedule.checklist;
+      }
+      return initialChecklist;
+  });
+
+  const handleChecklistChange = (index: number, field: keyof ChecklistItem, value: string) => {
+      const newChecklist = [...checklist];
+      (newChecklist[index] as any)[field] = value;
+      setChecklist(newChecklist);
+  };
+
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
-  
+
   const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
   const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
   const addCrewMember = () => {
-    setCrew(c => [...c, { id: Date.now() }]);
+    setCrew(c => [...c, { localId: Date.now() }]);
   };
 
-  const removeCrewMember = (id: number) => {
-    setCrew(c => c.filter(member => member.id !== id));
+  const removeCrewMember = (localId: number) => {
+    setCrew(c => c.filter(member => member.localId !== localId));
   };
   
+  const handleCrewChange = (index: number, field: keyof WorkCrewMember, value: string) => {
+    const newCrew = [...crew];
+    (newCrew[index] as any)[field] = value;
+    setCrew(newCrew);
+  };
+
   const handleSaveToUpcoming = async () => {
     if (!selectedEquipment || !inspectionDate || !inspectedById) {
         toast({
@@ -140,10 +176,10 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
         return;
     }
     setIsSaving(true);
-    
+
     const equipmentData = equipment?.find(e => e.id === selectedEquipment);
     const inspectorData = users?.find(u => u.id === inspectedById);
-    
+
     if (!equipmentData || !inspectorData) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected equipment or user.' });
         setIsSaving(false);
@@ -162,6 +198,8 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
         completionNotes: '',
         component: 'VSD',
         frequency: 'Monthly',
+        workCrew: [],
+        checklist: initialChecklist,
     };
 
     try {
@@ -181,26 +219,38 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
         setIsSaving(false);
     }
   };
-  
-  const handleComplete = async () => {
-    if (!schedule) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No schedule data to complete.' });
-        return;
-    }
-    // In a real app, this would collect all the form data (checklist, signatures, etc.)
-    toast({ title: 'Functionality Pending', description: 'Completing and finalizing schedules is not yet fully implemented.' });
-  };
-  
-  const isEditMode = !!schedule;
 
+  const handleSaveProgress = async () => {
+      if (!schedule) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
+          return;
+      }
+
+      setIsSaving(true);
+      const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+      const crewToSave = crew.map(({ localId, ...rest }) => rest);
+
+      try {
+          await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave, checklist });
+          toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
+      } catch (error: any) {
+          console.error("Error saving progress:", error);
+          toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'An unexpected error occurred.' });
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
+  const isEditMode = !!schedule;
+  const docPrefix = "MS";
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
       <div className="flex justify-end mb-4 gap-2 print:hidden">
         {isEditMode ? (
-            <Button onClick={handleComplete} disabled={isSaving}>
+            <Button onClick={handleSaveProgress} disabled={isSaving}>
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                {isSaving ? 'Saving...' : 'Save & Complete'}
+                {isSaving ? 'Saving...' : 'Save Progress'}
             </Button>
         ) : (
              <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
@@ -222,7 +272,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
           <div className="text-right">
             <h2 className="text-2xl font-bold text-primary">{title}</h2>
             <p className="text-muted-foreground">Service Document</p>
-            {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-MS-{schedule.id.slice(-6).toUpperCase()}</p>}
+            {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-{docPrefix}-{schedule.id.slice(-6).toUpperCase()}</p>}
           </div>
         </header>
 
@@ -293,10 +343,6 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
             </div>
           </CardContent>
         </Card>
-        
-        <div className="prose prose-sm max-w-none dark:prose-invert">
-            <p className="lead">Building a comprehensive maintenance strategy involves shifting from simple monitoring to deep cleaning and electrical testing. Below is a structured template for Monthly and Annual VSD maintenance.</p>
-        </div>
 
         <div className="prose prose-sm max-w-none dark:prose-invert mt-8 space-y-6">
             <div>
@@ -365,8 +411,8 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {crew.map((member) => (
-                        <WorkCrewRow key={member.id} onRemove={() => removeCrewMember(member.id)} users={users} usersLoading={usersLoading} />
+                    {crew.map((member, index) => (
+                        <WorkCrewRow key={member.localId} onRemove={() => removeCrewMember(member.localId)} onChange={(field, value) => handleCrewChange(index, field, value)} users={users} usersLoading={usersLoading} member={member}/>
                     ))}
                 </TableBody>
             </Table>
@@ -395,24 +441,27 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
               <TableRow>
                 <TableHead className="w-[75px]">Task</TableHead>
                 <TableHead className="w-[350px]">Action</TableHead>
-                <TableHead className="text-center w-[100px]">Not Checked</TableHead>
-                <TableHead className="text-center w-[100px]">Checked</TableHead>
                 <TableHead>Comments</TableHead>
+                <TableHead className="text-center w-[150px]">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {monthlyChecklist.map((item, index) => (
+              {monthlyChecklistItems.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-medium">{item.task}</TableCell>
                   <TableCell>{item.action}</TableCell>
-                  <TableCell className="text-center">
-                    <Checkbox aria-label={`Mark task ${item.task} as not checked`} />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Checkbox aria-label={`Check task ${item.task}`} />
+                  <TableCell>
+                    <Input placeholder="Comments..." value={checklist[index]?.comments || ''} onChange={(e) => handleChecklistChange(index, 'comments', e.target.value)} />
                   </TableCell>
                   <TableCell>
-                    <Input placeholder="Comments..." />
+                    <Select value={checklist[index]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(index, 'status', value)}>
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="checked">Checked</SelectItem>
+                            <SelectItem value="not-checked">Not Checked</SelectItem>
+                            <SelectItem value="n/a">N/A</SelectItem>
+                        </SelectContent>
+                    </Select>
                   </TableCell>
                 </TableRow>
               ))}
@@ -431,34 +480,39 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
                         <TableHead className="w-[150px]">Component</TableHead>
                         <TableHead className="w-[250px]">Action</TableHead>
                         <TableHead className="w-[250px]">Reason</TableHead>
-                        <TableHead className="text-center w-[100px]">Not Checked</TableHead>
-                        <TableHead className="text-center w-[100px]">Checked</TableHead>
                         <TableHead>Comments</TableHead>
+                        <TableHead className="text-center w-[150px]">Status</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {annualChecklist.map((item, index) => (
+                    {annualChecklistItems.map((item, index) => {
+                        const checklistIndex = monthlyChecklistItems.length + index;
+                        return (
                         <TableRow key={index}>
                             <TableCell className="font-medium">{item.component}</TableCell>
                             <TableCell>{item.action}</TableCell>
                             <TableCell>{item.reason}</TableCell>
-                            <TableCell className="text-center">
-                                <Checkbox aria-label={`Mark task ${item.component} as not checked`} />
-                            </TableCell>
-                            <TableCell className="text-center">
-                                <Checkbox aria-label={`Check task ${item.component}`} />
+                            <TableCell>
+                               <Input placeholder="Comments..." value={checklist[checklistIndex]?.comments || ''} onChange={(e) => handleChecklistChange(checklistIndex, 'comments', e.target.value)} />
                             </TableCell>
                             <TableCell>
-                                <Input placeholder="Comments..." />
+                                <Select value={checklist[checklistIndex]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(checklistIndex, 'status', value)}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="checked">Checked</SelectItem>
+                                        <SelectItem value="not-checked">Not Checked</SelectItem>
+                                        <SelectItem value="n/a">N/A</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </TableCell>
                         </TableRow>
-                    ))}
+                    )})}
                 </TableBody>
             </Table>
         </Card>
 
         <Separator className="my-8" />
-        
+
         <div className="grid md:grid-cols-2 gap-8">
             <Card>
                 <CardHeader>
@@ -482,7 +536,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
                 </AlertDescription>
             </Alert>
         </div>
-        
+
         <footer className="mt-16 text-xs text-muted-foreground text-center">
           <p>Altek Green - Confidential</p>
         </footer>
@@ -490,5 +544,3 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
     </div>
   );
 }
-
-    

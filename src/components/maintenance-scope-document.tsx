@@ -24,6 +24,7 @@ import { Checkbox } from './ui/checkbox';
 import { SignaturePad } from './ui/signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { Textarea } from './ui/textarea';
 
 
 interface MaintenanceScopeDocumentProps {
@@ -47,6 +48,7 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
             <TableCell>
                  <Select
                     disabled={usersLoading}
+                    value={users?.find(u => u.name === member.name)?.id}
                     onValueChange={(userId) => {
                         const user = users?.find(u => u.id === userId);
                         onChange('name', user?.name || '');
@@ -114,13 +116,14 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     const [selectedEquipment, setSelectedEquipment] = useState<string | undefined>(schedule?.equipmentId);
     const [inspectionDate, setInspectionDate] = useState<Date | undefined>(schedule ? new Date(schedule.scheduledFor) : undefined);
     const [inspectedById, setInspectedById] = useState<string | undefined>(schedule?.assignedToId);
-    
-    const [crew, setCrew] = useState<(Partial<WorkCrewMember> & { localId: number })[]>(() => 
+    const [completionNotes, setCompletionNotes] = useState<string>(schedule?.completionNotes || '');
+
+    const [crew, setCrew] = useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
         ? schedule.workCrew.map((m, i) => ({ ...m, localId: i }))
         : [{ localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]
     );
-    
+
     const [isSaving, setIsSaving] = useState(false);
     const firestore = useFirestore();
     const { user } = useUser();
@@ -140,7 +143,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     const removeCrewMember = (localId: number) => {
         setCrew(c => c.filter(member => member.localId !== localId));
     };
-    
+
     const handleCrewChange = (index: number, field: keyof WorkCrewMember, value: string) => {
         const newCrew = [...crew];
         (newCrew[index] as any)[field] = value;
@@ -158,7 +161,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
         const crewToSave = crew.map(({ localId, ...rest }) => rest);
 
         try {
-            await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave });
+            await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave, completionNotes });
             toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
         } catch (error: any) {
             console.error("Error saving progress:", error);
@@ -179,10 +182,10 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             return;
         }
         setIsSaving(true);
-        
+
         const equipmentData = equipment?.find(e => e.id === selectedEquipment);
         const inspectorData = users?.find(u => u.id === inspectedById);
-        
+
         if (!equipmentData || !inspectorData) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected equipment or user.' });
             setIsSaving(false);
@@ -393,76 +396,32 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     </TableHeader>
                     <TableBody>
                         {crew.map((member, index) => (
-                            <WorkCrewRow 
-                                key={member.localId} 
+                            <WorkCrewRow
+                                key={member.localId}
                                 member={member}
-                                onRemove={() => removeCrewMember(member.localId)} 
+                                onRemove={() => removeCrewMember(member.localId)}
                                 onChange={(field, value) => handleCrewChange(index, field, value)}
-                                users={users} 
+                                users={users}
                                 usersLoading={usersLoading} />
                         ))}
                     </TableBody>
                 </Table>
             </div>
 
-            <Alert variant="destructive" className="my-8">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Safety Warning</AlertTitle>
-                <AlertDescription>
-                    <ul className="list-disc pl-5 space-y-1">
-                        <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
-                        <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
-                        <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
-                        <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
-                        <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
-                        <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
-                    </ul>
-                </AlertDescription>
-            </Alert>
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-                <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown.</p>
-                <p>At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
-
-                <h3 className="mt-6 text-lg font-bold">3-Month VSD Service Schedule</h3>
-                <ol className="list-decimal pl-5 space-y-4">
-                    <li>
-                        <strong>Safety & Preparation</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Lockout/Tagout (LOTO):</strong> Isolate power and wait for the DC bus to discharge (verify with a meter—usually 5–15 mins).</li>
-                            <li><strong>PPE:</strong> Wear appropriate arc flash protection and use insulated tools.</li>
-                            <li><strong>Backup:</strong> If the drive is still powered, export the current parameter set to a laptop or USB keypad.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Electrical Integrity (The "Tightness" Check)</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Re-Torque Terminals:</strong> Check the tightness of all power input (L1, L2, L3) and output (U, V, W) connections. Vibrations and thermal cycling naturally loosen these over 90 days.</li>
-                            <li><strong>Control Wiring:</strong> Tug-test small control wires (Start/Stop, Speed Ref) to ensure they haven't vibrated loose.</li>
-                            <li><strong>Grounding:</strong> Inspect the ground strap for corrosion or loose bolts.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Thermal & Physical Health</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Heat Sink Cleaning:</strong> Use a vacuum or dry, oil-free compressed air to blow out the heat sink fins from the bottom up.</li>
-                            <li><strong>Thermal Imaging:</strong> If the drive is running, use an IR camera to look for "hot spots" on terminal blocks or the main DC bus capacitors.</li>
-                            <li><strong>Capacitor Inspection:</strong> Visually check for "crowning" (bulging tops) or leaking fluid.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Performance & Data Analysis</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Fault Log Review:</strong> Download the last 3 months of fault history. Look for recurring "Under-voltage" or "Over-current" warnings that didn't trip the drive but indicate a brewing problem.</li>
-                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically &gt;5V AC), your capacitors are starting to fail.</li>
-                            <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
-                        </ul>
-                    </li>
-                </ol>
+            <div className="my-8">
+                 <h3 className="text-xl font-bold mb-4">Completion Notes</h3>
+                 <Textarea
+                    placeholder="Enter any notes about the work performed, issues found, or follow-up actions required..."
+                    value={completionNotes}
+                    onChange={(e) => setCompletionNotes(e.target.value)}
+                    rows={6}
+                    disabled={!isEditMode}
+                 />
             </div>
 
 
             <Separator className="my-8" />
-            
+
             <footer className="mt-16 text-xs text-muted-foreground text-center">
                <p>Altek Green - Confidential</p>
             </footer>
@@ -470,8 +429,3 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     </div>
   );
 }
-
-
-    
-
-    

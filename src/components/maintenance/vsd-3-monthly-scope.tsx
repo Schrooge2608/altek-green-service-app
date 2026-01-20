@@ -20,7 +20,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import React from 'react';
+import React, { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
-import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember } from '@/lib/types';
+import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -51,8 +51,9 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
   return (
     <TableRow>
       <TableCell>
-         <Select 
+         <Select
             disabled={usersLoading}
+            value={users?.find(u => u.name === member.name)?.id}
             onValueChange={(userId) => {
                 const user = users?.find(u => u.id === userId);
                 onChange('name', user?.name || '');
@@ -114,6 +115,15 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
   );
 }
 
+const quarterlyChecklistItems = [
+    "Power terminals torqued",
+    "Heat sink fins vacuumed",
+    "Fans spinning freely/quietly",
+    "Parameter set backed up",
+    "Fault log cleared",
+    "DC Bus Voltage Stability"
+];
+
 export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask }) {
     const title = "VSDs 3-Monthly Service Scope";
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
@@ -125,15 +135,30 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     const { toast } = useToast();
     const router = useRouter();
 
-    const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() => 
+    const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
         ? schedule.workCrew.map((m, i) => ({ ...m, localId: i }))
         : [{ localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]
     );
+    
+    const initialChecklist = React.useMemo(() => quarterlyChecklistItems.map(item => ({ task: item, status: 'not-checked' as const, comments: '' })), []);
+
+    const [checklist, setChecklist] = React.useState<ChecklistItem[]>(() => {
+        if (schedule?.checklist && schedule.checklist.length > 0) {
+            return schedule.checklist;
+        }
+        return initialChecklist;
+    });
+
+    const handleChecklistChange = (index: number, field: keyof ChecklistItem, value: string) => {
+        const newChecklist = [...checklist];
+        (newChecklist[index] as any)[field] = value;
+        setChecklist(newChecklist);
+    };
 
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
-    
+
     const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
@@ -161,10 +186,10 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             return;
         }
         setIsSaving(true);
-        
+
         const equipmentData = equipment?.find(e => e.id === selectedEquipment);
         const inspectorData = users?.find(u => u.id === inspectedById);
-        
+
         if (!equipmentData || !inspectorData) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected equipment or user.' });
             setIsSaving(false);
@@ -183,13 +208,15 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             completionNotes: '',
             component: 'VSD',
             frequency: '3-Monthly',
+            workCrew: [],
+            checklist: initialChecklist,
         };
 
         try {
             const schedulesRef = collection(firestore, 'upcoming_schedules');
             const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
             await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
-            
+
             toast({
                 title: 'Schedule Saved',
                 description: 'The task has been added to the upcoming schedules list.'
@@ -214,7 +241,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         const crewToSave = crew.map(({ localId, ...rest }) => rest);
 
         try {
-            await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave });
+            await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave, checklist });
             toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
         } catch (error: any) {
             console.error("Error saving progress:", error);
@@ -225,7 +252,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     };
 
     const isEditMode = !!schedule;
-
+    const docPrefix = "3MS";
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
@@ -255,7 +282,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 <div className="text-right">
                     <h2 className="text-2xl font-bold text-primary">{title}</h2>
                     <p className="text-muted-foreground">Service Document</p>
-                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-3MS-{schedule.id.slice(-6).toUpperCase()}</p>}
+                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-{docPrefix}-{schedule.id.slice(-6).toUpperCase()}</p>}
                 </div>
             </header>
 
@@ -395,13 +422,13 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     </TableHeader>
                     <TableBody>
                         {crew.map((member, index) => (
-                           <WorkCrewRow 
-                                key={member.localId} 
+                           <WorkCrewRow
+                                key={member.localId}
                                 member={member}
-                                onRemove={() => removeCrewMember(member.localId)} 
+                                onRemove={() => removeCrewMember(member.localId)}
                                 onChange={(field, value) => handleCrewChange(index, field, value)}
-                                users={users} 
-                                usersLoading={usersLoading} 
+                                users={users}
+                                usersLoading={usersLoading}
                             />
                         ))}
                     </TableBody>
@@ -464,7 +491,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             </div>
 
             <Separator className="my-8" />
-            
+
             <Card className="mt-8">
                 <CardHeader>
                     <CardTitle>Quarterly Maintenance Log</CardTitle>
@@ -488,46 +515,36 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[40%]">Task</TableHead>
-                                <TableHead className="w-[120px] text-center">Status (Pass/Fail)</TableHead>
                                 <TableHead>Notes</TableHead>
+                                <TableHead className="w-[150px] text-center">Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow>
-                                <TableCell>Power terminals torqued</TableCell>
-                                <TableCell className="text-center"><Checkbox /></TableCell>
-                                <TableCell><Input placeholder="Notes..." /></TableCell>
-                            </TableRow>
-                             <TableRow>
-                                <TableCell>Heat sink fins vacuumed</TableCell>
-                                <TableCell className="text-center"><Checkbox /></TableCell>
-                                <TableCell><Input placeholder="Notes..." /></TableCell>
-                            </TableRow>
-                             <TableRow>
-                                <TableCell>Fans spinning freely/quietly</TableCell>
-                                <TableCell className="text-center"><Checkbox /></TableCell>
-                                <TableCell><Input placeholder="Notes..." /></TableCell>
-                            </TableRow>
-                             <TableRow>
-                                <TableCell>Parameter set backed up</TableCell>
-                                <TableCell className="text-center"><Checkbox /></TableCell>
-                                <TableCell><Input placeholder="Notes..." /></TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Fault log cleared</TableCell>
-                                <TableCell className="text-center"><Checkbox /></TableCell>
-                                <TableCell><Input placeholder="Notes..." /></TableCell>
-                            </TableRow>
-                             <TableRow>
-                                <TableCell>DC Bus Voltage Stability</TableCell>
-                                <TableCell className="text-center"><Checkbox /></TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-2">
-                                        <Label htmlFor="dc-bus-reading" className="whitespace-nowrap">Reading:</Label>
-                                        <Input id="dc-bus-reading" placeholder="_______" />
-                                    </div>
-                                </TableCell>
-                            </TableRow>
+                             {quarterlyChecklistItems.map((item, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{item}</TableCell>
+                                    <TableCell>
+                                        <Input
+                                            placeholder="Notes..."
+                                            value={checklist[index]?.comments || ''}
+                                            onChange={(e) => handleChecklistChange(index, 'comments', e.target.value)}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Select
+                                            value={checklist[index]?.status || 'not-checked'}
+                                            onValueChange={(value) => handleChecklistChange(index, 'status', value)}
+                                        >
+                                            <SelectTrigger><SelectValue/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="checked">Checked</SelectItem>
+                                                <SelectItem value="not-checked">Not Checked</SelectItem>
+                                                <SelectItem value="n/a">N/A</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -545,7 +562,3 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     </div>
   );
 }
-
-    
-
-    

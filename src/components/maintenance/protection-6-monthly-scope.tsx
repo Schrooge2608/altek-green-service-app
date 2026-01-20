@@ -50,8 +50,9 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
   return (
     <TableRow>
       <TableCell>
-         <Select 
+         <Select
             disabled={usersLoading}
+            value={users?.find(u => u.name === member.name)?.id}
             onValueChange={(userId) => {
                 const user = users?.find(u => u.id === userId);
                 onChange('name', user?.name || '');
@@ -142,12 +143,12 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
     const router = useRouter();
     const { toast } = useToast();
 
-    const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() => 
+    const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
         ? schedule.workCrew.map((m, i) => ({ ...m, localId: i }))
         : [{ localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]
     );
-    
+
     const initialChecklist = React.useMemo(() => [
         ...qualityControlItems.map(item => ({ task: item.text, status: 'not-checked' as const, comments: '' })),
         ...commissioningItems.map(item => ({ task: item.text, status: 'not-checked' as const, comments: '' })),
@@ -160,20 +161,15 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
         return initialChecklist;
     });
 
-    const handleChecklistChange = (index: number, field: keyof ChecklistItem, value: string | boolean) => {
+    const handleChecklistChange = (index: number, field: keyof ChecklistItem, value: string) => {
         const newChecklist = [...checklist];
-        if (field === 'status') {
-            const currentStatus = newChecklist[index].status;
-            newChecklist[index][field] = currentStatus === 'checked' ? 'not-checked' : 'checked';
-        } else {
-            (newChecklist[index] as any)[field] = value;
-        }
+        (newChecklist[index] as any)[field] = value;
         setChecklist(newChecklist);
     };
 
     const equipmentQuery = useMemoFirebase(() => query(collection(firestore, 'equipment'), where('breakerModel', '!=', '')), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
-    
+
     const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
@@ -201,10 +197,10 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             return;
         }
         setIsSaving(true);
-        
+
         const equipmentData = equipment?.find(e => e.id === selectedEquipment);
         const inspectorData = users?.find(u => u.id === inspectedById);
-        
+
         if (!equipmentData || !inspectorData) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected equipment or user.' });
             setIsSaving(false);
@@ -265,8 +261,9 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             setIsSaving(false);
         }
     };
-    
+
     const isEditMode = !!schedule;
+    const docPrefix = "6MS";
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
@@ -296,7 +293,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                 <div className="text-right">
                     <h2 className="text-2xl font-bold text-primary">{title}</h2>
                     <p className="text-muted-foreground">Service Document</p>
-                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-6MS-{schedule.id.slice(-6).toUpperCase()}</p>}
+                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-{docPrefix}-{schedule.id.slice(-6).toUpperCase()}</p>}
                 </div>
             </header>
 
@@ -422,13 +419,13 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                     </TableHeader>
                     <TableBody>
                         {crew.map((member, index) => (
-                            <WorkCrewRow 
-                                key={member.localId} 
+                            <WorkCrewRow
+                                key={member.localId}
                                 member={member}
-                                onRemove={() => removeCrewMember(member.localId)} 
+                                onRemove={() => removeCrewMember(member.localId)}
                                 onChange={(field, value) => handleCrewChange(index, field, value)}
-                                users={users} 
-                                usersLoading={usersLoading} 
+                                users={users}
+                                usersLoading={usersLoading}
                             />
                         ))}
                     </TableBody>
@@ -439,9 +436,9 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                 <h3 className="mt-6 text-lg font-bold">6-Month Protection Service (Circuit Breakers)</h3>
                 <p>This service focuses on the physical and mechanical integrity of the circuit breaker. It is a critical check to ensure the device can physically do its job when called upon.</p>
             </div>
-            
+
             <Separator className="my-8" />
-            
+
             <Card className="mt-8">
                 <CardHeader>
                     <CardTitle>Protection Quality Control Sheet</CardTitle>
@@ -452,8 +449,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                             <TableRow>
                                 <TableHead>Action</TableHead>
                                 <TableHead>Comments / Feedback</TableHead>
-                                <TableHead className="text-center w-[100px]">Checked</TableHead>
-                                <TableHead className="text-center w-[100px]">N/A</TableHead>
+                                <TableHead className="text-center w-[150px]">Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -461,8 +457,16 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                 <TableRow key={index}>
                                     <TableCell>{item.text}</TableCell>
                                     <TableCell><Input placeholder="Comments..." value={checklist[index]?.comments || ''} onChange={(e) => handleChecklistChange(index, 'comments', e.target.value)}/></TableCell>
-                                    <TableCell className="text-center"><Checkbox checked={checklist[index]?.status === 'checked'} onCheckedChange={(checked) => handleChecklistChange(index, 'status', !!checked)} /></TableCell>
-                                    <TableCell className="text-center"><Checkbox/></TableCell>
+                                    <TableCell>
+                                        <Select value={checklist[index]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(index, 'status', value)}>
+                                            <SelectTrigger><SelectValue/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="checked">Checked</SelectItem>
+                                                <SelectItem value="not-checked">Not Checked</SelectItem>
+                                                <SelectItem value="n/a">N/A</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -480,8 +484,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                             <TableRow>
                                 <TableHead>Action</TableHead>
                                 <TableHead>Comments / Feedback</TableHead>
-                                <TableHead className="text-center w-[100px]">Checked</TableHead>
-                                <TableHead className="text-center w-[100px]">N/A</TableHead>
+                                <TableHead className="text-center w-[150px]">Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -491,8 +494,16 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                 <TableRow key={index}>
                                     <TableCell>{item.text}</TableCell>
                                     <TableCell><Input placeholder="Comments..." value={checklist[checklistIndex]?.comments || ''} onChange={(e) => handleChecklistChange(checklistIndex, 'comments', e.target.value)}/></TableCell>
-                                    <TableCell className="text-center"><Checkbox checked={checklist[checklistIndex]?.status === 'checked'} onCheckedChange={(checked) => handleChecklistChange(checklistIndex, 'status', !!checked)}/></TableCell>
-                                    <TableCell className="text-center"><Checkbox /></TableCell>
+                                    <TableCell>
+                                        <Select value={checklist[checklistIndex]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(checklistIndex, 'status', value)}>
+                                            <SelectTrigger><SelectValue/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="checked">Checked</SelectItem>
+                                                <SelectItem value="not-checked">Not Checked</SelectItem>
+                                                <SelectItem value="n/a">N/A</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
                                 </TableRow>
                             )})}
                         </TableBody>
@@ -507,7 +518,3 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
     </div>
   );
 }
-
-    
-
-    
