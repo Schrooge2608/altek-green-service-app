@@ -34,10 +34,10 @@ interface CreateUnscheduledScheduleDialogProps {
 
 const availableFrequencies: Record<string, MaintenanceTask['frequency'][]> = {
     'VSD': ['Weekly', 'Monthly', '3-Monthly', '6-Monthly', 'Yearly'],
-    'Protection': ['6-Monthly'],
-    'Motor': [],
-    'Pump': [],
-    'UPS': [],
+    'Protection': ['Weekly', 'Monthly', '3-Monthly', '6-Monthly', 'Yearly'],
+    'Motor': ['Weekly', 'Monthly', '3-Monthly', '6-Monthly', 'Yearly'],
+    'Pump': ['Weekly', 'Monthly', '3-Monthly', '6-Monthly', 'Yearly'],
+    'UPS': ['Weekly', 'Monthly', '3-Monthly', '6-Monthly', 'Yearly'],
 };
 
 export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnscheduledScheduleDialogProps) {
@@ -61,7 +61,9 @@ export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnsche
         const options: { value: MaintenanceTask['component']; label: string }[] = [];
         if (vsd?.model) options.push({ value: 'VSD', label: 'VSD / Soft Starter' });
         if (equipment.breakerAssetNumber) options.push({ value: 'Protection', label: 'Protection System' });
-        // Add other components here if they get schedule pages
+        if (equipment.motorModel) options.push({ value: 'Motor', label: 'Motor' });
+        if (equipment.pumpBrand) options.push({ value: 'Pump', label: 'Pump' });
+        if (equipment.upsModel) options.push({ value: 'UPS', label: 'UPS' });
         return options;
     }, [equipment, vsd]);
 

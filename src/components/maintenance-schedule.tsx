@@ -31,23 +31,25 @@ const statusVariantMap: Record<string, StatusVariant> = {
 
 // A helper function to get the correct path slug for the URL
 function getFrequencySlug(frequency: MaintenanceTask['frequency']): string {
+    if (!frequency) return '';
     return frequency.toLowerCase().replace(/\s+/g, '-');
 }
 
 // Map component type to the slug used in the URL
 const componentToCategorySlug = (component: MaintenanceTask['component']): string | null => {
-    const map = {
+    if (!component) return null;
+    const map: Record<string, string> = {
         'VSD': 'vsds',
         'Protection': 'protection',
         'Motor': 'motors',
         'Pump': 'pumps',
-        'UPS': 'ups-btus' // This slug might not have a corresponding page
+        'UPS': 'ups-btus'
     };
     const slug = map[component];
     
-    // As observed, 'ups-btus' does not have a scope page. Let's validate against known page slugs.
-    const validSlugs = ['vsds', 'protection']; // Only these have specific pages for now
-    if (slug === 'vsds' || slug === 'protection') {
+    // Allow all generated tasks to have a link, assuming a generic page exists.
+    const validSlugs = ['vsds', 'protection', 'motors', 'pumps', 'ups-btus'];
+    if (slug && validSlugs.includes(slug)) {
         return slug;
     }
     return null;

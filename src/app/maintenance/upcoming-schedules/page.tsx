@@ -27,7 +27,13 @@ const componentToCategorySlug = (component: MaintenanceTask['component']): strin
         'Pump': 'pumps',
         'UPS': 'ups-btus'
     };
-    return map[component] || null;
+    const slug = map[component];
+    
+    const validSlugs = ['vsds', 'protection', 'motors', 'pumps', 'ups-btus'];
+    if (slug && validSlugs.includes(slug)) {
+        return slug;
+    }
+    return null;
 };
 
 
