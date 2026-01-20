@@ -15,12 +15,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText } from 'lucide-react';
 import React from 'react';
-import { MaintenanceCategory } from '@/lib/task-generator';
 
 interface MaintenanceScheduleProps {
   tasks: MaintenanceTask[] | null;
   isLoading: boolean;
-  category: MaintenanceCategory;
 }
 
 type StatusVariant = "default" | "secondary" | "destructive";
@@ -36,12 +34,32 @@ function getFrequencySlug(frequency: MaintenanceTask['frequency']): string {
     return frequency.toLowerCase().replace(/\s+/g, '-');
 }
 
-export function MaintenanceSchedule({ tasks, isLoading, category }: MaintenanceScheduleProps) {
+// Map component type to the slug used in the URL
+const componentToCategorySlug = (component: MaintenanceTask['component']): string | null => {
+    const map = {
+        'VSD': 'vsds',
+        'Protection': 'protection',
+        'Motor': 'motors',
+        'Pump': 'pumps',
+        'UPS': 'ups-btus' // This slug might not have a corresponding page
+    };
+    const slug = map[component];
+    
+    // As observed, 'ups-btus' does not have a scope page. Let's validate against known page slugs.
+    const validSlugs = ['vsds', 'protection']; // Only these have specific pages for now
+    if (slug === 'vsds' || slug === 'protection') {
+        return slug;
+    }
+    return null;
+}
+
+
+export function MaintenanceSchedule({ tasks, isLoading }: MaintenanceScheduleProps) {
   
   if (isLoading) {
     return (
       <div className="text-center py-10 text-muted-foreground">
-        Loading {category.toLowerCase()} tasks...
+        Loading tasks...
       </div>
     );
   }
@@ -49,13 +67,11 @@ export function MaintenanceSchedule({ tasks, isLoading, category }: MaintenanceS
   if (!tasks || tasks.length === 0) {
     return (
         <div className="text-center py-20 text-muted-foreground">
-            <h3 className="text-lg font-semibold">No {category.toLowerCase()} tasks due.</h3>
+            <h3 className="text-lg font-semibold">No tasks due.</h3>
             <p className="text-sm">All equipment is up to date for this maintenance cycle.</p>
         </div>
     );
   }
-
-  const categorySlug = category.toLowerCase();
 
   return (
     <Table>
@@ -72,37 +88,47 @@ export function MaintenanceSchedule({ tasks, isLoading, category }: MaintenanceS
         </TableRow>
       </TableHeader>
       <TableBody>
-        {tasks.map((task) => (
-          <TableRow key={task.id}>
-            <TableCell className="font-medium">
-                <Link href={`/equipment/${task.equipmentId}`} className="hover:underline text-primary">
-                    {task.equipmentName}
-                </Link>
-            </TableCell>
-            <TableCell>{task.component}</TableCell>
-            <TableCell>{task.task}</TableCell>
-            <TableCell>
-                <Badge variant="secondary">{task.frequency}</Badge>
-            </TableCell>
-            <TableCell>{task.dueDate}</TableCell>
-            <TableCell>
-              <Badge variant={statusVariantMap[task.status]}>
-                {task.status}
-              </Badge>
-            </TableCell>
-            <TableCell>
-                {task.assignedToName || 'Unassigned'}
-            </TableCell>
-            <TableCell className="text-right">
-                <Link href={`/maintenance/${categorySlug}/${getFrequencySlug(task.frequency)}`} passHref>
-                  <Button variant="ghost" size="icon">
-                    <FileText className="h-4 w-4" />
-                    <span className="sr-only">Generate Document</span>
-                  </Button>
-                </Link>
-            </TableCell>
-          </TableRow>
-        ))}
+        {tasks.map((task) => {
+            const categorySlug = componentToCategorySlug(task.component);
+            return (
+                <TableRow key={task.id}>
+                    <TableCell className="font-medium">
+                        <Link href={`/equipment/${task.equipmentId}`} className="hover:underline text-primary">
+                            {task.equipmentName}
+                        </Link>
+                    </TableCell>
+                    <TableCell>{task.component}</TableCell>
+                    <TableCell>{task.task}</TableCell>
+                    <TableCell>
+                        <Badge variant="secondary">{task.frequency}</Badge>
+                    </TableCell>
+                    <TableCell>{task.dueDate}</TableCell>
+                    <TableCell>
+                    <Badge variant={statusVariantMap[task.status]}>
+                        {task.status}
+                    </Badge>
+                    </TableCell>
+                    <TableCell>
+                        {task.assignedToName || 'Unassigned'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                        {categorySlug ? (
+                            <Link href={`/maintenance/${categorySlug}/${getFrequencySlug(task.frequency)}`} passHref>
+                                <Button variant="ghost" size="icon">
+                                    <FileText className="h-4 w-4" />
+                                    <span className="sr-only">Generate Document</span>
+                                </Button>
+                            </Link>
+                        ) : (
+                            <Button variant="ghost" size="icon" disabled>
+                                <FileText className="h-4 w-4" />
+                                <span className="sr-only">No Document Available</span>
+                            </Button>
+                        )}
+                    </TableCell>
+                </TableRow>
+            )
+        })}
       </TableBody>
     </Table>
   );

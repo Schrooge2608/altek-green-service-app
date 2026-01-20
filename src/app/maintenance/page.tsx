@@ -1,54 +1,51 @@
-
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MaintenanceSchedule } from '@/components/maintenance-schedule';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Equipment, MaintenanceTask } from '@/lib/types';
-import { generateTasksForEquipment, MaintenanceCategory } from '@/lib/task-generator';
-
-const maintenanceCategories: MaintenanceCategory[] = [
-  'Protection',
-  'UPS/BTU\'s',
-  'VSDs',
-  'Motors',
-  'Pumps',
-];
+import { generateTasksForEquipment } from '@/lib/task-generator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { MaintenanceSchedule } from '@/components/maintenance-schedule';
 
 export default function MaintenancePage() {
   const firestore = useFirestore();
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
-  const [activeTab, setActiveTab] = useState<MaintenanceCategory>('Protection');
+  const tasksByPlantAndDivision = useMemo(() => {
+    if (!equipment) return {};
+    
+    const grouped: Record<string, Record<string, MaintenanceTask[]>> = {
+        'Mining': {},
+        'Smelter': {},
+    };
 
-  const allTasks = useMemo(() => {
-    if (!equipment) return [];
-    return equipment.flatMap(eq => generateTasksForEquipment(eq));
+    equipment.forEach(eq => {
+        if (eq.plant && eq.division) {
+            const tasks = generateTasksForEquipment(eq);
+            if (tasks.length > 0) {
+                if (!grouped[eq.plant][eq.division]) {
+                    grouped[eq.plant][eq.division] = [];
+                }
+                grouped[eq.plant][eq.division].push(...tasks);
+            }
+        }
+    });
+
+    return grouped;
   }, [equipment]);
-
-  const tasksByCategory = useMemo(() => {
-    return maintenanceCategories.reduce((acc, category) => {
-      let componentName: string = category.slice(0, -1);
-      if (category === 'UPS/BTU\'s') {
-        componentName = 'UPS';
-      }
-      acc[category] = allTasks.filter(task => task.component === componentName);
-      return acc;
-    }, {} as Record<MaintenanceCategory, MaintenanceTask[]>);
-  }, [allTasks]);
-
+  
+  const plantOrder = ['Mining', 'Smelter'];
 
   return (
     <div className="flex flex-col gap-8">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Maintenance Schedule</h1>
         <p className="text-muted-foreground">
-          Automatically generated maintenance tasks for all equipment, sorted by component type.
+          Automatically generated maintenance tasks for all equipment, grouped by plant and division.
         </p>
       </header>
 
@@ -58,26 +55,44 @@ export default function MaintenancePage() {
             <p className="ml-2">Generating maintenance tasks...</p>
         </div>
       ) : (
-        <Tabs defaultValue="Protection" className="w-full" onValueChange={(value) => setActiveTab(value as MaintenanceCategory)}>
-          <TabsList className="grid w-full grid-cols-5">
-            {maintenanceCategories.map(cat => (
-              <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
-            ))}
-          </TabsList>
-          {maintenanceCategories.map(cat => (
-            <TabsContent key={cat} value={cat}>
-              <Card>
-                <CardContent className="pt-6">
-                  <MaintenanceSchedule
-                    tasks={tasksByCategory[cat]}
-                    isLoading={equipmentLoading}
-                    category={cat}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
+        <Accordion type="multiple" className="w-full space-y-4" defaultValue={plantOrder}>
+          {plantOrder.map(plant => (
+              Object.keys(tasksByPlantAndDivision[plant] || {}).length > 0 && (
+                <AccordionItem value={plant} key={plant} className="border-b-0">
+                  <Card>
+                      <AccordionTrigger className="p-6 text-xl font-bold hover:no-underline">
+                          <CardHeader className="p-0">
+                            <CardTitle>{plant} Plant</CardTitle>
+                          </CardHeader>
+                      </AccordionTrigger>
+                    <AccordionContent className="p-0">
+                      <div className="px-6 pb-6">
+                        <Accordion type="multiple" className="space-y-2">
+                            {Object.keys(tasksByPlantAndDivision[plant]).sort().map(division => (
+                                tasksByPlantAndDivision[plant][division].length > 0 && (
+                                <AccordionItem value={division} key={division} className="border rounded-lg">
+                                    <AccordionTrigger className="px-4 py-2 hover:no-underline text-base">
+                                        {division} ({tasksByPlantAndDivision[plant][division].length} tasks)
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="p-1 border-t">
+                                            <MaintenanceSchedule
+                                                tasks={tasksByPlantAndDivision[plant][division]}
+                                                isLoading={equipmentLoading}
+                                            />
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                                )
+                            ))}
+                        </Accordion>
+                      </div>
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
+              )
           ))}
-        </Tabs>
+        </Accordion>
       )}
     </div>
   );
