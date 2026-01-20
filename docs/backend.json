@@ -143,7 +143,7 @@
         "id": { "type": "string" },
         "equipmentId": { "type": "string" },
         "equipmentName": { "type": "string" },
-        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump"] },
+        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump", "UPS"] },
         "task": { "type": "string" },
         "dueDate": { "type": "string", "format": "date" },
         "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
@@ -167,7 +167,9 @@
         "status": { "type": "string", "enum": ["Pending", "In Progress", "Completed", "Cancelled"] },
         "assignedToId": { "type": "string" },
         "assignedToName": { "type": "string" },
-        "completionNotes": { "type": "string" }
+        "completionNotes": { "type": "string" },
+        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump", "UPS"] },
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] }
       },
       "required": ["id", "originalTaskId", "equipmentId", "task", "scheduledFor", "status", "assignedToId"]
     },
@@ -476,7 +478,3 @@
     ]
   }
 }
-
-
-
-
