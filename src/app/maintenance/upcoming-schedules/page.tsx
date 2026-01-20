@@ -1,41 +1,15 @@
-
 'use client';
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
-import type { ScheduledTask, MaintenanceTask } from '@/lib/types';
+import type { ScheduledTask } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, CheckCircle, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-
-// Helper functions to generate the correct URL slug
-function getFrequencySlug(frequency: MaintenanceTask['frequency']): string {
-    if (!frequency) return ''; // Added a guard clause here
-    return frequency.toLowerCase().replace(/\s+/g, '-');
-}
-
-const componentToCategorySlug = (component: MaintenanceTask['component']): string | null => {
-    if (!component) return null;
-    const map: Record<string, string> = {
-        'VSD': 'vsds',
-        'Protection': 'protection',
-        'Motor': 'motors',
-        'Pump': 'pumps',
-        'UPS': 'ups-btus'
-    };
-    const slug = map[component];
-    
-    const validSlugs = ['vsds', 'protection', 'motors', 'pumps', 'ups-btus'];
-    if (slug && validSlugs.includes(slug)) {
-        return slug;
-    }
-    return null;
-};
-
 
 export default function UpcomingSchedulesPage() {
     const firestore = useFirestore();
@@ -93,20 +67,12 @@ export default function UpcomingSchedulesPage() {
                                 </TableRow>
                             ) : schedules && schedules.length > 0 ? (
                                 schedules.map(task => {
-                                    const categorySlug = componentToCategorySlug(task.component);
-                                    const frequencySlug = getFrequencySlug(task.frequency);
-                                    const isLinkValid = categorySlug && frequencySlug;
-
                                     return (
                                         <TableRow key={task.id}>
                                             <TableCell className="font-medium">
-                                                {isLinkValid ? (
-                                                    <Link href={`/maintenance/${categorySlug}/${frequencySlug}`} className="hover:underline text-primary">
-                                                        {task.equipmentName}
-                                                    </Link>
-                                                ) : (
-                                                    task.equipmentName
-                                                )}
+                                                <Link href={`/maintenance/resolve/${task.id}`} className="hover:underline text-primary">
+                                                    {task.equipmentName}
+                                                </Link>
                                             </TableCell>
                                             <TableCell>{task.task}</TableCell>
                                             <TableCell>{task.scheduledFor}</TableCell>
@@ -115,10 +81,12 @@ export default function UpcomingSchedulesPage() {
                                                 <Badge variant={statusVariantMap[task.status]}>{task.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="sm" disabled>
-                                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                                    Resolve
-                                                </Button>
+                                                <Link href={`/maintenance/resolve/${task.id}`} passHref>
+                                                    <Button variant="ghost" size="sm">
+                                                        <CheckCircle className="mr-2 h-4 w-4" />
+                                                        Resolve
+                                                    </Button>
+                                                </Link>
                                             </TableCell>
                                         </TableRow>
                                     );
