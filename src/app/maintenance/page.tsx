@@ -10,15 +10,17 @@ import { generateTasksForEquipment } from '@/lib/task-generator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { MaintenanceSchedule } from '@/components/maintenance-schedule';
 
+const frequencyOrder: MaintenanceTask['frequency'][] = ['Weekly', 'Monthly', '3-Monthly', '6-Monthly', 'Yearly'];
+
 export default function MaintenancePage() {
   const firestore = useFirestore();
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
-  const tasksByPlantAndDivision = useMemo(() => {
+  const tasksByPlantDivisionAndFrequency = useMemo(() => {
     if (!equipment) return {};
     
-    const grouped: Record<string, Record<string, MaintenanceTask[]>> = {
+    const grouped: Record<string, Record<string, Record<string, MaintenanceTask[]>>> = {
         'Mining': {},
         'Smelter': {},
     };
@@ -28,9 +30,14 @@ export default function MaintenancePage() {
             const tasks = generateTasksForEquipment(eq);
             if (tasks.length > 0) {
                 if (!grouped[eq.plant][eq.division]) {
-                    grouped[eq.plant][eq.division] = [];
+                    grouped[eq.plant][eq.division] = {};
                 }
-                grouped[eq.plant][eq.division].push(...tasks);
+                tasks.forEach(task => {
+                    if (!grouped[eq.plant][eq.division][task.frequency]) {
+                        grouped[eq.plant][eq.division][task.frequency] = [];
+                    }
+                    grouped[eq.plant][eq.division][task.frequency].push(task);
+                });
             }
         }
     });
@@ -57,7 +64,7 @@ export default function MaintenancePage() {
       ) : (
         <Accordion type="multiple" className="w-full space-y-4" defaultValue={plantOrder}>
           {plantOrder.map(plant => (
-              Object.keys(tasksByPlantAndDivision[plant] || {}).length > 0 && (
+              Object.keys(tasksByPlantDivisionAndFrequency[plant] || {}).length > 0 && (
                 <AccordionItem value={plant} key={plant} className="border-b-0">
                   <Card>
                       <AccordionTrigger className="p-6 text-xl font-bold hover:no-underline">
@@ -68,23 +75,41 @@ export default function MaintenancePage() {
                     <AccordionContent className="p-0">
                       <div className="px-6 pb-6">
                         <Accordion type="multiple" className="space-y-2">
-                            {Object.keys(tasksByPlantAndDivision[plant]).sort().map(division => (
-                                tasksByPlantAndDivision[plant][division].length > 0 && (
+                            {Object.keys(tasksByPlantDivisionAndFrequency[plant]).sort().map(division => {
+                                const divisionTasks = tasksByPlantDivisionAndFrequency[plant][division];
+                                const totalTasksInDivision = Object.values(divisionTasks).reduce((acc, tasks) => acc + tasks.length, 0);
+
+                                return totalTasksInDivision > 0 && (
                                 <AccordionItem value={division} key={division} className="border rounded-lg">
                                     <AccordionTrigger className="px-4 py-2 hover:no-underline text-base">
-                                        {division} ({tasksByPlantAndDivision[plant][division].length} tasks)
+                                        {division} ({totalTasksInDivision} tasks)
                                     </AccordionTrigger>
                                     <AccordionContent>
-                                        <div className="p-1 border-t">
-                                            <MaintenanceSchedule
-                                                tasks={tasksByPlantAndDivision[plant][division]}
-                                                isLoading={equipmentLoading}
-                                            />
+                                        <div className="p-2 border-t">
+                                            <Accordion type="multiple" className="space-y-1">
+                                                {frequencyOrder.map(frequency => (
+                                                    divisionTasks[frequency] && divisionTasks[frequency].length > 0 && (
+                                                        <AccordionItem value={`${division}-${frequency}`} key={frequency} className="border rounded-md">
+                                                            <AccordionTrigger className="px-3 py-1.5 hover:no-underline text-sm">
+                                                                {frequency} ({divisionTasks[frequency].length} tasks)
+                                                            </AccordionTrigger>
+                                                            <AccordionContent>
+                                                                <div className="p-1 border-t">
+                                                                    <MaintenanceSchedule
+                                                                        tasks={divisionTasks[frequency]}
+                                                                        isLoading={equipmentLoading}
+                                                                    />
+                                                                </div>
+                                                            </AccordionContent>
+                                                        </AccordionItem>
+                                                    )
+                                                ))}
+                                            </Accordion>
                                         </div>
                                     </AccordionContent>
                                 </AccordionItem>
                                 )
-                            ))}
+                            })}
                         </Accordion>
                       </div>
                     </AccordionContent>
