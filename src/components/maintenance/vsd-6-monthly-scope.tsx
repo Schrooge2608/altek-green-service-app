@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -15,6 +16,7 @@ import {
   Plus,
   Trash2,
   AlertTriangle,
+  Save,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
@@ -149,6 +151,10 @@ export function Vsd6MonthlyScopeDocument() {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
+            <Button variant="outline">
+                <Save className="mr-2 h-4 w-4" />
+                Save to Upcoming Schedule List
+            </Button>
             <Button onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
             </Button>

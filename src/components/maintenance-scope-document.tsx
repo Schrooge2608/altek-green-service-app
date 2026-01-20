@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Printer, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Printer, Plus, Trash2, AlertTriangle, Save } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
 import { Label } from './ui/label';
@@ -104,6 +104,10 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
+            <Button variant="outline">
+                <Save className="mr-2 h-4 w-4" />
+                Save to Upcoming Schedule List
+            </Button>
             <Button onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
             </Button>
@@ -150,14 +154,14 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
-                                variant={"outline"}
+                                variant={'outline'}
                                 className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !inspectionDate && "text-muted-foreground"
+                                    'w-full justify-start text-left font-normal',
+                                    !inspectionDate && 'text-muted-foreground'
                                 )}
                                 >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {inspectionDate ? format(inspectionDate, "PPP") : <span>Pick a date</span>}
+                                {inspectionDate ? format(inspectionDate, 'PPP') : <span>Pick a date</span>}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
@@ -310,7 +314,7 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
                         <strong>Performance & Data Analysis</strong>
                         <ul className="list-disc pl-5 mt-2">
                             <li><strong>Fault Log Review:</strong> Download the last 3 months of fault history. Look for recurring "Under-voltage" or "Over-current" warnings that didn't trip the drive but indicate a brewing problem.</li>
-                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically &gt;5V AC), your capacitors are starting to fail.</li>
+                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically >5V AC), your capacitors are starting to fail.</li>
                             <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
                         </ul>
                     </li>
