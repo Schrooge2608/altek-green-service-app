@@ -58,7 +58,7 @@ export default function SeedPage() {
             driveType: driveType ?? 'VSD',
             equipmentId: equipmentId,
             model: model,
-            manufacturer: manufacturer,
+            manufacturer: manufacturer ?? '',
             serialNumber: serialNumber,
             installationDate: installationDate,
             status: 'active',
