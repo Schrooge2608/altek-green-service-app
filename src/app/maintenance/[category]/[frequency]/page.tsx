@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, notFound } from 'next/navigation';
@@ -16,6 +15,7 @@ const validCategories: Record<string, string> = {
   protection: 'Protection',
   motors: 'Motors',
   pumps: 'Pumps',
+  'ups-btus': "UPS/BTU's",
 };
 
 const validFrequencies: Record<string, string> = {
@@ -31,6 +31,7 @@ const slugToComponentMap: Record<string, MaintenanceTask['component']> = {
     'protection': 'Protection',
     'motors': 'Motor',
     'pumps': 'Pump',
+    'ups-btus': 'UPS',
 };
 
 export default function MaintenanceScopePage() {

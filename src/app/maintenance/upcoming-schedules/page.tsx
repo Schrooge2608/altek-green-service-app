@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -14,6 +13,7 @@ import Link from 'next/link';
 
 // Helper functions to generate the correct URL slug
 function getFrequencySlug(frequency: MaintenanceTask['frequency']): string {
+    if (!frequency) return '';
     return frequency.toLowerCase().replace(/\s+/g, '-');
 }
 
@@ -25,14 +25,7 @@ const componentToCategorySlug = (component: MaintenanceTask['component']): strin
         'Pump': 'pumps',
         'UPS': 'ups-btus'
     };
-    const slug = map[component];
-    
-    // Only return slugs for pages that have a specific scope document.
-    const validSlugs = ['vsds', 'protection']; 
-    if (slug && validSlugs.includes(slug)) {
-        return slug;
-    }
-    return null;
+    return map[component] || null;
 }
 
 export default function UpcomingSchedulesPage() {
@@ -92,7 +85,7 @@ export default function UpcomingSchedulesPage() {
                             ) : schedules && schedules.length > 0 ? (
                                 schedules.map(task => {
                                     const categorySlug = componentToCategorySlug(task.component);
-                                    const frequencySlug = task.frequency ? getFrequencySlug(task.frequency) : null;
+                                    const frequencySlug = getFrequencySlug(task.frequency);
                                     const isLinkValid = categorySlug && frequencySlug;
 
                                     return (
