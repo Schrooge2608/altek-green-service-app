@@ -142,6 +142,8 @@ export interface ScheduledTask {
   assignedToId: string;
   assignedToName: string;
   completionNotes?: string;
+  component: MaintenanceTask['component'];
+  frequency: MaintenanceTask['frequency'];
 }
 
 export interface Breakdown {

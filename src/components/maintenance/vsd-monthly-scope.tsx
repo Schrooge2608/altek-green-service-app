@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -29,7 +30,7 @@ import React from 'react';
 import { Input } from '../ui/input';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import type { Equipment, User, ScheduledTask } from '@/lib/types';
+import type { Equipment, User, ScheduledTask, MaintenanceTask } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '../ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -159,6 +160,8 @@ export function VsdMonthlyScopeDocument() {
         assignedToId: inspectorData.id,
         assignedToName: inspectorData.name,
         completionNotes: '',
+        component: 'VSD',
+        frequency: 'Monthly',
     };
 
     try {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -28,7 +29,7 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import type { Equipment, User, ScheduledTask } from '@/lib/types';
+import type { Equipment, User, ScheduledTask, MaintenanceTask } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -154,6 +155,8 @@ export function VsdYearlyScopeDocument() {
             assignedToId: inspectorData.id,
             assignedToName: inspectorData.name,
             completionNotes: '',
+            component: 'VSD',
+            frequency: 'Yearly',
         };
 
         try {

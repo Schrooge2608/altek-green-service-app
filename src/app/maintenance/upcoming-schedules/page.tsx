@@ -1,15 +1,39 @@
+
 'use client';
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
-import type { ScheduledTask } from '@/lib/types';
+import type { ScheduledTask, MaintenanceTask } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, CheckCircle, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+
+// Helper functions to generate the correct URL slug
+function getFrequencySlug(frequency: MaintenanceTask['frequency']): string {
+    return frequency.toLowerCase().replace(/\s+/g, '-');
+}
+
+const componentToCategorySlug = (component: MaintenanceTask['component']): string | null => {
+    const map: Record<string, string> = {
+        'VSD': 'vsds',
+        'Protection': 'protection',
+        'Motor': 'motors',
+        'Pump': 'pumps',
+        'UPS': 'ups-btus'
+    };
+    const slug = map[component];
+    
+    // Only return slugs for pages that have a specific scope document.
+    const validSlugs = ['vsds', 'protection']; 
+    if (slug && validSlugs.includes(slug)) {
+        return slug;
+    }
+    return null;
+}
 
 export default function UpcomingSchedulesPage() {
     const firestore = useFirestore();
@@ -66,27 +90,37 @@ export default function UpcomingSchedulesPage() {
                                     </TableCell>
                                 </TableRow>
                             ) : schedules && schedules.length > 0 ? (
-                                schedules.map(task => (
-                                    <TableRow key={task.id}>
-                                        <TableCell className="font-medium">
-                                            <Link href={`/equipment/${task.equipmentId}`} className="hover:underline text-primary">
-                                                {task.equipmentName}
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell>{task.task}</TableCell>
-                                        <TableCell>{task.scheduledFor}</TableCell>
-                                        <TableCell>{task.assignedToName}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={statusVariantMap[task.status]}>{task.status}</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm" disabled>
-                                                <CheckCircle className="mr-2 h-4 w-4" />
-                                                Resolve
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                schedules.map(task => {
+                                    const categorySlug = componentToCategorySlug(task.component);
+                                    const frequencySlug = getFrequencySlug(task.frequency);
+                                    const isLinkValid = categorySlug && frequencySlug;
+
+                                    return (
+                                        <TableRow key={task.id}>
+                                            <TableCell className="font-medium">
+                                                {isLinkValid ? (
+                                                    <Link href={`/maintenance/${categorySlug}/${frequencySlug}`} className="hover:underline text-primary">
+                                                        {task.equipmentName}
+                                                    </Link>
+                                                ) : (
+                                                    task.equipmentName
+                                                )}
+                                            </TableCell>
+                                            <TableCell>{task.task}</TableCell>
+                                            <TableCell>{task.scheduledFor}</TableCell>
+                                            <TableCell>{task.assignedToName}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={statusVariantMap[task.status]}>{task.status}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="sm" disabled>
+                                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                                    Resolve
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">

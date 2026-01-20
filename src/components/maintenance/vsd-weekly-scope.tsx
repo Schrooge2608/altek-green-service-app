@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -31,7 +32,7 @@ import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import type { Equipment, User, ScheduledTask } from '@/lib/types';
+import type { Equipment, User, ScheduledTask, MaintenanceTask } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -155,6 +156,8 @@ export function VsdWeeklyScopeDocument() {
         assignedToId: inspectorData.id,
         assignedToName: inspectorData.name,
         completionNotes: '',
+        component: 'VSD',
+        frequency: 'Weekly',
     };
 
     try {
