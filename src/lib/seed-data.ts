@@ -9,17 +9,5 @@ const nextMaintenanceDate = format(new Date(new Date().setMonth(new Date().getMo
 // This file is ready for future data seeding.
 // To add new equipment, populate this array following the example structure.
 export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & { model: string; serialNumber: string, installationDate: string, driveType?: 'VSD' | 'Soft Starter', manufacturer?: string }> = [
-  {
-    plant: 'Smelter',
-    division: 'Iron Injection',
-    location: 'Iron Injection - Turn Table',
-    name: 'Turn Table',
-    driveType: 'Soft Starter',
-    manufacturer: 'Allen-Bradley',
-    model: 'SMC-FLEX',
-    serialNumber: 'TT-SS-001',
-    installationDate: todayFormatted,
-    lastMaintenance: todayFormatted,
-    nextMaintenance: nextMaintenanceDate,
-  }
+  // The user requested to clear the seed data.
 ];
