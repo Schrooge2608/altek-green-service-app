@@ -37,27 +37,27 @@ export default function ResolveSchedulePage() {
 
     const { component, frequency } = schedule;
 
-    // Specific component mappings
+    // Specific component mappings, now passing the full schedule object
     if (component === 'VSD' && frequency === 'Weekly') {
-        return <VsdWeeklyScopeDocument />;
+        return <VsdWeeklyScopeDocument schedule={schedule} />;
     }
     if (component === 'VSD' && frequency === 'Monthly') {
-        return <VsdMonthlyScopeDocument />;
+        return <VsdMonthlyScopeDocument schedule={schedule} />;
     }
     if (component === 'VSD' && frequency === '3-Monthly') {
-        return <Vsd3MonthlyScopeDocument />;
+        return <Vsd3MonthlyScopeDocument schedule={schedule} />;
     }
     if (component === 'VSD' && frequency === '6-Monthly') {
-        return <Vsd6MonthlyScopeDocument />;
+        return <Vsd6MonthlyScopeDocument schedule={schedule} />;
     }
     if (component === 'VSD' && frequency === 'Yearly') {
-        return <VsdYearlyScopeDocument />;
+        return <VsdYearlyScopeDocument schedule={schedule} />;
     }
     if (component === 'Protection' && frequency === '6-Monthly') {
-        return <Protection6MonthlyScopeDocument />;
+        return <Protection6MonthlyScopeDocument schedule={schedule} />;
     }
 
-    // Fallback to the generic document for other combinations
+    // Fallback to the generic document, passing the schedule data
     const title = `${component} ${frequency} Service Scope`;
-    return <MaintenanceScopeDocument title={title} component={component} frequency={frequency} />;
+    return <MaintenanceScopeDocument title={title} component={component} frequency={frequency} schedule={schedule} />;
 }

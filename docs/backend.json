@@ -169,7 +169,30 @@
         "assignedToName": { "type": "string" },
         "completionNotes": { "type": "string" },
         "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump", "UPS"] },
-        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] }
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
+        "workCrew": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "rtbsNo": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "signature": { "type": "string", "description": "Base64 encoded signature image." }
+            }
+          }
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "task": { "type": "string" },
+              "status": { "type": "string", "enum": ["checked", "not-checked", "n/a"] },
+              "comments": { "type": "string" }
+            }
+          }
+        }
       },
       "required": ["id", "originalTaskId", "equipmentId", "task", "scheduledFor", "status", "assignedToId"]
     },

@@ -144,6 +144,8 @@ export interface ScheduledTask {
   completionNotes?: string;
   component: MaintenanceTask['component'];
   frequency: MaintenanceTask['frequency'];
+  workCrew?: WorkCrewMember[];
+  checklist?: ChecklistItem[];
 }
 
 export interface Breakdown {
