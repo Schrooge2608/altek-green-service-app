@@ -92,7 +92,7 @@ export default function UpcomingSchedulesPage() {
                             ) : schedules && schedules.length > 0 ? (
                                 schedules.map(task => {
                                     const categorySlug = componentToCategorySlug(task.component);
-                                    const frequencySlug = getFrequencySlug(task.frequency);
+                                    const frequencySlug = task.frequency ? getFrequencySlug(task.frequency) : null;
                                     const isLinkValid = categorySlug && frequencySlug;
 
                                     return (

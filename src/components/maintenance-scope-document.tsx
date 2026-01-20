@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,7 +16,7 @@ import { format } from 'date-fns';
 import { Calendar } from './ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import type { Equipment, User, ScheduledTask } from '@/lib/types';
+import type { Equipment, User, ScheduledTask, MaintenanceTask } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Checkbox } from './ui/checkbox';
@@ -26,6 +27,8 @@ import { useRouter } from 'next/navigation';
 
 interface MaintenanceScopeDocumentProps {
   title: string;
+  component: MaintenanceTask['component'];
+  frequency: MaintenanceTask['frequency'];
 }
 
 function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, users: User[] | null, usersLoading: boolean }) {
@@ -81,7 +84,7 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
     )
 }
 
-export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProps) {
+export function MaintenanceScopeDocument({ title, component, frequency }: MaintenanceScopeDocumentProps) {
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
     const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>();
     const [inspectedById, setInspectedById] = React.useState<string | undefined>();
@@ -136,6 +139,8 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
             assignedToId: inspectorData.id,
             assignedToName: inspectorData.name,
             completionNotes: '',
+            component: component,
+            frequency: frequency,
         };
 
         try {
@@ -208,14 +213,14 @@ export function MaintenanceScopeDocument({ title }: MaintenanceScopeDocumentProp
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
-                                variant={'outline'}
+                                variant={"outline"}
                                 className={cn(
-                                    'w-full justify-start text-left font-normal',
-                                    !inspectionDate && 'text-muted-foreground'
+                                    "w-full justify-start text-left font-normal",
+                                    !inspectionDate && "text-muted-foreground"
                                 )}
                                 >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {inspectionDate ? format(inspectionDate, 'PPP') : <span>Pick a date</span>}
+                                {inspectionDate ? format(inspectionDate, "PPP") : <span>Pick a date</span>}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">

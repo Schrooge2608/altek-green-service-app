@@ -9,6 +9,7 @@ import { Vsd3MonthlyScopeDocument } from '@/components/maintenance/vsd-3-monthly
 import { Vsd6MonthlyScopeDocument } from '@/components/maintenance/vsd-6-monthly-scope';
 import { VsdYearlyScopeDocument } from '@/components/maintenance/vsd-yearly-scope';
 import { Protection6MonthlyScopeDocument } from '@/components/maintenance/protection-6-monthly-scope';
+import type { MaintenanceTask } from '@/lib/types';
 
 const validCategories: Record<string, string> = {
   vsds: 'VSDs',
@@ -25,15 +26,23 @@ const validFrequencies: Record<string, string> = {
   yearly: 'Yearly',
 };
 
+const slugToComponentMap: Record<string, MaintenanceTask['component']> = {
+    'vsds': 'VSD',
+    'protection': 'Protection',
+    'motors': 'Motor',
+    'pumps': 'Pump',
+};
+
 export default function MaintenanceScopePage() {
   const params = useParams();
   const categorySlug = Array.isArray(params.category) ? params.category[0] : params.category;
   const frequencySlug = Array.isArray(params.frequency) ? params.frequency[0] : params.frequency;
 
   const category = validCategories[categorySlug];
-  const frequency = validFrequencies[frequencySlug];
+  const frequency = validFrequencies[frequencySlug] as MaintenanceTask['frequency'];
+  const component = slugToComponentMap[categorySlug];
 
-  if (!category || !frequency) {
+  if (!category || !frequency || !component) {
     notFound();
     return null;
   }
@@ -70,5 +79,5 @@ export default function MaintenanceScopePage() {
 
   const title = `${category} ${frequency} Service Scope`;
 
-  return <MaintenanceScopeDocument title={title} />;
+  return <MaintenanceScopeDocument title={title} component={component} frequency={frequency} />;
 }
