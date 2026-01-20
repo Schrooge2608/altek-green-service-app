@@ -27,6 +27,7 @@ import { EditImageForm } from '@/components/equipment/edit-image-form';
 import { EditGearboxForm } from '@/components/equipment/edit-gearbox-form';
 import { EditFanForm } from '@/components/equipment/edit-fan-form';
 import { EditValveForm } from '@/components/equipment/edit-valve-form';
+import { CreateUnscheduledScheduleDialog } from '@/components/equipment/create-unscheduled-schedule-dialog';
 
 const imageMap: { [key: string]: string } = {
     Pump: "pump-1",
@@ -168,10 +169,7 @@ export default function EquipmentDetailPage() {
                     Generate Daily Diary for Unscheduled work
                 </Button>
             </Link>
-            <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create Schedule for Unscheduled Work
-            </Button>
+            <CreateUnscheduledScheduleDialog equipment={eq} vsd={vsd} />
         </div>
       </header>
 
