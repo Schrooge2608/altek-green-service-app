@@ -39,14 +39,14 @@ export default function MaintenanceDocumentPage({ params }: { params: { id: stri
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-8">
+    <div className="max-w-4xl mx-auto p-4 sm:p-8 print-container">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
             <Button onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
             </Button>
         </div>
 
-        <Card className="p-8 shadow-lg border-2 border-primary/20 bg-card">
+        <Card className="p-8 shadow-lg border-2 border-primary/20 bg-card print-card">
             <header className="flex items-start justify-between mb-8">
                 <div>
                     <AltekLogo className="h-12 w-auto" />
