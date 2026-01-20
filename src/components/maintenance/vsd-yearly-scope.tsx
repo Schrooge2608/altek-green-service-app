@@ -183,7 +183,6 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             return;
         }
         // In a real app, this would collect all the form data (checklist, signatures, etc.)
-        // and save it to a 'completed_schedules' collection.
         toast({ title: 'Functionality Pending', description: 'Completing and finalizing schedules is not yet fully implemented.' });
     };
 
@@ -218,7 +217,7 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                 <div className="text-right">
                     <h2 className="text-2xl font-bold text-primary">{title}</h2>
                     <p className="text-muted-foreground">Service Document</p>
-                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-WS-{schedule.id.slice(-6).toUpperCase()}</p>}
+                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-YS-{schedule.id.slice(-6).toUpperCase()}</p>}
                 </div>
             </header>
 
@@ -378,7 +377,7 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                     </ul>
                 </AlertDescription>
             </Alert>
-            <div className="prose prose-sm max-w-none dark:prose-invert mt-8">
+            <div className="prose prose-sm max-w-none dark:prose-invert">
                 <p>An annual service is your most critical intervention. While weekly and quarterly tasks keep the drive running, the Annual Maintenance is designed to prevent "catastrophic failure"—the kind that leads to smoke, fire, or weeks of lead-time for a replacement.</p>
                 <p>This schedule requires a full plant shutdown for the drive and must be performed by a qualified technician or electrician.</p>
                 
@@ -526,3 +525,5 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
     </div>
   );
 }
+
+    

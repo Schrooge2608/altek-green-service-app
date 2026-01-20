@@ -29,7 +29,7 @@ import { format } from 'date-fns';
 import React from 'react';
 import { Input } from '../ui/input';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '../ui/label';
@@ -104,12 +104,12 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
     )
 }
 
-export function VsdMonthlyScopeDocument() {
+export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask }) {
   const title = "VSDs Monthly & Annual Service Scope";
   const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
-  const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>();
-  const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>();
-  const [inspectedById, setInspectedById] = React.useState<string | undefined>();
+  const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
+  const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>(schedule ? new Date(schedule.scheduledFor) : undefined);
+  const [inspectedById, setInspectedById] = React.useState<string | undefined>(schedule?.assignedToId);
   const [isSaving, setIsSaving] = React.useState(false);
   const firestore = useFirestore();
   const { user } = useUser();
@@ -166,7 +166,9 @@ export function VsdMonthlyScopeDocument() {
 
     try {
         const schedulesRef = collection(firestore, 'upcoming_schedules');
-        await addDocumentNonBlocking(schedulesRef, newScheduledTask);
+        const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
+        await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
+
         toast({
             title: 'Schedule Saved',
             description: 'The task has been added to the upcoming schedules list.'
@@ -179,15 +181,33 @@ export function VsdMonthlyScopeDocument() {
         setIsSaving(false);
     }
   };
+  
+  const handleComplete = async () => {
+    if (!schedule) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No schedule data to complete.' });
+        return;
+    }
+    // In a real app, this would collect all the form data (checklist, signatures, etc.)
+    toast({ title: 'Functionality Pending', description: 'Completing and finalizing schedules is not yet fully implemented.' });
+  };
+  
+  const isEditMode = !!schedule;
 
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
       <div className="flex justify-end mb-4 gap-2 print:hidden">
-        <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isSaving ? 'Saving...' : 'Save to Upcoming Schedule List'}
-        </Button>
+        {isEditMode ? (
+            <Button onClick={handleComplete} disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isSaving ? 'Saving...' : 'Save & Complete'}
+            </Button>
+        ) : (
+             <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isSaving ? 'Saving...' : 'Save to Upcoming Schedule List'}
+            </Button>
+        )}
         <Button onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
         </Button>
@@ -202,6 +222,7 @@ export function VsdMonthlyScopeDocument() {
           <div className="text-right">
             <h2 className="text-2xl font-bold text-primary">{title}</h2>
             <p className="text-muted-foreground">Service Document</p>
+            {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-MS-{schedule.id.slice(-6).toUpperCase()}</p>}
           </div>
         </header>
 
@@ -212,7 +233,7 @@ export function VsdMonthlyScopeDocument() {
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
                 <Label htmlFor="equipment-select">Select Equipment for Inspection</Label>
-                <Select onValueChange={setSelectedEquipment} value={selectedEquipment} disabled={equipmentLoading}>
+                <Select onValueChange={setSelectedEquipment} value={selectedEquipment} disabled={equipmentLoading || isEditMode}>
                     <SelectTrigger id="equipment-select">
                         <SelectValue placeholder="Select the equipment..." />
                     </SelectTrigger>
@@ -239,6 +260,7 @@ export function VsdMonthlyScopeDocument() {
                             "w-full justify-start text-left font-normal",
                             !inspectionDate && "text-muted-foreground"
                         )}
+                        disabled={isEditMode}
                         >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {inspectionDate ? format(inspectionDate, "PPP") : <span>Pick a date</span>}
@@ -256,7 +278,7 @@ export function VsdMonthlyScopeDocument() {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="inspected-by">Inspected By</Label>
-                 <Select onValueChange={setInspectedById} value={inspectedById} disabled={usersLoading || !user}>
+                 <Select onValueChange={setInspectedById} value={inspectedById} disabled={usersLoading || !user || isEditMode}>
                     <SelectTrigger id="inspected-by">
                         <SelectValue placeholder="Select technician..." />
                     </SelectTrigger>
@@ -468,3 +490,5 @@ export function VsdMonthlyScopeDocument() {
     </div>
   );
 }
+
+    

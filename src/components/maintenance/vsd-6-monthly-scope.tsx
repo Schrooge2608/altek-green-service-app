@@ -213,7 +213,6 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             return;
         }
         // In a real app, this would collect all the form data (checklist, signatures, etc.)
-        // and save it to a 'completed_schedules' collection.
         toast({ title: 'Functionality Pending', description: 'Completing and finalizing schedules is not yet fully implemented.' });
     };
 
@@ -247,7 +246,7 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 <div className="text-right">
                     <h2 className="text-2xl font-bold text-primary">{title}</h2>
                     <p className="text-muted-foreground">Service Document</p>
-                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-WS-{schedule.id.slice(-6).toUpperCase()}</p>}
+                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-6MS-{schedule.id.slice(-6).toUpperCase()}</p>}
                 </div>
             </header>
 
@@ -504,3 +503,5 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     </div>
   );
 }
+
+    

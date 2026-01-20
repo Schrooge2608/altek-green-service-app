@@ -219,7 +219,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 <div className="text-right">
                     <h2 className="text-2xl font-bold text-primary">{title}</h2>
                     <p className="text-muted-foreground">Service Document</p>
-                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-WS-{schedule.id.slice(-6).toUpperCase()}</p>}
+                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-3MS-{schedule.id.slice(-6).toUpperCase()}</p>}
                 </div>
             </header>
 
@@ -502,3 +502,5 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     </div>
   );
 }
+
+    

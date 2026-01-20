@@ -85,6 +85,17 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
     )
 }
 
+const getFrequencyPrefix = (frequency: MaintenanceTask['frequency']): string => {
+    switch (frequency) {
+        case 'Weekly': return 'WS';
+        case 'Monthly': return 'MS';
+        case '3-Monthly': return '3MS';
+        case '6-Monthly': return '6MS';
+        case 'Yearly': return 'YS';
+        default: return 'TASK';
+    }
+};
+
 export function MaintenanceScopeDocument({ title, component, frequency, schedule }: MaintenanceScopeDocumentProps) {
     const [selectedEquipment, setSelectedEquipment] = useState<string | undefined>(schedule?.equipmentId);
     const [inspectionDate, setInspectionDate] = useState<Date | undefined>(schedule ? new Date(schedule.scheduledFor) : undefined);
@@ -173,6 +184,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     };
 
     const isEditMode = !!schedule;
+    const docPrefix = getFrequencyPrefix(frequency);
 
 
   return (
@@ -203,7 +215,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 <div className="text-right">
                     <h2 className="text-2xl font-bold text-primary">{title}</h2>
                     <p className="text-muted-foreground">Service Document</p>
-                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-WS-{schedule.id.slice(-6).toUpperCase()}</p>}
+                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-{docPrefix}-{schedule.id.slice(-6).toUpperCase()}</p>}
                 </div>
             </header>
 
@@ -414,3 +426,6 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     </div>
   );
 }
+
+
+    

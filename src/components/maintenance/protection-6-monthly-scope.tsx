@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, doc, setDoc, query, where } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -235,7 +235,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                 <div className="text-right">
                     <h2 className="text-2xl font-bold text-primary">{title}</h2>
                     <p className="text-muted-foreground">Service Document</p>
-                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-WS-{schedule.id.slice(-6).toUpperCase()}</p>}
+                    {isEditMode && <p className="text-xs text-muted-foreground font-mono mt-1">Doc #: AG-RBM-6MS-{schedule.id.slice(-6).toUpperCase()}</p>}
                 </div>
             </header>
 
@@ -310,7 +310,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             <div className="prose prose-sm max-w-none dark:prose-invert mt-8 space-y-6">
                 <div>
                     <h3 className="text-lg font-bold">1. PURPOSE</h3>
-                    <p>To ensure all circuit breakers and associated protection devices are in good working order, will operate correctly under fault conditions, and provide reliable protection for personnel and equipment.</p>
+                    <p>Mandatory inspections and services are needed to be carried out in order to identify, report and repair any unsafe conditions as well as to ensure reliable operation of electrical equipment.</p>
                 </div>
                  <div>
                     <h3 className="text-lg font-bold">3. JOB SPECIFIC SAFETY INFORMATION</h3>
@@ -437,3 +437,5 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
     </div>
   );
 }
+
+    
