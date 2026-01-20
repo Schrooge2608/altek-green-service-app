@@ -18,17 +18,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useFirestore, useCollection, useMemoFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useFirestore, useCollection, useMemoFirebase, useDoc, updateDocumentNonBlocking, useFirebase } from '@/firebase';
+import { collection, doc, setDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Equipment, VSD, Breakdown } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import { ImageUploader } from '@/components/image-uploader';
 
 
 const formSchema = z.object({
@@ -43,10 +44,13 @@ const formSchema = z.object({
 
 export default function NewBreakdownPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const { firestore, firebaseApp } = useFirebase();
   const router = useRouter();
   const searchParams = useSearchParams();
   const equipmentIdFromQuery = searchParams.get('equipmentId');
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [images, setImages] = useState<File[]>([]);
   
   const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
   const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -92,7 +96,25 @@ export default function NewBreakdownPage() {
     return options;
   }, [selectedEquipment, vsd]);
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  const uploadImages = async (breakdownId: string): Promise<string[]> => {
+    if (!firebaseApp || images.length === 0) return [];
+    const storage = getStorage(firebaseApp);
+    const uploadPromises = images.map(file => {
+        const storagePath = `breakdown_reports/${breakdownId}/${file.name}`;
+        const storageRef = ref(storage, storagePath);
+        return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+    });
+    try {
+        const urls = await Promise.all(uploadPromises);
+        return urls;
+    } catch (error) {
+        console.error("Image upload failed:", error);
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload one or more images." });
+        throw error;
+    }
+  };
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!selectedEquipment) {
         toast({
           variant: "destructive",
@@ -102,29 +124,47 @@ export default function NewBreakdownPage() {
         return;
     }
 
-    const breakdownRef = collection(firestore, 'breakdown_reports');
-
-    const breakdownData: Omit<Breakdown, 'id'> = {
-      equipmentId: values.equipmentId,
-      equipmentName: selectedEquipment.name,
-      component: values.component.split('::')[0] as Breakdown['component'], // Store only component type
-      date: format(values.date, "yyyy-MM-dd"),
-      description: values.description,
-      resolved: false,
-      timeReported: new Date().toISOString(),
-    };
-
-    addDocumentNonBlocking(breakdownRef, breakdownData);
+    setIsSaving(true);
     
-    // Update the equipment status
-    const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
-    updateDocumentNonBlocking(equipmentRef, { breakdownStatus: 'Active' });
+    // Generate a unique ID for the new breakdown report
+    const newBreakdownRef = doc(collection(firestore, 'breakdown_reports'));
 
-    toast({
-      title: 'Breakdown Reported',
-      description: `The issue for ${selectedEquipment.name} (${values.component}) has been logged.`,
-    });
-    router.push(`/equipment/${values.equipmentId}`);
+    try {
+        const imageUrls = await uploadImages(newBreakdownRef.id);
+
+        const breakdownData: Breakdown = {
+          id: newBreakdownRef.id,
+          equipmentId: values.equipmentId,
+          equipmentName: selectedEquipment.name,
+          component: values.component.split('::')[0] as Breakdown['component'], // Store only component type
+          date: format(values.date, "yyyy-MM-dd"),
+          description: values.description,
+          resolved: false,
+          timeReported: new Date().toISOString(),
+          images: imageUrls,
+        };
+
+        await setDoc(newBreakdownRef, breakdownData);
+        
+        // Update the equipment status
+        const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
+        updateDocumentNonBlocking(equipmentRef, { breakdownStatus: 'Active' });
+
+        toast({
+          title: 'Breakdown Reported',
+          description: `The issue for ${selectedEquipment.name} (${values.component}) has been logged.`,
+        });
+        router.push(`/equipment/${values.equipmentId}`);
+
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Failed to Report Breakdown",
+            description: error.message || "An unexpected error occurred.",
+        });
+    } finally {
+        setIsSaving(false);
+    }
   }
 
   return (
@@ -262,9 +302,22 @@ export default function NewBreakdownPage() {
             </CardContent>
           </Card>
           
+          <Card>
+              <CardHeader>
+                  <CardTitle>Attach Images</CardTitle>
+                  <CardDescription>Upload photos of the breakdown. This can help with diagnosis.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <ImageUploader onImagesChange={setImages} title="Breakdown Images" />
+              </CardContent>
+          </Card>
+
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-            <Button type="submit" variant="destructive">Submit Report</Button>
+            <Button type="submit" variant="destructive" disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isSaving ? 'Submitting...' : 'Submit Report'}
+            </Button>
           </div>
         </form>
       </Form>

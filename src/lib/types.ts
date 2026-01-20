@@ -1,3 +1,4 @@
+
 export interface Equipment {
   id: string;
   name: string;
@@ -142,6 +143,7 @@ export interface Breakdown {
   overtimeHours?: number;
   timeReported?: string;
   timeBackInService?: string;
+  images?: string[];
 }
 
 export interface CompletedSchedule {
