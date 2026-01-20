@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -13,11 +14,12 @@ import Link from 'next/link';
 
 // Helper functions to generate the correct URL slug
 function getFrequencySlug(frequency: MaintenanceTask['frequency']): string {
-    if (!frequency) return '';
+    if (!frequency) return ''; // Added a guard clause here
     return frequency.toLowerCase().replace(/\s+/g, '-');
 }
 
 const componentToCategorySlug = (component: MaintenanceTask['component']): string | null => {
+    if (!component) return null;
     const map: Record<string, string> = {
         'VSD': 'vsds',
         'Protection': 'protection',
@@ -26,7 +28,8 @@ const componentToCategorySlug = (component: MaintenanceTask['component']): strin
         'UPS': 'ups-btus'
     };
     return map[component] || null;
-}
+};
+
 
 export default function UpcomingSchedulesPage() {
     const firestore = useFirestore();
