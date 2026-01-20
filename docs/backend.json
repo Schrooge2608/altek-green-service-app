@@ -153,6 +153,24 @@
       },
       "required": ["id", "equipmentId", "equipmentName", "component", "task", "dueDate", "frequency", "status"]
     },
+    "ScheduledTask": {
+      "title": "ScheduledTask",
+      "type": "object",
+      "description": "Represents a maintenance task that has been scheduled for a specific week by a technician.",
+      "properties": {
+        "id": { "type": "string" },
+        "originalTaskId": { "type": "string", "description": "The ID of the master maintenance task this was generated from." },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "task": { "type": "string" },
+        "scheduledFor": { "type": "string", "format": "date", "description": "The target date for the task." },
+        "status": { "type": "string", "enum": ["Pending", "In Progress", "Completed", "Cancelled"] },
+        "assignedToId": { "type": "string" },
+        "assignedToName": { "type": "string" },
+        "completionNotes": { "type": "string" }
+      },
+      "required": ["id", "originalTaskId", "equipmentId", "task", "scheduledFor", "status", "assignedToId"]
+    },
     "BreakdownReport": {
       "title": "BreakdownReport",
       "type": "object",
@@ -400,6 +418,14 @@
         }
       },
       {
+        "path": "/upcoming_schedules/{scheduleId}",
+        "definition": {
+          "entityName": "ScheduledTask",
+          "schema": { "$ref": "#/entities/ScheduledTask" },
+          "description": "Stores technician-scheduled tasks for the upcoming week."
+        }
+      },
+      {
         "path": "/breakdown_reports/{breakdownReportId}",
         "definition": {
           "entityName": "BreakdownReport",
@@ -450,6 +476,7 @@
     ]
   }
 }
+
 
 
 

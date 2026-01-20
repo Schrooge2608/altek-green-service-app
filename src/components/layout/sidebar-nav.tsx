@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -116,12 +117,6 @@ const librarySubMenu = [
     { href: '/scan', label: 'Scan Document', icon: ScanLine },
 ]
 
-const maintenanceSubMenu = [
-    { href: '/maintenance', label: 'Schedule' },
-    { href: '/maintenance/work-orders', label: 'Work Orders' },
-    { href: '/maintenance/permit-to-work', label: 'Permit to Work' },
-];
-
 export function SidebarNav() {
   const pathname = usePathname();
   const { user } = useUser();
@@ -148,7 +143,8 @@ export function SidebarNav() {
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
   const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library') || pathname === '/scan');
-  const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed') && !pathname.startsWith('/maintenance/vsds') && !pathname.startsWith('/maintenance/protection'));
+  const [isMaintenanceOpen, setIsMaintenanceOpen] = React.useState(pathname.startsWith('/maintenance'));
+  const [isScheduleOpen, setIsScheduleOpen] = React.useState(pathname.startsWith('/maintenance/upcoming-schedules') || pathname === '/maintenance');
   const [isProceduresOpen, setIsProceduresOpen] = React.useState(pathname.startsWith('/maintenance/vsds') || pathname.startsWith('/maintenance/protection'));
   const [isReportsOpen, setIsReportsOpen] = React.useState(pathname.startsWith('/reports'));
 
@@ -345,7 +341,7 @@ export function SidebarNav() {
            <Collapsible open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Maintenance" isActive={pathname.startsWith('/maintenance') && !pathname.startsWith('/maintenance/completed') && !pathname.startsWith('/maintenance/vsds') && !pathname.startsWith('/maintenance/protection')}>
+                        <SidebarMenuButton tooltip="Maintenance" isActive={pathname.startsWith('/maintenance')}>
                             <Calendar />
                             <span>Maintenance</span>
                             <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
@@ -354,13 +350,41 @@ export function SidebarNav() {
                 </SidebarMenuItem>
                 <CollapsibleContent>
                     <SidebarMenuSub>
-                        {maintenanceSubMenu.map((item) => (
-                            <SidebarMenuItem key={item.href}>
-                                <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                    <Link href={item.href}>{item.label}</Link>
-                                </SidebarMenuSubButton>
+                        <Collapsible open={isScheduleOpen} onOpenChange={setIsScheduleOpen}>
+                            <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton tooltip="Schedule" isActive={pathname === '/maintenance' || pathname.startsWith('/maintenance/upcoming-schedules')}>
+                                        <Calendar />
+                                        <span>Schedule</span>
+                                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                    </SidebarMenuButton>
+                                </CollapsibleTrigger>
                             </SidebarMenuItem>
-                        ))}
+                            <CollapsibleContent>
+                                <SidebarMenuSub>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuSubButton asChild isActive={pathname === '/maintenance'}>
+                                            <Link href="/maintenance">View All</Link>
+                                        </SidebarMenuSubButton>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/upcoming-schedules'}>
+                                            <Link href="/maintenance/upcoming-schedules">Upcoming</Link>
+                                        </SidebarMenuSubButton>
+                                    </SidebarMenuItem>
+                                </SidebarMenuSub>
+                            </CollapsibleContent>
+                        </Collapsible>
+                         <SidebarMenuItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/work-orders'}>
+                                <Link href="/maintenance/work-orders">Work Orders</Link>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
+                         <SidebarMenuItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/permit-to-work'}>
+                                <Link href="/maintenance/permit-to-work">Permit to Work</Link>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
                     </SidebarMenuSub>
                 </CollapsibleContent>
            </Collapsible>

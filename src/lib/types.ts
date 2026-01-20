@@ -1,4 +1,5 @@
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -128,6 +129,19 @@ export interface MaintenanceTask {
   status: 'pending' | 'completed' | 'overdue';
   assignedToId: string;
   assignedToName: string;
+}
+
+export interface ScheduledTask {
+  id: string;
+  originalTaskId: string;
+  equipmentId: string;
+  equipmentName: string;
+  task: string;
+  scheduledFor: string;
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
+  assignedToId: string;
+  assignedToName: string;
+  completionNotes?: string;
 }
 
 export interface Breakdown {
