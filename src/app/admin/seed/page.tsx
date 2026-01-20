@@ -40,14 +40,17 @@ export default function SeedPage() {
     setIsLoading(true);
     const batch = writeBatch(firestore);
 
-    equipmentToSeed.forEach((item, index) => {
-        // Use a more generic ID generation or ensure IDs are provided in the data
-        const equipmentId = `${item.location.slice(0,3).toLowerCase()}-${item.name.replace(/\s/g, '').slice(0,4).toLowerCase()}-${String(index + 1).padStart(3, '0')}`;
+    const slugify = (str: string) => str.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/[\s-]+/g, '-');
+
+    equipmentToSeed.forEach((item) => {
+        const locationSlug = slugify(item.location);
+        const nameSlug = slugify(item.name);
+        const equipmentId = `${locationSlug}-${nameSlug}`;
         const vsdId = `vsd-${equipmentId}`;
         
         const { model, serialNumber, installationDate, driveType, manufacturer, ...baseEq } = item;
 
-        const equipmentDoc: Omit<Equipment, 'status' | 'model' | 'serialNumber' | 'installationDate'> = {
+        const equipmentDoc: Partial<Equipment> = {
             ...baseEq,
             id: equipmentId,
             vsdId: vsdId,
@@ -124,5 +127,3 @@ export default function SeedPage() {
     </div>
   );
 }
-
-    
