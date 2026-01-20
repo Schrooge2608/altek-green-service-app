@@ -168,6 +168,10 @@ export default function EquipmentDetailPage() {
                     Generate Daily Diary for Unscheduled work
                 </Button>
             </Link>
+            <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Schedule for Unscheduled Work
+            </Button>
         </div>
       </header>
 
@@ -481,5 +485,7 @@ export default function EquipmentDetailPage() {
     </div>
   );
 }
+
+    
 
     
