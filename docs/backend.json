@@ -29,7 +29,7 @@
         "name": { "type": "string" },
         "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "MPE Dry Mining", "Smelter Area 1", "Smelter Area 2", "RWBS", "MSP - TTP", "Pilot Plant", "Drymill", "Roaster 1&2", "3,3KV Blowers", "Mag Separation", "Roaster - RTR Magnets", "Smelter feed", "Charplant - Stoker 1", "Charplant - Stoker 2", "Charplant - Baghouse", "Smelter - SF1", "Smelter - Common", "Smelter - SF2", "Smelter - SF3", "Smelter - SF4", "Smelter - Clay gun", "Smelter Elevator", "Iron Injection - West Crane", "Iron Injection - East Crane", "Iron Injection", "Iron Injection - PCM1", "Iron Injection - PCM2", "Iron Injection - Fumehood", "Iron Injection - Turn Table", "Stripping crane 1", "Stripping crane 2", "Slag plant", "North Screen"] },
         "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
-        "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron Injection", "Stripping Crane", "Slag Plant", "North Screen", "UPS/BTU's"], "description": "The specific division within the Mining or Smelter plant." },
+        "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron Injection", "Stripping Crane", "Slag plant", "North Screen", "UPS/BTU's"], "description": "The specific division within the Mining or Smelter plant." },
         "vsdId": { "type": "string" },
         "lastMaintenance": { "type": "string", "format": "date" },
         "nextMaintenance": { "type": "string", "format": "date" },
@@ -450,5 +450,6 @@
     ]
   }
 }
+
 
 

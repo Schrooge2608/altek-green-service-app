@@ -39,7 +39,7 @@ const formSchema = z.object({
   equipmentId: z.string().min(1, 'Equipment ID is required'),
   equipmentName: z.string().min(1, 'Equipment name is required'),
   plant: z.enum(['Mining', 'Smelter']),
-  division: z.enum(["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron injection", "Stripping Crane", "Slag plant", "North Screen", "UPS/BTU's"]).optional(),
+  division: z.enum(["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron Injection", "Stripping Crane", "Slag plant", "North Screen", "UPS/BTU's"]).optional(),
   location: z.string().min(1, 'Location is required'),
   imageUrl: z.string().optional(),
   

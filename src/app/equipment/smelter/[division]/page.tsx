@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -38,7 +39,7 @@ const validDivisions: Record<string, string> = {
     'smelter': 'Smelter',
     'iron-injection': 'Iron Injection',
     'stripping-crane': 'Stripping Crane',
-    'slag-plant': 'Slag Plant',
+    'slag-plant': 'Slag plant',
     'north-screen': 'North Screen',
     'ups-btus': "UPS/BTU's",
 }
