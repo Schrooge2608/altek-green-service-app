@@ -9,5 +9,17 @@ const nextMaintenanceDate = format(new Date(new Date().setMonth(new Date().getMo
 // This file is ready for future data seeding.
 // To add new equipment, populate this array following the example structure.
 export const equipmentToSeed: Array<Omit<Equipment, 'id' | 'vsdId' | 'status' > & { model: string; serialNumber: string, installationDate: string, driveType?: 'VSD' | 'Soft Starter', manufacturer?: string }> = [
-    // Ready for new data
+    {
+        name: 'Main Elevator Hoist Drive',
+        plant: 'Smelter',
+        division: 'Smelter',
+        location: 'Smelter Elevator',
+        driveType: 'VSD',
+        manufacturer: 'OTIS',
+        model: 'OTIS GEN2',
+        serialNumber: 'SN-OTIS-ELEV-001',
+        installationDate: todayFormatted,
+        lastMaintenance: todayFormatted,
+        nextMaintenance: nextMaintenanceDate,
+    }
 ];
