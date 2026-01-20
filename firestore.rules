@@ -4,37 +4,47 @@ service cloud.firestore {
     function isAuthenticated() { return request.auth != null; }
     function isManagement() { return request.auth.token.email.matches('.*admin.*'); } // Fallback if roles fail
 
-    match /users/{userId} { allow read, write, list: if isAuthenticated(); }
-    
-    match /vsds/{vsdId} { allow read, write: if isAuthenticated(); }
-    
-    match /completed_schedules/{document=**} {
-      allow read, write: if isAuthenticated();
+    match /users/{userId} {
+      allow read, write, list: if isAuthenticated();
     }
     
-    match /upcoming_schedules/{document=**} {
-      allow read, write: if isAuthenticated();
+    match /vsds/{vsdId} {
+      allow read, write, list: if isAuthenticated();
     }
     
-    // Allow access to Equipment for all logged-in users
-    match /equipment/{document=**} {
-      allow read, write: if isAuthenticated();
+    match /completed_schedules/{scheduleId} {
+      allow read, write, list: if isAuthenticated();
+    }
+    
+    match /upcoming_schedules/{scheduleId} {
+      allow read, write, list: if isAuthenticated();
+    }
+    
+    match /equipment/{equipmentId} {
+      allow read, write, list: if isAuthenticated();
+      
+      match /performance_records/{recordId} {
+        allow read, write, list: if isAuthenticated();
+      }
     }
 
-    // Allow access to Breakdown Reports for all logged-in users
-    match /breakdown_reports/{document=**} {
-      allow read, write: if isAuthenticated();
+    match /breakdown_reports/{breakdownReportId} {
+      allow read, write, list: if isAuthenticated();
     }
     
-    // DAILY DIARIES - FIXED FOR SAVING
     match /daily_diaries/{diaryId} {
-      allow read, list: if isAuthenticated();
-      allow create: if isAuthenticated(); 
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow read, write, list: if isAuthenticated();
     }
 
     match /generated_reports/{reportId} {
+      allow read, write, list: if isAuthenticated();
+    }
+
+    match /tasks/{taskId} {
+      allow read, write, list: if isAuthenticated();
+    }
+
+    match /timesheets/{timesheetId} {
       allow read, write, list: if isAuthenticated();
     }
   }
