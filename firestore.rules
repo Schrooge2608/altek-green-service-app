@@ -28,7 +28,7 @@ service cloud.firestore {
     }
 
     match /generated_reports/{reportId} {
-      allow read, write: if isAuthenticated();
+      allow read, write, list: if isAuthenticated();
     }
   }
 }
