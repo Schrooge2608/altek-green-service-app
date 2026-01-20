@@ -26,5 +26,9 @@ service cloud.firestore {
       allow update: if isAuthenticated();
       allow delete: if isAuthenticated();
     }
+
+    match /generated_reports/{reportId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }
