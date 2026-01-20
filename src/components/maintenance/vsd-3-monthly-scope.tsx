@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -6,7 +7,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
@@ -28,9 +28,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
-import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
-import type { Equipment, User, ScheduledTask, MaintenanceTask } from '@/lib/types';
+import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,12 +38,26 @@ import { SignaturePad } from '@/components/ui/signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
-function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, users: User[] | null, usersLoading: boolean }) {
-  const [date, setDate] = React.useState<Date | undefined>();
+interface WorkCrewRowProps {
+    member: Partial<WorkCrewMember> & { localId: number };
+    onRemove: () => void;
+    onChange: (field: keyof WorkCrewMember, value: string) => void;
+    users: User[] | null;
+    usersLoading: boolean;
+}
+
+
+function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCrewRowProps) {
   return (
     <TableRow>
       <TableCell>
-         <Select disabled={usersLoading}>
+         <Select 
+            disabled={usersLoading}
+            onValueChange={(userId) => {
+                const user = users?.find(u => u.id === userId);
+                onChange('name', user?.name || '');
+            }}
+         >
             <SelectTrigger>
                 <SelectValue placeholder="Select crew member..." />
             </SelectTrigger>
@@ -57,7 +71,7 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
         </Select>
       </TableCell>
       <TableCell>
-        <Input placeholder="RTBS No..." />
+        <Input placeholder="RTBS No..." value={member.rtbsNo || ''} onChange={(e) => onChange('rtbsNo', e.target.value)} />
       </TableCell>
       <TableCell className="w-[180px]">
         <Popover>
@@ -66,25 +80,25 @@ function WorkCrewRow({ onRemove, users, usersLoading }: { onRemove: () => void, 
               variant={'outline'}
               className={cn(
                 'w-full justify-start text-left font-normal',
-                !date && 'text-muted-foreground'
+                !member.date && 'text-muted-foreground'
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {date ? format(date, 'PPP') : <span>Pick a date</span>}
+              {member.date ? format(new Date(member.date), 'PPP') : <span>Pick a date</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
             <Calendar
               mode="single"
-              selected={date}
-              onSelect={setDate}
+              selected={member.date ? new Date(member.date) : undefined}
+              onSelect={(date) => onChange('date', date ? format(date, 'yyyy-MM-dd') : '')}
               initialFocus
             />
           </PopoverContent>
         </Popover>
       </TableCell>
       <TableCell className="w-[250px]">
-        <SignaturePad />
+        <SignaturePad value={member.signature} onSign={(sig) => onChange('signature', sig)} onClear={() => onChange('signature', '')} />
       </TableCell>
       <TableCell className="text-right">
         <Button
@@ -105,12 +119,17 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
     const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>(schedule ? new Date(schedule.scheduledFor) : undefined);
     const [inspectedById, setInspectedById] = React.useState<string | undefined>(schedule?.assignedToId);
-    const [crew, setCrew] = React.useState(() => [{ id: 1 }, { id: 2 }, { id: 3 }]);
     const [isSaving, setIsSaving] = React.useState(false);
     const firestore = useFirestore();
     const { user } = useUser();
     const { toast } = useToast();
     const router = useRouter();
+
+    const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() => 
+        (schedule?.workCrew && schedule.workCrew.length > 0)
+        ? schedule.workCrew.map((m, i) => ({ ...m, localId: i }))
+        : [{ localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]
+    );
 
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -119,11 +138,17 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
     const addCrewMember = () => {
-        setCrew(c => [...c, { id: Date.now() }]);
+        setCrew(c => [...c, { localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]);
     };
 
-    const removeCrewMember = (id: number) => {
-        setCrew(c => c.filter(member => member.id !== id));
+    const removeCrewMember = (localId: number) => {
+        setCrew(c => c.filter(member => member.localId !== localId));
+    };
+
+    const handleCrewChange = (index: number, field: keyof WorkCrewMember, value: string) => {
+        const newCrew = [...crew];
+        (newCrew[index] as any)[field] = value;
+        setCrew(newCrew);
     };
 
     const handleSaveToUpcoming = async () => {
@@ -178,14 +203,25 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         }
     };
     
-    const handleComplete = async () => {
+    const handleSaveProgress = async () => {
         if (!schedule) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No schedule data to complete.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
             return;
         }
-        // In a real app, this would collect all the form data (checklist, signatures, etc.)
-        // and save it to a 'completed_schedules' collection.
-        toast({ title: 'Functionality Pending', description: 'Completing and finalizing schedules is not yet fully implemented.' });
+
+        setIsSaving(true);
+        const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+        const crewToSave = crew.map(({ localId, ...rest }) => rest);
+
+        try {
+            await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave });
+            toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
+        } catch (error: any) {
+            console.error("Error saving progress:", error);
+            toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'An unexpected error occurred.' });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const isEditMode = !!schedule;
@@ -195,9 +231,9 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
              {isEditMode ? (
-                <Button onClick={handleComplete} disabled={isSaving}>
+                <Button onClick={handleSaveProgress} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    {isSaving ? 'Saving...' : 'Save & Complete'}
+                    {isSaving ? 'Saving...' : 'Save Progress'}
                 </Button>
             ) : (
                  <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
@@ -358,8 +394,15 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {crew.map((member) => (
-                            <WorkCrewRow key={member.id} onRemove={() => removeCrewMember(member.id)} users={users} usersLoading={usersLoading} />
+                        {crew.map((member, index) => (
+                           <WorkCrewRow 
+                                key={member.localId} 
+                                member={member}
+                                onRemove={() => removeCrewMember(member.localId)} 
+                                onChange={(field, value) => handleCrewChange(index, field, value)}
+                                users={users} 
+                                usersLoading={usersLoading} 
+                            />
                         ))}
                     </TableBody>
                 </Table>
@@ -502,5 +545,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     </div>
   );
 }
+
+    
 
     
