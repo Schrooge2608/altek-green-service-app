@@ -14,15 +14,15 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from './ui/calendar';
-import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase } from '@/firebase';
-import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { SignaturePad } from './ui/signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Textarea } from './ui/textarea';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { ImageUploader } from './image-uploader';
 
 
@@ -110,6 +110,9 @@ const getFrequencyPrefix = (frequency: MaintenanceTask['frequency']): string => 
         default: return 'TASK';
     }
 };
+
+const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+
 
 export function MaintenanceScopeDocument({ title, component, frequency, schedule }: MaintenanceScopeDocumentProps) {
     const [selectedEquipment, setSelectedEquipment] = useState<string | undefined>(schedule?.equipmentId);
@@ -419,12 +422,20 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         {schedule?.take5Scans && schedule.take5Scans.length > 0 && (
                             <div className="mb-4 space-y-2">
                                 <Label>Uploaded Documents</Label>
-                                <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                                <div className="flex flex-wrap gap-4 rounded-md border p-2">
                                     {schedule.take5Scans.map((url, i) => (
-                                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                                            <Paperclip className="h-3 w-3" />
-                                            Take 5 Scan {i + 1}
-                                        </a>
+                                        <div key={i} className="relative group">
+                                            <a href={url} target="_blank" rel="noopener noreferrer">
+                                            {isImageUrl(url) ? (
+                                                <img src={url} alt={`Take 5 Scan ${i + 1}`} className="w-24 h-24 rounded-md object-cover group-hover:opacity-70 transition-opacity" />
+                                            ) : (
+                                                <div className="w-24 h-24 rounded-md bg-muted flex flex-col items-center justify-center p-2 text-center">
+                                                     <Paperclip className="h-6 w-6" />
+                                                     <span className="text-xs mt-1 truncate">Scan {i + 1}</span>
+                                                </div>
+                                            )}
+                                            </a>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
@@ -437,12 +448,20 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         {schedule?.cccScans && schedule.cccScans.length > 0 && (
                             <div className="mb-4 space-y-2">
                                 <Label>Uploaded Documents</Label>
-                                <div className="flex flex-wrap gap-2 rounded-md border p-2">
-                                    {schedule.cccScans.map((url, i) => (
-                                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                                            <Paperclip className="h-3 w-3" />
-                                            CCC Scan {i + 1}
-                                        </a>
+                                <div className="flex flex-wrap gap-4 rounded-md border p-2">
+                                     {schedule.cccScans.map((url, i) => (
+                                        <div key={i} className="relative group">
+                                            <a href={url} target="_blank" rel="noopener noreferrer">
+                                            {isImageUrl(url) ? (
+                                                <img src={url} alt={`CCC Scan ${i + 1}`} className="w-24 h-24 rounded-md object-cover group-hover:opacity-70 transition-opacity" />
+                                            ) : (
+                                                <div className="w-24 h-24 rounded-md bg-muted flex flex-col items-center justify-center p-2 text-center">
+                                                     <Paperclip className="h-6 w-6" />
+                                                     <span className="text-xs mt-1 truncate">Scan {i + 1}</span>
+                                                </div>
+                                            )}
+                                            </a>
+                                        </div>
                                     ))}
                                 </div>
                             </div>

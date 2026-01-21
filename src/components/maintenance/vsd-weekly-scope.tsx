@@ -109,6 +109,8 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: { memb
     )
 }
 
+const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+
 export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask }) {
   const title = "VSDs Weekly Service Scope";
   const [selectedEquipment, setSelectedEquipment] = useState<string | undefined>(schedule?.equipmentId);
@@ -483,9 +485,13 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                             <div className="flex flex-col gap-2 rounded-md border p-2">
                                 {schedule.take5Scans.map((url, i) => (
                                     <div key={i} className="flex items-center justify-between">
-                                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1 truncate">
-                                            <Paperclip className="h-3 w-3 shrink-0" />
-                                            <span className="truncate">Take 5 Scan {i + 1}</span>
+                                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                            {isImageUrl(url) ? (
+                                                <img src={url} alt={`Take 5 Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                            ) : (
+                                                <Paperclip className="h-4 w-4 shrink-0" />
+                                            )}
+                                            <span className="text-sm text-primary group-hover:underline truncate">Take 5 Scan {i + 1}</span>
                                         </a>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
                                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -505,10 +511,14 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                             <Label>Uploaded Documents</Label>
                             <div className="flex flex-col gap-2 rounded-md border p-2">
                                 {schedule.cccScans.map((url, i) => (
-                                    <div key={i} className="flex items-center justify-between">
-                                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1 truncate">
-                                            <Paperclip className="h-3 w-3 shrink-0" />
-                                            <span className="truncate">CCC Scan {i + 1}</span>
+                                     <div key={i} className="flex items-center justify-between">
+                                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                            {isImageUrl(url) ? (
+                                                <img src={url} alt={`CCC Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                            ) : (
+                                                <Paperclip className="h-4 w-4 shrink-0" />
+                                            )}
+                                            <span className="text-sm text-primary group-hover:underline truncate">CCC Scan {i + 1}</span>
                                         </a>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
                                             <Trash2 className="h-4 w-4 text-destructive" />
