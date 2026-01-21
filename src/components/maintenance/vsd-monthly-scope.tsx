@@ -7,6 +7,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import {
   Table,
@@ -292,7 +293,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
               uploadScans(take5Files, 'take5'),
               uploadScans(cccFiles, 'ccc'),
           ]);
-
+          
           const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
           const crewToSave = crew.map(({ localId, ...rest }) => rest);
 
@@ -310,11 +311,12 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
           }
 
           await updateDoc(scheduleRef, updateData);
-          toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
 
+          toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
+          
           if (newTake5Urls.length > 0) setTake5Files([]);
           if (newCccUrls.length > 0) setCccFiles([]);
-
+          
           router.refresh();
       } catch (error: any) {
           console.error("Error saving progress:", error);
@@ -476,12 +478,12 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
                 <Separator />
                 <div>
                     <h4 className="font-semibold text-muted-foreground mb-2">Critical Control Checklist (CCC) Scan(s)</h4>
-                    {schedule?.cccScans && schedule.cccScans.length > 0 && (
+                      {schedule?.cccScans && schedule.cccScans.length > 0 && (
                         <div className="mb-4 space-y-2">
                             <Label>Uploaded Documents</Label>
                             <div className="flex flex-col gap-2 rounded-md border p-2">
-                                 {schedule.cccScans.map((url, i) => (
-                                    <div key={i} className="flex items-center justify-between">
+                                {schedule.cccScans.map((url, i) => (
+                                     <div key={i} className="flex items-center justify-between">
                                         <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
                                             {isImageUrl(url) ? (
                                                 <img src={url} alt={`CCC Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
