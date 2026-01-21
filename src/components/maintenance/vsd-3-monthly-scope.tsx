@@ -141,6 +141,8 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     const [take5Files, setTake5Files] = useState<File[]>([]);
     const [cccFiles, setCccFiles] = useState<File[]>([]);
     const [jhaFiles, setJhaFiles] = useState<File[]>([]);
+    const [ptwFiles, setPtwFiles] = useState<File[]>([]);
+    const [workOrderFiles, setWorkOrderFiles] = useState<File[]>([]);
 
     const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -188,7 +190,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         setCrew(newCrew);
     };
 
-    const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans' | 'jhaScans') => {
+    const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans' | 'jhaScans' | 'ptwScans' | 'workOrderScans') => {
         if (!schedule || !firebaseApp) {
             toast({ variant: "destructive", title: "Error", description: "Cannot delete file." });
             return;
@@ -264,7 +266,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
 
             const scheduleId = docRef.id;
-            const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha'): Promise<string[]> => {
+            const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha' | 'ptw' | 'work_order'): Promise<string[]> => {
                 if (!firebaseApp || files.length === 0) return [];
                 const storage = getStorage(firebaseApp);
                 const uploadPromises = files.map(async file => {
@@ -276,17 +278,21 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 return Promise.all(uploadPromises);
             };
     
-            const [newTake5Urls, newCccUrls, newJhaUrls] = await Promise.all([
+            const [newTake5Urls, newCccUrls, newJhaUrls, newPtwUrls, newWorkOrderUrls] = await Promise.all([
                 uploadScans(take5Files, 'take5'),
                 uploadScans(cccFiles, 'ccc'),
                 uploadScans(jhaFiles, 'jha'),
+                uploadScans(ptwFiles, 'ptw'),
+                uploadScans(workOrderFiles, 'work_order'),
             ]);
     
-            if (newTake5Urls.length > 0 || newCccUrls.length > 0 || newJhaUrls.length > 0) {
+            if (newTake5Urls.length > 0 || newCccUrls.length > 0 || newJhaUrls.length > 0 || newPtwUrls.length > 0 || newWorkOrderUrls.length > 0) {
                 await updateDoc(docRef, { 
                     take5Scans: newTake5Urls,
                     cccScans: newCccUrls,
                     jhaScans: newJhaUrls,
+                    ptwScans: newPtwUrls,
+                    workOrderScans: newWorkOrderUrls,
                 });
             }
 
@@ -311,7 +317,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
 
         setIsSaving(true);
         
-        const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha'): Promise<string[]> => {
+        const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha' | 'ptw' | 'work_order'): Promise<string[]> => {
             if (!files.length) return [];
             const storage = getStorage(firebaseApp);
             const uploadPromises = files.map(async file => {
@@ -324,10 +330,12 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         };
 
         try {
-            const [newTake5Urls, newCccUrls, newJhaUrls] = await Promise.all([
+            const [newTake5Urls, newCccUrls, newJhaUrls, newPtwUrls, newWorkOrderUrls] = await Promise.all([
                 uploadScans(take5Files, 'take5'),
                 uploadScans(cccFiles, 'ccc'),
                 uploadScans(jhaFiles, 'jha'),
+                uploadScans(ptwFiles, 'ptw'),
+                uploadScans(workOrderFiles, 'work_order'),
             ]);
 
             const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
@@ -338,15 +346,11 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 updatedAt: new Date().toISOString(),
             };
 
-            if (newTake5Urls.length > 0) {
-                updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
-            }
-            if (newCccUrls.length > 0) {
-                updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
-            }
-            if (newJhaUrls.length > 0) {
-                updateData.jhaScans = [...(schedule.jhaScans || []), ...newJhaUrls];
-            }
+            if (newTake5Urls.length > 0) updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
+            if (newCccUrls.length > 0) updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
+            if (newJhaUrls.length > 0) updateData.jhaScans = [...(schedule.jhaScans || []), ...newJhaUrls];
+            if (newPtwUrls.length > 0) updateData.ptwScans = [...(schedule.ptwScans || []), ...newPtwUrls];
+            if (newWorkOrderUrls.length > 0) updateData.workOrderScans = [...(schedule.workOrderScans || []), ...newWorkOrderUrls];
 
             await updateDoc(scheduleRef, updateData);
             toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
@@ -354,6 +358,8 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             if (newTake5Urls.length > 0) setTake5Files([]);
             if (newCccUrls.length > 0) setCccFiles([]);
             if (newJhaUrls.length > 0) setJhaFiles([]);
+            if (newPtwUrls.length > 0) setPtwFiles([]);
+            if (newWorkOrderUrls.length > 0) setWorkOrderFiles([]);
             
             router.refresh();
 
@@ -582,6 +588,60 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                             </div>
                         )}
                         <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="my-8">
+                <CardHeader>
+                    <CardTitle>Task Documents</CardTitle>
+                    <CardDescription>Upload scans of the Permit to Work and Work Order.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div>
+                        <h4 className="font-semibold text-muted-foreground mb-2">Permit to Work Scan(s)</h4>
+                        {schedule?.ptwScans && schedule.ptwScans.length > 0 && (
+                            <div className="mb-4 space-y-2">
+                                <Label>Uploaded Documents</Label>
+                                <div className="flex flex-col gap-2 rounded-md border p-2">
+                                    {schedule.ptwScans.map((url, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                                {isImageUrl(url) ? (<img src={url} alt={`Permit to Work Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
+                                                <span className="text-sm text-primary group-hover:underline truncate">Permit to Work Scan {i + 1}</span>
+                                            </a>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'ptwScans')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <ImageUploader onImagesChange={setPtwFiles} title="Permit to Work Documents" />
+                    </div>
+                    <Separator />
+                    <div>
+                        <h4 className="font-semibold text-muted-foreground mb-2">Works Order Scan(s)</h4>
+                        {schedule?.workOrderScans && schedule.workOrderScans.length > 0 && (
+                            <div className="mb-4 space-y-2">
+                                <Label>Uploaded Documents</Label>
+                                <div className="flex flex-col gap-2 rounded-md border p-2">
+                                     {schedule.workOrderScans.map((url, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                                {isImageUrl(url) ? (<img src={url} alt={`Works Order Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
+                                                <span className="text-sm text-primary group-hover:underline truncate">Works Order Scan {i + 1}</span>
+                                            </a>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'workOrderScans')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <ImageUploader onImagesChange={setWorkOrderFiles} title="Works Order Documents" />
                     </div>
                 </CardContent>
             </Card>

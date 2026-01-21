@@ -148,6 +148,8 @@ export interface ScheduledTask {
   take5Scans?: string[];
   cccScans?: string[];
   jhaScans?: string[];
+  ptwScans?: string[];
+  workOrderScans?: string[];
   updatedAt?: string;
 }
 
