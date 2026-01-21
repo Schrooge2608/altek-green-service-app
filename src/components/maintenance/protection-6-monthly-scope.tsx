@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -149,6 +148,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
 
     const [take5Files, setTake5Files] = useState<File[]>([]);
     const [cccFiles, setCccFiles] = useState<File[]>([]);
+    const [jhaFiles, setJhaFiles] = useState<File[]>([]);
 
     const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -199,7 +199,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
         setCrew(newCrew);
     };
     
-    const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans') => {
+    const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans' | 'jhaScans') => {
         if (!schedule || !firebaseApp) {
             toast({ variant: "destructive", title: "Error", description: "Cannot delete file. Schedule or Firebase app not available." });
             return;
@@ -239,7 +239,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             toast({
                 variant: 'destructive',
                 title: 'Missing Information',
-                description: 'Please select an equipment and date before saving.'
+                description: 'Please select an equipment and date before saving. You must be logged in.'
             });
             return;
         }
@@ -274,6 +274,33 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
             await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
 
+            const scheduleId = docRef.id;
+            const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha'): Promise<string[]> => {
+                if (!firebaseApp || files.length === 0) return [];
+                const storage = getStorage(firebaseApp);
+                const uploadPromises = files.map(async file => {
+                    const storagePath = `scheduled_tasks/${scheduleId}/${docType}_scans/${file.name}_${Date.now()}`;
+                    const storageRef = ref(storage, storagePath);
+                    const snapshot = await uploadBytes(storageRef, file);
+                    return getDownloadURL(snapshot.ref);
+                });
+                return Promise.all(uploadPromises);
+            };
+    
+            const [newTake5Urls, newCccUrls, newJhaUrls] = await Promise.all([
+                uploadScans(take5Files, 'take5'),
+                uploadScans(cccFiles, 'ccc'),
+                uploadScans(jhaFiles, 'jha'),
+            ]);
+    
+            if (newTake5Urls.length > 0 || newCccUrls.length > 0 || newJhaUrls.length > 0) {
+                await updateDoc(docRef, { 
+                    take5Scans: newTake5Urls,
+                    cccScans: newCccUrls,
+                    jhaScans: newJhaUrls,
+                });
+            }
+
             toast({
                 title: 'Schedule Saved',
                 description: 'The task has been added to the upcoming schedules list.'
@@ -294,8 +321,8 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
         }
 
         setIsSaving(true);
-
-        const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
+        
+        const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha'): Promise<string[]> => {
             if (!files.length) return [];
             const storage = getStorage(firebaseApp);
             const uploadPromises = files.map(async file => {
@@ -308,9 +335,10 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
         };
         
         try {
-            const [newTake5Urls, newCccUrls] = await Promise.all([
+            const [newTake5Urls, newCccUrls, newJhaUrls] = await Promise.all([
                 uploadScans(take5Files, 'take5'),
                 uploadScans(cccFiles, 'ccc'),
+                uploadScans(jhaFiles, 'jha'),
             ]);
 
             const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
@@ -328,12 +356,16 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             if (newCccUrls.length > 0) {
                 updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
             }
+            if (newJhaUrls.length > 0) {
+                updateData.jhaScans = [...(schedule.jhaScans || []), ...newJhaUrls];
+            }
 
             await updateDoc(scheduleRef, updateData);
             toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
-
+            
             if (newTake5Urls.length > 0) setTake5Files([]);
             if (newCccUrls.length > 0) setCccFiles([]);
+            if (newJhaUrls.length > 0) setJhaFiles([]);
             
             router.refresh();
 
@@ -471,7 +503,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             <Card className="my-8">
                 <CardHeader>
                     <CardTitle>Safety Documentation</CardTitle>
-                    <CardDescription>Upload scans of the completed Take 5 and CCC documents.</CardDescription>
+                    <CardDescription>Upload scans of the completed safety documents.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div>
@@ -526,6 +558,33 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                             </div>
                         )}
                         <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />
+                    </div>
+                    <Separator />
+                    <div>
+                        <h4 className="font-semibold text-muted-foreground mb-2">Job Hazard Analysis (JHA) Scan(s)</h4>
+                        {schedule?.jhaScans && schedule.jhaScans.length > 0 && (
+                            <div className="mb-4 space-y-2">
+                                <Label>Uploaded Documents</Label>
+                                <div className="flex flex-col gap-2 rounded-md border p-2">
+                                     {schedule.jhaScans.map((url, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                                {isImageUrl(url) ? (
+                                                    <img src={url} alt={`JHA Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                                ) : (
+                                                    <Paperclip className="h-4 w-4 shrink-0" />
+                                                )}
+                                                <span className="text-sm text-primary group-hover:underline truncate">JHA Scan {i + 1}</span>
+                                            </a>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'jhaScans')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />
                     </div>
                 </CardContent>
             </Card>

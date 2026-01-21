@@ -1,6 +1,4 @@
 
-
-      
 'use client';
 
 import {
@@ -124,6 +122,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
 
   const [take5Files, setTake5Files] = useState<File[]>([]);
   const [cccFiles, setCccFiles] = useState<File[]>([]);
+  const [jhaFiles, setJhaFiles] = useState<File[]>([]);
 
   const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
     (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -171,7 +170,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
     setCrew(newCrew);
   };
   
-  const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans') => {
+  const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans' | 'jhaScans') => {
     if (!schedule || !firebaseApp) {
         toast({
             variant: "destructive",
@@ -184,12 +183,10 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
     setIsSaving(true);
 
     try {
-        // 1. Delete from Storage
         const storage = getStorage(firebaseApp);
         const fileRef = ref(storage, fileUrl);
         await deleteObject(fileRef);
 
-        // 2. Delete from Firestore
         const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
         const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
         
@@ -201,7 +198,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             title: "File Deleted",
             description: "The selected document has been removed.",
         });
-        router.refresh(); // To get the latest schedule data
+        router.refresh();
 
     } catch (error: any) {
         console.error("Error deleting file:", error);
@@ -212,7 +209,6 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                 ? "File not found in storage. Removing from record."
                 : error.message || "An unexpected error occurred.",
         });
-        // If storage deletion fails but we want to proceed with DB update anyway
         if(error.code === 'storage/object-not-found'){
             const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
             const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
@@ -245,7 +241,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
         return;
     }
 
-    const newScheduledTask: Omit<ScheduledTask, 'id'> = {
+    const newScheduledTask: Omit<ScheduledTask, 'id' | 'updatedAt'> = {
         originalTaskId: `${equipmentData.id}-vsd-weekly`,
         equipmentId: equipmentData.id,
         equipmentName: equipmentData.name,
@@ -267,8 +263,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
         await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
 
         const scheduleId = docRef.id;
-
-        const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
+        const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha'): Promise<string[]> => {
             if (!firebaseApp || files.length === 0) return [];
             const storage = getStorage(firebaseApp);
             const uploadPromises = files.map(async file => {
@@ -280,15 +275,17 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             return Promise.all(uploadPromises);
         };
 
-        const [newTake5Urls, newCccUrls] = await Promise.all([
+        const [newTake5Urls, newCccUrls, newJhaUrls] = await Promise.all([
             uploadScans(take5Files, 'take5'),
             uploadScans(cccFiles, 'ccc'),
+            uploadScans(jhaFiles, 'jha'),
         ]);
 
-        if (newTake5Urls.length > 0 || newCccUrls.length > 0) {
+        if (newTake5Urls.length > 0 || newCccUrls.length > 0 || newJhaUrls.length > 0) {
             await updateDoc(docRef, { 
                 take5Scans: newTake5Urls,
                 cccScans: newCccUrls,
+                jhaScans: newJhaUrls,
             });
         }
         
@@ -313,7 +310,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
 
       setIsSaving(true);
       
-      const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
+      const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha'): Promise<string[]> => {
             if (!files.length) return [];
             const storage = getStorage(firebaseApp);
             const uploadPromises = files.map(async file => {
@@ -326,9 +323,10 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
         };
 
       try {
-          const [newTake5Urls, newCccUrls] = await Promise.all([
+          const [newTake5Urls, newCccUrls, newJhaUrls] = await Promise.all([
               uploadScans(take5Files, 'take5'),
               uploadScans(cccFiles, 'ccc'),
+              uploadScans(jhaFiles, 'jha'),
           ]);
           
           const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
@@ -345,13 +343,18 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
           if (newCccUrls.length > 0) {
               updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
           }
+           if (newJhaUrls.length > 0) {
+              updateData.jhaScans = [...(schedule.jhaScans || []), ...newJhaUrls];
+          }
 
+          updateData.updatedAt = new Date().toISOString(); 
           await updateDoc(scheduleRef, updateData);
 
           toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
           
           if (newTake5Urls.length > 0) setTake5Files([]);
           if (newCccUrls.length > 0) setCccFiles([]);
+          if (newJhaUrls.length > 0) setJhaFiles([]);
           
           router.refresh();
       } catch (error: any) {
@@ -370,7 +373,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
       <div className="flex justify-end mb-4 gap-2 print:hidden">
         <Button onClick={handleSaveProgress} disabled={isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isSaving ? 'Saving...' : 'Save Progress'}
+            Save Progress
         </Button>
         <Button onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
@@ -475,7 +478,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
         <Card className="my-8">
             <CardHeader>
                 <CardTitle>Safety Documentation</CardTitle>
-                <CardDescription>Upload scans of the completed Take 5 and CCC documents.</CardDescription>
+                <CardDescription>Upload scans of the completed safety documents.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div>
@@ -530,6 +533,33 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                         </div>
                     )}
                     <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />
+                </div>
+                 <Separator />
+                <div>
+                    <h4 className="font-semibold text-muted-foreground mb-2">Job Hazard Analysis (JHA) Scan(s)</h4>
+                    {schedule?.jhaScans && schedule.jhaScans.length > 0 && (
+                        <div className="mb-4 space-y-2">
+                            <Label>Uploaded Documents</Label>
+                            <div className="flex flex-col gap-2 rounded-md border p-2">
+                                 {schedule.jhaScans.map((url, i) => (
+                                    <div key={i} className="flex items-center justify-between">
+                                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                            {isImageUrl(url) ? (
+                                                <img src={url} alt={`JHA Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                            ) : (
+                                                <Paperclip className="h-4 w-4 shrink-0" />
+                                            )}
+                                            <span className="text-sm text-primary group-hover:underline truncate">JHA Scan {i + 1}</span>
+                                        </a>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'jhaScans')}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />
                 </div>
             </CardContent>
         </Card>
@@ -655,7 +685,3 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
     </div>
   );
 }
-      
-    
-
-    

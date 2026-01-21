@@ -1,5 +1,4 @@
 
-
 export interface Equipment {
   id: string;
   name: string;
@@ -148,6 +147,8 @@ export interface ScheduledTask {
   checklist?: ChecklistItem[];
   take5Scans?: string[];
   cccScans?: string[];
+  jhaScans?: string[];
+  updatedAt?: string;
 }
 
 export interface Breakdown {
@@ -307,5 +308,3 @@ export interface GeneratedReport {
   generatedByUserId: string;
   generatedByUserName: string;
 }
-
-    
