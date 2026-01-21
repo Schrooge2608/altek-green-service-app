@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -17,9 +18,10 @@ import {
   AlertTriangle,
   Save,
   Loader2,
+  Paperclip,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -28,7 +30,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebase } from '@/firebase';
-import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -36,7 +38,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ImageUploader } from '../image-uploader';
 
 interface WorkCrewRowProps {
     member: Partial<WorkCrewMember> & { localId: number };
@@ -124,6 +127,8 @@ const quarterlyChecklistItems = [
     "DC Bus Voltage Stability"
 ];
 
+const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+
 export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask }) {
     const title = "VSDs 3-Monthly Service Scope";
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
@@ -133,6 +138,9 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     const { user } = useUser();
     const { toast } = useToast();
     const router = useRouter();
+
+    const [take5Files, setTake5Files] = useState<File[]>([]);
+    const [cccFiles, setCccFiles] = useState<File[]>([]);
 
     const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -180,6 +188,41 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         setCrew(newCrew);
     };
 
+    const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans') => {
+        if (!schedule || !firebaseApp) {
+            toast({ variant: "destructive", title: "Error", description: "Cannot delete file." });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const storage = getStorage(firebaseApp);
+            const fileRef = ref(storage, fileUrl);
+            await deleteObject(fileRef);
+            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+            const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
+            await updateDoc(scheduleRef, { [docType]: updatedScans });
+            toast({ title: "File Deleted", description: "The selected document has been removed." });
+            router.refresh();
+        } catch (error: any) {
+            console.error("Error deleting file:", error);
+            toast({
+                variant: "destructive",
+                title: "Deletion Failed",
+                description: error.code === 'storage/object-not-found' 
+                    ? "File not found. Removing from record."
+                    : error.message || "An unexpected error occurred.",
+            });
+            if(error.code === 'storage/object-not-found'){
+                const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+                const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
+                await updateDoc(scheduleRef, { [docType]: updatedScans });
+                router.refresh();
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleSaveToUpcoming = async () => {
         if (!selectedEquipment || !inspectionDate || !currentUserData || !user) {
             toast({
@@ -199,7 +242,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             return;
         }
 
-        const newScheduledTask: Omit<ScheduledTask, 'id'> = {
+        const newScheduledTask: Omit<ScheduledTask, 'id' | 'updatedAt'> = {
             originalTaskId: `${equipmentData.id}-vsd-3-monthly`,
             equipmentId: equipmentData.id,
             equipmentName: equipmentData.name,
@@ -234,18 +277,54 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     };
     
     const handleSaveProgress = async () => {
-        if (!schedule) {
+        if (!schedule || !firebaseApp) {
             toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
             return;
         }
 
         setIsSaving(true);
-        const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
-        const crewToSave = crew.map(({ localId, ...rest }) => rest);
+        
+        const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
+            if (!files.length) return [];
+            const storage = getStorage(firebaseApp);
+            const uploadPromises = files.map(async file => {
+                const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}_${Date.now()}`;
+                const storageRef = ref(storage, storagePath);
+                const snapshot = await uploadBytes(storageRef, file);
+                return getDownloadURL(snapshot.ref);
+            });
+            return Promise.all(uploadPromises);
+        };
 
         try {
-            await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave, checklist });
+            const [newTake5Urls, newCccUrls] = await Promise.all([
+                uploadScans(take5Files, 'take5'),
+                uploadScans(cccFiles, 'ccc'),
+            ]);
+
+            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+            const crewToSave = crew.map(({ localId, ...rest }) => rest);
+            const updateData: Partial<ScheduledTask> = {
+                workCrew: crewToSave,
+                checklist,
+                updatedAt: new Date().toISOString(),
+            };
+
+            if (newTake5Urls.length > 0) {
+                updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
+            }
+            if (newCccUrls.length > 0) {
+                updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
+            }
+
+            await updateDoc(scheduleRef, updateData);
             toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
+            
+            if (newTake5Urls.length > 0) setTake5Files([]);
+            if (newCccUrls.length > 0) setCccFiles([]);
+            
+            router.refresh();
+
         } catch (error: any) {
             console.error("Error saving progress:", error);
             toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'An unexpected error occurred.' });
@@ -263,7 +342,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
              {isEditMode ? (
                 <Button onClick={handleSaveProgress} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    {isSaving ? 'Saving...' : 'Save Progress'}
+                    Save Progress
                 </Button>
             ) : (
                  <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
@@ -371,29 +450,67 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 </div>
             </div>
 
-            <div className="my-8">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>SAFETY</TableHead>
-                            <TableHead>COMPLETED</TableHead>
-                            <TableHead>SIGN</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell className="font-medium">Take 5</TableCell>
-                            <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
-                            <TableCell className="w-[250px]"><SignaturePad /></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell className="font-medium">CCC</TableCell>
-                            <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
-                            <TableCell className="w-[250px]"><SignaturePad /></TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </div>
+            <Card className="my-8">
+                <CardHeader>
+                    <CardTitle>Safety Documentation</CardTitle>
+                    <CardDescription>Upload scans of the completed Take 5 and CCC documents.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div>
+                        <h4 className="font-semibold text-muted-foreground mb-2">Take 5 Assessment Scan(s)</h4>
+                        {schedule?.take5Scans && schedule.take5Scans.length > 0 && (
+                            <div className="mb-4 space-y-2">
+                                <Label>Uploaded Documents</Label>
+                                <div className="flex flex-col gap-2 rounded-md border p-2">
+                                    {schedule.take5Scans.map((url, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                                {isImageUrl(url) ? (
+                                                    <img src={url} alt={`Take 5 Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                                ) : (
+                                                    <Paperclip className="h-4 w-4 shrink-0" />
+                                                )}
+                                                <span className="text-sm text-primary group-hover:underline truncate">Take 5 Scan {i + 1}</span>
+                                            </a>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />
+                    </div>
+                    <Separator />
+                    <div>
+                        <h4 className="font-semibold text-muted-foreground mb-2">Critical Control Checklist (CCC) Scan(s)</h4>
+                        {schedule?.cccScans && schedule.cccScans.length > 0 && (
+                            <div className="mb-4 space-y-2">
+                                <Label>Uploaded Documents</Label>
+                                <div className="flex flex-col gap-2 rounded-md border p-2">
+                                     {schedule.cccScans.map((url, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                                {isImageUrl(url) ? (
+                                                    <img src={url} alt={`CCC Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                                ) : (
+                                                    <Paperclip className="h-4 w-4 shrink-0" />
+                                                )}
+                                                <span className="text-sm text-primary group-hover:underline truncate">CCC Scan {i + 1}</span>
+                                            </a>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />
+                    </div>
+                </CardContent>
+            </Card>
 
             <div className="my-8">
                 <div className="flex items-center justify-between mb-4">
@@ -444,42 +561,6 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             <div className="prose prose-sm max-w-none dark:prose-invert">
                 <p>A 3-month (Quarterly) service schedule is often considered the "sweet spot" for industrial maintenance. It bridges the gap between simple visual checks and the major annual shutdown.</p>
                 <p>At the 3-month mark, the goal is proactive prevention—catching the "silent killers" like loose terminals and parameter drift before they cause a breakdown.</p>
-
-                <h3 className="mt-6 text-lg font-bold">3-Month VSD Service Schedule</h3>
-                <ol className="list-decimal pl-5 space-y-4">
-                    <li>
-                        <strong>Safety & Preparation</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Lockout/Tagout (LOTO):</strong> Isolate power and wait for the DC bus to discharge (verify with a meter—usually 5–15 mins).</li>
-                            <li><strong>PPE:</strong> Wear appropriate arc flash protection and use insulated tools.</li>
-                            <li><strong>Backup:</strong> If the drive is still powered, export the current parameter set to a laptop or USB keypad.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Electrical Integrity (The "Tightness" Check)</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Re-Torque Terminals:</strong> Check the tightness of all power input (L1, L2, L3) and output (U, V, W) connections. Vibrations and thermal cycling naturally loosen these over 90 days.</li>
-                            <li><strong>Control Wiring:</strong> Tug-test small control wires (Start/Stop, Speed Ref) to ensure they haven't vibrated loose.</li>
-                            <li><strong>Grounding:</strong> Inspect the ground strap for corrosion or loose bolts.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Thermal & Physical Health</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Heat Sink Cleaning:</strong> Use a vacuum or dry, oil-free compressed air to blow out the heat sink fins from the bottom up.</li>
-                            <li><strong>Thermal Imaging:</strong> If the drive is running, use an IR camera to look for "hot spots" on terminal blocks or the main DC bus capacitors.</li>
-                            <li><strong>Capacitor Inspection:</strong> Visually check for "crowning" (bulging tops) or leaking fluid.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Performance & Data Analysis</strong>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li><strong>Fault Log Review:</strong> Download the last 3 months of fault history. Look for recurring "Under-voltage" or "Over-current" warnings that didn't trip the drive but indicate a brewing problem.</li>
-                            <li><strong>DC Bus Ripple Test:</strong> Measure the AC ripple on the DC bus. If it’s rising (typically &gt;5V AC), your capacitors are starting to fail.</li>
-                            <li><strong>I/O Verification:</strong> Test that the Emergency Stop (E-Stop) and any safety interlocks still function correctly.</li>
-                        </ul>
-                    </li>
-                </ol>
             </div>
 
             <Separator className="my-8" />
@@ -541,12 +622,6 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     </Table>
                 </CardContent>
             </Card>
-
-            <div className="prose prose-sm max-w-none dark:prose-invert mt-8">
-                <h3 className="text-lg font-bold">Why the 3-Month Mark is Critical</h3>
-                <p>Most VSD failures are caused by Dust + Moisture = Conductivity. A quarterly schedule ensures that dust never builds up enough to absorb ambient moisture and create a "tracking" path across your circuit boards.</p>
-            </div>
-
             <footer className="mt-16 text-xs text-muted-foreground text-center">
                <p>Altek Green - Confidential</p>
             </footer>

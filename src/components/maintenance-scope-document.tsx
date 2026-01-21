@@ -159,6 +159,57 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
         setCrew(newCrew);
     };
 
+    const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans') => {
+        if (!schedule || !firebaseApp) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Cannot delete file. Schedule or Firebase app not available.",
+            });
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            const storage = getStorage(firebaseApp);
+            const fileRef = ref(storage, fileUrl);
+            await deleteObject(fileRef);
+
+            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+            const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
+            
+            await updateDoc(scheduleRef, {
+                [docType]: updatedScans
+            });
+
+            toast({
+                title: "File Deleted",
+                description: "The selected document has been removed.",
+            });
+            router.refresh();
+
+        } catch (error: any) {
+            console.error("Error deleting file:", error);
+            toast({
+                variant: "destructive",
+                title: "Deletion Failed",
+                description: error.code === 'storage/object-not-found' 
+                    ? "File not found in storage. Removing from record."
+                    : error.message || "An unexpected error occurred.",
+            });
+            if(error.code === 'storage/object-not-found'){
+                const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+                const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
+                await updateDoc(scheduleRef, { [docType]: updatedScans });
+                router.refresh();
+            }
+
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleSaveProgress = async () => {
         if (!schedule || !firebaseApp) {
             toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context or Firebase App instance.' });
@@ -184,15 +235,16 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 uploadScans(take5Files, 'take5'),
                 uploadScans(cccFiles, 'ccc'),
             ]);
-
+            
             const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
             const crewToSave = crew.map(({ localId, ...rest }) => rest);
 
             const updateData: Partial<ScheduledTask> = {
                 workCrew: crewToSave,
                 completionNotes,
+                updatedAt: new Date().toISOString(),
             };
-
+            
             if (newTake5Urls.length > 0) {
                 updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
             }
@@ -236,7 +288,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             return;
         }
 
-        const newScheduledTask: Omit<ScheduledTask, 'id'> = {
+        const newScheduledTask: Omit<ScheduledTask, 'id' | 'updatedAt'> = {
             originalTaskId: `${equipmentData.id}-${title.toLowerCase().replace(/ /g, '-')}`,
             equipmentId: equipmentData.id,
             equipmentName: equipmentData.name,
@@ -303,7 +355,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             {isEditMode ? (
                 <Button onClick={handleSaveProgress} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    {isSaving ? 'Saving...' : 'Save Progress'}
+                    Save Progress
                 </Button>
             ) : (
                  <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
@@ -422,19 +474,20 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         {schedule?.take5Scans && schedule.take5Scans.length > 0 && (
                             <div className="mb-4 space-y-2">
                                 <Label>Uploaded Documents</Label>
-                                <div className="flex flex-wrap gap-4 rounded-md border p-2">
+                                <div className="flex flex-col gap-2 rounded-md border p-2">
                                     {schedule.take5Scans.map((url, i) => (
-                                        <div key={i} className="relative group">
-                                            <a href={url} target="_blank" rel="noopener noreferrer">
-                                            {isImageUrl(url) ? (
-                                                <img src={url} alt={`Take 5 Scan ${i + 1}`} className="w-24 h-24 rounded-md object-cover group-hover:opacity-70 transition-opacity" />
-                                            ) : (
-                                                <div className="w-24 h-24 rounded-md bg-muted flex flex-col items-center justify-center p-2 text-center">
-                                                     <Paperclip className="h-6 w-6" />
-                                                     <span className="text-xs mt-1 truncate">Scan {i + 1}</span>
-                                                </div>
-                                            )}
+                                        <div key={i} className="flex items-center justify-between">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                                {isImageUrl(url) ? (
+                                                    <img src={url} alt={`Take 5 Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                                ) : (
+                                                    <Paperclip className="h-4 w-4 shrink-0" />
+                                                )}
+                                                <span className="text-sm text-primary group-hover:underline truncate">Take 5 Scan {i + 1}</span>
                                             </a>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
                                         </div>
                                     ))}
                                 </div>
@@ -448,19 +501,20 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         {schedule?.cccScans && schedule.cccScans.length > 0 && (
                             <div className="mb-4 space-y-2">
                                 <Label>Uploaded Documents</Label>
-                                <div className="flex flex-wrap gap-4 rounded-md border p-2">
+                                <div className="flex flex-col gap-2 rounded-md border p-2">
                                      {schedule.cccScans.map((url, i) => (
-                                        <div key={i} className="relative group">
-                                            <a href={url} target="_blank" rel="noopener noreferrer">
-                                            {isImageUrl(url) ? (
-                                                <img src={url} alt={`CCC Scan ${i + 1}`} className="w-24 h-24 rounded-md object-cover group-hover:opacity-70 transition-opacity" />
-                                            ) : (
-                                                <div className="w-24 h-24 rounded-md bg-muted flex flex-col items-center justify-center p-2 text-center">
-                                                     <Paperclip className="h-6 w-6" />
-                                                     <span className="text-xs mt-1 truncate">Scan {i + 1}</span>
-                                                </div>
-                                            )}
+                                        <div key={i} className="flex items-center justify-between">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                                {isImageUrl(url) ? (
+                                                    <img src={url} alt={`CCC Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                                ) : (
+                                                    <Paperclip className="h-4 w-4 shrink-0" />
+                                                )}
+                                                <span className="text-sm text-primary group-hover:underline truncate">CCC Scan {i + 1}</span>
                                             </a>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
                                         </div>
                                     ))}
                                 </div>

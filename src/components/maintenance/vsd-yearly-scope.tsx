@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -17,9 +18,10 @@ import {
   AlertTriangle,
   Save,
   Loader2,
+  Paperclip,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -28,7 +30,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebase } from '@/firebase';
-import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -36,7 +38,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ImageUploader } from '../image-uploader';
 
 interface WorkCrewRowProps {
     member: Partial<WorkCrewMember> & { localId: number };
@@ -127,6 +130,8 @@ const comparisonChecklistItems = [
     { frequency: 'Annual', focus: 'Testing & Replacement', goal: 'Reliability' },
 ];
 
+const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+
 export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask }) {
     const title = "VSDs Yearly Service Scope";
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
@@ -136,6 +141,9 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
     const { user } = useUser();
     const { toast } = useToast();
     const router = useRouter();
+
+    const [take5Files, setTake5Files] = useState<File[]>([]);
+    const [cccFiles, setCccFiles] = useState<File[]>([]);
 
     const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -185,6 +193,42 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
         (newCrew[index] as any)[field] = value;
         setCrew(newCrew);
     };
+    
+    const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans') => {
+        if (!schedule || !firebaseApp) {
+            toast({ variant: "destructive", title: "Error", description: "Cannot delete file." });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const storage = getStorage(firebaseApp);
+            const fileRef = ref(storage, fileUrl);
+            await deleteObject(fileRef);
+            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+            const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
+            await updateDoc(scheduleRef, { [docType]: updatedScans });
+            toast({ title: "File Deleted", description: "The selected document has been removed." });
+            router.refresh();
+        } catch (error: any) {
+            console.error("Error deleting file:", error);
+            toast({
+                variant: "destructive",
+                title: "Deletion Failed",
+                description: error.code === 'storage/object-not-found' 
+                    ? "File not found. Removing from record."
+                    : error.message || "An unexpected error occurred.",
+            });
+            if(error.code === 'storage/object-not-found'){
+                const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+                const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
+                await updateDoc(scheduleRef, { [docType]: updatedScans });
+                router.refresh();
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
 
     const handleSaveToUpcoming = async () => {
         if (!selectedEquipment || !inspectionDate || !currentUserData || !user) {
@@ -205,7 +249,7 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             return;
         }
 
-        const newScheduledTask: Omit<ScheduledTask, 'id'> = {
+        const newScheduledTask: Omit<ScheduledTask, 'id' | 'updatedAt'> = {
             originalTaskId: `${equipmentData.id}-vsd-yearly`,
             equipmentId: equipmentData.id,
             equipmentName: equipmentData.name,
@@ -240,18 +284,54 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
     };
 
     const handleSaveProgress = async () => {
-        if (!schedule) {
+        if (!schedule || !firebaseApp) {
             toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
             return;
         }
 
         setIsSaving(true);
-        const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
-        const crewToSave = crew.map(({ localId, ...rest }) => rest);
-
+        
+        const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
+            if (!files.length) return [];
+            const storage = getStorage(firebaseApp);
+            const uploadPromises = files.map(async file => {
+                const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}_${Date.now()}`;
+                const storageRef = ref(storage, storagePath);
+                const snapshot = await uploadBytes(storageRef, file);
+                return getDownloadURL(snapshot.ref);
+            });
+            return Promise.all(uploadPromises);
+        };
+        
         try {
-            await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave, checklist });
+            const [newTake5Urls, newCccUrls] = await Promise.all([
+                uploadScans(take5Files, 'take5'),
+                uploadScans(cccFiles, 'ccc'),
+            ]);
+
+            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+            const crewToSave = crew.map(({ localId, ...rest }) => rest);
+            const updateData: Partial<ScheduledTask> = {
+                workCrew: crewToSave,
+                checklist,
+                updatedAt: new Date().toISOString(),
+            };
+
+            if (newTake5Urls.length > 0) {
+                updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
+            }
+            if (newCccUrls.length > 0) {
+                updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
+            }
+
+            await updateDoc(scheduleRef, updateData);
             toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
+            
+            if (newTake5Urls.length > 0) setTake5Files([]);
+            if (newCccUrls.length > 0) setCccFiles([]);
+            
+            router.refresh();
+
         } catch (error: any) {
             console.error("Error saving progress:", error);
             toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'An unexpected error occurred.' });
@@ -270,7 +350,7 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             {isEditMode ? (
                 <Button onClick={handleSaveProgress} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    {isSaving ? 'Saving...' : 'Save Progress'}
+                    Save Progress
                 </Button>
             ) : (
                  <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
@@ -378,29 +458,67 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                 </div>
             </div>
 
-            <div className="my-8">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>SAFETY</TableHead>
-                            <TableHead>COMPLETED</TableHead>
-                            <TableHead>SIGN</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell className="font-medium">Take 5</TableCell>
-                            <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
-                            <TableCell className="w-[250px]"><SignaturePad /></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell className="font-medium">CCC</TableCell>
-                            <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
-                            <TableCell className="w-[250px]"><SignaturePad /></TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </div>
+            <Card className="my-8">
+                <CardHeader>
+                    <CardTitle>Safety Documentation</CardTitle>
+                    <CardDescription>Upload scans of the completed Take 5 and CCC documents.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div>
+                        <h4 className="font-semibold text-muted-foreground mb-2">Take 5 Assessment Scan(s)</h4>
+                        {schedule?.take5Scans && schedule.take5Scans.length > 0 && (
+                            <div className="mb-4 space-y-2">
+                                <Label>Uploaded Documents</Label>
+                                <div className="flex flex-col gap-2 rounded-md border p-2">
+                                    {schedule.take5Scans.map((url, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                                {isImageUrl(url) ? (
+                                                    <img src={url} alt={`Take 5 Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                                ) : (
+                                                    <Paperclip className="h-4 w-4 shrink-0" />
+                                                )}
+                                                <span className="text-sm text-primary group-hover:underline truncate">Take 5 Scan {i + 1}</span>
+                                            </a>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />
+                    </div>
+                    <Separator />
+                    <div>
+                        <h4 className="font-semibold text-muted-foreground mb-2">Critical Control Checklist (CCC) Scan(s)</h4>
+                        {schedule?.cccScans && schedule.cccScans.length > 0 && (
+                            <div className="mb-4 space-y-2">
+                                <Label>Uploaded Documents</Label>
+                                <div className="flex flex-col gap-2 rounded-md border p-2">
+                                     {schedule.cccScans.map((url, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                                {isImageUrl(url) ? (
+                                                    <img src={url} alt={`CCC Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />
+                                                ) : (
+                                                    <Paperclip className="h-4 w-4 shrink-0" />
+                                                )}
+                                                <span className="text-sm text-primary group-hover:underline truncate">CCC Scan {i + 1}</span>
+                                            </a>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />
+                    </div>
+                </CardContent>
+            </Card>
 
             <div className="my-8">
                 <div className="flex items-center justify-between mb-4">
@@ -444,82 +562,49 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             <div className="prose prose-sm max-w-none dark:prose-invert">
                 <p>An annual service is your most critical intervention. While weekly and quarterly tasks keep the drive running, the Annual Maintenance is designed to prevent "catastrophic failure"—the kind that leads to smoke, fire, or weeks of lead-time for a replacement.</p>
                 <p>This schedule requires a full plant shutdown for the drive and must be performed by a qualified technician or electrician.</p>
-                
-                <h3 className="mt-6 text-lg font-bold">Annual VSD Service Schedule</h3>
-                <ol className="list-decimal pl-5 space-y-6">
-                    <li>
-                        <strong>Power-Down & Safety Discharge</strong>
-                        <ul className="list-disc pl-5 mt-2 space-y-1">
-                            <li><strong>Isolate & Lockout:</strong> Perform LOTO on the main breaker.</li>
-                            <li><strong>Wait for Discharge:</strong> VSD capacitors hold a charge. Wait at least 10–15 minutes (check your manual for the exact "discharge time").</li>
-                            <li><strong>Voltage Verification:</strong> Use a multimeter to verify 0V on the DC Bus terminals (usually marked + and - or BR).</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Deep Mechanical Cleaning</strong>
-                        <ul className="list-disc pl-5 mt-2 space-y-1">
-                            <li><strong>Vacuum Only:</strong> Use a vacuum with an anti-static nozzle to remove dust from all internal boards. Do not use high-pressure compressed air, as it can force conductive dust into the IGBT (transistor) modules.</li>
-                            <li><strong>Heat Sink Inspection:</strong> Check the fins for "clogging" from oils or fibers. If the drive is in a kitchen or textile mill, these may need a specialized non-conductive solvent cleaning.</li>
-                            <li><strong>Filter Replacement:</strong> Do not just clean them; replace all air filters with new ones to ensure maximum CFM (cubic feet per minute) of airflow.</li>
-                        </ul>
-                    </li>
-                     <li>
-                        <strong>Component Life-Cycle Testing</strong>
-                        <Card className="mt-4">
-                            <CardContent className="pt-6">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Component</TableHead>
-                                            <TableHead>Action</TableHead>
-                                            <TableHead>Critical Metric</TableHead>
-                                            <TableHead className="text-center w-[150px]">Status</TableHead>
-                                            <TableHead>Comments</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {lifecycleChecklistItems.map((item, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>{item.component}</TableCell>
-                                                <TableCell>{item.action}</TableCell>
-                                                <TableCell>{item.metric}</TableCell>
-                                                <TableCell>
-                                                    <Select value={checklist[index]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(index, 'status', value)}>
-                                                        <SelectTrigger><SelectValue/></SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="checked">Checked</SelectItem>
-                                                            <SelectItem value="not-checked">Not Checked</SelectItem>
-                                                            <SelectItem value="n/a">N/A</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </TableCell>
-                                                <TableCell><Input placeholder="Comments..." value={checklist[index]?.comments || ''} onChange={(e) => handleChecklistChange(index, 'comments', e.target.value)}/></TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </li>
-                    <li>
-                        <strong>Electrical Health Audit</strong>
-                         <ul className="list-disc pl-5 mt-2 space-y-1">
-                            <li><strong>Torque Verification:</strong> Use a calibrated torque wrench to tighten all power terminals to the manufacturer’s exact specification (Nm or In-lb). Note: Overtightening is just as dangerous as under-tightening.</li>
-                            <li><strong>Insulation Resistance (Megger):</strong> Disconnect the VSD from the motor. Megger the motor and cables only. <p><strong>Warning: Never Megger the VSD itself, or you will destroy the sensitive transistors.</strong></p></li>
-                            <li><strong>Harmonic Check:</strong> If you have the tools, measure Total Harmonic Distortion (THD) on the input. Rising harmonics can indicate a failing input rectifier or line reactor.</li>
-                        </ul>
-                    </li>
-                </ol>
-
-                <h4 className="mt-6 text-md font-bold">The "Yearly Pro" Checklist</h4>
-                <p>To finish the service, perform these three high-level tasks:</p>
-                <ul className="list-disc pl-5 mt-2 space-y-1">
-                    <li><strong>Firmware Check:</strong> Check the manufacturer’s website. Newer firmware often includes better "protection algorithms" that can prevent the drive from blowing up during a power surge.</li>
-                    <li><strong>Thermal Scan (Post-Service):</strong> After powering back up and running under load for 1 hour, use a thermal camera to ensure no terminals are "glowing" (overheating).</li>
-                    <li><strong>Final Parameter Backup:</strong> Save the parameters to a laptop or the cloud. If the drive takes a lightning strike tomorrow, you can program the new one in 5 minutes.</li>
-                </ul>
             </div>
+
+            <Separator className="my-8" />
             
+            <Card className="mt-8">
+                <CardHeader>
+                    <CardTitle>Component Life-Cycle Testing</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Component</TableHead>
+                                <TableHead>Action</TableHead>
+                                <TableHead>Critical Metric</TableHead>
+                                <TableHead className="text-center w-[150px]">Status</TableHead>
+                                <TableHead>Comments</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {lifecycleChecklistItems.map((item, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{item.component}</TableCell>
+                                    <TableCell>{item.action}</TableCell>
+                                    <TableCell>{item.metric}</TableCell>
+                                    <TableCell>
+                                        <Select value={checklist[index]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(index, 'status', value)}>
+                                            <SelectTrigger><SelectValue/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="checked">Checked</SelectItem>
+                                                <SelectItem value="not-checked">Not Checked</SelectItem>
+                                                <SelectItem value="n/a">N/A</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell><Input placeholder="Comments..." value={checklist[index]?.comments || ''} onChange={(e) => handleChecklistChange(index, 'comments', e.target.value)}/></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
             <Card className="mt-8">
                 <CardHeader>
                     <CardTitle>Comparison of Maintenance Depth</CardTitle>
