@@ -14,7 +14,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCYugYlB7XHdQxB6GQ3omRv9a0n7fBG6Yg",
   storageBucket: "studio-8966443065-8fafa.firebasestorage.app",
   projectId: "studio-8966443065-8fafa",
-  storageBucket: "studio-8966443065-8fafa.appspot.com",
+  storageBucket: "studio-8966443065-8fafa.firebasestorage.app",
   messagingSenderId: "1080999162704",
   appId: "1:1080999162704:web:7d15f613f892c50fc7f255",
 };
