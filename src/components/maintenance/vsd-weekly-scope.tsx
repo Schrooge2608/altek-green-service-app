@@ -7,6 +7,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import {
   Table,
@@ -18,25 +19,26 @@ import {
 } from '@/components/ui/table';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { Printer, CalendarIcon, Plus, Trash2, AlertTriangle, Save, Loader2 } from 'lucide-react';
+import { Printer, CalendarIcon, Plus, Trash2, AlertTriangle, Save, Loader2, Paperclip } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { SignaturePad } from '@/components/ui/signature-pad';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import React, { useState } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { Alert } from '../ui/alert';
+import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase } from '@/firebase';
+import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ImageUploader } from '@/components/image-uploader';
+import { SignaturePad } from '../ui/signature-pad';
 
 
 const checklistItems = [
@@ -113,10 +115,13 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
   const [inspectionDate, setInspectionDate] = useState<Date | undefined>(schedule ? new Date(schedule.scheduledFor) : undefined);
   const [inspectedById, setInspectedById] = useState<string | undefined>(schedule?.assignedToId);
   const [isSaving, setIsSaving] = useState(false);
-  const firestore = useFirestore();
+  const { firestore, firebaseApp } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
+
+  const [take5Files, setTake5Files] = useState<File[]>([]);
+  const [cccFiles, setCccFiles] = useState<File[]>([]);
 
   const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
     (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -198,9 +203,33 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
     try {
         const schedulesRef = collection(firestore, 'upcoming_schedules');
         const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
-        // Now update the document with its own ID
         await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
 
+        const scheduleId = docRef.id;
+
+        const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
+            if (!firebaseApp || files.length === 0) return [];
+            const storage = getStorage(firebaseApp);
+            const uploadPromises = files.map(file => {
+                const storagePath = `scheduled_tasks/${scheduleId}/${docType}_scans/${file.name}`;
+                const storageRef = ref(storage, storagePath);
+                return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+            });
+            return Promise.all(uploadPromises);
+        };
+
+        const [newTake5Urls, newCccUrls] = await Promise.all([
+            uploadScans(take5Files, 'take5'),
+            uploadScans(cccFiles, 'ccc'),
+        ]);
+
+        if (newTake5Urls.length > 0 || newCccUrls.length > 0) {
+            await updateDoc(docRef, { 
+                take5Scans: newTake5Urls,
+                cccScans: newCccUrls,
+            });
+        }
+        
         toast({
             title: 'Schedule Saved',
             description: 'The task has been added to the upcoming schedules list.'
@@ -215,18 +244,53 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
   };
 
   const handleSaveProgress = async () => {
-      if (!schedule) {
-          toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
+      if (!schedule || !firebaseApp) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context or Firebase App instance.' });
           return;
       }
 
       setIsSaving(true);
-      const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
-      const crewToSave = crew.map(({ localId, ...rest }) => rest);
+      
+      const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
+            if (!files.length) return [];
+            const storage = getStorage(firebaseApp);
+            const uploadPromises = files.map(file => {
+                const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}`;
+                const storageRef = ref(storage, storagePath);
+                return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+            });
+            return Promise.all(uploadPromises);
+        };
 
       try {
-          await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave, checklist });
+          const [newTake5Urls, newCccUrls] = await Promise.all([
+              uploadScans(take5Files, 'take5'),
+              uploadScans(cccFiles, 'ccc'),
+          ]);
+          
+          const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+          const crewToSave = crew.map(({ localId, ...rest }) => rest);
+
+          const updateData: Partial<ScheduledTask> = {
+              workCrew: crewToSave,
+              checklist,
+          };
+          
+          if (newTake5Urls.length > 0) {
+              updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
+          }
+          if (newCccUrls.length > 0) {
+              updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
+          }
+
+          await updateDoc(scheduleRef, updateData);
+
           toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
+          
+          if (newTake5Urls.length > 0) setTake5Files([]);
+          if (newCccUrls.length > 0) setCccFiles([]);
+
+          router.refresh();
       } catch (error: any) {
           console.error("Error saving progress:", error);
           toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'An unexpected error occurred.' });
@@ -363,29 +427,49 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             </div>
         </div>
 
-        <div className="my-8">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>SAFETY</TableHead>
-                        <TableHead>COMPLETED</TableHead>
-                        <TableHead>SIGN</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    <TableRow>
-                        <TableCell className="font-medium">Take 5</TableCell>
-                        <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
-                        <TableCell className="w-[250px]"><SignaturePad /></TableCell>
-                    </TableRow>
-                     <TableRow>
-                        <TableCell className="font-medium">CCC</TableCell>
-                        <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
-                        <TableCell className="w-[250px]"><SignaturePad /></TableCell>
-                    </TableRow>
-                </TableBody>
-            </Table>
-        </div>
+        <Card className="my-8">
+            <CardHeader>
+                <CardTitle>Safety Documentation</CardTitle>
+                <CardDescription>Upload scans of the completed Take 5 and CCC documents.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div>
+                    <h4 className="font-semibold text-muted-foreground mb-2">Take 5 Assessment Scan(s)</h4>
+                    {schedule?.take5Scans && schedule.take5Scans.length > 0 && (
+                        <div className="mb-4 space-y-2">
+                            <Label>Uploaded Documents</Label>
+                            <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                                {schedule.take5Scans.map((url, i) => (
+                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                                        <Paperclip className="h-3 w-3" />
+                                        Take 5 Scan {i + 1}
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />
+                </div>
+                <Separator />
+                <div>
+                    <h4 className="font-semibold text-muted-foreground mb-2">Critical Control Checklist (CCC) Scan(s)</h4>
+                      {schedule?.cccScans && schedule.cccScans.length > 0 && (
+                        <div className="mb-4 space-y-2">
+                            <Label>Uploaded Documents</Label>
+                            <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                                {schedule.cccScans.map((url, i) => (
+                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                                        <Paperclip className="h-3 w-3" />
+                                        CCC Scan {i + 1}
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />
+                </div>
+            </CardContent>
+        </Card>
 
         <div className="my-8">
             <div className="flex items-center justify-between mb-4">
@@ -414,17 +498,10 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
 
         <Alert variant="destructive" className="my-8">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Safety Warning</AlertTitle>
-            <AlertDescription>
-                <ul className="list-disc pl-5 space-y-1">
-                    <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
-                    <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
-                    <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
-                    <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
-                    <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
-                    <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
-                </ul>
-            </AlertDescription>
+            <CardTitle className="mb-2">Safety Warning</CardTitle>
+            <p className="text-xs">
+                A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle.
+            </p>
         </Alert>
 
         <h3 className="text-xl font-bold mb-4">Weekly Maintenance Checklist</h3>
@@ -500,42 +577,6 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                 </div>
             </CardContent>
         </Card>
-
-        <div className="mt-8 prose prose-sm max-w-none dark:prose-invert">
-            <h3 className="text-xl font-bold mb-4">Pro-Tips for Weekly Upkeep</h3>
-            <ul>
-                <li><strong>The "Heat" Rule:</strong> For every 10°C rise in operating temperature, the lifespan of a VSD's capacitors is roughly halved. Weekly temperature logging is your best defense against premature aging.</li>
-                <li><strong>Don't Open the Door (If Possible):</strong> For weekly checks, avoid opening the cabinet while the drive is energized unless you are wearing proper PPE and it is necessary for a reading. Most data can be pulled from the digital keypad/HMI.</li>
-                <li><strong>Check the Fault History:</strong> Even if the drive hasn't tripped, check the fault log for "soft" warnings or auto-resets that happened during the week.</li>
-            </ul>
-
-            <h3 className="text-xl font-bold mt-6 mb-4">When to do more?</h3>
-            <p>If your VSD is in a harsh environment (e.g., a sawmill with high dust or a pumping station with high humidity), you may need to move "Monthly" tasks like cleaning/replacing filters to your weekly schedule.</p>
-        </div>
-
-        <Separator className="my-8" />
-
-        <h3 className="text-xl font-bold mb-4">Thermal Image Upload</h3>
-        <Card>
-            <CardContent className="pt-6">
-                <div className="grid gap-6 md:grid-cols-3">
-                    <div className="space-y-2 md:col-span-1">
-                        <Label htmlFor="thermal-image">Thermal Image of VSD</Label>
-                        <Input id="thermal-image" type="file" className="file:text-foreground" />
-                        <p className="text-xs text-muted-foreground">Upload a thermal image taken during the inspection.</p>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="image-date">Date of Image</Label>
-                        <Input id="image-date" type="date" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="image-time">Time of Image</Label>
-                        <Input id="image-time" type="time" />
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-
 
         <footer className="mt-16 text-xs text-muted-foreground text-center">
           <p>Altek Green - Confidential</p>

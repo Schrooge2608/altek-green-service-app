@@ -2,10 +2,10 @@
 
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Printer, Plus, Trash2, AlertTriangle, Save, Loader2 } from 'lucide-react';
+import { CalendarIcon, Printer, Plus, Trash2, Save, Loader2, Paperclip } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import React, { useState } from 'react';
 import { Label } from './ui/label';
@@ -15,16 +15,16 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from './ui/calendar';
-import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase } from '@/firebase';
+import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember } from '@/lib/types';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Checkbox } from './ui/checkbox';
 import { SignaturePad } from './ui/signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Textarea } from './ui/textarea';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ImageUploader } from './image-uploader';
 
 
 interface MaintenanceScopeDocumentProps {
@@ -125,10 +125,13 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     );
 
     const [isSaving, setIsSaving] = useState(false);
-    const firestore = useFirestore();
+    const { firestore, firebaseApp } = useFirebase();
     const { user } = useUser();
     const router = useRouter();
     const { toast } = useToast();
+    
+    const [take5Files, setTake5Files] = useState<File[]>([]);
+    const [cccFiles, setCccFiles] = useState<File[]>([]);
 
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -151,18 +154,53 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     };
 
     const handleSaveProgress = async () => {
-        if (!schedule) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
+        if (!schedule || !firebaseApp) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context or Firebase App instance.' });
             return;
         }
 
         setIsSaving(true);
-        const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
-        const crewToSave = crew.map(({ localId, ...rest }) => rest);
+        
+        const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
+            if (!files.length) return [];
+            const storage = getStorage(firebaseApp);
+            const uploadPromises = files.map(file => {
+                const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}`;
+                const storageRef = ref(storage, storagePath);
+                return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+            });
+            return Promise.all(uploadPromises);
+        };
 
         try {
-            await updateDocumentNonBlocking(scheduleRef, { workCrew: crewToSave, completionNotes });
+            const [newTake5Urls, newCccUrls] = await Promise.all([
+                uploadScans(take5Files, 'take5'),
+                uploadScans(cccFiles, 'ccc'),
+            ]);
+
+            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+            const crewToSave = crew.map(({ localId, ...rest }) => rest);
+
+            const updateData: Partial<ScheduledTask> = {
+                workCrew: crewToSave,
+                completionNotes,
+            };
+
+            if (newTake5Urls.length > 0) {
+                updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
+            }
+            if (newCccUrls.length > 0) {
+                updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
+            }
+
+            await updateDoc(scheduleRef, updateData);
             toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
+            
+            if (newTake5Urls.length > 0) setTake5Files([]);
+            if (newCccUrls.length > 0) setCccFiles([]);
+            
+            router.refresh();
+
         } catch (error: any) {
             console.error("Error saving progress:", error);
             toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'An unexpected error occurred.' });
@@ -211,14 +249,38 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
             await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
 
+            const scheduleId = docRef.id;
+            const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
+                if (!firebaseApp || files.length === 0) return [];
+                const storage = getStorage(firebaseApp);
+                const uploadPromises = files.map(file => {
+                    const storagePath = `scheduled_tasks/${scheduleId}/${docType}_scans/${file.name}`;
+                    const storageRef = ref(storage, storagePath);
+                    return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+                });
+                return Promise.all(uploadPromises);
+            };
+
+            const [newTake5Urls, newCccUrls] = await Promise.all([
+                uploadScans(take5Files, 'take5'),
+                uploadScans(cccFiles, 'ccc'),
+            ]);
+
+            if (newTake5Urls.length > 0 || newCccUrls.length > 0) {
+                await updateDoc(docRef, { 
+                    take5Scans: newTake5Urls,
+                    cccScans: newCccUrls,
+                });
+            }
+
             toast({
                 title: 'Schedule Saved',
                 description: 'The task has been added to the upcoming schedules list.'
             });
             router.push('/maintenance/upcoming-schedules');
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the schedule.' });
+            toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'Could not save the schedule.' });
         } finally {
             setIsSaving(false);
         }
@@ -289,7 +351,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
-                                variant={'outline'}
+                                variant={"outline"}
                                 className={cn(
                                     "w-full justify-start text-left font-normal",
                                     !inspectionDate && "text-muted-foreground"
@@ -353,29 +415,49 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 </div>
             </div>
 
-            <div className="my-8">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>SAFETY</TableHead>
-                            <TableHead>COMPLETED</TableHead>
-                            <TableHead>SIGN</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell className="font-medium">Take 5</TableCell>
-                            <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
-                            <TableCell className="w-[250px]"><SignaturePad /></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell className="font-medium">CCC</TableCell>
-                            <TableCell className="w-[150px] text-center"><Checkbox /></TableCell>
-                            <TableCell className="w-[250px]"><SignaturePad /></TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </div>
+            <Card className="my-8">
+                <CardHeader>
+                    <CardTitle>Safety Documentation</CardTitle>
+                    <CardDescription>Upload scans of the completed Take 5 and CCC documents.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div>
+                        <h4 className="font-semibold text-muted-foreground mb-2">Take 5 Assessment Scan(s)</h4>
+                        {schedule?.take5Scans && schedule.take5Scans.length > 0 && (
+                            <div className="mb-4 space-y-2">
+                                <Label>Uploaded Documents</Label>
+                                <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                                    {schedule.take5Scans.map((url, i) => (
+                                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                                            <Paperclip className="h-3 w-3" />
+                                            Take 5 Scan {i + 1}
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />
+                    </div>
+                    <Separator />
+                    <div>
+                        <h4 className="font-semibold text-muted-foreground mb-2">Critical Control Checklist (CCC) Scan(s)</h4>
+                        {schedule?.cccScans && schedule.cccScans.length > 0 && (
+                            <div className="mb-4 space-y-2">
+                                <Label>Uploaded Documents</Label>
+                                <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                                    {schedule.cccScans.map((url, i) => (
+                                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                                            <Paperclip className="h-3 w-3" />
+                                            CCC Scan {i + 1}
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />
+                    </div>
+                </CardContent>
+            </Card>
 
             <div className="my-8">
                 <div className="flex items-center justify-between mb-4">

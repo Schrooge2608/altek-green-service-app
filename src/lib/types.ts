@@ -146,6 +146,8 @@ export interface ScheduledTask {
   frequency: MaintenanceTask['frequency'];
   workCrew?: WorkCrewMember[];
   checklist?: ChecklistItem[];
+  take5Scans?: string[];
+  cccScans?: string[];
 }
 
 export interface Breakdown {
