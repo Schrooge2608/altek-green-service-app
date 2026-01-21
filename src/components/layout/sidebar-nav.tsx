@@ -131,6 +131,7 @@ export function SidebarNav() {
   const canViewBeta = userData?.role && (userData.role.includes('(Beta)') || userData.role.includes('Admin') || userData.role.includes('Superadmin'));
   const isAdmin = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
   const isClientManager = userData?.role === 'Client Manager';
+  const isTechnician = userData?.role?.includes('Technician');
 
 
   const isEquipmentPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter');
@@ -242,7 +243,7 @@ export function SidebarNav() {
                 </CollapsibleContent>
            </Collapsible>
 
-           {(isAdmin || isManager || isClientManager) && (
+           {(isAdmin || isManager || isClientManager || isTechnician) && (
                 <Collapsible open={isReportsOpen} onOpenChange={setIsReportsOpen}>
                     <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
