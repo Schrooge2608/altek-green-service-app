@@ -44,6 +44,7 @@ export default function NewDailyDiaryPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
     const [afterFiles, setAfterFiles] = useState<File[]>([]);
+    const [hseFiles, setHseFiles] = useState<File[]>([]);
     const [contractorSignature, setContractorSignature] = useState<string | null>(null);
     const [clientSignature, setClientSignature] = useState<string | null>(null);
     const [contractorName, setContractorName] = useState('');
@@ -161,7 +162,7 @@ export default function NewDailyDiaryPage() {
         }
     }, [diaryId]);
 
-    const uploadImages = async (files: File[], folder: 'before' | 'after'): Promise<string[]> => {
+    const uploadImages = async (files: File[], folder: 'before' | 'after' | 'hse'): Promise<string[]> => {
         if (!firebaseApp || files.length === 0) return [];
         
         const storage = getStorage(firebaseApp);
@@ -192,6 +193,7 @@ export default function NewDailyDiaryPage() {
         try {
             const newBeforeImageUrls = await uploadImages(beforeFiles, 'before');
             const newAfterImageUrls = await uploadImages(afterFiles, 'after');
+            const newHseImageUrls = await uploadImages(hseFiles, 'hse');
 
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
@@ -241,6 +243,7 @@ export default function NewDailyDiaryPage() {
                 date: data.date ? format(new Date(data.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
                 beforeWorkImages: [...(diaryData?.beforeWorkImages || []), ...newBeforeImageUrls],
                 afterWorkImages: [...(diaryData?.afterWorkImages || []), ...newAfterImageUrls],
+                hseDocumentationScans: [...(diaryData?.hseDocumentationScans || []), ...newHseImageUrls],
                 contractorSignature,
                 clientSignature,
                 contractorName,
@@ -478,6 +481,10 @@ export default function NewDailyDiaryPage() {
                                     </FormItem>
                                 )}
                             />
+                             <div className="space-y-2 pt-2">
+                                <Label className="font-semibold">HSE Documentation (Take 5, etc.)</Label>
+                                <ImageUploader onImagesChange={setHseFiles} title="HSE Documents" />
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -717,5 +724,7 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
+
+    
 
     

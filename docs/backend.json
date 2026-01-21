@@ -296,6 +296,7 @@
             "hrs": { "type": "number" },
             "incidents": { "type": "string" },
             "toolboxTalk": { "type": "string" },
+            "hseDocumentationScans": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for scanned HSE documents like Take 5 or CCC." },
             "manpower": {
               "type": "array",
               "items": { "$ref": "#/entities/ManpowerEntry" }
@@ -501,3 +502,6 @@
     ]
   }
 }
+
+
+    

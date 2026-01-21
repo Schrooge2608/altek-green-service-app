@@ -113,6 +113,7 @@ export default function ViewDailyDiaryPage() {
                             <h4 className="font-semibold text-muted-foreground">Toolbox Talk</h4>
                             <p>{diary.toolboxTalk || 'None reported.'}</p>
                         </div>
+                        <ImageGallery title="HSE Documentation" images={diary.hseDocumentationScans} />
                     </CardContent>
                 </Card>
 
@@ -161,3 +162,5 @@ export default function ViewDailyDiaryPage() {
         </div>
     );
 }
+
+    

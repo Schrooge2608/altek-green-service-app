@@ -250,6 +250,7 @@ export interface DailyDiary {
   hrs?: number;
   incidents?: string;
   toolboxTalk?: string;
+  hseDocumentationScans?: string[];
   manpower?: ManpowerEntry[];
   plant?: PlantEntry[];
   works?: WorkEntry[];
@@ -306,3 +307,5 @@ export interface GeneratedReport {
   generatedByUserId: string;
   generatedByUserName: string;
 }
+
+    
