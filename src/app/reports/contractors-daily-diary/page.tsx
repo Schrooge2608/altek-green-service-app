@@ -67,7 +67,11 @@ export default function NewDailyDiaryPage() {
     const { data: userRole } = useDoc<AppUser>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user])
     );
-    const isClientManager = userRole?.role === 'Client Manager';
+
+    const isAdmin = useMemo(() => userRole?.role && ['Admin', 'Superadmin'].includes(userRole.role), [userRole]);
+    const isCreator = useMemo(() => diaryData?.userId === user?.uid, [diaryData, user]);
+    const canEdit = !diaryId || isCreator || isAdmin;
+
 
     const locationOptions = useMemo(() => {
         if (!equipmentList) return [];
@@ -281,445 +285,445 @@ export default function NewDailyDiaryPage() {
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
             <div className="flex justify-end mb-4 gap-2 print:hidden">
-                 <Button onClick={form.handleSubmit(handleSave)} disabled={!uniqueId || isIdLoading || isClientManager || isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    {isSaving ? 'Saving...' : 'Save Diary'}
-                </Button>
+                {canEdit && (
+                    <Button onClick={form.handleSubmit(handleSave)} disabled={!uniqueId || isIdLoading || isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        {isSaving ? 'Saving...' : 'Save Diary'}
+                    </Button>
+                )}
                 <Button onClick={() => window.print()} variant="outline">
                     <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
                 </Button>
             </div>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSave)}>
-                <Card className="p-8 shadow-lg" id="diary-form">
-                    <header className="flex items-start justify-between mb-4 border-b pb-4">
-                        <AltekLogo className="h-10" />
-                        <div className="text-right">
-                            <h1 className="text-2xl font-bold tracking-tight text-primary">{diaryId ? 'Edit Daily Diary' : 'DAILY DIARY'}</h1>
-                            <p className="text-sm text-muted-foreground font-mono">ID: {isIdLoading ? 'Generating...' : uniqueId}</p>
-                        </div>
-                    </header>
-
-                    <Card className="mb-4">
-                        <CardHeader className="bg-muted p-2 rounded-t-lg">
-                            <CardTitle className="text-sm">SELECT EQUIPMENT (OPTIONAL)</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-                            <div className="space-y-1">
-                                <Label>Location</Label>
-                                <Select onValueChange={setSelectedLocation} value={selectedLocation} disabled={equipmentLoading}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Location..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {equipmentLoading ? <SelectItem value="loading" disabled>Loading locations...</SelectItem> : locationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                <fieldset disabled={!canEdit}>
+                    <Card className="p-8 shadow-lg" id="diary-form">
+                        <header className="flex items-start justify-between mb-4 border-b pb-4">
+                            <AltekLogo className="h-10" />
+                            <div className="text-right">
+                                <h1 className="text-2xl font-bold tracking-tight text-primary">{diaryId ? 'Edit Daily Diary' : 'DAILY DIARY'}</h1>
+                                <p className="text-sm text-muted-foreground font-mono">ID: {isIdLoading ? 'Generating...' : uniqueId}</p>
                             </div>
-                            <div className="space-y-1">
-                                <Label>Equipment Name</Label>
-                                <Select onValueChange={handleEquipmentSelect} disabled={!selectedLocation || equipmentLoading}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Equipment..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {equipmentLoading || !selectedLocation ? <SelectItem value="loading" disabled>Select a location first...</SelectItem> : equipmentOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </header>
 
-                    {/* Form fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 text-sm items-end">
-                       <FormField
-                            control={form.control}
-                            name="contractTitle"
-                            render={({ field }) => (
-                                <FormItem className="lg:col-span-2 grid grid-cols-2 gap-4">
+                        <Card className="mb-4">
+                            <CardHeader className="bg-muted p-2 rounded-t-lg">
+                                <CardTitle className="text-sm">SELECT EQUIPMENT (OPTIONAL)</CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                                 <div className="space-y-1">
-                                    <FormLabel>Contract Title</FormLabel>
-                                    <FormControl>
-                                      <Input id="contract-title" {...field} />
-                                    </FormControl>
+                                    <Label>Location</Label>
+                                    <Select onValueChange={setSelectedLocation} value={selectedLocation} disabled={equipmentLoading || !canEdit}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Location..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {equipmentLoading ? <SelectItem value="loading" disabled>Loading locations...</SelectItem> : locationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                                <FormField
-                                    control={form.control}
-                                    name="contractNumber"
-                                    render={({ field: fieldNum }) => (
-                                        <FormItem>
-                                            <FormLabel>Contract Number</FormLabel>
-                                            <FormControl>
-                                              <Input id="contract-number" {...fieldNum} />
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                                </FormItem>
-                            )}
-                        />
+                                <div className="space-y-1">
+                                    <Label>Equipment Name</Label>
+                                    <Select onValueChange={handleEquipmentSelect} disabled={!selectedLocation || equipmentLoading || !canEdit}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Equipment..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {equipmentLoading || !selectedLocation ? <SelectItem value="loading" disabled>Select a location first...</SelectItem> : equipmentOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </CardContent>
+                        </Card>
 
+                        {/* Form fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 text-sm items-end">
                         <FormField
-                            control={form.control}
-                            name="area"
-                            render={({ field }) => (
-                                <FormItem className="space-y-1">
-                                    <FormLabel>Area</FormLabel>
-                                    <FormControl>
-                                      <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
-                                          <FormItem className="flex items-center space-x-2">
-                                              <FormControl>
-                                                <RadioGroupItem value="Mining" id="mining" />
-                                              </FormControl>
-                                              <FormLabel htmlFor="mining">Mining</FormLabel>
-                                          </FormItem>
-                                          <FormItem className="flex items-center space-x-2">
-                                              <FormControl>
-                                                <RadioGroupItem value="Smelter" id="smelter" />
-                                              </FormControl>
-                                              <FormLabel htmlFor="smelter">Smelter</FormLabel>
-                                          </FormItem>
-                                      </RadioGroup>
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="date"
-                            render={({ field }) => (
-                                <FormItem className="space-y-1">
-                                <FormLabel>Date</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                          <CalendarIcon className="mr-2 h-4 w-4" />
-                                          {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-                                      </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                    <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={field.onChange} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-                         <FormField
-                            control={form.control}
-                            name="shiftStart"
-                            render={({ field }) => (
-                                <FormItem className="space-y-1">
-                                    <FormLabel>Shift Start</FormLabel>
-                                    <FormControl>
-                                      <Input id="shift-start" type="time" {...field} />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="shiftEnd"
-                            render={({ field }) => (
-                                <FormItem className="space-y-1">
-                                    <FormLabel>Shift End</FormLabel>
-                                    <FormControl>
-                                      <Input id="shift-end" type="time" {...field} />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="hrs"
-                            render={({ field }) => (
-                                <FormItem className="space-y-1">
-                                    <FormLabel>Hrs</FormLabel>
-                                    <FormControl>
-                                      <Input id="hrs" type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} value={field.value ?? ''} />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-
-                    <Card className="mb-4">
-                        <CardHeader className="bg-muted p-2 rounded-t-lg">
-                            <CardTitle className="text-sm">SECTION A: HSE</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 space-y-4">
-                             <FormField
                                 control={form.control}
-                                name="incidents"
+                                name="contractTitle"
+                                render={({ field }) => (
+                                    <FormItem className="lg:col-span-2 grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <FormLabel>Contract Title</FormLabel>
+                                        <FormControl>
+                                        <Input id="contract-title" {...field} />
+                                        </FormControl>
+                                    </div>
+                                    <FormField
+                                        control={form.control}
+                                        name="contractNumber"
+                                        render={({ field: fieldNum }) => (
+                                            <FormItem>
+                                                <FormLabel>Contract Number</FormLabel>
+                                                <FormControl>
+                                                <Input id="contract-number" {...fieldNum} />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="area"
                                 render={({ field }) => (
                                     <FormItem className="space-y-1">
-                                        <FormLabel>Incidents/Accidents/Injuries</FormLabel>
+                                        <FormLabel>Area</FormLabel>
                                         <FormControl>
-                                          <VoiceTextarea id="incidents" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
+                                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+                                            <FormItem className="flex items-center space-x-2">
+                                                <FormControl>
+                                                    <RadioGroupItem value="Mining" id="mining" />
+                                                </FormControl>
+                                                <FormLabel htmlFor="mining">Mining</FormLabel>
+                                            </FormItem>
+                                            <FormItem className="flex items-center space-x-2">
+                                                <FormControl>
+                                                    <RadioGroupItem value="Smelter" id="smelter" />
+                                                </FormControl>
+                                                <FormLabel htmlFor="smelter">Smelter</FormLabel>
+                                            </FormItem>
+                                        </RadioGroup>
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="date"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-1">
+                                    <FormLabel>Date</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <FormControl>
+                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                        </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                        <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={field.onChange} initialFocus />
+                                        </PopoverContent>
+                                    </Popover>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
+                            <FormField
+                                control={form.control}
+                                name="shiftStart"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-1">
+                                        <FormLabel>Shift Start</FormLabel>
+                                        <FormControl>
+                                        <Input id="shift-start" type="time" {...field} />
                                         </FormControl>
                                     </FormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
-                                name="toolboxTalk"
+                                name="shiftEnd"
                                 render={({ field }) => (
                                     <FormItem className="space-y-1">
-                                        <FormLabel>Toolbox Talk</FormLabel>
+                                        <FormLabel>Shift End</FormLabel>
                                         <FormControl>
-                                          <VoiceTextarea id="toolbox-talk" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
+                                        <Input id="shift-end" type="time" {...field} />
                                         </FormControl>
                                     </FormItem>
                                 )}
                             />
-                             <div className="space-y-2 pt-2">
-                                <Label className="font-semibold">HSE Documentation (Take 5, etc.)</Label>
-                                <ImageUploader onImagesChange={setHseFiles} title="HSE Documents" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                            <FormField
+                                control={form.control}
+                                name="hrs"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-1">
+                                        <FormLabel>Hrs</FormLabel>
+                                        <FormControl>
+                                        <Input id="hrs" type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} value={field.value ?? ''} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
-                    <Card className="mb-4">
-                        <CardHeader className="bg-muted p-2 rounded-t-lg flex flex-row items-center justify-between">
-                            <CardTitle className="text-sm">SECTION B: MANPOWER AND PLANT</CardTitle>
-                            <Button size="sm" type="button" onClick={() => appendManpower({ designation: '', forecast: 1, actual: 1, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 9, comments: '' })}><Plus className="mr-2 h-4 w-4"/>Add Manpower</Button>
-                        </CardHeader>
-                        <CardContent className="p-4 space-y-4">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[200px]">Designation</TableHead>
-                                        <TableHead>Forecast</TableHead>
-                                        <TableHead>Actual</TableHead>
-                                        <TableHead>Normal</TableHead>
-                                        <TableHead>1.5 OT</TableHead>
-                                        <TableHead>2.0 OT</TableHead>
-                                        <TableHead>Total</TableHead>
-                                        <TableHead>Comments</TableHead>
-                                        <TableHead />
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {manpowerFields.map((field, index) => (
-                                        <TableRow key={field.id}>
-                                            <TableCell><Input {...form.register(`manpower.${index}.designation`)}/></TableCell>
-                                            <TableCell><Input type="number" {...form.register(`manpower.${index}.forecast`, { valueAsNumber: true })}/></TableCell>
-                                            <TableCell><Input type="number" {...form.register(`manpower.${index}.actual`, { valueAsNumber: true })}/></TableCell>
-                                            <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.normalHrs`, { valueAsNumber: true })}/></TableCell>
-                                            <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.overtime1_5`, { valueAsNumber: true })}/></TableCell>
-                                            <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.overtime2_0`, { valueAsNumber: true })}/></TableCell>
-                                            <TableCell><Input type="number" {...form.register(`manpower.${index}.totalManHrs`, { valueAsNumber: true })} readOnly className="bg-muted"/></TableCell>
-                                            <TableCell><Input {...form.register(`manpower.${index}.comments`)}/></TableCell>
-                                            <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removeManpower(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                             <Button size="sm" type="button" onClick={() => appendPlant({ description: '', qty: 1, inspectionDone: 'no', comments: '' })}><Plus className="mr-2 h-4 w-4"/>Add Plant</Button>
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Plant description</TableHead>
-                                        <TableHead>Qty</TableHead>
-                                        <TableHead>Daily Inspection Done</TableHead>
-                                        <TableHead>Comments</TableHead>
-                                        <TableHead />
-                                    </TableRow>
-                                </TableHeader>
-                                 <TableBody>
-                                    {plantFields.map((field, index) => (
-                                        <TableRow key={field.id}>
-                                            <TableCell><Input {...form.register(`plant.${index}.description`)}/></TableCell>
-                                            <TableCell><Input type="number" {...form.register(`plant.${index}.qty`, { valueAsNumber: true })}/></TableCell>
-                                            <TableCell>
-                                                 <Controller
-                                                    control={form.control}
-                                                    name={`plant.${index}.inspectionDone`}
-                                                    render={({ field: radioField }) => (
-                                                        <RadioGroup className="flex gap-4" onValueChange={radioField.onChange} value={radioField.value}>
-                                                            <div className="flex items-center space-x-2"><RadioGroupItem value="yes" id={`plant-y-${index}`} /><Label htmlFor={`plant-y-${index}`}>Y</Label></div>
-                                                            <div className="flex items-center space-x-2"><RadioGroupItem value="no" id={`plant-n-${index}`} /><Label htmlFor={`plant-n-${index}`}>N</Label></div>
-                                                        </RadioGroup>
-                                                    )}
-                                                />
-                                            </TableCell>
-                                            <TableCell><Input {...form.register(`plant.${index}.comments`)}/></TableCell>
-                                            <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removePlant(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="mb-4">
-                        <CardHeader className="bg-muted p-2 rounded-t-lg flex flex-row items-center justify-between">
-                            <CardTitle className="text-sm">SECTION C: DESCRIPTION OF WORKS</CardTitle>
-                             <Button size="sm" type="button" onClick={() => appendWork({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: 0 })}><Plus className="mr-2 h-4 w-4"/>Add Work</Button>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Area of Work</TableHead>
-                                        <TableHead className="w-[40%]">Scope of Work</TableHead>
-                                        <TableHead>Time Start</TableHead>
-                                        <TableHead>Time End</TableHead>
-                                        <TableHead>Hrs</TableHead>
-                                        <TableHead />
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {workFields.map((field, index) => (
-                                        <TableRow key={field.id}>
-                                            <TableCell><Input {...form.register(`works.${index}.area`)}/></TableCell>
-                                            <TableCell><Textarea {...form.register(`works.${index}.scope`)}/></TableCell>
-                                            <TableCell><Input type="time" {...form.register(`works.${index}.timeStart`)}/></TableCell>
-                                            <TableCell><Input type="time" {...form.register(`works.${index}.timeEnd`)}/></TableCell>
-                                            <TableCell><Input type="number" className="w-[70px]" {...form.register(`works.${index}.hrs`, { valueAsNumber: true })}/></TableCell>
-                                            <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removeWork(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                    
-                    <div className="grid grid-cols-2 gap-4">
                         <Card className="mb-4">
                             <CardHeader className="bg-muted p-2 rounded-t-lg">
-                                <CardTitle className="text-sm">SECTION D: DELAYS</CardTitle>
+                                <CardTitle className="text-sm">SECTION A: HSE</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-4 space-y-2">
-                                {form.getValues().delays?.map((_, index) => (
-                                    <FormField
-                                        key={index}
-                                        control={form.control}
-                                        name={`delays.${index}`}
-                                        render={({ field }) => (
-                                            <FormItem className="flex items-center gap-2">
-                                                <FormLabel className="w-6 shrink-0">{index + 1}.</FormLabel>
-                                                <FormControl>
-                                                  <Textarea rows={1} {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                ))}
+                            <CardContent className="p-4 space-y-4">
+                                <FormField
+                                    control={form.control}
+                                    name="incidents"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel>Incidents/Accidents/Injuries</FormLabel>
+                                            <FormControl>
+                                            <VoiceTextarea id="incidents" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="toolboxTalk"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel>Toolbox Talk</FormLabel>
+                                            <FormControl>
+                                            <VoiceTextarea id="toolbox-talk" rows={2} {...field} onChange={field.onChange} value={field.value ?? ''} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <div className="space-y-2 pt-2">
+                                    <Label className="font-semibold">HSE Documentation (Take 5, etc.)</Label>
+                                    <ImageUploader onImagesChange={setHseFiles} title="HSE Documents" />
+                                </div>
                             </CardContent>
                         </Card>
 
                         <Card className="mb-4">
-                            <CardHeader className="bg-muted p-2 rounded-t-lg">
-                                <CardTitle className="text-sm">SECTION E: COMMENTS</CardTitle>
+                            <CardHeader className="bg-muted p-2 rounded-t-lg flex flex-row items-center justify-between">
+                                <CardTitle className="text-sm">SECTION B: MANPOWER AND PLANT</CardTitle>
+                                {canEdit && <Button size="sm" type="button" onClick={() => appendManpower({ designation: '', forecast: 1, actual: 1, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 9, comments: '' })}><Plus className="mr-2 h-4 w-4"/>Add Manpower</Button>}
                             </CardHeader>
-                            <CardContent className="p-4 space-y-2">
-                                {form.getValues().comments?.map((_, index) => (
-                                    <FormField
-                                        key={index}
-                                        control={form.control}
-                                        name={`comments.${index}`}
-                                        render={({ field }) => (
-                                             <FormItem className="flex items-center gap-2">
-                                                <FormLabel className="w-6 shrink-0">{index + 1}.</FormLabel>
-                                                <FormControl>
-                                                  <Textarea rows={1} {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                ))}
+                            <CardContent className="p-4 space-y-4">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[200px]">Designation</TableHead>
+                                            <TableHead>Forecast</TableHead>
+                                            <TableHead>Actual</TableHead>
+                                            <TableHead>Normal</TableHead>
+                                            <TableHead>1.5 OT</TableHead>
+                                            <TableHead>2.0 OT</TableHead>
+                                            <TableHead>Total</TableHead>
+                                            <TableHead>Comments</TableHead>
+                                            {canEdit && <TableHead />}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {manpowerFields.map((field, index) => (
+                                            <TableRow key={field.id}>
+                                                <TableCell><Input {...form.register(`manpower.${index}.designation`)}/></TableCell>
+                                                <TableCell><Input type="number" {...form.register(`manpower.${index}.forecast`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" {...form.register(`manpower.${index}.actual`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.normalHrs`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.overtime1_5`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.overtime2_0`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" {...form.register(`manpower.${index}.totalManHrs`, { valueAsNumber: true })} readOnly className="bg-muted"/></TableCell>
+                                                <TableCell><Input {...form.register(`manpower.${index}.comments`)}/></TableCell>
+                                                {canEdit && <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removeManpower(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>}
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                                {canEdit && <Button size="sm" type="button" onClick={() => appendPlant({ description: '', qty: 1, inspectionDone: 'no', comments: '' })}><Plus className="mr-2 h-4 w-4"/>Add Plant</Button>}
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Plant description</TableHead>
+                                            <TableHead>Qty</TableHead>
+                                            <TableHead>Daily Inspection Done</TableHead>
+                                            <TableHead>Comments</TableHead>
+                                            {canEdit && <TableHead />}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {plantFields.map((field, index) => (
+                                            <TableRow key={field.id}>
+                                                <TableCell><Input {...form.register(`plant.${index}.description`)}/></TableCell>
+                                                <TableCell><Input type="number" {...form.register(`plant.${index}.qty`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell>
+                                                    <Controller
+                                                        control={form.control}
+                                                        name={`plant.${index}.inspectionDone`}
+                                                        render={({ field: radioField }) => (
+                                                            <RadioGroup className="flex gap-4" onValueChange={radioField.onChange} value={radioField.value}>
+                                                                <div className="flex items-center space-x-2"><RadioGroupItem value="yes" id={`plant-y-${index}`} /><Label htmlFor={`plant-y-${index}`}>Y</Label></div>
+                                                                <div className="flex items-center space-x-2"><RadioGroupItem value="no" id={`plant-n-${index}`} /><Label htmlFor={`plant-n-${index}`}>N</Label></div>
+                                                            </RadioGroup>
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                                <TableCell><Input {...form.register(`plant.${index}.comments`)}/></TableCell>
+                                                {canEdit && <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removePlant(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>}
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             </CardContent>
                         </Card>
-                    </div>
 
-                    <Card>
-                        <CardHeader className="bg-muted p-2 rounded-t-lg">
-                            <CardTitle className="text-sm">SECTION F: GALLERY</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 space-y-6">
-                            <div className="space-y-2">
-                                <h4 className="font-semibold">Before Work</h4>
-                                <ImageUploader onImagesChange={setBeforeFiles} title="Before Work" />
-                            </div>
-                            <div className="space-y-2">
-                                <h4 className="font-semibold">After Work</h4>
-                                <ImageUploader onImagesChange={setAfterFiles} title="After Work" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                        <Card className="mb-4">
+                            <CardHeader className="bg-muted p-2 rounded-t-lg flex flex-row items-center justify-between">
+                                <CardTitle className="text-sm">SECTION C: DESCRIPTION OF WORKS</CardTitle>
+                                {canEdit && <Button size="sm" type="button" onClick={() => appendWork({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: 0 })}><Plus className="mr-2 h-4 w-4"/>Add Work</Button>}
+                            </CardHeader>
+                            <CardContent className="p-4">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Area of Work</TableHead>
+                                            <TableHead className="w-[40%]">Scope of Work</TableHead>
+                                            <TableHead>Time Start</TableHead>
+                                            <TableHead>Time End</TableHead>
+                                            <TableHead>Hrs</TableHead>
+                                            {canEdit && <TableHead />}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {workFields.map((field, index) => (
+                                            <TableRow key={field.id}>
+                                                <TableCell><Input {...form.register(`works.${index}.area`)}/></TableCell>
+                                                <TableCell><Textarea {...form.register(`works.${index}.scope`)}/></TableCell>
+                                                <TableCell><Input type="time" {...form.register(`works.${index}.timeStart`)}/></TableCell>
+                                                <TableCell><Input type="time" {...form.register(`works.${index}.timeEnd`)}/></TableCell>
+                                                <TableCell><Input type="number" className="w-[70px]" {...form.register(`works.${index}.hrs`, { valueAsNumber: true })}/></TableCell>
+                                                {canEdit && <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removeWork(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>}
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <Card className="mb-4">
+                                <CardHeader className="bg-muted p-2 rounded-t-lg">
+                                    <CardTitle className="text-sm">SECTION D: DELAYS</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 space-y-2">
+                                    {form.getValues().delays?.map((_, index) => (
+                                        <FormField
+                                            key={index}
+                                            control={form.control}
+                                            name={`delays.${index}`}
+                                            render={({ field }) => (
+                                                <FormItem className="flex items-center gap-2">
+                                                    <FormLabel className="w-6 shrink-0">{index + 1}.</FormLabel>
+                                                    <FormControl>
+                                                    <Textarea rows={1} {...field} />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                    ))}
+                                </CardContent>
+                            </Card>
 
-                    <div className="grid grid-cols-2 gap-8 mt-8">
+                            <Card className="mb-4">
+                                <CardHeader className="bg-muted p-2 rounded-t-lg">
+                                    <CardTitle className="text-sm">SECTION E: COMMENTS</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 space-y-2">
+                                    {form.getValues().comments?.map((_, index) => (
+                                        <FormField
+                                            key={index}
+                                            control={form.control}
+                                            name={`comments.${index}`}
+                                            render={({ field }) => (
+                                                <FormItem className="flex items-center gap-2">
+                                                    <FormLabel className="w-6 shrink-0">{index + 1}.</FormLabel>
+                                                    <FormControl>
+                                                    <Textarea rows={1} {...field} />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </div>
+
                         <Card>
-                             <CardHeader className="p-4">
-                                <CardTitle className="text-base text-center">CONTRACTOR</CardTitle>
+                            <CardHeader className="bg-muted p-2 rounded-t-lg">
+                                <CardTitle className="text-sm">SECTION F: GALLERY</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-4 space-y-4">
-                                <div className="space-y-1">
-                                    <Label>Name</Label>
-                                    <Input value={contractorName} onChange={(e) => setContractorName(e.target.value)} />
+                            <CardContent className="p-4 space-y-6">
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold">Before Work</h4>
+                                    <ImageUploader onImagesChange={setBeforeFiles} title="Before Work" />
                                 </div>
-                                 <div className="space-y-1">
-                                    <Label>Signature</Label>
-                                    <SignaturePad value={contractorSignature} onSign={setContractorSignature} onClear={() => setContractorSignature(null)} />
-                                </div>
-                                 <div className="space-y-1">
-                                    <Label>Date</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {contractorDate ? format(contractorDate, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={contractorDate} onSelect={setContractorDate} initialFocus />
-                                        </PopoverContent>
-                                    </Popover>
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold">After Work</h4>
+                                    <ImageUploader onImagesChange={setAfterFiles} title="After Work" />
                                 </div>
                             </CardContent>
                         </Card>
-                         <Card>
-                             <CardHeader className="p-4">
-                                <CardTitle className="text-base text-center">CLIENT</CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 space-y-4">
-                                 <div className="space-y-1">
-                                    <Label>Name</Label>
-                                    <Input value={clientName} onChange={(e) => setClientName(e.target.value)}/>
-                                </div>
-                                 <div className="space-y-1">
-                                    <Label>Signature</Label>
-                                    <SignaturePad value={clientSignature} onSign={setClientSignature} onClear={() => setClientSignature(null)} />
-                                </div>
-                                 <div className="space-y-1">
-                                    <Label>Date</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {clientDate ? format(clientDate, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={clientDate} onSelect={setClientDate} initialFocus />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </Card>
+
+                        <div className="grid grid-cols-2 gap-8 mt-8">
+                            <Card>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base text-center">CONTRACTOR</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 space-y-4">
+                                    <div className="space-y-1">
+                                        <Label>Name</Label>
+                                        <Input value={contractorName} onChange={(e) => setContractorName(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Signature</Label>
+                                        <SignaturePad value={contractorSignature} onSign={setContractorSignature} onClear={() => setContractorSignature(null)} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Date</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {contractorDate ? format(contractorDate, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                            <Calendar mode="single" selected={contractorDate} onSelect={setContractorDate} initialFocus />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base text-center">CLIENT</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 space-y-4">
+                                    <div className="space-y-1">
+                                        <Label>Name</Label>
+                                        <Input value={clientName} onChange={(e) => setClientName(e.target.value)}/>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Signature</Label>
+                                        <SignaturePad value={clientSignature} onSign={setClientSignature} onClear={() => setClientSignature(null)} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Date</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {clientDate ? format(clientDate, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                            <Calendar mode="single" selected={clientDate} onSelect={setClientDate} initialFocus />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </Card>
+                </fieldset>
             </form>
             </Form>
         </div>
     );
 }
-
-    
-
-    
