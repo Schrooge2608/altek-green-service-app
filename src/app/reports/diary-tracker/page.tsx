@@ -138,7 +138,7 @@ export default function DiaryTrackerPage() {
                                 <TableCell>{diary.date}</TableCell>
                                 <TableCell>{diary.area}</TableCell>
                                 <TableCell className="text-right">
-                                    <Link href={`/reports/contractors-daily-diary/view?id=${diary.id}`} passHref>
+                                    <Link href={`/reports/view-diary/${diary.id}`} passHref>
                                         <Button variant="ghost" size="icon">
                                             <FileText className="h-4 w-4" />
                                             <span className="sr-only">View Diary</span>
