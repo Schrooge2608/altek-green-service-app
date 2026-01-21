@@ -305,7 +305,7 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         }
 
         setIsSaving(true);
-
+        
         const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
             if (!files.length) return [];
             const storage = getStorage(firebaseApp);
@@ -472,6 +472,21 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 </div>
             </div>
 
+            <Alert variant="destructive" className="my-8">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Safety Warning</AlertTitle>
+                <AlertDescription>
+                    <ul className="list-disc pl-5 space-y-1">
+                        <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
+                        <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
+                        <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
+                        <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
+                        <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
+                        <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
+                    </ul>
+                </AlertDescription>
+            </Alert>
+            
             <Card className="my-8">
                 <CardHeader>
                     <CardTitle>Safety Documentation</CardTitle>
@@ -558,21 +573,6 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     </TableBody>
                 </Table>
             </div>
-
-            <Alert variant="destructive" className="my-8">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Safety Warning</AlertTitle>
-                <AlertDescription>
-                    <ul className="list-disc pl-5 space-y-1">
-                        <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
-                        <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
-                        <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
-                        <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
-                        <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
-                        <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
-                    </ul>
-                </AlertDescription>
-            </Alert>
             <div className="prose prose-sm max-w-none dark:prose-invert">
                 <p>The 6-month service is an extension of the quarterly checks, focusing on predictive rather than purely preventative maintenance. It involves deeper diagnostics to forecast component failure.</p>
             </div>

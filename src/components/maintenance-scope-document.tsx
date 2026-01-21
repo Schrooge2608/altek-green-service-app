@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Printer, Plus, Trash2, Save, Loader2, Paperclip } from 'lucide-react';
+import { CalendarIcon, Printer, Plus, Trash2, Save, Loader2, Paperclip, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import React, { useState, useMemo } from 'react';
 import { Label } from './ui/label';
@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
 import { Textarea } from './ui/textarea';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { ImageUploader } from './image-uploader';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
 interface MaintenanceScopeDocumentProps {
@@ -410,10 +411,10 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
-                                variant={"outline"}
+                                variant={'outline'}
                                 className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !inspectionDate && "text-muted-foreground"
+                                    'w-full justify-start text-left font-normal',
+                                    !inspectionDate && 'text-muted-foreground'
                                 )}
                                 disabled={isEditMode}
                                 >
@@ -462,6 +463,21 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     </ul>
                 </div>
             </div>
+
+            <Alert variant="destructive" className="my-8">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Safety Warning</AlertTitle>
+                <AlertDescription>
+                    <ul className="list-disc pl-5 space-y-1">
+                        <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
+                        <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
+                        <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
+                        <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
+                        <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
+                        <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
+                    </ul>
+                </AlertDescription>
+            </Alert>
 
             <Card className="my-8">
                 <CardHeader>

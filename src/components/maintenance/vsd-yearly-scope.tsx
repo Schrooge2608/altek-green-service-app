@@ -458,6 +458,21 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                 </div>
             </div>
 
+            <Alert variant="destructive" className="my-8">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Safety Warning</AlertTitle>
+                <AlertDescription>
+                    <ul className="list-disc pl-5 space-y-1">
+                        <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
+                        <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
+                        <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
+                        <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
+                        <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
+                        <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
+                    </ul>
+                </AlertDescription>
+            </Alert>
+            
             <Card className="my-8">
                 <CardHeader>
                     <CardTitle>Safety Documentation</CardTitle>
@@ -544,21 +559,6 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                     </TableBody>
                 </Table>
             </div>
-
-            <Alert variant="destructive" className="my-8">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Safety Warning</AlertTitle>
-                <AlertDescription>
-                    <ul className="list-disc pl-5 space-y-1">
-                        <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
-                        <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
-                        <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
-                        <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
-                        <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
-                        <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
-                    </ul>
-                </AlertDescription>
-            </Alert>
             <div className="prose prose-sm max-w-none dark:prose-invert">
                 <p>An annual service is your most critical intervention. While weekly and quarterly tasks keep the drive running, the Annual Maintenance is designed to prevent "catastrophic failure"—the kind that leads to smoke, fire, or weeks of lead-time for a replacement.</p>
                 <p>This schedule requires a full plant shutdown for the drive and must be performed by a qualified technician or electrician.</p>
