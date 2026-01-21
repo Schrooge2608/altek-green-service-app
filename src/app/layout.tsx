@@ -5,6 +5,7 @@ import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { AuthWrapper } from '@/components/layout/auth-wrapper';
+import ErrorBoundary from '@/components/layout/error-boundary';
 
 export const metadata: Metadata = {
   title: 'Altek Green VSD Data Base',
@@ -33,7 +34,11 @@ export default function RootLayout({
               <Sidebar>
                 <SidebarNav />
               </Sidebar>
-              <SidebarInset>{children}</SidebarInset>
+              <SidebarInset>
+                <ErrorBoundary>
+                  {children}
+                </ErrorBoundary>
+              </SidebarInset>
             </SidebarProvider>
             <Toaster />
           </AuthWrapper>
