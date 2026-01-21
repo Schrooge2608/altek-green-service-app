@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useParams, notFound, useRouter } from 'next/navigation';
+import { useSearchParams, notFound, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AltekLogo } from '@/components/altek-logo';
@@ -10,6 +10,7 @@ import { doc } from 'firebase/firestore';
 import type { DailyDiary } from '@/lib/types';
 import { Loader2, Printer, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import React from 'react';
 
 function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
     return (
@@ -42,13 +43,13 @@ function ImageGallery({ title, images }: { title: string; images?: string[] }) {
 }
 
 
-export default function ViewDailyDiaryPage() {
-    const params = useParams();
+export default function ViewDiaryPage() {
+    const searchParams = useSearchParams();
     const router = useRouter();
-    const id = typeof params.id === 'string' ? params.id : '';
+    const id = searchParams.get('id');
     const firestore = useFirestore();
 
-    const diaryRef = useMemoFirebase(() => doc(firestore, 'daily_diaries', id), [firestore, id]);
+    const diaryRef = useMemoFirebase(() => id ? doc(firestore, 'daily_diaries', id) : null, [firestore, id]);
     const { data: diary, isLoading } = useDoc<DailyDiary>(diaryRef);
 
     if (isLoading) {
@@ -60,7 +61,7 @@ export default function ViewDailyDiaryPage() {
         );
     }
 
-    if (!diary) {
+    if (!id || !diary) {
         notFound();
         return null;
     }
@@ -162,5 +163,3 @@ export default function ViewDailyDiaryPage() {
         </div>
     );
 }
-
-    
