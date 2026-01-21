@@ -727,3 +727,5 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
+
+    
