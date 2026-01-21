@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import {
@@ -210,10 +208,17 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
         const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
             if (!firebaseApp || files.length === 0) return [];
             const storage = getStorage(firebaseApp);
-            const uploadPromises = files.map(file => {
+            const uploadPromises = files.map(async file => {
                 const storagePath = `scheduled_tasks/${scheduleId}/${docType}_scans/${file.name}`;
                 const storageRef = ref(storage, storagePath);
-                return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+                
+                const uploadPromise = uploadBytes(storageRef, file);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Upload timed out after 2 minutes.')), 120000)
+                );
+
+                const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as Awaited<typeof uploadPromise>;
+                return getDownloadURL(snapshot.ref);
             });
             return Promise.all(uploadPromises);
         };
@@ -235,9 +240,9 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             description: 'The task has been added to the upcoming schedules list.'
         });
         router.push('/maintenance/upcoming-schedules');
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
-        toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the schedule.' });
+        toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'Could not save the schedule.' });
     } finally {
         setIsSaving(false);
     }
@@ -254,10 +259,17 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
       const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
             if (!files.length) return [];
             const storage = getStorage(firebaseApp);
-            const uploadPromises = files.map(file => {
+            const uploadPromises = files.map(async file => {
                 const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}`;
                 const storageRef = ref(storage, storagePath);
-                return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+
+                const uploadPromise = uploadBytes(storageRef, file);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Upload timed out after 2 minutes.')), 120000)
+                );
+
+                const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as Awaited<typeof uploadPromise>;
+                return getDownloadURL(snapshot.ref);
             });
             return Promise.all(uploadPromises);
         };

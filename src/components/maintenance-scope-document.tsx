@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -164,10 +162,17 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
         const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
             if (!files.length) return [];
             const storage = getStorage(firebaseApp);
-            const uploadPromises = files.map(file => {
+            const uploadPromises = files.map(async file => {
                 const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}`;
                 const storageRef = ref(storage, storagePath);
-                return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+                
+                const uploadPromise = uploadBytes(storageRef, file);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Upload timed out after 2 minutes.')), 120000)
+                );
+
+                const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as Awaited<typeof uploadPromise>;
+                return getDownloadURL(snapshot.ref);
             });
             return Promise.all(uploadPromises);
         };
@@ -253,10 +258,17 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             const uploadScans = async (files: File[], docType: 'take5' | 'ccc'): Promise<string[]> => {
                 if (!firebaseApp || files.length === 0) return [];
                 const storage = getStorage(firebaseApp);
-                const uploadPromises = files.map(file => {
+                const uploadPromises = files.map(async file => {
                     const storagePath = `scheduled_tasks/${scheduleId}/${docType}_scans/${file.name}`;
                     const storageRef = ref(storage, storagePath);
-                    return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+
+                    const uploadPromise = uploadBytes(storageRef, file);
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Upload timed out after 2 minutes.')), 120000)
+                    );
+                    
+                    const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as Awaited<typeof uploadPromise>;
+                    return getDownloadURL(snapshot.ref);
                 });
                 return Promise.all(uploadPromises);
             };
