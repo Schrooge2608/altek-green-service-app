@@ -197,9 +197,13 @@ export default function NewDailyDiaryPage() {
 
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
-            // Sanitize data before saving to prevent Firestore errors with `undefined`
-            const sanitizedData: Partial<DailyDiary> = {
-                ...data,
+            const finalDiaryData: Partial<DailyDiary> = { 
+                id: uniqueId,
+                userId: user.uid,
+                contractTitle: data.contractTitle || 'VSD MAINTENANCE',
+                contractNumber: data.contractNumber || 'CW 22038313',
+                area: data.area || 'Mining',
+                date: data.date ? format(new Date(data.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
                 shiftStart: data.shiftStart || '',
                 shiftEnd: data.shiftEnd || '',
                 hrs: data.hrs || 0,
@@ -230,15 +234,8 @@ export default function NewDailyDiaryPage() {
                 })),
                 delays: (data.delays || []).map(d => d || ''),
                 comments: (data.comments || []).map(c => c || ''),
-            };
-
-            const finalDiaryData: Partial<DailyDiary> = { 
-                ...sanitizedData,
-                id: uniqueId,
-                userId: user.uid, // Enforce ownership
                 isSignedOff: diaryData?.isSignedOff || false,
                 createdAt: diaryData?.createdAt || serverTimestamp(),
-                date: data.date ? format(new Date(data.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
                 beforeWorkImages: [...(diaryData?.beforeWorkImages || []), ...newBeforeImageUrls],
                 afterWorkImages: [...(diaryData?.afterWorkImages || []), ...newAfterImageUrls],
                 hseDocumentationScans: [...(diaryData?.hseDocumentationScans || []), ...newHseImageUrls],
