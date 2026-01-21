@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -132,6 +133,7 @@ export function SidebarNav() {
   const isAdmin = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
   const isClientManager = userData?.role === 'Client Manager';
   const isTechnician = userData?.role?.includes('Technician');
+  const isTechnologist = userData?.role?.includes('Technologist');
 
 
   const isEquipmentPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter');
@@ -243,7 +245,7 @@ export function SidebarNav() {
                 </CollapsibleContent>
            </Collapsible>
 
-           {(isAdmin || isManager || isClientManager || isTechnician) && (
+           {(isAdmin || isManager || isClientManager || isTechnician || isTechnologist) && (
                 <Collapsible open={isReportsOpen} onOpenChange={setIsReportsOpen}>
                     <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
