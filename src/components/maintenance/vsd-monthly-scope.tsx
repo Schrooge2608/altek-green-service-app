@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -25,7 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Input } from '../ui/input';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebase } from '@/firebase';
 import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
@@ -114,7 +115,6 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
   const title = "VSDs Monthly & Annual Service Scope";
   const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
   const [inspectionDate, setInspectionDate] = React.useState<Date | undefined>(schedule ? new Date(schedule.scheduledFor) : undefined);
-  const [inspectedById, setInspectedById] = React.useState<string | undefined>(schedule?.assignedToId);
   const [isSaving, setIsSaving] = React.useState(false);
   const firestore = useFirestore();
   const { user } = useUser();
@@ -151,6 +151,11 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
   const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
   const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
+  const currentUserData = useMemo(() => {
+    if (!user || !users) return null;
+    return users.find(u => u.id === user.uid);
+  }, [user, users]);
+
   const addCrewMember = () => {
     setCrew(c => [...c, { localId: Date.now() }]);
   };
@@ -166,21 +171,20 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
   };
 
   const handleSaveToUpcoming = async () => {
-    if (!selectedEquipment || !inspectionDate || !inspectedById) {
+    if (!selectedEquipment || !inspectionDate || !currentUserData || !user) {
         toast({
             variant: 'destructive',
             title: 'Missing Information',
-            description: 'Please select an equipment, date, and inspector before saving.'
+            description: 'Please select an equipment and date before saving. You must be logged in.'
         });
         return;
     }
     setIsSaving(true);
 
     const equipmentData = equipment?.find(e => e.id === selectedEquipment);
-    const inspectorData = users?.find(u => u.id === inspectedById);
 
-    if (!equipmentData || !inspectorData) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected equipment or user.' });
+    if (!equipmentData) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected equipment.' });
         setIsSaving(false);
         return;
     }
@@ -192,8 +196,8 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
         task: 'VSD Monthly Service',
         scheduledFor: format(inspectionDate, 'yyyy-MM-dd'),
         status: 'Pending',
-        assignedToId: inspectorData.id,
-        assignedToName: inspectorData.name,
+        assignedToId: user.uid,
+        assignedToName: currentUserData.name,
         completionNotes: '',
         component: 'VSD',
         frequency: 'Monthly',
@@ -327,18 +331,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
             </div>
             <div className="space-y-2">
                 <Label htmlFor="inspected-by">Inspected By</Label>
-                 <Select onValueChange={setInspectedById} value={inspectedById} disabled={usersLoading || !user || isEditMode}>
-                    <SelectTrigger id="inspected-by">
-                        <SelectValue placeholder="Select technician..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                    {usersLoading ? (
-                        <SelectItem value="loading" disabled>Loading...</SelectItem>
-                    ) : (
-                        users?.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)
-                    )}
-                    </SelectContent>
-                </Select>
+                 <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
             </div>
           </CardContent>
         </Card>
