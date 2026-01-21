@@ -28,8 +28,9 @@ class ErrorBoundary extends Component<Props, State> {
     console.error("Uncaught error:", error, errorInfo);
   }
   
+  // This will force a hard refresh of the page.
   private handleTryAgain = () => {
-    this.setState({ hasError: false });
+    window.location.reload();
   }
 
   public render() {
@@ -45,7 +46,7 @@ class ErrorBoundary extends Component<Props, State> {
                       </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                      <p className="text-muted-foreground">An unexpected error occurred. Please try again.</p>
+                      <p className="text-muted-foreground">Something went wrong here.</p>
                       <Button onClick={this.handleTryAgain}>
                           Try Again
                       </Button>

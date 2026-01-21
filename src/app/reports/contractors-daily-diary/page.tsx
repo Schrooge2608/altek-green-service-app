@@ -197,15 +197,14 @@ export default function NewDailyDiaryPage() {
 
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
-            // Sanitize data before saving
+            // Sanitize data before saving to prevent Firestore errors with `undefined`
             const sanitizedData: Partial<DailyDiary> = {
                 ...data,
-                // Ensure number fields are not undefined
+                shiftStart: data.shiftStart || '',
+                shiftEnd: data.shiftEnd || '',
                 hrs: data.hrs || 0,
-                // Ensure string fields are not undefined
                 incidents: data.incidents || '',
                 toolboxTalk: data.toolboxTalk || '',
-                // Sanitize arrays of objects
                 manpower: (data.manpower || []).map(m => ({
                     designation: m.designation || '',
                     forecast: m.forecast || 0,
@@ -229,7 +228,6 @@ export default function NewDailyDiaryPage() {
                     timeEnd: w.timeEnd || '',
                     hrs: w.hrs || 0,
                 })),
-                 // Sanitize arrays of strings
                 delays: (data.delays || []).map(d => d || ''),
                 comments: (data.comments || []).map(c => c || ''),
             };
@@ -244,10 +242,10 @@ export default function NewDailyDiaryPage() {
                 beforeWorkImages: [...(diaryData?.beforeWorkImages || []), ...newBeforeImageUrls],
                 afterWorkImages: [...(diaryData?.afterWorkImages || []), ...newAfterImageUrls],
                 hseDocumentationScans: [...(diaryData?.hseDocumentationScans || []), ...newHseImageUrls],
-                contractorSignature,
-                clientSignature,
-                contractorName,
-                clientName,
+                contractorSignature: contractorSignature || null,
+                clientSignature: clientSignature || null,
+                contractorName: contractorName || '',
+                clientName: clientName || '',
                 contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
                 clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
             };
