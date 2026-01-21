@@ -112,14 +112,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
     const storageRef = ref(storage, storagePath);
 
     try {
-        const uploadPromise = uploadBytes(storageRef, blob);
-        
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Upload timed out after 2 minutes.')), 120000)
-        );
-
-        const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as Awaited<typeof uploadPromise>;
-        
+        const snapshot = await uploadBytes(storageRef, blob);
         const downloadURL = await getDownloadURL(snapshot.ref);
 
         const equipmentRef = doc(firestore, 'equipment', equipment.id);

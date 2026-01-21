@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -45,12 +44,62 @@ export function ImageUploader({ onImagesChange, title }: ImageUploaderProps) {
       setPreviews(newPreviews);
   };
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      updateParent([...files, ...newFiles]);
-    }
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    const newFiles = Array.from(e.target.files);
+
+    const processFile = (file: File): Promise<File> => {
+      return new Promise((resolve) => {
+        // Don't compress PDFs or GIFs
+        if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+          return resolve(file);
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          if (!event.target?.result) return resolve(file); // Fallback
+
+          const img = new window.Image();
+          img.src = event.target.result as string;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1920; // Max width for resized image
+
+            if (img.width <= MAX_WIDTH) {
+              return resolve(file); // Don't upscale small images
+            }
+            
+            const scale = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scale;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(file); // Fallback
+
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+              if (!blob) return resolve(file); // Fallback
+
+              const newFileName = file.name.substring(0, file.name.lastIndexOf('.')) + '.jpg';
+              const compressedFile = new File([blob], newFileName, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            }, 'image/jpeg', 0.8); // 80% quality
+          };
+          img.onerror = () => resolve(file); // Fallback if image fails to load
+        };
+        reader.onerror = () => resolve(file); // Fallback if reader fails
+      });
+    };
+
+    const processedFiles = await Promise.all(newFiles.map(processFile));
+    updateParent([...files, ...processedFiles]);
   };
+
 
   const removeFile = (index: number) => {
     const newFiles = [...files];
