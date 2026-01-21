@@ -552,7 +552,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         )}
                         <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />
                     </div>
-                     <Separator />
+                    <Separator />
                     <div>
                         <h4 className="font-semibold text-muted-foreground mb-2">Job Hazard Analysis (JHA) Scan(s)</h4>
                         {schedule?.jhaScans && schedule.jhaScans.length > 0 && (

@@ -6,6 +6,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
@@ -599,7 +600,7 @@ export function VsdYearlyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                     </div>
                 </CardContent>
             </Card>
-
+            
             <Card className="my-8">
                 <CardHeader>
                     <CardTitle>Task Documents</CardTitle>

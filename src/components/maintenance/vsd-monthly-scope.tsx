@@ -129,6 +129,8 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
   const [take5Files, setTake5Files] = useState<File[]>([]);
   const [cccFiles, setCccFiles] = useState<File[]>([]);
   const [jhaFiles, setJhaFiles] = useState<File[]>([]);
+  const [ptwFiles, setPtwFiles] = useState<File[]>([]);
+  const [workOrderFiles, setWorkOrderFiles] = useState<File[]>([]);
 
   const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
     (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -179,7 +181,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
     setCrew(newCrew);
   };
 
-  const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans' | 'jhaScans') => {
+  const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans' | 'jhaScans' | 'ptwScans' | 'workOrderScans') => {
       if (!schedule || !firebaseApp) {
           toast({ variant: "destructive", title: "Error", description: "Cannot delete file." });
           return;
@@ -256,7 +258,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
         await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
 
         const scheduleId = docRef.id;
-        const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha'): Promise<string[]> => {
+        const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha' | 'ptw' | 'work_order'): Promise<string[]> => {
             if (!firebaseApp || files.length === 0) return [];
             const storage = getStorage(firebaseApp);
             const uploadPromises = files.map(async file => {
@@ -268,17 +270,21 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
             return Promise.all(uploadPromises);
         };
 
-        const [newTake5Urls, newCccUrls, newJhaUrls] = await Promise.all([
+        const [newTake5Urls, newCccUrls, newJhaUrls, newPtwUrls, newWorkOrderUrls] = await Promise.all([
             uploadScans(take5Files, 'take5'),
             uploadScans(cccFiles, 'ccc'),
             uploadScans(jhaFiles, 'jha'),
+            uploadScans(ptwFiles, 'ptw'),
+            uploadScans(workOrderFiles, 'work_order'),
         ]);
 
-        if (newTake5Urls.length > 0 || newCccUrls.length > 0 || newJhaUrls.length > 0) {
+        if (newTake5Urls.length > 0 || newCccUrls.length > 0 || newJhaUrls.length > 0 || newPtwUrls.length > 0 || newWorkOrderUrls.length > 0) {
             await updateDoc(docRef, { 
                 take5Scans: newTake5Urls,
                 cccScans: newCccUrls,
                 jhaScans: newJhaUrls,
+                ptwScans: newPtwUrls,
+                workOrderScans: newWorkOrderUrls,
             });
         }
         
@@ -303,7 +309,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
 
       setIsSaving(true);
       
-      const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha'): Promise<string[]> => {
+      const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha' | 'ptw' | 'work_order'): Promise<string[]> => {
             if (!files.length) return [];
             const storage = getStorage(firebaseApp);
             const uploadPromises = files.map(async file => {
@@ -316,10 +322,12 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
         };
 
       try {
-          const [newTake5Urls, newCccUrls, newJhaUrls] = await Promise.all([
+          const [newTake5Urls, newCccUrls, newJhaUrls, newPtwUrls, newWorkOrderUrls] = await Promise.all([
               uploadScans(take5Files, 'take5'),
               uploadScans(cccFiles, 'ccc'),
               uploadScans(jhaFiles, 'jha'),
+              uploadScans(ptwFiles, 'ptw'),
+              uploadScans(workOrderFiles, 'work_order'),
           ]);
           
           const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
@@ -330,15 +338,11 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
               checklist,
           };
           
-          if (newTake5Urls.length > 0) {
-              updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
-          }
-          if (newCccUrls.length > 0) {
-              updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
-          }
-          if (newJhaUrls.length > 0) {
-              updateData.jhaScans = [...(schedule.jhaScans || []), ...newJhaUrls];
-          }
+          if (newTake5Urls.length > 0) updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
+          if (newCccUrls.length > 0) updateData.cccScans = [...(schedule.cccScans || []), ...newCccUrls];
+          if (newJhaUrls.length > 0) updateData.jhaScans = [...(schedule.jhaScans || []), ...newJhaUrls];
+          if (newPtwUrls.length > 0) updateData.ptwScans = [...(schedule.ptwScans || []), ...newPtwUrls];
+          if (newWorkOrderUrls.length > 0) updateData.workOrderScans = [...(schedule.workOrderScans || []), ...newWorkOrderUrls];
           
           updateData.updatedAt = new Date().toISOString();
           await updateDoc(scheduleRef, updateData);
@@ -348,6 +352,8 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
           if (newTake5Urls.length > 0) setTake5Files([]);
           if (newCccUrls.length > 0) setCccFiles([]);
           if (newJhaUrls.length > 0) setJhaFiles([]);
+          if (newPtwUrls.length > 0) setPtwFiles([]);
+          if (newWorkOrderUrls.length > 0) setWorkOrderFiles([]);
           
           router.refresh();
       } catch (error: any) {
@@ -475,6 +481,21 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
             </div>
         </div>
 
+        <Alert variant="destructive" className="my-8">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Safety Warning</AlertTitle>
+            <AlertDescription>
+                <ul className="list-disc pl-5 space-y-1">
+                    <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
+                    <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
+                    <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
+                    <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
+                    <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
+                    <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
+                </ul>
+            </AlertDescription>
+        </Alert>
+
         <Card className="my-8">
             <CardHeader>
                 <CardTitle>Safety Documentation</CardTitle>
@@ -564,6 +585,60 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
             </CardContent>
         </Card>
 
+        <Card className="my-8">
+            <CardHeader>
+                <CardTitle>Task Documents</CardTitle>
+                <CardDescription>Upload scans of the Permit to Work and Work Order.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div>
+                    <h4 className="font-semibold text-muted-foreground mb-2">Permit to Work Scan(s)</h4>
+                    {schedule?.ptwScans && schedule.ptwScans.length > 0 && (
+                        <div className="mb-4 space-y-2">
+                            <Label>Uploaded Documents</Label>
+                            <div className="flex flex-col gap-2 rounded-md border p-2">
+                                {schedule.ptwScans.map((url, i) => (
+                                    <div key={i} className="flex items-center justify-between">
+                                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                            {isImageUrl(url) ? (<img src={url} alt={`Permit to Work Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
+                                            <span className="text-sm text-primary group-hover:underline truncate">Permit to Work Scan {i + 1}</span>
+                                        </a>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'ptwScans')}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <ImageUploader onImagesChange={setPtwFiles} title="Permit to Work Documents" />
+                </div>
+                <Separator />
+                <div>
+                    <h4 className="font-semibold text-muted-foreground mb-2">Works Order Scan(s)</h4>
+                    {schedule?.workOrderScans && schedule.workOrderScans.length > 0 && (
+                        <div className="mb-4 space-y-2">
+                            <Label>Uploaded Documents</Label>
+                            <div className="flex flex-col gap-2 rounded-md border p-2">
+                                 {schedule.workOrderScans.map((url, i) => (
+                                    <div key={i} className="flex items-center justify-between">
+                                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+                                            {isImageUrl(url) ? (<img src={url} alt={`Works Order Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
+                                            <span className="text-sm text-primary group-hover:underline truncate">Works Order Scan {i + 1}</span>
+                                        </a>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'workOrderScans')}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <ImageUploader onImagesChange={setWorkOrderFiles} title="Works Order Documents" />
+                </div>
+            </CardContent>
+        </Card>
+
         <div className="my-8">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold">Work Crew</h3>
@@ -588,21 +663,6 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
                 </TableBody>
             </Table>
         </div>
-
-        <Alert variant="destructive" className="my-8">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Safety Warning</AlertTitle>
-            <AlertDescription>
-                <ul className="list-disc pl-5 space-y-1">
-                    <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
-                    <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
-                    <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
-                    <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
-                    <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
-                    <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
-                </ul>
-            </AlertDescription>
-        </Alert>
 
         <h3 className="text-xl font-bold mb-4">Monthly Maintenance: "The Deep Clean"</h3>
         <p className="text-sm text-muted-foreground mb-4">Monthly tasks focus on the physical health of the drive and ensuring that the cooling systems are actually working, not just spinning.</p>

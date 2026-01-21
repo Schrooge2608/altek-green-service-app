@@ -6,6 +6,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
@@ -167,7 +168,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
 
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
-
+    
     const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 

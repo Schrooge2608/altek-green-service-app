@@ -6,6 +6,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription
 } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
@@ -319,7 +320,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             setIsSaving(false);
         }
     };
-
+    
     const handleSaveProgress = async () => {
         if (!schedule || !firebaseApp) {
             toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
@@ -351,7 +352,6 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
 
             const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
             const crewToSave = crew.map(({ localId, ...rest }) => rest);
-
             const updateData: Partial<ScheduledTask> = {
                 workCrew: crewToSave,
                 checklist,
