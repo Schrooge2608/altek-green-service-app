@@ -1,4 +1,5 @@
 
+      
 'use client';
 
 import {
@@ -29,13 +30,13 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import React, { useState, useMemo } from 'react';
 import { Alert } from '../ui/alert';
-import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { ImageUploader } from '@/components/image-uploader';
 import { SignaturePad } from '../ui/signature-pad';
 
@@ -166,6 +167,61 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
     (newCrew[index] as any)[field] = value;
     setCrew(newCrew);
   };
+  
+  const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans') => {
+    if (!schedule || !firebaseApp) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Cannot delete file. Schedule or Firebase app not available.",
+        });
+        return;
+    }
+
+    setIsSaving(true);
+
+    try {
+        // 1. Delete from Storage
+        const storage = getStorage(firebaseApp);
+        const fileRef = ref(storage, fileUrl);
+        await deleteObject(fileRef);
+
+        // 2. Delete from Firestore
+        const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+        const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
+        
+        await updateDoc(scheduleRef, {
+            [docType]: updatedScans
+        });
+
+        toast({
+            title: "File Deleted",
+            description: "The selected document has been removed.",
+        });
+        router.refresh(); // To get the latest schedule data
+
+    } catch (error: any) {
+        console.error("Error deleting file:", error);
+        toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: error.code === 'storage/object-not-found' 
+                ? "File not found in storage. Removing from record."
+                : error.message || "An unexpected error occurred.",
+        });
+        // If storage deletion fails but we want to proceed with DB update anyway
+        if(error.code === 'storage/object-not-found'){
+            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+            const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
+            await updateDoc(scheduleRef, { [docType]: updatedScans });
+            router.refresh();
+        }
+
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
 
   const handleSaveToUpcoming = async () => {
     if (!selectedEquipment || !inspectionDate || !currentUserData || !user) {
@@ -309,17 +365,10 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
       <div className="flex justify-end mb-4 gap-2 print:hidden">
-        {isEditMode ? (
-            <Button onClick={handleSaveProgress} disabled={isSaving}>
-                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                {isSaving ? 'Saving...' : 'Save Progress'}
-            </Button>
-        ) : (
-             <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
-                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                {isSaving ? 'Saving...' : 'Save to Upcoming Schedule List'}
-            </Button>
-        )}
+        <Button onClick={handleSaveProgress} disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isSaving ? 'Saving...' : 'Save Progress'}
+        </Button>
         <Button onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
         </Button>
@@ -431,12 +480,17 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                     {schedule?.take5Scans && schedule.take5Scans.length > 0 && (
                         <div className="mb-4 space-y-2">
                             <Label>Uploaded Documents</Label>
-                            <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                            <div className="flex flex-col gap-2 rounded-md border p-2">
                                 {schedule.take5Scans.map((url, i) => (
-                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                                        <Paperclip className="h-3 w-3" />
-                                        Take 5 Scan {i + 1}
-                                    </a>
+                                    <div key={i} className="flex items-center justify-between">
+                                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1 truncate">
+                                            <Paperclip className="h-3 w-3 shrink-0" />
+                                            <span className="truncate">Take 5 Scan {i + 1}</span>
+                                        </a>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -449,12 +503,17 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                       {schedule?.cccScans && schedule.cccScans.length > 0 && (
                         <div className="mb-4 space-y-2">
                             <Label>Uploaded Documents</Label>
-                            <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                            <div className="flex flex-col gap-2 rounded-md border p-2">
                                 {schedule.cccScans.map((url, i) => (
-                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                                        <Paperclip className="h-3 w-3" />
-                                        CCC Scan {i + 1}
-                                    </a>
+                                    <div key={i} className="flex items-center justify-between">
+                                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1 truncate">
+                                            <Paperclip className="h-3 w-3 shrink-0" />
+                                            <span className="truncate">CCC Scan {i + 1}</span>
+                                        </a>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -578,3 +637,5 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
     </div>
   );
 }
+      
+    
