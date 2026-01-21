@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, Camera, Video, AlertTriangle, RefreshCw, X } from 'lucide-react';
+import { Upload, Camera, Video, AlertTriangle, RefreshCw, X, FileText } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,7 +20,7 @@ interface ImageUploaderProps {
 export function ImageUploader({ onImagesChange, title }: ImageUploaderProps) {
   const { toast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [previews, setPreviews] = useState<{ url: string; name: string; type: string }[]>([]);
   
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -32,9 +32,16 @@ export function ImageUploader({ onImagesChange, title }: ImageUploaderProps) {
   const updateParent = (newFiles: File[]) => {
       setFiles(newFiles);
       onImagesChange(newFiles);
-      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+      
       // Revoke old object URLs to prevent memory leaks
-      previews.forEach(url => URL.revokeObjectURL(url));
+      previews.forEach(p => URL.revokeObjectURL(p.url));
+
+      const newPreviews = newFiles.map(file => ({
+          url: URL.createObjectURL(file),
+          name: file.name,
+          type: file.type,
+      }));
+
       setPreviews(newPreviews);
   };
   
@@ -45,7 +52,7 @@ export function ImageUploader({ onImagesChange, title }: ImageUploaderProps) {
     }
   };
 
-  const removeImage = (index: number) => {
+  const removeFile = (index: number) => {
     const newFiles = [...files];
     newFiles.splice(index, 1);
     updateParent(newFiles);
@@ -82,7 +89,7 @@ export function ImageUploader({ onImagesChange, title }: ImageUploaderProps) {
 
   useEffect(() => {
     return () => {
-      previews.forEach(url => URL.revokeObjectURL(url));
+      previews.forEach(p => URL.revokeObjectURL(p.url));
       stopCameraStream();
     }
   }, [previews, stopCameraStream]);
@@ -135,8 +142,8 @@ export function ImageUploader({ onImagesChange, title }: ImageUploaderProps) {
           </TabsList>
           <TabsContent value="upload">
             <div className="space-y-4 pt-4">
-              <Label htmlFor={`file-upload-${title}`}>Add images by uploading files</Label>
-              <Input id={`file-upload-${title}`} ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} />
+              <Label htmlFor={`file-upload-${title}`}>Add images or PDFs by uploading files</Label>
+              <Input id={`file-upload-${title}`} ref={fileInputRef} type="file" accept="image/*,application/pdf" multiple onChange={handleFileChange} />
             </div>
           </TabsContent>
           <TabsContent value="camera">
@@ -172,16 +179,23 @@ export function ImageUploader({ onImagesChange, title }: ImageUploaderProps) {
         </Tabs>
         {previews.length > 0 && (
           <div className="mt-4">
-            <h4 className="font-semibold mb-2 text-sm text-muted-foreground">Image Previews</h4>
+            <h4 className="font-semibold mb-2 text-sm text-muted-foreground">File Previews</h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {previews.map((src, index) => (
+              {previews.map((preview, index) => (
                 <div key={index} className="relative group aspect-square">
-                  <Image src={src} alt={`Preview ${index}`} layout="fill" className="rounded-md object-cover" />
+                  {preview.type.startsWith('image/') ? (
+                     <Image src={preview.url} alt={`Preview ${index}`} layout="fill" className="rounded-md object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full bg-muted rounded-md p-2 text-center">
+                        <FileText className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground mt-2 break-all">{preview.name}</span>
+                    </div>
+                  )}
                   <Button
                     variant="destructive"
                     size="icon"
                     className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => removeImage(index)}
+                    onClick={() => removeFile(index)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
