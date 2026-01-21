@@ -172,7 +172,7 @@ export default function NewDailyDiaryPage() {
         const storage = getStorage(firebaseApp);
         
         const uploadPromises = files.map(file => {
-            const storagePath = `daily_diaries/${uniqueId}/${folder}/${file.name}`;
+            const storagePath = `daily_diaries/${uniqueId}/${folder}/${file.name}_${Date.now()}`;
             const storageRef = ref(storage, storagePath);
             return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
         });

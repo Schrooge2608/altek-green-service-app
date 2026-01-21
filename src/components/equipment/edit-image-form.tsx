@@ -108,7 +108,7 @@ export function EditImageForm({ equipment }: EditImageFormProps) {
   const uploadBlob = async (blob: Blob, fileName: string) => {
     setIsUploading(true);
     const storage = getStorage(firebaseApp);
-    const storagePath = `equipment_images/${equipment.id}/${fileName}`;
+    const storagePath = `equipment_images/${equipment.id}/${Date.now()}_${fileName}`;
     const storageRef = ref(storage, storagePath);
 
     try {

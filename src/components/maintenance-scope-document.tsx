@@ -168,7 +168,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             if (!files.length) return [];
             const storage = getStorage(firebaseApp);
             const uploadPromises = files.map(async file => {
-                const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}`;
+                const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}_${Date.now()}`;
                 const storageRef = ref(storage, storagePath);
                 const snapshot = await uploadBytes(storageRef, file);
                 return getDownloadURL(snapshot.ref);
@@ -257,7 +257,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 if (!firebaseApp || files.length === 0) return [];
                 const storage = getStorage(firebaseApp);
                 const uploadPromises = files.map(async file => {
-                    const storagePath = `scheduled_tasks/${scheduleId}/${docType}_scans/${file.name}`;
+                    const storagePath = `scheduled_tasks/${scheduleId}/${docType}_scans/${file.name}_${Date.now()}`;
                     const storageRef = ref(storage, storagePath);
                     const snapshot = await uploadBytes(storageRef, file);
                     return getDownloadURL(snapshot.ref);

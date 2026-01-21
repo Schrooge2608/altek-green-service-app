@@ -269,7 +269,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             if (!firebaseApp || files.length === 0) return [];
             const storage = getStorage(firebaseApp);
             const uploadPromises = files.map(async file => {
-                const storagePath = `scheduled_tasks/${scheduleId}/${docType}_scans/${file.name}`;
+                const storagePath = `scheduled_tasks/${scheduleId}/${docType}_scans/${file.name}_${Date.now()}`;
                 const storageRef = ref(storage, storagePath);
                 const snapshot = await uploadBytes(storageRef, file);
                 return getDownloadURL(snapshot.ref);
@@ -314,7 +314,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             if (!files.length) return [];
             const storage = getStorage(firebaseApp);
             const uploadPromises = files.map(async file => {
-                const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}`;
+                const storagePath = `scheduled_tasks/${schedule.id}/${docType}_scans/${file.name}_${Date.now()}`;
                 const storageRef = ref(storage, storagePath);
                 const snapshot = await uploadBytes(storageRef, file);
                 return getDownloadURL(snapshot.ref);
@@ -349,7 +349,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
           
           if (newTake5Urls.length > 0) setTake5Files([]);
           if (newCccUrls.length > 0) setCccFiles([]);
-
+          
           router.refresh();
       } catch (error: any) {
           console.error("Error saving progress:", error);

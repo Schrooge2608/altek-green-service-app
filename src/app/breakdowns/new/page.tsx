@@ -100,7 +100,7 @@ export default function NewBreakdownPage() {
     if (!firebaseApp || images.length === 0) return [];
     const storage = getStorage(firebaseApp);
     const uploadPromises = images.map(file => {
-        const storagePath = `breakdown_reports/${breakdownId}/${file.name}`;
+        const storagePath = `breakdown_reports/${breakdownId}/${file.name}_${Date.now()}`;
         const storageRef = ref(storage, storagePath);
         return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
     });
