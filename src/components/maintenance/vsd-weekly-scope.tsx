@@ -29,7 +29,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import React, { useState, useMemo } from 'react';
-import { Alert } from '../ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
@@ -560,10 +560,10 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
 
         <Alert variant="destructive" className="my-8">
             <AlertTriangle className="h-4 w-4" />
-            <CardTitle className="mb-2">Safety Warning</CardTitle>
-            <p className="text-xs">
+            <AlertTitle>Safety Warning</AlertTitle>
+            <AlertDescription className="text-xs">
                 A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle.
-            </p>
+            </AlertDescription>
         </Alert>
 
         <h3 className="text-xl font-bold mb-4">Weekly Maintenance Checklist</h3>
@@ -648,4 +648,6 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
   );
 }
       
+    
+
     
