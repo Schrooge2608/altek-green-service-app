@@ -265,7 +265,8 @@
             "department": { "type": "string", "description": "RBM Information: Department." },
             "section": { "type": "string", "description": "RBM Information: Section." },
             "purchaseOrderNo": { "type": "string", "description": "RBM Information: Purchase Order No." },
-            "justification": { "type": "string", "description": "RBM Information: Justification." }
+            "justification": { "type": "string", "description": "RBM Information: Justification." },
+            "signatureUrl": { "type": "string", "description": "URL of the user's saved signature image." }
         },
         "required": ["id", "name", "email", "role"]
     },
@@ -493,6 +494,3 @@
     ]
   }
 }
-
-
-    

@@ -211,6 +211,7 @@ export interface User {
   section?: string;
   purchaseOrderNo?: string;
   justification?: string;
+  signatureUrl?: string;
 }
 
 export interface ManpowerEntry {
@@ -246,7 +247,6 @@ export interface DailyDiary {
   contractTitle: string;
   contractNumber: string;
   area: 'Mining' | 'Smelter';
-  // FIX 1: Allow string OR Date object to prevent conflict
   date: string | Date;
   shiftStart?: string;
   shiftEnd?: string;
@@ -269,7 +269,6 @@ export interface DailyDiary {
   afterWorkImages?: string[];
   isSignedOff: boolean;
   createdAt?: any;
-  // FIX 2: Allow null values to prevent assignment errors
   locationFilter?: string | null;
   savedEquipmentId?: string | null;
 }
