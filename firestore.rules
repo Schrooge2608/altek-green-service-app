@@ -1,23 +1,40 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAuthenticated() { return request.auth != null; }
-    function isManagement() { return request.auth.token.email.matches('.*admin.*'); } // Fallback if roles fail
+    function isAuthenticated() { 
+      return request.auth != null; 
+    }
+
+    // Helper function to safely get the user's role
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Helper function to check if the user has one of the specified manager roles
+    function isManager() {
+      // Check for existence before accessing data to prevent errors
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             userRole() in ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'];
+    }
 
     match /users/{userId} {
-      allow read, write, list: if isAuthenticated();
+      allow read, list: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isManager());
     }
     
     match /vsds/{vsdId} {
       allow read, write, list: if isAuthenticated();
     }
     
-    match /completed_schedules/{scheduleId} {
-      allow read, write, list: if isAuthenticated();
+    match /completed_work/{scheduleId} {
+      allow read: if isAuthenticated();
+      // Assuming completed work also has a userId field for the creator
+      allow write: if isAuthenticated() && (request.auth.uid == resource.data.userId || isManager());
     }
     
-    match /upcoming_schedules/{scheduleId} {
-      allow read, write, list: if isAuthenticated();
+    match /upcoming_work/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == resource.data.userId || isManager());
     }
     
     match /equipment/{equipmentId} {
@@ -33,7 +50,8 @@ service cloud.firestore {
     }
     
     match /daily_diaries/{diaryId} {
-      allow read, write, list: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == resource.data.userId || isManager());
     }
 
     match /generated_reports/{reportId} {
@@ -45,7 +63,8 @@ service cloud.firestore {
     }
 
     match /timesheets/{timesheetId} {
-      allow read, write, list: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == resource.data.userId || isManager());
     }
   }
 }
