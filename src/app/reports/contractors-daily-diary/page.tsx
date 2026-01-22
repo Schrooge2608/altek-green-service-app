@@ -75,48 +75,38 @@ export default function NewDailyDiaryPage() {
     const isAdmin = useMemo(() => userData?.role && ['Admin', 'Superadmin'].includes(userData.role), [userData]);
     const isCreator = useMemo(() => diaryData?.userId === user?.uid, [diaryData, user]);
 
-    const isSignedOff = useMemo(() => diaryId ? (diaryData?.isSignedOff || false) : false, [diaryId, diaryData]);
-    const isFinalised = useMemo(() => diaryId ? (diaryData?.isFinalised || false) : false, [diaryId, diaryData]);
+    const isSignedOff = diaryId ? (diaryData?.isSignedOff || false) : false;
+    const isFinalised = diaryId ? (diaryData?.isFinalised || false) : false;
 
-    const canEdit = useMemo(() => !diaryId || ((isCreator || isAdmin) && !isSignedOff), [diaryId, isCreator, isAdmin, isSignedOff]);
+    const canEdit = !diaryId || ((isCreator || isAdmin) && !isSignedOff);
     
     const canSignClient = useMemo(() => {
         return isManager && !isFinalised;
     }, [isManager, isFinalised]);
 
 
-    const defaultValues = useMemo(() => {
-        const works = Array(5).fill(null).map(() => ({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: undefined }));
-        if (equipmentNameFromQuery && !diaryId) {
-            works[0].scope = `Unscheduled work on: ${equipmentNameFromQuery}`;
-        }
-        return {
-            contractTitle: 'VSD MAINTENANCE',
-            contractNumber: 'CW 22038313',
-            area: 'Mining' as 'Mining' | 'Smelter',
-            date: new Date(),
-            shiftStart: '',
-            shiftEnd: '',
-            hrs: undefined,
-            incidents: '',
-            toolboxTalk: '',
-            manpower: [
-                { designation: 'Site Supervisor', forecast: 1, actual: 1, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 9, comments: '' },
-                { designation: 'Electrician', forecast: 1, actual: 1, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 9, comments: '' },
-                { designation: 'Assistant', forecast: 2, actual: 2, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 18, comments: '' },
-                { designation: 'Safety Officer', forecast: 1, actual: 1, normalHrs: 9, overtime1_5: 0, overtime2_0: 0, totalManHrs: 9, comments: '' },
-            ] as ManpowerEntry[],
-            plant: [
-                { description: 'LDV - Single Cab', qty: 1, inspectionDone: 'yes', comments: '' },
-                { description: 'LDV - Double Cab', qty: 1, inspectionDone: 'yes', comments: '' },
-            ] as PlantEntry[],
-            works: works,
-            delays: Array(5).fill(''),
-            comments: Array(5).fill(''),
-            locationFilter: '',
-            savedEquipmentId: '',
-        }
-    }, [equipmentNameFromQuery, diaryId]);
+    // DEFINE CLEAN DEFAULTS
+    const defaultValues: Partial<DailyDiary> = {
+        contractTitle: '',
+        contractNumber: '',
+        area: 'Mining', // Default to Mining, or leave empty '' if preferred
+        date: new Date(),
+        shiftStart: '',
+        shiftEnd: '',
+        hrs: 0,
+        incidents: '',
+        toolboxTalk: '',
+        // ARRAYS: Start with exactly ONE empty row for new diaries
+        manpower: [{ designation: '', forecast: 0, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' }],
+        plant: [{ description: '', qty: 0, inspectionDone: 'no', comments: '' }],
+        works: [{ area: '', scope: '', timeStart: '', timeEnd: '', hrs: 0 }],
+        delays: [''],
+        comments: [''],
+        hseDocumentationScans: [],
+        beforeWorkImages: [],
+        afterWorkImages: [],
+        isSignedOff: false,
+    };
 
     const form = useForm<DailyDiary>({
         defaultValues,
@@ -156,25 +146,43 @@ export default function NewDailyDiaryPage() {
 
     useEffect(() => {
         if (diaryId && diaryData) {
-            // EDIT MODE: Load existing data
+            // --- EDIT MODE: Load Saved Data ---
             form.reset({
-                ...defaultValues,
-                ...diaryData,
+                ...defaultValues, // Fallback for missing fields
+                ...diaryData,     // Overwrite with saved data
+                
+                // DATA RECOVERY: If saved array is empty, give 1 empty line. If it has data, KEEP IT.
+                manpower: (diaryData.manpower && diaryData.manpower.length > 0) 
+                          ? diaryData.manpower 
+                          : defaultValues.manpower,
+
+                plant: (diaryData.plant && diaryData.plant.length > 0) 
+                          ? diaryData.plant 
+                          : defaultValues.plant,
+
+                works: (diaryData.works && diaryData.works.length > 0) 
+                          ? diaryData.works 
+                          : defaultValues.works,
+
+                // DATE HANDLING
                 date: diaryData.date ? new Date(diaryData.date) : new Date(),
                 locationFilter: diaryData.locationFilter || (diaryData.works && diaryData.works[0]?.area) || '',
                 savedEquipmentId: diaryData.savedEquipmentId || '',
             });
+
+            // Restore Signatures & Local State
             setContractorSignature(diaryData.contractorSignature || null);
             setClientSignature(diaryData.clientSignature || null);
             setContractorName(diaryData.contractorName || '');
             setClientName(diaryData.clientName || '');
             setContractorDate(diaryData.contractorDate ? new Date(diaryData.contractorDate) : undefined);
             setClientDate(diaryData.clientDate ? new Date(diaryData.clientDate) : undefined);
+
         } else if (!diaryId) {
-            // NEW MODE: Force reset to blank defaults
+            // --- NEW MODE: Force Clean Slate ---
             form.reset(defaultValues);
             
-            // Clear all local state manually to be safe
+            // Wipe all local state
             setContractorSignature(null);
             setClientSignature(null);
             setContractorName('');
@@ -185,7 +193,7 @@ export default function NewDailyDiaryPage() {
             setAfterFile(null);
             setHseFile(null);
         }
-    }, [diaryId, diaryData, form, defaultValues]);
+    }, [diaryId, diaryData, form]);
     
     useEffect(() => {
         if (diaryId) {
