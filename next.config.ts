@@ -1,6 +1,5 @@
 import type {NextConfig} from 'next';
 
-// Triggering a server restart to apply environment variable changes.
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
