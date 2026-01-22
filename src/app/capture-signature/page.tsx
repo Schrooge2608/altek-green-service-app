@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,14 +9,16 @@ import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Trash2 } from 'lucide-react';
+import { Loader2, Save, Trash2, ArrowLeft } from 'lucide-react';
 import { AltekLogo } from '@/components/altek-logo';
 import type { User } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 export default function CaptureSignaturePage() {
     const { user } = useUser();
     const { firestore, firebaseApp } = useFirebase();
     const { toast } = useToast();
+    const router = useRouter();
     
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
     const { data: userData } = useDoc<User>(userDocRef);
@@ -101,14 +104,24 @@ export default function CaptureSignaturePage() {
                     </div>
 
                     {/* SAVE BUTTON */}
-                    <Button 
-                        className="w-full h-12 text-lg" 
-                        onClick={handleSave} 
-                        disabled={isSaving || !signature || (signature === userData?.signatureUrl)}
-                    >
-                        {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-                        {isSaving ? 'Saving to Cloud...' : 'Save Signature'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                         <Button 
+                            variant="outline"
+                            className="w-full h-12 text-lg" 
+                            onClick={() => router.back()}
+                        >
+                            <ArrowLeft className="mr-2 h-5 w-5" />
+                            Back
+                        </Button>
+                        <Button 
+                            className="w-full h-12 text-lg" 
+                            onClick={handleSave} 
+                            disabled={isSaving || !signature || (signature === userData?.signatureUrl)}
+                        >
+                            {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
+                            {isSaving ? 'Saving...' : 'Save Signature'}
+                        </Button>
+                    </div>
 
                     <p className="text-xs text-center text-muted-foreground">
                         By clicking save, you agree that this digital signature carries the same weight as your physical signature on Altek Green documents.

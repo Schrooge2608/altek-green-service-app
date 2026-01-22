@@ -376,9 +376,9 @@ export function SidebarNav() {
             <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Completed Schedules" isActive={pathname.startsWith('/maintenance/completed')}>
+                        <SidebarMenuButton tooltip="Completed Work" isActive={pathname.startsWith('/maintenance/completed')}>
                             <FileText />
-                            <span>Completed Schedules</span>
+                            <span>Completed Work</span>
                             <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
                         </SidebarMenuButton>
                     </CollapsibleTrigger>
