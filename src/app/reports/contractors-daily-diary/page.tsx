@@ -81,8 +81,8 @@ export default function NewDailyDiaryPage() {
     const canEdit = !diaryId || ((isCreator || isAdmin) && !isSignedOff);
     
     const canSignClient = useMemo(() => {
-        return isManager && !isFinalised;
-    }, [isManager, isFinalised]);
+        return isManager && isSignedOff && !isFinalised;
+    }, [isManager, isSignedOff, isFinalised]);
 
 
     // DEFINE CLEAN DEFAULTS
@@ -1050,18 +1050,75 @@ export default function NewDailyDiaryPage() {
                                 <CardContent className="p-4 space-y-4">
                                     <div className="space-y-1">
                                         <Label>Name</Label>
-                                        <Input value={clientName} onChange={(e) => setClientName(e.target.value)} disabled={!canSignClient} />
+                                        <Input 
+                                            value={clientName} 
+                                            onChange={(e) => setClientName(e.target.value)} 
+                                            disabled={!canSignClient} 
+                                            placeholder="Client Representative Name"
+                                        />
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Signature</Label>
-                                        {canSignClient ? (
-                                            <SignaturePad value={clientSignature} onSign={setClientSignature} onClear={() => setClientSignature(null)} />
+                                        
+                                        {/* STATE 1: Already Signed */}
+                                        {clientSignature ? (
+                                            <div className="relative border rounded-md p-4 bg-white flex flex-col items-center">
+                                                <img src={clientSignature} alt="Client Sig" className="h-24 object-contain" />
+                                                
+                                                {/* Only allow deleting if it's still possible to sign */}
+                                                {canSignClient && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="absolute top-1 right-1 h-6 w-6 p-0 text-red-500 hover:bg-red-50" 
+                                                        onClick={() => setClientSignature(null)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
                                         ) : (
-                                            <div className="relative border rounded-md p-4 bg-muted flex flex-col items-center min-h-[148px] justify-center">
-                                                {clientSignature ? (
-                                                    <img src={clientSignature} alt="Client Signature" className="h-24 object-contain" />
+                                            /* STATE 2: Not Signed - Check Profile */
+                                            <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center bg-slate-50 gap-3">
+                                                
+                                                {/* Check if this user can sign at all */}
+                                                {canSignClient ? (
+                                                    <>
+                                                        {/* OPTION A: User has a signature saved */}
+                                                        {userData?.signatureUrl ? (
+                                                            <Button 
+                                                                type="button" 
+                                                                variant="default" 
+                                                                className="w-full bg-blue-600 hover:bg-blue-700"
+                                                                onClick={() => {
+                                                                    setClientSignature(userData.signatureUrl);
+                                                                    if (!clientName) setClientName(userData.name || '');
+                                                                    setClientDate(new Date());
+                                                                    toast({ title: "Approved", description: "Client signature applied." });
+                                                                }}
+                                                            >
+                                                                <Pencil className="mr-2 h-4 w-4" />
+                                                                Click to Sign as {userData.name}
+                                                            </Button>
+                                                        ) : (
+                                                            /* OPTION B: User has NO signature saved */
+                                                            <div className="flex flex-col items-center gap-2 w-full">
+                                                                <p className="text-sm text-red-500 font-medium text-center">
+                                                                    No signature found for {userData?.name || 'you'}.
+                                                                </p>
+                                                                <Button 
+                                                                    type="button" 
+                                                                    variant="outline" 
+                                                                    className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                                                                    onClick={() => router.push('/capture-signature')}
+                                                                >
+                                                                    Create Signature Now
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </>
                                                 ) : (
-                                                    <p className="text-sm text-muted-foreground">Not yet signed by client.</p>
+                                                    <p className="text-sm text-muted-foreground">Not yet ready for client signature.</p>
                                                 )}
                                             </div>
                                         )}
