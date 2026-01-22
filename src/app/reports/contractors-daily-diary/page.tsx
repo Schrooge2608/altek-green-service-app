@@ -411,13 +411,28 @@ export default function NewDailyDiaryPage() {
                         {isSaving ? 'Saving...' : 'Save Diary'}
                     </Button>
                 )}
-                {canEdit ? (
-                    <Button onClick={form.handleSubmit(handleSaveForApproval)} variant="outline" disabled={!uniqueId || isIdLoading || isSaving}>
-                        For Approval
+                
+                {isSignedOff ? (
+                     <Button onClick={() => window.print()} variant="outline">
+                        <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
                     </Button>
                 ) : (
-                    <Button onClick={() => window.print()} variant="outline">
-                        <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
+                    <Button 
+                        variant="outline" 
+                        disabled={isSaving}
+                        onClick={() => {
+                            if (isManager && !clientSignature) {
+                                toast({
+                                    variant: "destructive",
+                                    title: "Signature Required",
+                                    description: "As a manager, you must sign the document in the Client section before approving.",
+                                });
+                            } else {
+                                form.handleSubmit(handleSaveForApproval)();
+                            }
+                        }}
+                    >
+                        For Approval
                     </Button>
                 )}
             </div>
