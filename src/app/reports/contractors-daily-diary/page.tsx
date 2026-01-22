@@ -492,6 +492,22 @@ export default function NewDailyDiaryPage() {
                                         className="w-full p-2 border rounded"
                                     />
                                     {hseFile && <p className="text-green-600 text-sm mt-1">File Selected: {hseFile.name}</p>}
+                                    {diaryData?.hseDocumentationScans && diaryData.hseDocumentationScans.length > 0 && (
+                                    <div className="flex gap-2 mt-2 flex-wrap">
+                                        {diaryData.hseDocumentationScans.map((url, index) => (
+                                        <div key={index} className="relative group">
+                                            <a href={url} target="_blank" rel="noopener noreferrer">
+                                            <img 
+                                                src={url} 
+                                                alt={`HSE Doc ${index + 1}`} 
+                                                className="h-20 w-20 object-cover rounded border border-gray-300 bg-gray-100"
+                                                onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://placehold.co/100?text=PDF' }} 
+                                            />
+                                            </a>
+                                        </div>
+                                        ))}
+                                    </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -669,6 +685,15 @@ export default function NewDailyDiaryPage() {
                                         className="w-full p-2 border rounded"
                                     />
                                     {beforeFile && <p className="text-green-600 text-sm mt-1">File Selected: {beforeFile.name}</p>}
+                                    {diaryData?.beforeWorkImages && diaryData.beforeWorkImages.length > 0 && (
+                                    <div className="flex gap-2 mt-2 flex-wrap">
+                                        {diaryData.beforeWorkImages.map((url, index) => (
+                                        <a key={index} href={url} target="_blank" rel="noopener noreferrer">
+                                            <img src={url} alt="" className="h-24 w-24 object-cover rounded border border-gray-300" />
+                                        </a>
+                                        ))}
+                                    </div>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor='after-file-input' className="font-semibold">After Work</Label>
@@ -684,6 +709,15 @@ export default function NewDailyDiaryPage() {
                                         className="w-full p-2 border rounded"
                                     />
                                     {afterFile && <p className="text-green-600 text-sm mt-1">File Selected: {afterFile.name}</p>}
+                                    {diaryData?.afterWorkImages && diaryData.afterWorkImages.length > 0 && (
+                                    <div className="flex gap-2 mt-2 flex-wrap">
+                                        {diaryData.afterWorkImages.map((url, index) => (
+                                        <a key={index} href={url} target="_blank" rel="noopener noreferrer">
+                                            <img src={url} alt="" className="h-24 w-24 object-cover rounded border border-gray-300" />
+                                        </a>
+                                        ))}
+                                    </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
