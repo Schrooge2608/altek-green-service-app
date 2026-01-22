@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, notFound } from 'next/navigation';
@@ -26,7 +25,7 @@ const validCategories: Record<string, CompletedSchedule['maintenanceType']> = {
   pumps: 'Pumps',
 };
 
-const frequencies: CompletedSchedule['frequency'][] = ['Weekly', 'Monthly', '3-Monthly', '6-Monthly', 'Yearly'];
+const frequencies: CompletedSchedule['frequency'][] = ['3-Monthly', '6-Monthly', 'Yearly'];
 
 function CompletedSchedulesTable({ schedules, isLoading }: { schedules: CompletedSchedule[] | null, isLoading: boolean }) {
     const hasSchedules = !isLoading && schedules && schedules.length > 0;
