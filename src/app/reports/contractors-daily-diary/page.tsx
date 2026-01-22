@@ -75,15 +75,10 @@ export default function NewDailyDiaryPage() {
     const isAdmin = useMemo(() => userData?.role && ['Admin', 'Superadmin'].includes(userData.role), [userData]);
     const isCreator = useMemo(() => diaryData?.userId === user?.uid, [diaryData, user]);
 
-    const isFinalised = useMemo(() => diaryData?.isFinalised === true, [diaryData]);
+    const isSignedOff = useMemo(() => diaryId ? (diaryData?.isSignedOff || false) : false, [diaryId, diaryData]);
+    const isFinalised = useMemo(() => diaryId ? (diaryData?.isFinalised || false) : false, [diaryId, diaryData]);
 
-    const canEdit = useMemo(() => {
-        if (isFinalised) return false;
-        if (isAdmin) return true;
-        if (isManager) return true;
-        if (isCreator && !diaryData?.isSignedOff) return true;
-        return false;
-    }, [isFinalised, diaryData?.isSignedOff, isAdmin, isManager, isCreator]);
+    const canEdit = useMemo(() => !diaryId || ((isCreator || isAdmin) && !isSignedOff), [diaryId, isCreator, isAdmin, isSignedOff]);
     
     const canSignClient = useMemo(() => {
         return isManager && !isFinalised;
@@ -967,7 +962,7 @@ export default function NewDailyDiaryPage() {
                                         <Input 
                                             value={contractorName} 
                                             onChange={(e) => setContractorName(e.target.value)} 
-                                            disabled={!canEdit || diaryData?.isSignedOff} 
+                                            disabled={!canEdit || isSignedOff} 
                                             placeholder="Contractor Name"
                                         />
                                     </div>
@@ -978,7 +973,7 @@ export default function NewDailyDiaryPage() {
                                         {contractorSignature ? (
                                             <div className="relative border rounded-md p-4 bg-white flex flex-col items-center">
                                                 <img src={contractorSignature} alt="Contractor Sig" className="h-24 object-contain" />
-                                                {canEdit && !diaryData?.isSignedOff && (
+                                                {canEdit && !isSignedOff && (
                                                     <Button 
                                                         variant="ghost" 
                                                         size="sm" 
@@ -994,7 +989,7 @@ export default function NewDailyDiaryPage() {
                                                 <Button 
                                                     type="button" 
                                                     variant="default" 
-                                                    disabled={!canEdit || diaryData?.isSignedOff}
+                                                    disabled={!canEdit || isSignedOff}
                                                     className="w-full"
                                                     onClick={() => {
                                                         if (userData?.signatureUrl) {
@@ -1028,7 +1023,7 @@ export default function NewDailyDiaryPage() {
                                         <Label>Date</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button variant={"outline"} disabled={!canEdit || diaryData?.isSignedOff} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
+                                                <Button variant={"outline"} disabled={!canEdit || isSignedOff} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {contractorDate ? format(contractorDate, "PPP") : <span>Pick a date</span>}
                                                 </Button>
