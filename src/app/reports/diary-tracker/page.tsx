@@ -22,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 export default function DiaryTrackerPage() {
   const firestore = useFirestore();
@@ -115,13 +116,14 @@ export default function DiaryTrackerPage() {
                         <TableHead>Equipment</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Area</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {isLoading ? (
                         <TableRow>
-                            <TableCell colSpan={7} className="h-24 text-center">
+                            <TableCell colSpan={8} className="h-24 text-center">
                                 <div className="flex justify-center items-center">
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Loading diaries...
@@ -137,6 +139,11 @@ export default function DiaryTrackerPage() {
                                 <TableCell>{diary.equipmentName}</TableCell>
                                 <TableCell>{diary.date}</TableCell>
                                 <TableCell>{diary.area}</TableCell>
+                                <TableCell>
+                                    <Badge variant={diary.isSignedOff ? 'default' : 'secondary'}>
+                                        {diary.isSignedOff ? 'Signed Off' : 'Draft'}
+                                    </Badge>
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <Link href={`/reports/contractors-daily-diary?id=${diary.id}`} passHref>
                                         <Button variant="ghost" size="icon">
@@ -185,7 +192,7 @@ export default function DiaryTrackerPage() {
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={7} className="h-24 text-center">
+                            <TableCell colSpan={8} className="h-24 text-center">
                                 No submitted diaries found.
                             </TableCell>
                         </TableRow>
