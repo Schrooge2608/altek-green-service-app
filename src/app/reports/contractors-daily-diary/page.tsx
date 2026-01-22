@@ -26,8 +26,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { DailyDiary, User as AppUser, User, WorkEntry, PlantEntry, ManpowerEntry, Equipment } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ImageUploader } from '@/components/image-uploader';
-
 
 export default function NewDailyDiaryPage() {
     const searchParams = useSearchParams();
@@ -42,9 +40,11 @@ export default function NewDailyDiaryPage() {
     const [uniqueId, setUniqueId] = useState('');
     const [isIdLoading, setIsIdLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
-    const [afterFiles, setAfterFiles] = useState<File[]>([]);
-    const [hseFiles, setHseFiles] = useState<File[]>([]);
+    
+    const [beforeFile, setBeforeFile] = useState<File | null>(null);
+    const [afterFile, setAfterFile] = useState<File | null>(null);
+    const [hseFile, setHseFile] = useState<File | null>(null);
+
     const [contractorSignature, setContractorSignature] = useState<string | null>(null);
     const [clientSignature, setClientSignature] = useState<string | null>(null);
     const [contractorName, setContractorName] = useState('');
@@ -166,27 +166,6 @@ export default function NewDailyDiaryPage() {
         }
     }, [diaryId]);
 
-    const uploadImages = async (files: File[], folder: 'before' | 'after' | 'hse'): Promise<string[]> => {
-        if (!firebaseApp || files.length === 0) return [];
-        
-        const storage = getStorage(firebaseApp);
-        
-        const uploadPromises = files.map(file => {
-            const storagePath = `daily_diaries/${uniqueId}/${folder}/${file.name}_${Date.now()}`;
-            const storageRef = ref(storage, storagePath);
-            return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
-        });
-    
-        try {
-            const downloadedUrls = await Promise.all(uploadPromises);
-            return downloadedUrls;
-        } catch (error) {
-            console.error("Image upload failed:", error);
-            toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload one or more images." });
-            throw error;
-        }
-    };
-
     const handleSave = async (data: DailyDiary) => {
         if (!firestore || !uniqueId || !user) {
             toast({ variant: 'destructive', title: 'Error', description: 'User not logged in or database not available.' });
@@ -195,10 +174,7 @@ export default function NewDailyDiaryPage() {
 
         setIsSaving(true);
         try {
-            const newBeforeImageUrls = await uploadImages(beforeFiles, 'before');
-            const newAfterImageUrls = await uploadImages(afterFiles, 'after');
-            const newHseImageUrls = await uploadImages(hseFiles, 'hse');
-
+            const storage = getStorage(firebaseApp);
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
             const finalDiaryData: Partial<DailyDiary> = { 
@@ -240,9 +216,9 @@ export default function NewDailyDiaryPage() {
                 comments: (data.comments || []).map(c => c || ''),
                 isSignedOff: diaryData?.isSignedOff || false,
                 createdAt: diaryData?.createdAt || serverTimestamp(),
-                beforeWorkImages: [...(diaryData?.beforeWorkImages || []), ...newBeforeImageUrls],
-                afterWorkImages: [...(diaryData?.afterWorkImages || []), ...newAfterImageUrls],
-                hseDocumentationScans: [...(diaryData?.hseDocumentationScans || []), ...newHseImageUrls],
+                beforeWorkImages: diaryData?.beforeWorkImages || [],
+                afterWorkImages: diaryData?.afterWorkImages || [],
+                hseDocumentationScans: diaryData?.hseDocumentationScans || [],
                 contractorSignature: contractorSignature || null,
                 clientSignature: clientSignature || null,
                 contractorName: contractorName || '',
@@ -250,6 +226,27 @@ export default function NewDailyDiaryPage() {
                 contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
                 clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
             };
+
+            // --- UPLOAD LOGIC ---
+            if (beforeFile) {
+                const fileRef = ref(storage, `daily_diaries/${uniqueId}/before/${beforeFile.name}_${Date.now()}`);
+                await uploadBytes(fileRef, beforeFile);
+                const downloadUrl = await getDownloadURL(fileRef);
+                finalDiaryData.beforeWorkImages?.push(downloadUrl);
+            }
+            if (afterFile) {
+                const fileRef = ref(storage, `daily_diaries/${uniqueId}/after/${afterFile.name}_${Date.now()}`);
+                await uploadBytes(fileRef, afterFile);
+                const downloadUrl = await getDownloadURL(fileRef);
+                finalDiaryData.afterWorkImages?.push(downloadUrl);
+            }
+            if (hseFile) {
+                const fileRef = ref(storage, `daily_diaries/${uniqueId}/hse/${hseFile.name}_${Date.now()}`);
+                await uploadBytes(fileRef, hseFile);
+                const downloadUrl = await getDownloadURL(fileRef);
+                finalDiaryData.hseDocumentationScans?.push(downloadUrl);
+            }
+
 
             await setDoc(diaryDocRef, finalDiaryData, { merge: true });
             
@@ -261,13 +258,11 @@ export default function NewDailyDiaryPage() {
             router.push(`/reports/diary-tracker`);
         } catch (error: any) {
             console.error("Failed to save diary:", error);
-            if (!error.message || !error.message.includes("upload")) {
-                 toast({
-                    variant: 'destructive',
-                    title: 'Save Failed',
-                    description: error.message || 'An unexpected error occurred while saving the diary.',
-                });
-            }
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: error.message || 'An unexpected error occurred while saving the diary.',
+            });
         } finally {
             setIsSaving(false);
         }
@@ -484,8 +479,19 @@ export default function NewDailyDiaryPage() {
                                     )}
                                 />
                                 <div className="space-y-2 pt-2">
-                                    <Label className="font-semibold">HSE Documentation (Take 5, etc.)</Label>
-                                    <ImageUploader onImagesChange={setHseFiles} title="HSE Documents" />
+                                    <Label className="font-semibold" htmlFor="hse-file-input">HSE Documentation (Take 5, etc.)</Label>
+                                    <Input 
+                                        id="hse-file-input"
+                                        type="file" 
+                                        accept="image/*,application/pdf"
+                                        onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            setHseFile(e.target.files[0]);
+                                        }
+                                        }}
+                                        className="w-full p-2 border rounded"
+                                    />
+                                    {hseFile && <p className="text-green-600 text-sm mt-1">File Selected: {hseFile.name}</p>}
                                 </div>
                             </CardContent>
                         </Card>
@@ -650,12 +656,34 @@ export default function NewDailyDiaryPage() {
                             </CardHeader>
                             <CardContent className="p-4 space-y-6">
                                 <div className="space-y-2">
-                                    <h4 className="font-semibold">Before Work</h4>
-                                    <ImageUploader onImagesChange={setBeforeFiles} title="Before Work" />
+                                    <Label htmlFor='before-file-input' className="font-semibold">Before Work</Label>
+                                    <Input 
+                                        id='before-file-input'
+                                        type="file" 
+                                        accept="image/*,application/pdf"
+                                        onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            setBeforeFile(e.target.files[0]);
+                                        }
+                                        }}
+                                        className="w-full p-2 border rounded"
+                                    />
+                                    {beforeFile && <p className="text-green-600 text-sm mt-1">File Selected: {beforeFile.name}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <h4 className="font-semibold">After Work</h4>
-                                    <ImageUploader onImagesChange={setAfterFiles} title="After Work" />
+                                    <Label htmlFor='after-file-input' className="font-semibold">After Work</Label>
+                                     <Input 
+                                        id='after-file-input'
+                                        type="file" 
+                                        accept="image/*,application/pdf"
+                                        onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            setAfterFile(e.target.files[0]);
+                                        }
+                                        }}
+                                        className="w-full p-2 border rounded"
+                                    />
+                                    {afterFile && <p className="text-green-600 text-sm mt-1">File Selected: {afterFile.name}</p>}
                                 </div>
                             </CardContent>
                         </Card>
@@ -727,5 +755,3 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
-
-    
