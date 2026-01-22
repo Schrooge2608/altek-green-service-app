@@ -75,16 +75,15 @@ export default function NewDailyDiaryPage() {
     const isAdmin = useMemo(() => userData?.role && ['Admin', 'Superadmin'].includes(userData.role), [userData]);
     const isCreator = useMemo(() => diaryData?.userId === user?.uid, [diaryData, user]);
 
-    const isSignedOff = useMemo(() => diaryData?.isSignedOff === true, [diaryData]);
     const isFinalised = useMemo(() => diaryData?.isFinalised === true, [diaryData]);
 
     const canEdit = useMemo(() => {
         if (isFinalised) return false;
         if (isAdmin) return true;
-        if (isManager) return true; // Manager can edit Draft and Completed
-        if (isCreator && !isSignedOff) return true; // Creator can only edit Draft
+        if (isManager) return true;
+        if (isCreator && !diaryData?.isSignedOff) return true;
         return false;
-    }, [isFinalised, isSignedOff, isAdmin, isManager, isCreator]);
+    }, [isFinalised, diaryData?.isSignedOff, isAdmin, isManager, isCreator]);
     
     const canSignClient = useMemo(() => {
         return isManager && !isFinalised;
@@ -161,7 +160,8 @@ export default function NewDailyDiaryPage() {
     }
 
     useEffect(() => {
-        if (diaryData) {
+        if (diaryId && diaryData) {
+            // EDIT MODE: Load existing data
             form.reset({
                 ...defaultValues,
                 ...diaryData,
@@ -175,8 +175,22 @@ export default function NewDailyDiaryPage() {
             setClientName(diaryData.clientName || '');
             setContractorDate(diaryData.contractorDate ? new Date(diaryData.contractorDate) : undefined);
             setClientDate(diaryData.clientDate ? new Date(diaryData.clientDate) : undefined);
+        } else if (!diaryId) {
+            // NEW MODE: Force reset to blank defaults
+            form.reset(defaultValues);
+            
+            // Clear all local state manually to be safe
+            setContractorSignature(null);
+            setClientSignature(null);
+            setContractorName('');
+            setClientName('');
+            setContractorDate(undefined);
+            setClientDate(undefined);
+            setBeforeFile(null);
+            setAfterFile(null);
+            setHseFile(null);
         }
-    }, [diaryData, form, defaultValues]);
+    }, [diaryId, diaryData, form, defaultValues]);
     
     useEffect(() => {
         if (diaryId) {
@@ -275,17 +289,9 @@ export default function NewDailyDiaryPage() {
                 clientName: clientName || '',
                 contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
                 clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
+                isSignedOff: diaryData?.isSignedOff || false,
+                isFinalised: isManager && clientSignature ? true : (diaryData?.isFinalised || false),
             };
-
-            // Manager finalization logic
-            if (isManager && clientSignature) {
-                finalDiaryData.isFinalised = true;
-                finalDiaryData.isSignedOff = true; // Finalizing also marks it as 'completed'
-            } else {
-                // Preserve existing status if not finalizing
-                finalDiaryData.isSignedOff = diaryData?.isSignedOff || false;
-                finalDiaryData.isFinalised = diaryData?.isFinalised || false;
-            }
 
             if (beforeFile) {
                 const fileRef = ref(storage, `daily_diaries/${uniqueId}/before/${beforeFile.name}_${Date.now()}`);
@@ -369,7 +375,7 @@ export default function NewDailyDiaryPage() {
                 delays: (data.delays || []).map(d => d || ''),
                 comments: (data.comments || []).map(c => c || ''),
                 isSignedOff: true, // Key change for approval submission
-                isFinalised: diaryData?.isFinalised || false,
+                isFinalised: isManager && clientSignature ? true : (diaryData?.isFinalised || false),
                 createdAt: diaryData?.createdAt || serverTimestamp(),
                 beforeWorkImages: diaryData?.beforeWorkImages || [],
                 afterWorkImages: diaryData?.afterWorkImages || [],
@@ -431,7 +437,7 @@ export default function NewDailyDiaryPage() {
                     </Button>
                 )}
                 
-                {isFinalised || isSignedOff ? (
+                {diaryData?.isFinalised || diaryData?.isSignedOff ? (
                      <Button onClick={() => window.print()} variant="outline">
                         <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
                     </Button>
@@ -961,7 +967,7 @@ export default function NewDailyDiaryPage() {
                                         <Input 
                                             value={contractorName} 
                                             onChange={(e) => setContractorName(e.target.value)} 
-                                            disabled={!canEdit || isSignedOff} 
+                                            disabled={!canEdit || diaryData?.isSignedOff} 
                                             placeholder="Contractor Name"
                                         />
                                     </div>
@@ -972,7 +978,7 @@ export default function NewDailyDiaryPage() {
                                         {contractorSignature ? (
                                             <div className="relative border rounded-md p-4 bg-white flex flex-col items-center">
                                                 <img src={contractorSignature} alt="Contractor Sig" className="h-24 object-contain" />
-                                                {canEdit && !isSignedOff && (
+                                                {canEdit && !diaryData?.isSignedOff && (
                                                     <Button 
                                                         variant="ghost" 
                                                         size="sm" 
@@ -988,7 +994,7 @@ export default function NewDailyDiaryPage() {
                                                 <Button 
                                                     type="button" 
                                                     variant="default" 
-                                                    disabled={!canEdit || isSignedOff}
+                                                    disabled={!canEdit || diaryData?.isSignedOff}
                                                     className="w-full"
                                                     onClick={() => {
                                                         if (userData?.signatureUrl) {
@@ -1022,7 +1028,7 @@ export default function NewDailyDiaryPage() {
                                         <Label>Date</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button variant={"outline"} disabled={!canEdit || isSignedOff} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
+                                                <Button variant={"outline"} disabled={!canEdit || diaryData?.isSignedOff} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {contractorDate ? format(contractorDate, "PPP") : <span>Pick a date</span>}
                                                 </Button>
