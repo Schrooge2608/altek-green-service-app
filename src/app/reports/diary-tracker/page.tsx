@@ -145,13 +145,15 @@ export default function DiaryTrackerPage() {
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Link href={`/reports/view-diary/${diary.id}`} passHref>
-                                        <Button variant="ghost" size="icon">
-                                            <FileText className="h-4 w-4" />
-                                            <span className="sr-only">View Diary</span>
-                                        </Button>
-                                    </Link>
-                                     {user?.uid === diary.userId && !diary.isSignedOff && (
+                                    {diary.isSignedOff && (
+                                        <Link href={`/reports/view-diary/${diary.id}`} passHref>
+                                            <Button variant="ghost" size="icon">
+                                                <FileText className="h-4 w-4" />
+                                                <span className="sr-only">View Diary</span>
+                                            </Button>
+                                        </Link>
+                                    )}
+                                    {user?.uid === diary.userId && !diary.isSignedOff && (
                                         <Link href={`/reports/contractors-daily-diary?id=${diary.id}`} passHref>
                                             <Button variant="ghost" size="icon">
                                                 <Pencil className="h-4 w-4" />
