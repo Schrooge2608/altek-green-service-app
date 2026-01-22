@@ -47,6 +47,10 @@ export default function NewDailyDiaryPage() {
     const [contractorSignature, setContractorSignature] = useState<string | null>(null);
     const [contractorName, setContractorName] = useState('');
     const [contractorDate, setContractorDate] = useState<Date>();
+
+    const [clientSignature, setClientSignature] = useState<string | null>(null);
+    const [clientName, setClientName] = useState('');
+    const [clientDate, setClientDate] = useState<Date>();
     
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -134,24 +138,49 @@ export default function NewDailyDiaryPage() {
 
     useEffect(() => {
         if (diaryId && diaryData) {
+            // --- EDIT MODE: Load Saved Data ---
             form.reset({
-                ...defaultValues,
-                ...diaryData,
-                manpower: (diaryData.manpower && diaryData.manpower.length > 0) ? diaryData.manpower : defaultValues.manpower,
-                plant: (diaryData.plant && diaryData.plant.length > 0) ? diaryData.plant : defaultValues.plant,
-                works: (diaryData.works && diaryData.works.length > 0) ? diaryData.works : defaultValues.works,
+                ...defaultValues, // Fallback for missing fields
+                ...diaryData,     // Overwrite with saved data
+                
+                // DATA RECOVERY: If saved array is empty, give 1 empty line. If it has data, KEEP IT.
+                manpower: (diaryData.manpower && diaryData.manpower.length > 0) 
+                          ? diaryData.manpower 
+                          : defaultValues.manpower,
+
+                plant: (diaryData.plant && diaryData.plant.length > 0) 
+                          ? diaryData.plant 
+                          : defaultValues.plant,
+
+                works: (diaryData.works && diaryData.works.length > 0) 
+                          ? diaryData.works 
+                          : defaultValues.works,
+
+                // DATE HANDLING
                 date: diaryData.date ? new Date(diaryData.date) : new Date(),
                 locationFilter: diaryData.locationFilter || (diaryData.works && diaryData.works[0]?.area) || '',
                 savedEquipmentId: diaryData.savedEquipmentId || '',
             });
+
+            // Restore Signatures & Local State
             setContractorSignature(diaryData.contractorSignature || null);
+            setClientSignature(diaryData.clientSignature || null);
             setContractorName(diaryData.contractorName || '');
+            setClientName(diaryData.clientName || '');
             setContractorDate(diaryData.contractorDate ? new Date(diaryData.contractorDate) : undefined);
+            setClientDate(diaryData.clientDate ? new Date(diaryData.clientDate) : undefined);
+
         } else if (!diaryId) {
+            // --- NEW MODE: Force Clean Slate ---
             form.reset(defaultValues);
+            
+            // Wipe all local state
             setContractorSignature(null);
+            setClientSignature(null);
             setContractorName('');
+            setClientName('');
             setContractorDate(undefined);
+            setClientDate(undefined);
             setBeforeFile(null);
             setAfterFile(null);
             setHseFile(null);
@@ -171,8 +200,27 @@ export default function NewDailyDiaryPage() {
     }, [diaryId]);
 
     const handleApprove = async () => {
+        // 1. Check if User has a signature on file
+        if (!userData?.signatureUrl) {
+            toast({
+                variant: "destructive",
+                title: "Signature Required",
+                description: "You must upload your digital signature before approving.",
+            });
+            // Redirect to Signature Page
+            router.push('/capture-signature');
+            return;
+        }
+
+        // 2. Apply Signature & Lock the Form
+        setClientSignature(userData.signatureUrl);
+        if (!clientName) setClientName(userData.name || '');
+        setClientDate(new Date());
+
+        // We need to trigger a save with the approval flag
         form.handleSubmit((data) => handleSave(data, true))();
     };
+
 
     const handleDeleteImage = async (imageUrl: string, imageType: 'beforeWorkImages' | 'afterWorkImages' | 'hseDocumentationScans') => {
         if (!diaryId || !firebaseApp) {
@@ -209,7 +257,7 @@ export default function NewDailyDiaryPage() {
             const storage = getStorage(firebaseApp);
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
-            const finalIsSignedOff = isApprovalAction ? true : (diaryData?.isSignedOff || false);
+            const finalIsFinalised = isApprovalAction ? true : (diaryData?.isFinalised || false);
 
             const finalDiaryData: Partial<DailyDiary> = { 
                 id: uniqueId,
@@ -259,9 +307,13 @@ export default function NewDailyDiaryPage() {
                 contractorSignature: contractorSignature || null,
                 contractorName: contractorName || '',
                 contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
+
+                clientSignature: clientSignature || null,
+                clientName: clientName || '',
+                clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
                 
-                isSignedOff: finalIsSignedOff,
-                isFinalised: isApprovalAction,
+                isSignedOff: finalIsFinalised ? true : (diaryData?.isSignedOff || !!contractorSignature),
+                isFinalised: finalIsFinalised,
             };
 
             if (beforeFile) {
@@ -312,33 +364,29 @@ export default function NewDailyDiaryPage() {
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
             <div className="flex justify-end mb-4 gap-2 print:hidden">
-                {diaryData?.isFinalised ? (
-                     <Button onClick={() => window.print()} variant="outline">
-                        <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
+                {!diaryData?.isFinalised && (isManager || isAdmin) && !isCreator ? (
+                    <Button 
+                        onClick={handleApprove} 
+                        disabled={isSaving || !diaryData?.isSignedOff}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
+                        Approve Diary
                     </Button>
                 ) : (
-                    <div className="flex gap-2">
-                        {(isManager || isAdmin) ? (
-                            <Button 
-                                onClick={handleApprove} 
-                                disabled={isSaving || !diaryData?.isSignedOff}
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
-                                Approve Diary
-                            </Button>
-                        ) : (
-                            <Button 
-                                onClick={form.handleSubmit((data) => handleSave(data, false))} 
-                                disabled={!uniqueId || isIdLoading || isSaving || isSignedOff}
-                            >
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                {isSaving ? 'Saving...' : 'Save Progress'}
-                            </Button>
-                        )}
-                    </div>
+                    <Button 
+                        onClick={form.handleSubmit((data) => handleSave(data, false))} 
+                        disabled={!uniqueId || isIdLoading || isSaving || diaryData?.isFinalised}
+                    >
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        {isSaving ? 'Saving...' : 'Save Progress'}
+                    </Button>
                 )}
+                <Button onClick={() => window.print()} variant="outline">
+                    <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
+                </Button>
             </div>
+
 
             <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => handleSave(data, false))}>
@@ -835,7 +883,7 @@ export default function NewDailyDiaryPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="mt-8 grid grid-cols-1 md:w-1/2 mx-auto">
+                        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                             <Card>
                                 <CardHeader className="p-4">
                                     <CardTitle className="text-base text-center">CONTRACTOR</CardTitle>
@@ -846,7 +894,7 @@ export default function NewDailyDiaryPage() {
                                         <Input 
                                             value={contractorName} 
                                             onChange={(e) => setContractorName(e.target.value)} 
-                                            disabled={!canEdit} 
+                                            disabled={!canEdit || diaryData?.isFinalised} 
                                             placeholder="Contractor Name"
                                         />
                                     </div>
@@ -855,7 +903,7 @@ export default function NewDailyDiaryPage() {
                                         {contractorSignature ? (
                                             <div className="relative border rounded-md p-4 bg-white flex flex-col items-center">
                                                 <img src={contractorSignature} alt="Contractor Sig" className="h-24 object-contain" />
-                                                {canEdit && (
+                                                {canEdit && !diaryData?.isFinalised && (isAdmin || isCreator) && (
                                                     <Button 
                                                         variant="ghost" 
                                                         size="sm" 
@@ -869,32 +917,29 @@ export default function NewDailyDiaryPage() {
                                         ) : (
                                             <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center bg-slate-50 gap-3">
                                                 {(isCreator || isAdmin) ? (
-                                                    <>
-                                                        <Button 
-                                                            type="button" 
-                                                            variant="default" 
-                                                            disabled={!canEdit}
-                                                            className="w-full"
-                                                            onClick={() => {
-                                                                if (userData?.signatureUrl) {
-                                                                    setContractorSignature(userData.signatureUrl);
-                                                                    if (!contractorName) setContractorName(userData.name || '');
-                                                                    setContractorDate(new Date());
-                                                                    toast({ title: "Signed", description: "Digital signature applied." });
-                                                                } else {
-                                                                    toast({ variant: "destructive", title: "No Signature", description: "Please create a signature in your profile first." });
-                                                                    router.push('/capture-signature');
-                                                                }
-                                                            }}
-                                                        >
-                                                            <Pencil className="mr-2 h-4 w-4" />
-                                                            Click to Sign as {userData?.name}
-                                                        </Button>
-                                                    </>
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="default" 
+                                                        disabled={!canEdit || diaryData?.isFinalised}
+                                                        className="w-full"
+                                                        onClick={() => {
+                                                            if (userData?.signatureUrl) {
+                                                                setContractorSignature(userData.signatureUrl);
+                                                                if (!contractorName) setContractorName(userData.name || '');
+                                                                setContractorDate(new Date());
+                                                            } else {
+                                                                toast({ variant: "destructive", title: "No Signature", description: "Please create a signature in your profile first." });
+                                                                router.push('/capture-signature');
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        Click to Sign as {userData?.name}
+                                                    </Button>
                                                 ) : (
                                                     <div className="text-center text-muted-foreground py-2">
                                                         <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 opacity-20" />
-                                                        <p className="text-sm">Waiting for Contractor Signature</p>
+                                                        <p className="text-sm">Waiting for Contractor</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -904,13 +949,103 @@ export default function NewDailyDiaryPage() {
                                         <Label>Date</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button variant={"outline"} disabled={!canEdit} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
+                                                <Button variant={"outline"} disabled={!canEdit || diaryData?.isFinalised} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {contractorDate ? format(contractorDate, "PPP") : <span>Pick a date</span>}
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
                                                 <Calendar mode="single" selected={contractorDate} onSelect={setContractorDate} initialFocus />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base text-center">CLIENT / MANAGER</CardTitle>
+                                </CardHeader>
+                                 <CardContent className="p-4 space-y-4">
+                                    <div className="space-y-1">
+                                        <Label>Name</Label>
+                                        <Input 
+                                            value={clientName} 
+                                            onChange={(e) => setClientName(e.target.value)} 
+                                            disabled={diaryData?.isFinalised} 
+                                            placeholder="Client Representative Name"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Signature</Label>
+                                        {clientSignature ? (
+                                            <div className="relative border rounded-md p-4 bg-white flex flex-col items-center">
+                                                <img src={clientSignature} alt="Client Sig" className="h-24 object-contain" />
+                                                {!diaryData?.isFinalised && (isManager || isAdmin) && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="absolute top-1 right-1 h-6 w-6 p-0 text-red-500 hover:bg-red-50" 
+                                                        onClick={() => setClientSignature(null)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center bg-slate-50 gap-3">
+                                                {(isManager || isAdmin) ? (
+                                                    userData?.signatureUrl ? (
+                                                        <Button 
+                                                            type="button" 
+                                                            variant="default" 
+                                                            disabled={diaryData?.isFinalised}
+                                                            className="w-full bg-blue-600 hover:bg-blue-700"
+                                                            onClick={() => {
+                                                                setClientSignature(userData.signatureUrl);
+                                                                if (!clientName) setClientName(userData.name || '');
+                                                                setClientDate(new Date());
+                                                                toast({ title: "Signature Applied", description: "Client signature applied." });
+                                                            }}
+                                                        >
+                                                            <Pencil className="mr-2 h-4 w-4" />
+                                                            Click to Sign as {userData.name}
+                                                        </Button>
+                                                    ) : (
+                                                        <div className="flex flex-col items-center gap-2 w-full">
+                                                            <p className="text-sm text-red-500 font-medium text-center">
+                                                                No signature found.
+                                                            </p>
+                                                            <Button 
+                                                                type="button" 
+                                                                variant="outline" 
+                                                                className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                                                                onClick={() => router.push('/capture-signature')}
+                                                            >
+                                                                Create Signature
+                                                            </Button>
+                                                        </div>
+                                                    )
+                                                ) : (
+                                                    <div className="text-center text-muted-foreground py-2">
+                                                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 opacity-20" />
+                                                        <p className="text-sm">Awaiting Manager</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Date</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant={"outline"} disabled={diaryData?.isFinalised} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {clientDate ? format(clientDate, "PPP") : <span>Pick a date</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                                <Calendar mode="single" selected={clientDate} onSelect={setClientDate} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                     </div>

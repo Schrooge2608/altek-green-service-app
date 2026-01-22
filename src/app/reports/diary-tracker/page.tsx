@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -63,7 +62,7 @@ export default function DiaryTrackerPage() {
           creatorName: userNameMap.get(diary.userId) || 'Unknown User',
           equipmentName,
         };
-      });
+      }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [diaries, users]);
 
   const handleDeleteDiary = (diaryToDelete: DailyDiary) => {
@@ -151,14 +150,14 @@ export default function DiaryTrackerPage() {
                                     })()}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Link href={`/reports/view-diary/${diary.id}`} passHref>
+                                    <Link href={`/reports/contractors-daily-diary/view?id=${diary.id}`} passHref>
                                         <Button variant="ghost" size="icon">
                                             <FileText className="h-4 w-4" />
                                             <span className="sr-only">View Diary</span>
                                         </Button>
                                     </Link>
                                     {/* Edit button should only be visible if the diary is not finalized */}
-                                    {(!diary.isFinalised && user?.uid === diary.userId) && (
+                                    {!diary.isFinalised && (user?.uid === diary.userId || currentUserData?.role.includes("Admin")) && (
                                         <Link href={`/reports/contractors-daily-diary?id=${diary.id}`} passHref>
                                             <Button variant="ghost" size="icon">
                                                 <Pencil className="h-4 w-4" />
