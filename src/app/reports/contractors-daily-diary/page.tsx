@@ -59,18 +59,27 @@ export default function NewDailyDiaryPage() {
         useMemoFirebase(() => diaryId ? doc(firestore, 'daily_diaries', diaryId) : null, [firestore, diaryId])
     );
     
-    const { data: users, isLoading: usersLoading } = useCollection<User>(
-        useMemoFirebase(() => collection(firestore, 'users'), [firestore])
-    );
+    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
     const { data: userData, isLoading: userDataLoading } = useDoc<AppUser>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user])
     );
 
+    const isManager = useMemo(() => {
+        if (!userData?.role) return false;
+        const managerRoles = ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'];
+        // Using `some` and `includes` to catch Beta roles as well
+        return managerRoles.some(role => userData.role.includes(role));
+    }, [userData]);
+
     const isSignedOff = useMemo(() => diaryData?.isSignedOff === true, [diaryData]);
     const isAdmin = useMemo(() => userData?.role && ['Admin', 'Superadmin'].includes(userData.role), [userData]);
     const isCreator = useMemo(() => diaryData?.userId === user?.uid, [diaryData, user]);
+    // General edit permissions for the diary creator/admin
     const canEdit = (!diaryId || isCreator || isAdmin) && !isSignedOff;
+    // Specific permission for the client signature section
+    const canSignClient = isManager && !isSignedOff;
 
 
     const defaultValues = useMemo(() => {
@@ -338,7 +347,7 @@ export default function NewDailyDiaryPage() {
                                             <Select 
                                                 key={`loc-${equipmentList?.length || 0}`} 
                                                 onValueChange={field.onChange} 
-                                                value={field.value} 
+                                                value={field.value || ''} 
                                                 disabled={equipmentLoading || !canEdit}
                                             >
                                                 <SelectTrigger>
@@ -367,7 +376,7 @@ export default function NewDailyDiaryPage() {
                                                     field.onChange(val);
                                                     onEquipmentSelectChange(val);
                                                 }}
-                                                value={field.value}
+                                                value={field.value || ''}
                                                 disabled={!watchedLocation || equipmentLoading || !canEdit}
                                             >
                                                 <SelectTrigger>
@@ -898,17 +907,27 @@ export default function NewDailyDiaryPage() {
                                 <CardContent className="p-4 space-y-4">
                                     <div className="space-y-1">
                                         <Label>Name</Label>
-                                        <Input value={clientName} onChange={(e) => setClientName(e.target.value)} disabled={!canEdit || isSignedOff} />
+                                        <Input value={clientName} onChange={(e) => setClientName(e.target.value)} disabled={!canSignClient} />
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Signature</Label>
-                                        <SignaturePad value={clientSignature} onSign={setClientSignature} onClear={() => setClientSignature(null)} />
+                                        {canSignClient ? (
+                                            <SignaturePad value={clientSignature} onSign={setClientSignature} onClear={() => setClientSignature(null)} />
+                                        ) : (
+                                            <div className="relative border rounded-md p-4 bg-muted flex flex-col items-center min-h-[148px] justify-center">
+                                                {clientSignature ? (
+                                                    <img src={clientSignature} alt="Client Signature" className="h-24 object-contain" />
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground">Not yet signed by client.</p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Date</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button variant={"outline"} disabled={!canEdit || isSignedOff} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
+                                                <Button variant={"outline"} disabled={!canSignClient} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {clientDate ? format(clientDate, "PPP") : <span>Pick a date</span>}
                                                 </Button>
@@ -929,6 +948,8 @@ export default function NewDailyDiaryPage() {
     );
 }
 
+
+    
 
     
 
