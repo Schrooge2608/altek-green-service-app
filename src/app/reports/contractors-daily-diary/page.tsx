@@ -20,8 +20,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from '@/firebase';
-import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, collection, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { DailyDiary, User as AppUser, User, WorkEntry, PlantEntry, ManpowerEntry, Equipment } from '@/lib/types';
@@ -165,6 +165,51 @@ export default function NewDailyDiaryPage() {
             setIsIdLoading(false);
         }
     }, [diaryId]);
+
+    const handleDeleteImage = async (imageUrl: string, imageType: 'beforeWorkImages' | 'afterWorkImages' | 'hseDocumentationScans') => {
+        if (!diaryId || !firebaseApp) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Diary not loaded or Firebase not available. Cannot delete image.",
+            });
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const storage = getStorage(firebaseApp);
+            const imageRef = ref(storage, imageUrl);
+            
+            await deleteObject(imageRef);
+
+            const diaryRef = doc(firestore, 'daily_diaries', diaryId);
+            const currentImages = diaryData?.[imageType] || [];
+            const updatedImages = currentImages.filter(url => url !== imageUrl);
+
+            await updateDoc(diaryRef, {
+                [imageType]: updatedImages
+            });
+
+            toast({
+                title: "Image Deleted",
+                description: "The selected image has been removed."
+            });
+
+            router.refresh();
+
+        } catch (error: any) {
+            console.error("Failed to delete image:", error);
+            toast({
+                variant: "destructive",
+                title: "Deletion Failed",
+                description: error.message || "An unexpected error occurred while deleting the image.",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
 
     const handleSave = async (data: DailyDiary) => {
         if (!firestore || !uniqueId || !user) {
@@ -492,11 +537,13 @@ export default function NewDailyDiaryPage() {
                                         className="w-full p-2 border rounded"
                                     />
                                     {hseFile && <p className="text-green-600 text-sm mt-1">File Selected: {hseFile.name}</p>}
+                                    {/* --- EXISTING HSE IMAGES --- */}
                                     {diaryData?.hseDocumentationScans && diaryData.hseDocumentationScans.length > 0 && (
                                     <div className="flex gap-2 mt-2 flex-wrap">
                                         {diaryData.hseDocumentationScans.map((url, index) => (
                                         <div key={index} className="relative group">
                                             <a href={url} target="_blank" rel="noopener noreferrer">
+                                            {/* Render generic icon for PDFs, Image for JPGs */}
                                             <img 
                                                 src={url} 
                                                 alt={`HSE Doc ${index + 1}`} 
@@ -504,6 +551,15 @@ export default function NewDailyDiaryPage() {
                                                 onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://placehold.co/100?text=PDF' }} 
                                             />
                                             </a>
+                                             <Button
+                                                variant="destructive"
+                                                size="icon"
+                                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => handleDeleteImage(url, 'hseDocumentationScans')}
+                                                disabled={isSaving || !canEdit}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                         ))}
                                     </div>
@@ -685,12 +741,24 @@ export default function NewDailyDiaryPage() {
                                         className="w-full p-2 border rounded"
                                     />
                                     {beforeFile && <p className="text-green-600 text-sm mt-1">File Selected: {beforeFile.name}</p>}
+                                    {/* --- EXISTING BEFORE IMAGES --- */}
                                     {diaryData?.beforeWorkImages && diaryData.beforeWorkImages.length > 0 && (
                                     <div className="flex gap-2 mt-2 flex-wrap">
                                         {diaryData.beforeWorkImages.map((url, index) => (
-                                        <a key={index} href={url} target="_blank" rel="noopener noreferrer">
-                                            <img src={url} alt="" className="h-24 w-24 object-cover rounded border border-gray-300" />
-                                        </a>
+                                        <div key={index} className="relative group">
+                                            <a href={url} target="_blank" rel="noopener noreferrer">
+                                                <img src={url} alt={`Before Work ${index + 1}`} className="h-24 w-24 object-cover rounded border border-gray-300" />
+                                            </a>
+                                            <Button
+                                                variant="destructive"
+                                                size="icon"
+                                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => handleDeleteImage(url, 'beforeWorkImages')}
+                                                disabled={isSaving || !canEdit}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                         ))}
                                     </div>
                                     )}
@@ -709,12 +777,24 @@ export default function NewDailyDiaryPage() {
                                         className="w-full p-2 border rounded"
                                     />
                                     {afterFile && <p className="text-green-600 text-sm mt-1">File Selected: {afterFile.name}</p>}
+                                    {/* --- EXISTING AFTER IMAGES --- */}
                                     {diaryData?.afterWorkImages && diaryData.afterWorkImages.length > 0 && (
                                     <div className="flex gap-2 mt-2 flex-wrap">
                                         {diaryData.afterWorkImages.map((url, index) => (
-                                        <a key={index} href={url} target="_blank" rel="noopener noreferrer">
-                                            <img src={url} alt="" className="h-24 w-24 object-cover rounded border border-gray-300" />
-                                        </a>
+                                        <div key={index} className="relative group">
+                                            <a href={url} target="_blank" rel="noopener noreferrer">
+                                            <img src={url} alt={`After Work ${index + 1}`} className="h-24 w-24 object-cover rounded border border-gray-300" />
+                                            </a>
+                                            <Button
+                                                variant="destructive"
+                                                size="icon"
+                                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => handleDeleteImage(url, 'afterWorkImages')}
+                                                disabled={isSaving || !canEdit}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                         ))}
                                     </div>
                                     )}
