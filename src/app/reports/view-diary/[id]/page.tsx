@@ -11,6 +11,15 @@ import type { DailyDiary } from '@/lib/types';
 import { Loader2, Printer, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import React from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Separator } from '@/components/ui/separator';
 
 function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
     return (
@@ -103,7 +112,7 @@ export default function ViewDiaryPage() {
                 
                  <Card className="mt-4">
                     <CardHeader>
-                        <CardTitle>HSE</CardTitle>
+                        <CardTitle>SECTION A: HSE</CardTitle>
                     </CardHeader>
                      <CardContent className="space-y-4 text-sm">
                         <div>
@@ -117,6 +126,117 @@ export default function ViewDiaryPage() {
                         <ImageGallery title="HSE Documentation" images={diary.hseDocumentationScans} />
                     </CardContent>
                 </Card>
+
+                 <Card className="mt-4">
+                    <CardHeader>
+                        <CardTitle>SECTION B: MANPOWER AND PLANT</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <h4 className="font-semibold text-muted-foreground">Manpower</h4>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Designation</TableHead>
+                                    <TableHead>Forecast</TableHead>
+                                    <TableHead>Actual</TableHead>
+                                    <TableHead>Normal</TableHead>
+                                    <TableHead>1.5 OT</TableHead>
+                                    <TableHead>2.0 OT</TableHead>
+                                    <TableHead>Total</TableHead>
+                                    <TableHead>Comments</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {diary.manpower?.length ? diary.manpower.map((item, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{item.designation}</TableCell>
+                                        <TableCell>{item.forecast}</TableCell>
+                                        <TableCell>{item.actual}</TableCell>
+                                        <TableCell>{item.normalHrs}</TableCell>
+                                        <TableCell>{item.overtime1_5}</TableCell>
+                                        <TableCell>{item.overtime2_0}</TableCell>
+                                        <TableCell>{item.totalManHrs}</TableCell>
+                                        <TableCell>{item.comments}</TableCell>
+                                    </TableRow>
+                                )) : <TableRow><TableCell colSpan={8} className="text-center h-24">No manpower entries.</TableCell></TableRow>}
+                            </TableBody>
+                        </Table>
+                        <Separator />
+                        <h4 className="font-semibold text-muted-foreground">Plant</h4>
+                        <Table>
+                             <TableHeader>
+                                <TableRow>
+                                    <TableHead>Plant description</TableHead>
+                                    <TableHead>Qty</TableHead>
+                                    <TableHead>Daily Inspection Done</TableHead>
+                                    <TableHead>Comments</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                             <TableBody>
+                                {diary.plant?.length ? diary.plant.map((item, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{item.description}</TableCell>
+                                        <TableCell>{item.qty}</TableCell>
+                                        <TableCell>{item.inspectionDone}</TableCell>
+                                        <TableCell>{item.comments}</TableCell>
+                                    </TableRow>
+                                )) : <TableRow><TableCell colSpan={4} className="text-center h-24">No plant entries.</TableCell></TableRow>}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+
+                <Card className="mt-4">
+                    <CardHeader><CardTitle>SECTION C: DESCRIPTION OF WORKS</CardTitle></CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Area of Work</TableHead>
+                                    <TableHead>Scope of Work</TableHead>
+                                    <TableHead>Time Start</TableHead>
+                                    <TableHead>Time End</TableHead>
+                                    <TableHead>Hrs</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {diary.works?.length ? diary.works.map((item, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{item.area}</TableCell>
+                                        <TableCell>{item.scope}</TableCell>
+                                        <TableCell>{item.timeStart}</TableCell>
+                                        <TableCell>{item.timeEnd}</TableCell>
+                                        <TableCell>{item.hrs}</TableCell>
+                                    </TableRow>
+                                )) : <TableRow><TableCell colSpan={5} className="text-center h-24">No work entries.</TableCell></TableRow>}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                    <Card>
+                        <CardHeader><CardTitle>SECTION D: DELAYS</CardTitle></CardHeader>
+                        <CardContent>
+                            <ul className="list-disc pl-5">
+                                {diary.delays?.length && diary.delays.some(d => d) ? diary.delays.map((item, index) => (
+                                    item && <li key={index}>{item}</li>
+                                )) : <li className="list-none">No delays reported.</li>}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader><CardTitle>SECTION E: COMMENTS</CardTitle></CardHeader>
+                        <CardContent>
+                             <ul className="list-disc pl-5">
+                                {diary.comments?.length && diary.comments.some(c => c) ? diary.comments.map((item, index) => (
+                                    item && <li key={index}>{item}</li>
+                                )) : <li className="list-none">No comments.</li>}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                </div>
+
 
                 <Card className="mt-4">
                     <CardHeader>
