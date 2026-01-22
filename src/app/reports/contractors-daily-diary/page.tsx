@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +54,7 @@ export default function NewDailyDiaryPage() {
     const [clientDate, setClientDate] = useState<Date>();
     
     const [selectedLocation, setSelectedLocation] = useState('');
+    const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
@@ -151,6 +153,12 @@ export default function NewDailyDiaryPage() {
             setClientName(diaryData.clientName || '');
             setContractorDate(diaryData.contractorDate ? new Date(diaryData.contractorDate) : undefined);
             setClientDate(diaryData.clientDate ? new Date(diaryData.clientDate) : undefined);
+            if (diaryData.locationFilter) {
+                setSelectedLocation(diaryData.locationFilter);
+            }
+            if (diaryData.savedEquipmentId) {
+                setSelectedEquipmentId(diaryData.savedEquipmentId);
+            }
         }
     }, [diaryData, form, defaultValues]);
     
@@ -270,6 +278,8 @@ export default function NewDailyDiaryPage() {
                 clientName: clientName || '',
                 contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
                 clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
+                locationFilter: selectedLocation || '',
+                savedEquipmentId: selectedEquipmentId || '',
             };
 
             // --- UPLOAD LOGIC ---
@@ -365,7 +375,13 @@ export default function NewDailyDiaryPage() {
                                 </div>
                                 <div className="space-y-1">
                                     <Label>Equipment Name</Label>
-                                    <Select onValueChange={handleEquipmentSelect} disabled={!selectedLocation || equipmentLoading || !canEdit}>
+                                    <Select 
+                                        onValueChange={(value) => {
+                                            handleEquipmentSelect(value);
+                                            setSelectedEquipmentId(value);
+                                        }} 
+                                        value={selectedEquipmentId}
+                                        disabled={!selectedLocation || equipmentLoading || !canEdit}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select Equipment..." />
                                         </SelectTrigger>
