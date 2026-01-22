@@ -100,9 +100,6 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
           </PopoverContent>
         </Popover>
       </TableCell>
-      <TableCell className="w-[250px]">
-        <SignaturePad value={member.signature} onSign={(sig) => onChange('signature', sig)} onClear={() => onChange('signature', '')} />
-      </TableCell>
       <TableCell className="text-right">
         <Button
           variant="ghost"
@@ -662,7 +659,6 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                             <TableHead>WORK CREW - NAME</TableHead>
                             <TableHead>RTBS NO.</TableHead>
                             <TableHead>DATE</TableHead>
-                            <TableHead>SIGNATURE</TableHead>
                             <TableHead className="w-[50px] print:hidden"></TableHead>
                         </TableRow>
                     </TableHeader>

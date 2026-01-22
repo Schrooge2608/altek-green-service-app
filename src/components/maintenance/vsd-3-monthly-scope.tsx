@@ -101,9 +101,6 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
           </PopoverContent>
         </Popover>
       </TableCell>
-      <TableCell className="w-[250px]">
-        <SignaturePad value={member.signature} onSign={(sig) => onChange('signature', sig)} onClear={() => onChange('signature', '')} />
-      </TableCell>
       <TableCell className="text-right">
         <Button
           variant="ghost"
@@ -670,7 +667,6 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                             <TableHead>WORK CREW - NAME</TableHead>
                             <TableHead>RTBS NO.</TableHead>
                             <TableHead>DATE</TableHead>
-                            <TableHead>SIGNATURE</TableHead>
                             <TableHead className="w-[50px] print:hidden"></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -705,7 +701,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                             <Label htmlFor="asset-id">Asset ID:</Label>
                             <Input id="asset-id" placeholder="Enter Asset ID" />
                         </div>
-                        <div className="space-y-2">
+                         <div className="space-y-2">
                              <Label htmlFor="log-date">Date:</Label>
                             <Input id="log-date" type="date" />
                         </div>

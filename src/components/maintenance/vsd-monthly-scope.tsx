@@ -104,7 +104,6 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: { memb
                     </PopoverContent>
                 </Popover>
             </TableCell>
-            <TableCell className="w-[250px]"><SignaturePad value={member.signature} onSign={(sig) => onChange('signature', sig)} onClear={() => onChange('signature', '')} /></TableCell>
             <TableCell className="text-right">
                 <Button variant="ghost" size="icon" onClick={onRemove} className="print:hidden">
                     <Trash2 className="h-4 w-4" />
@@ -293,9 +292,9 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
             description: 'The task has been added to the upcoming schedules list.'
         });
         router.push('/maintenance/upcoming-schedules');
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
-        toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the schedule.' });
+        toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'Could not save the schedule.' });
     } finally {
         setIsSaving(false);
     }
@@ -303,7 +302,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
 
   const handleSaveProgress = async () => {
       if (!schedule || !firebaseApp) {
-          toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
+          toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context or Firebase App instance.' });
           return;
       }
 
@@ -343,8 +342,8 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
           if (newJhaUrls.length > 0) updateData.jhaScans = [...(schedule.jhaScans || []), ...newJhaUrls];
           if (newPtwUrls.length > 0) updateData.ptwScans = [...(schedule.ptwScans || []), ...newPtwUrls];
           if (newWorkOrderUrls.length > 0) updateData.workOrderScans = [...(schedule.workOrderScans || []), ...newWorkOrderUrls];
-          
-          updateData.updatedAt = new Date().toISOString();
+
+          updateData.updatedAt = new Date().toISOString(); 
           await updateDoc(scheduleRef, updateData);
 
           toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
@@ -652,7 +651,6 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
                         <TableHead>WORK CREW - NAME</TableHead>
                         <TableHead>RTBS NO.</TableHead>
                         <TableHead>DATE</TableHead>
-                        <TableHead>SIGNATURE</TableHead>
                         <TableHead className="w-[50px] print:hidden"></TableHead>
                     </TableRow>
                 </TableHeader>

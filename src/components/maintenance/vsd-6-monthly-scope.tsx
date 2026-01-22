@@ -53,14 +53,14 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
   return (
     <TableRow>
       <TableCell>
-         <Select
+        <Select
             disabled={usersLoading}
             value={users?.find(u => u.name === member.name)?.id}
             onValueChange={(userId) => {
                 const user = users?.find(u => u.id === userId);
                 onChange('name', user?.name || '');
             }}
-         >
+        >
             <SelectTrigger>
                 <SelectValue placeholder="Select crew member..." />
             </SelectTrigger>
@@ -99,9 +99,6 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
             />
           </PopoverContent>
         </Popover>
-      </TableCell>
-      <TableCell className="w-[250px]">
-        <SignaturePad value={member.signature} onSign={(sig) => onChange('signature', sig)} onClear={() => onChange('signature', '')} />
       </TableCell>
       <TableCell className="text-right">
         <Button
@@ -682,7 +679,6 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                             <TableHead>WORK CREW - NAME</TableHead>
                             <TableHead>RTBS NO.</TableHead>
                             <TableHead>DATE</TableHead>
-                            <TableHead>SIGNATURE</TableHead>
                             <TableHead className="w-[50px] print:hidden"></TableHead>
                         </TableRow>
                     </TableHeader>
