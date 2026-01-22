@@ -89,8 +89,6 @@ const completedSchedulesCategories = [
 ]
 
 const vsdProcedureSubMenu = [
-    { href: '/maintenance/vsds/weekly', label: 'Weekly' },
-    { href: '/maintenance/vsds/monthly', label: 'Monthly' },
     { href: '/maintenance/vsds/3-monthly', label: '3-Monthly' },
     { href: '/maintenance/vsds/6-monthly', label: '6-Monthly' },
     { href: '/maintenance/vsds/yearly', label: 'Yearly' },

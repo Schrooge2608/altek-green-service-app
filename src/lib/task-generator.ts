@@ -5,8 +5,6 @@ import type { Equipment, MaintenanceTask } from './types';
 export type MaintenanceCategory = 'VSDs' | 'Protection' | 'Motors' | 'Pumps' | 'UPS/BTU\'s';
 
 const frequencies: { name: MaintenanceTask['frequency']; days: number }[] = [
-  { name: 'Weekly', days: 7 },
-  { name: 'Monthly', days: 30 },
   { name: '3-Monthly', days: 90 },
   { name: '6-Monthly', days: 180 },
   { name: 'Yearly', days: 365 },

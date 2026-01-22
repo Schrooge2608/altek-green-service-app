@@ -118,13 +118,23 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
   );
 }
 
-const quarterlyChecklistItems = [
-    "Power terminals torqued",
-    "Heat sink fins vacuumed",
-    "Fans spinning freely/quietly",
-    "Parameter set backed up",
-    "Fault log cleared",
-    "DC Bus Voltage Stability"
+const combined3MonthlyTasks = [
+    // -- Weekly Observational Tasks --
+    "Acoustic Check: Listen for unusual noises (fans, humming).",
+    "Visual Inspection: Check for dust, moisture, or 'burnt' smells around the VSD.",
+    "Thermal Monitoring: Record internal temperature from VSD display.",
+    "Environment Log: Record ambient temperature and humidity of the room.",
+    "Electrical Logging: Record DC Bus Voltage, Output Current, and Frequency from display.",
+    "Ventilation Check: Ensure nothing is blocking intake or exhaust vents.",
+    // -- Monthly/Quarterly Hands-On Tasks --
+    "Filter Maintenance: Inspect and clean/replace cabinet air filters.",
+    "Heat Sink Cleaning: Vacuum dust from all heat sink fins.",
+    "Fan Check: Manually spin fans to check for free, quiet rotation.",
+    "Connection Integrity: Visually inspect power and control wiring for discoloration.",
+    "Terminal Torque Check: Re-torque all power terminals to specification.",
+    "Data Backup: Perform a full parameter set backup.",
+    "Clear Fault Log: Document and clear the VSD's fault history.",
+    "DC Bus Voltage Stability Check: Monitor for fluctuations under load."
 ];
 
 const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
@@ -151,7 +161,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         : [{ localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]
     );
     
-    const initialChecklist = React.useMemo(() => quarterlyChecklistItems.map(item => ({ task: item, status: 'not-checked' as const, comments: '' })), []);
+    const initialChecklist = React.useMemo(() => combined3MonthlyTasks.map(item => ({ task: item, status: 'not-checked' as const, comments: '' })), []);
 
     const [checklist, setChecklist] = React.useState<ChecklistItem[]>(() => {
         if (schedule?.checklist && schedule.checklist.length > 0) {
@@ -201,7 +211,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             const storage = getStorage(firebaseApp);
             const fileRef = ref(storage, fileUrl);
             await deleteObject(fileRef);
-            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+            const scheduleRef = doc(firestore, 'upcoming_work', schedule.id);
             const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
             await updateDoc(scheduleRef, { [docType]: updatedScans });
             toast({ title: "File Deleted", description: "The selected document has been removed." });
@@ -216,7 +226,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     : error.message || "An unexpected error occurred.",
             });
             if(error.code === 'storage/object-not-found'){
-                const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+                const scheduleRef = doc(firestore, 'upcoming_work', schedule.id);
                 const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
                 await updateDoc(scheduleRef, { [docType]: updatedScans });
                 router.refresh();
@@ -262,7 +272,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         };
 
         try {
-            const schedulesRef = collection(firestore, 'upcoming_schedules');
+            const schedulesRef = collection(firestore, 'upcoming_work');
             const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
             await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
 
@@ -329,7 +339,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             });
             return Promise.all(uploadPromises);
         };
-
+        
         try {
             const [newTake5Urls, newCccUrls, newJhaUrls, newPtwUrls, newWorkOrderUrls] = await Promise.all([
                 uploadScans(take5Files, 'take5'),
@@ -339,7 +349,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 uploadScans(workOrderFiles, 'work_order'),
             ]);
 
-            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+            const scheduleRef = doc(firestore, 'upcoming_work', schedule.id);
             const crewToSave = crew.map(({ localId, ...rest }) => rest);
             const updateData: Partial<ScheduledTask> = {
                 workCrew: crewToSave,
@@ -666,7 +676,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     </TableHeader>
                     <TableBody>
                         {crew.map((member, index) => (
-                           <WorkCrewRow
+                            <WorkCrewRow
                                 key={member.localId}
                                 member={member}
                                 onRemove={() => removeCrewMember(member.localId)}
@@ -713,7 +723,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                             {quarterlyChecklistItems.map((item, index) => (
+                             {combined3MonthlyTasks.map((item, index) => (
                                 <TableRow key={index}>
                                     <TableCell>{item}</TableCell>
                                     <TableCell>
