@@ -31,7 +31,7 @@ export default function NewDailyDiaryPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { toast } = useToast();
-    const { firestore, firebaseApp, auth } = useFirebase();
+    const { firestore, firebaseApp } = useFirebase();
     const { user, isUserLoading } = useUser();
 
     const diaryId = searchParams.get('id');
@@ -63,13 +63,15 @@ export default function NewDailyDiaryPage() {
         useMemoFirebase(() => collection(firestore, 'users'), [firestore])
     );
 
-    const { data: userRole } = useDoc<AppUser>(
+    const { data: userData, isLoading: userDataLoading } = useDoc<AppUser>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user])
     );
 
-    const isAdmin = useMemo(() => userRole?.role && ['Admin', 'Superadmin'].includes(userRole.role), [userRole]);
+    const isSignedOff = useMemo(() => diaryData?.isSignedOff === true, [diaryData]);
+    const isAdmin = useMemo(() => userData?.role && ['Admin', 'Superadmin'].includes(userData.role), [userData]);
     const isCreator = useMemo(() => diaryData?.userId === user?.uid, [diaryData, user]);
-    const canEdit = !diaryId || isCreator || isAdmin;
+    const canEdit = (!diaryId || isCreator || isAdmin) && !isSignedOff;
+
 
     const defaultValues = useMemo(() => {
         const works = Array(5).fill(null).map(() => ({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: undefined }));
@@ -288,7 +290,7 @@ export default function NewDailyDiaryPage() {
         }
     };
     
-    if (isUserLoading || diaryLoading) {
+    if (isUserLoading || diaryLoading || userDataLoading) {
         return (
             <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -312,7 +314,7 @@ export default function NewDailyDiaryPage() {
             </div>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSave)}>
-                <fieldset disabled={!canEdit}>
+                <fieldset disabled={!canEdit || isSignedOff}>
                     <Card className="p-8 shadow-lg" id="diary-form">
                         <header className="flex items-start justify-between mb-4 border-b pb-4">
                             <AltekLogo className="h-10" />
@@ -813,17 +815,71 @@ export default function NewDailyDiaryPage() {
                                 <CardContent className="p-4 space-y-4">
                                     <div className="space-y-1">
                                         <Label>Name</Label>
-                                        <Input value={contractorName} onChange={(e) => setContractorName(e.target.value)} />
+                                        <Input 
+                                            value={contractorName} 
+                                            onChange={(e) => setContractorName(e.target.value)} 
+                                            disabled={!canEdit || isSignedOff} 
+                                            placeholder="Contractor Name"
+                                        />
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Signature</Label>
-                                        <SignaturePad value={contractorSignature} onSign={setContractorSignature} onClear={() => setContractorSignature(null)} />
+                                        
+                                        {/* LOGIC: Show Image if signed, Button if empty */}
+                                        {contractorSignature ? (
+                                            <div className="relative border rounded-md p-4 bg-white flex flex-col items-center">
+                                                <img src={contractorSignature} alt="Contractor Sig" className="h-24 object-contain" />
+                                                {canEdit && !isSignedOff && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="absolute top-1 right-1 h-6 w-6 p-0 text-red-500 hover:bg-red-50" 
+                                                        onClick={() => setContractorSignature(null)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center bg-slate-50 gap-3">
+                                                <Button 
+                                                    type="button" 
+                                                    variant="default" 
+                                                    disabled={!canEdit || isSignedOff}
+                                                    className="w-full"
+                                                    onClick={() => {
+                                                        if (userData?.signatureUrl) {
+                                                            setContractorSignature(userData.signatureUrl);
+                                                            // Auto-fill name/date if they are empty
+                                                            if (!contractorName) setContractorName(userData.name || '');
+                                                            setContractorDate(new Date());
+                                                            toast({ title: "Signed", description: "Digital signature applied." });
+                                                        } else {
+                                                            toast({ 
+                                                                variant: "destructive", 
+                                                                title: "No Signature Found", 
+                                                                description: "Please go to Administration > Capture Signature to set one up first." 
+                                                            });
+                                                        }
+                                                    }}
+                                                >
+                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                    Click to Sign as {userData?.name || 'User'}
+                                                </Button>
+                                                
+                                                {!userData?.signatureUrl && (
+                                                    <p className="text-[10px] text-red-500 text-center">
+                                                        ⚠ No signature found in your profile.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Date</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
+                                                <Button variant={"outline"} disabled={!canEdit || isSignedOff} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {contractorDate ? format(contractorDate, "PPP") : <span>Pick a date</span>}
                                                 </Button>
@@ -842,7 +898,7 @@ export default function NewDailyDiaryPage() {
                                 <CardContent className="p-4 space-y-4">
                                     <div className="space-y-1">
                                         <Label>Name</Label>
-                                        <Input value={clientName} onChange={(e) => setClientName(e.target.value)}/>
+                                        <Input value={clientName} onChange={(e) => setClientName(e.target.value)} disabled={!canEdit || isSignedOff} />
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Signature</Label>
@@ -852,7 +908,7 @@ export default function NewDailyDiaryPage() {
                                         <Label>Date</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
+                                                <Button variant={"outline"} disabled={!canEdit || isSignedOff} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {clientDate ? format(clientDate, "PPP") : <span>Pick a date</span>}
                                                 </Button>
@@ -873,5 +929,7 @@ export default function NewDailyDiaryPage() {
     );
 }
 
+
+    
 
     
