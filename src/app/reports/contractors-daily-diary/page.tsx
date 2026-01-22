@@ -278,8 +278,8 @@ export default function NewDailyDiaryPage() {
                 clientName: clientName || '',
                 contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
                 clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
-                locationFilter: selectedLocation || '',
-                savedEquipmentId: selectedEquipmentId || '',
+                locationFilter: selectedLocation,
+                savedEquipmentId: selectedEquipmentId,
             };
 
             // --- UPLOAD LOGIC ---
