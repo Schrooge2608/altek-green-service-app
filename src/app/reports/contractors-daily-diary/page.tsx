@@ -299,6 +299,100 @@ export default function NewDailyDiaryPage() {
         }
     };
     
+    const handleSaveForApproval = async (data: DailyDiary) => {
+        if (!firestore || !uniqueId || !user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'User not logged in or database not available.' });
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const storage = getStorage(firebaseApp);
+            const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
+            
+            const finalDiaryData: Partial<DailyDiary> = { 
+                id: uniqueId,
+                userId: user.uid,
+                contractTitle: data.contractTitle || 'VSD MAINTENANCE',
+                contractNumber: data.contractNumber || 'CW 22038313',
+                area: data.area || 'Mining',
+                date: data.date ? format(new Date(data.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+                shiftStart: data.shiftStart || '',
+                shiftEnd: data.shiftEnd || '',
+                hrs: data.hrs || 0,
+                incidents: data.incidents || '',
+                toolboxTalk: data.toolboxTalk || '',
+                locationFilter: data.locationFilter || null,
+                savedEquipmentId: data.savedEquipmentId || null,
+                
+                manpower: (data.manpower || []).map(m => ({
+                    designation: m.designation || '',
+                    forecast: m.forecast || 0,
+                    actual: m.actual || 0,
+                    normalHrs: m.normalHrs || 0,
+                    overtime1_5: m.overtime1_5 || 0,
+                    overtime2_0: m.overtime2_0 || 0,
+                    totalManHrs: m.totalManHrs || 0,
+                    comments: m.comments || '',
+                })),
+                plant: (data.plant || []).map(p => ({
+                    description: p.description || '',
+                    qty: p.qty || 0,
+                    inspectionDone: p.inspectionDone || 'no',
+                    comments: p.comments || '',
+                })),
+                works: (data.works || []).map(w => ({
+                    area: w.area || '',
+                    scope: w.scope || '',
+                    timeStart: w.timeStart || '',
+                    timeEnd: w.timeEnd || '',
+                    hrs: w.hrs || 0,
+                })),
+                delays: (data.delays || []).map(d => d || ''),
+                comments: (data.comments || []).map(c => c || ''),
+                isSignedOff: true, // Key change for approval submission
+                createdAt: diaryData?.createdAt || serverTimestamp(),
+                beforeWorkImages: diaryData?.beforeWorkImages || [],
+                afterWorkImages: diaryData?.afterWorkImages || [],
+                hseDocumentationScans: diaryData?.hseDocumentationScans || [],
+                contractorSignature: contractorSignature || null,
+                clientSignature: clientSignature || null,
+                contractorName: contractorName || '',
+                clientName: clientName || '',
+                contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
+                clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
+            };
+
+            if (beforeFile) {
+                const fileRef = ref(storage, `daily_diaries/${uniqueId}/before/${beforeFile.name}_${Date.now()}`);
+                await uploadBytes(fileRef, beforeFile);
+                const downloadUrl = await getDownloadURL(fileRef);
+                finalDiaryData.beforeWorkImages?.push(downloadUrl);
+            }
+            if (afterFile) {
+                const fileRef = ref(storage, `daily_diaries/${uniqueId}/after/${afterFile.name}_${Date.now()}`);
+                await uploadBytes(fileRef, afterFile);
+                const downloadUrl = await getDownloadURL(fileRef);
+                finalDiaryData.afterWorkImages?.push(downloadUrl);
+            }
+            if (hseFile) {
+                const fileRef = ref(storage, `daily_diaries/${uniqueId}/hse/${hseFile.name}_${Date.now()}`);
+                await uploadBytes(fileRef, hseFile);
+                const downloadUrl = await getDownloadURL(fileRef);
+                finalDiaryData.hseDocumentationScans?.push(downloadUrl);
+            }
+
+            await setDoc(diaryDocRef, finalDiaryData, { merge: true });
+            toast({ title: 'Diary Submitted', description: `Document ${uniqueId} has been submitted for approval.` });
+            router.push(`/reports/diary-tracker`);
+        } catch (error: any) {
+            console.error("Failed to submit diary:", error);
+            toast({ variant: 'destructive', title: 'Submit Failed', description: error.message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
     if (isUserLoading || diaryLoading || userDataLoading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -317,9 +411,15 @@ export default function NewDailyDiaryPage() {
                         {isSaving ? 'Saving...' : 'Save Diary'}
                     </Button>
                 )}
-                <Button onClick={() => window.print()} variant="outline">
-                    <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
-                </Button>
+                {canEdit ? (
+                    <Button onClick={form.handleSubmit(handleSaveForApproval)} variant="outline" disabled={!uniqueId || isIdLoading || isSaving}>
+                        For Approval
+                    </Button>
+                ) : (
+                    <Button onClick={() => window.print()} variant="outline">
+                        <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
+                    </Button>
+                )}
             </div>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSave)}>
@@ -947,10 +1047,3 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
-
-
-    
-
-    
-
-    
