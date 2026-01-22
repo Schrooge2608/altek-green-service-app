@@ -140,9 +140,15 @@ export default function DiaryTrackerPage() {
                                 <TableCell>{diary.date}</TableCell>
                                 <TableCell>{diary.area}</TableCell>
                                 <TableCell>
-                                    <Badge variant={diary.isSignedOff ? 'default' : 'secondary'}>
-                                        {diary.isSignedOff ? 'Signed Off' : 'Draft'}
-                                    </Badge>
+                                    {(() => {
+                                        if (diary.isFinalised) {
+                                            return <Badge variant="default">Finalised</Badge>;
+                                        }
+                                        if (diary.isSignedOff) {
+                                            return <Badge variant="secondary">Completed</Badge>;
+                                        }
+                                        return <Badge variant="outline">Draft</Badge>;
+                                    })()}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     {diary.isSignedOff && (

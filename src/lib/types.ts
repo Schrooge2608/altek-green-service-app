@@ -268,6 +268,7 @@ export interface DailyDiary {
   beforeWorkImages?: string[];
   afterWorkImages?: string[];
   isSignedOff: boolean;
+  isFinalised?: boolean;
   createdAt?: any;
   locationFilter?: string | null;
   savedEquipmentId?: string | null;

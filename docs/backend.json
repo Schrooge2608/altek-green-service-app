@@ -310,6 +310,7 @@
             "beforeWorkImages": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images taken before work." },
             "afterWorkImages": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images taken after work." },
             "isSignedOff": { "type": "boolean", "description": "True if the diary has been signed off and locked from editing." },
+            "isFinalised": { "type": "boolean", "description": "True if the diary has been finalised by a manager." },
             "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the document was created." },
             "locationFilter": { "type": "string" },
             "savedEquipmentId": { "type": "string" }
