@@ -39,6 +39,7 @@ import {
   ScanLine,
   Sparkles,
   History,
+  Pen,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { UserNav } from '@/components/user-nav';
@@ -559,7 +560,7 @@ export function SidebarNav() {
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip="Administration" isActive={pathname.startsWith('/admin') || pathname.startsWith('/time-attendance')}>
+                      <SidebarMenuButton tooltip="Administration" isActive={pathname.startsWith('/admin') || pathname.startsWith('/time-attendance') || pathname === '/capture-signature'}>
                           <Shield />
                           <span>Administration</span>
                           <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
@@ -572,6 +573,14 @@ export function SidebarNav() {
                             <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance'}>
                                 <Link href="/time-attendance">
                                     <span>Time &amp; Attendance</span>
+                                </Link>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/capture-signature'}>
+                                <Link href="/capture-signature">
+                                    <Pen />
+                                    <span>Capture Signature</span>
                                 </Link>
                             </SidebarMenuSubButton>
                         </SidebarMenuItem>
