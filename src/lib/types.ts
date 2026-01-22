@@ -262,9 +262,6 @@ export interface DailyDiary {
   contractorName?: string;
   contractorSignature?: string; // base64
   contractorDate?: string;
-  clientName?: string;
-  clientSignature?: string; // base64
-  clientDate?: string;
   beforeWorkImages?: string[];
   afterWorkImages?: string[];
   isSignedOff: boolean;

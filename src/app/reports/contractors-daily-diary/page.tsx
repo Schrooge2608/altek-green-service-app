@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { VoiceTextarea } from '@/components/ui/voice-textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { CalendarIcon, Printer, Save, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarIcon, Printer, Save, Loader2, Pencil, Plus, Trash2, FileCheck } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -46,11 +45,8 @@ export default function NewDailyDiaryPage() {
     const [hseFile, setHseFile] = useState<File | null>(null);
 
     const [contractorSignature, setContractorSignature] = useState<string | null>(null);
-    const [clientSignature, setClientSignature] = useState<string | null>(null);
     const [contractorName, setContractorName] = useState('');
-    const [clientName, setClientName] = useState('');
     const [contractorDate, setContractorDate] = useState<Date>();
-    const [clientDate, setClientDate] = useState<Date>();
     
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
@@ -75,29 +71,20 @@ export default function NewDailyDiaryPage() {
     const isAdmin = useMemo(() => userData?.role && ['Admin', 'Superadmin'].includes(userData.role), [userData]);
     const isCreator = useMemo(() => diaryData?.userId === user?.uid, [diaryData, user]);
 
-    // CHECK 1: Is the diary approved? (FORCE FALSE if this is a New Diary)
-    const isSignedOff = diaryId ? (diaryData?.isSignedOff || false) : false;
-
-    // CHECK 2: Can edit? (New Diary = YES) OR (Creator/Admin AND Not Signed Off)
-    const canEdit = !diaryId || ((isCreator || isAdmin) && !isSignedOff);
-    
-    const canSignClient = useMemo(() => {
-        return isManager && isSignedOff;
-    }, [isManager, isSignedOff]);
+    const isSignedOff = diaryData?.isSignedOff || false;
+    const canEdit = !isSignedOff && (isCreator || isAdmin);
 
 
-    // DEFINE CLEAN DEFAULTS
     const defaultValues: Partial<DailyDiary> = {
         contractTitle: '',
         contractNumber: '',
-        area: 'Mining', // Default to Mining, or leave empty '' if preferred
+        area: 'Mining',
         date: new Date(),
         shiftStart: '',
         shiftEnd: '',
         hrs: 0,
         incidents: '',
         toolboxTalk: '',
-        // ARRAYS: Start with exactly ONE empty row for new diaries
         manpower: [{ designation: '', forecast: 0, actual: 0, normalHrs: 0, overtime1_5: 0, overtime2_0: 0, totalManHrs: 0, comments: '' }],
         plant: [{ description: '', qty: 0, inspectionDone: 'no', comments: '' }],
         works: [{ area: '', scope: '', timeStart: '', timeEnd: '', hrs: 0 }],
@@ -147,49 +134,24 @@ export default function NewDailyDiaryPage() {
 
     useEffect(() => {
         if (diaryId && diaryData) {
-            // --- EDIT MODE: Load Saved Data ---
             form.reset({
-                ...defaultValues, // Fallback for missing fields
-                ...diaryData,     // Overwrite with saved data
-                
-                // DATA RECOVERY: If saved array is empty, give 1 empty line. If it has data, KEEP IT.
-                manpower: (diaryData.manpower && diaryData.manpower.length > 0) 
-                          ? diaryData.manpower 
-                          : defaultValues.manpower,
-
-                plant: (diaryData.plant && diaryData.plant.length > 0) 
-                          ? diaryData.plant 
-                          : defaultValues.plant,
-
-                works: (diaryData.works && diaryData.works.length > 0) 
-                          ? diaryData.works 
-                          : defaultValues.works,
-
-                // DATE HANDLING
+                ...defaultValues,
+                ...diaryData,
+                manpower: (diaryData.manpower && diaryData.manpower.length > 0) ? diaryData.manpower : defaultValues.manpower,
+                plant: (diaryData.plant && diaryData.plant.length > 0) ? diaryData.plant : defaultValues.plant,
+                works: (diaryData.works && diaryData.works.length > 0) ? diaryData.works : defaultValues.works,
                 date: diaryData.date ? new Date(diaryData.date) : new Date(),
                 locationFilter: diaryData.locationFilter || (diaryData.works && diaryData.works[0]?.area) || '',
                 savedEquipmentId: diaryData.savedEquipmentId || '',
             });
-
-            // Restore Signatures & Local State
             setContractorSignature(diaryData.contractorSignature || null);
-            setClientSignature(diaryData.clientSignature || null);
             setContractorName(diaryData.contractorName || '');
-            setClientName(diaryData.clientName || '');
             setContractorDate(diaryData.contractorDate ? new Date(diaryData.contractorDate) : undefined);
-            setClientDate(diaryData.clientDate ? new Date(diaryData.clientDate) : undefined);
-
         } else if (!diaryId) {
-            // --- NEW MODE: Force Clean Slate ---
             form.reset(defaultValues);
-            
-            // Wipe all local state
             setContractorSignature(null);
-            setClientSignature(null);
             setContractorName('');
-            setClientName('');
             setContractorDate(undefined);
-            setClientDate(undefined);
             setBeforeFile(null);
             setAfterFile(null);
             setHseFile(null);
@@ -207,6 +169,10 @@ export default function NewDailyDiaryPage() {
             setIsIdLoading(false);
         }
     }, [diaryId]);
+
+    const handleApprove = async () => {
+        form.handleSubmit((data) => handleSave(data, true))();
+    };
 
     const handleDeleteImage = async (imageUrl: string, imageType: 'beforeWorkImages' | 'afterWorkImages' | 'hseDocumentationScans') => {
         if (!diaryId || !firebaseApp) {
@@ -232,7 +198,7 @@ export default function NewDailyDiaryPage() {
         }
     };
 
-    const handleSave = async (data: DailyDiary) => {
+    const handleSave = async (data: DailyDiary, isApprovalAction = false) => {
         if (!firestore || !uniqueId || !user) {
             toast({ variant: 'destructive', title: 'Error', description: 'User not logged in or database not available.' });
             return;
@@ -243,6 +209,8 @@ export default function NewDailyDiaryPage() {
             const storage = getStorage(firebaseApp);
             const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
             
+            const finalIsSignedOff = isApprovalAction ? true : (diaryData?.isSignedOff || false);
+
             const finalDiaryData: Partial<DailyDiary> = { 
                 id: uniqueId,
                 userId: user.uid,
@@ -287,14 +255,13 @@ export default function NewDailyDiaryPage() {
                 beforeWorkImages: diaryData?.beforeWorkImages || [],
                 afterWorkImages: diaryData?.afterWorkImages || [],
                 hseDocumentationScans: diaryData?.hseDocumentationScans || [],
+                
                 contractorSignature: contractorSignature || null,
-                clientSignature: clientSignature || null,
                 contractorName: contractorName || '',
-                clientName: clientName || '',
                 contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
-                clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
-                isSignedOff: diaryData?.isSignedOff || false,
-                isFinalised: isManager && clientSignature ? true : (diaryData?.isFinalised || false),
+                
+                isSignedOff: finalIsSignedOff,
+                isFinalised: isApprovalAction,
             };
 
             if (beforeFile) {
@@ -317,106 +284,17 @@ export default function NewDailyDiaryPage() {
             }
 
             await setDoc(diaryDocRef, finalDiaryData, { merge: true });
-            toast({ title: 'Diary Saved', description: `Document ${uniqueId} has been saved successfully.` });
+            
+            if (isApprovalAction) {
+                 toast({ title: 'Approved', description: `Diary ${uniqueId} has been successfully approved and signed.` });
+            } else {
+                 toast({ title: 'Saved', description: `Diary ${uniqueId} saved.` });
+            }
+            
             router.push(`/reports/diary-tracker`);
         } catch (error: any) {
             console.error("Failed to save diary:", error);
             toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-    
-    const handleSaveForApproval = async (data: DailyDiary) => {
-        if (!firestore || !uniqueId || !user) {
-            toast({ variant: 'destructive', title: 'Error', description: 'User not logged in or database not available.' });
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            const storage = getStorage(firebaseApp);
-            const diaryDocRef = doc(firestore, 'daily_diaries', uniqueId);
-            
-            const finalDiaryData: Partial<DailyDiary> = { 
-                id: uniqueId,
-                userId: user.uid,
-                contractTitle: data.contractTitle || 'VSD MAINTENANCE',
-                contractNumber: data.contractNumber || 'CW 22038313',
-                area: data.area || 'Mining',
-                date: data.date ? format(new Date(data.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-                shiftStart: data.shiftStart || '',
-                shiftEnd: data.shiftEnd || '',
-                hrs: data.hrs || 0,
-                incidents: data.incidents || '',
-                toolboxTalk: data.toolboxTalk || '',
-                locationFilter: data.locationFilter || null,
-                savedEquipmentId: data.savedEquipmentId || null,
-                
-                manpower: (data.manpower || []).map(m => ({
-                    designation: m.designation || '',
-                    forecast: m.forecast || 0,
-                    actual: m.actual || 0,
-                    normalHrs: m.normalHrs || 0,
-                    overtime1_5: m.overtime1_5 || 0,
-                    overtime2_0: m.overtime2_0 || 0,
-                    totalManHrs: m.totalManHrs || 0,
-                    comments: m.comments || '',
-                })),
-                plant: (data.plant || []).map(p => ({
-                    description: p.description || '',
-                    qty: p.qty || 0,
-                    inspectionDone: p.inspectionDone || 'no',
-                    comments: p.comments || '',
-                })),
-                works: (data.works || []).map(w => ({
-                    area: w.area || '',
-                    scope: w.scope || '',
-                    timeStart: w.timeStart || '',
-                    timeEnd: w.timeEnd || '',
-                    hrs: w.hrs || 0,
-                })),
-                delays: (data.delays || []).map(d => d || ''),
-                comments: (data.comments || []).map(c => c || ''),
-                isSignedOff: true, // Key change for approval submission
-                isFinalised: isManager && clientSignature ? true : (diaryData?.isFinalised || false),
-                createdAt: diaryData?.createdAt || serverTimestamp(),
-                beforeWorkImages: diaryData?.beforeWorkImages || [],
-                afterWorkImages: diaryData?.afterWorkImages || [],
-                hseDocumentationScans: diaryData?.hseDocumentationScans || [],
-                contractorSignature: contractorSignature || null,
-                clientSignature: clientSignature || null,
-                contractorName: contractorName || '',
-                clientName: clientName || '',
-                contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
-                clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
-            };
-
-            if (beforeFile) {
-                const fileRef = ref(storage, `daily_diaries/${uniqueId}/before/${beforeFile.name}_${Date.now()}`);
-                await uploadBytes(fileRef, beforeFile);
-                const downloadUrl = await getDownloadURL(fileRef);
-                finalDiaryData.beforeWorkImages?.push(downloadUrl);
-            }
-            if (afterFile) {
-                const fileRef = ref(storage, `daily_diaries/${uniqueId}/after/${afterFile.name}_${Date.now()}`);
-                await uploadBytes(fileRef, afterFile);
-                const downloadUrl = await getDownloadURL(fileRef);
-                finalDiaryData.afterWorkImages?.push(downloadUrl);
-            }
-            if (hseFile) {
-                const fileRef = ref(storage, `daily_diaries/${uniqueId}/hse/${hseFile.name}_${Date.now()}`);
-                await uploadBytes(fileRef, hseFile);
-                const downloadUrl = await getDownloadURL(fileRef);
-                finalDiaryData.hseDocumentationScans?.push(downloadUrl);
-            }
-
-            await setDoc(diaryDocRef, finalDiaryData, { merge: true });
-            toast({ title: 'Diary Submitted', description: `Document ${uniqueId} has been submitted for approval.` });
-            router.push(`/reports/diary-tracker`);
-        } catch (error: any) {
-            console.error("Failed to submit diary:", error);
-            toast({ variant: 'destructive', title: 'Submit Failed', description: error.message });
         } finally {
             setIsSaving(false);
         }
@@ -434,40 +312,37 @@ export default function NewDailyDiaryPage() {
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
             <div className="flex justify-end mb-4 gap-2 print:hidden">
-                {canEdit && (
-                    <Button onClick={form.handleSubmit(handleSave)} disabled={!uniqueId || isIdLoading || isSaving}>
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                        {isSaving ? 'Saving...' : 'Save Diary'}
-                    </Button>
-                )}
-                
-                {diaryData?.isFinalised || diaryData?.isSignedOff ? (
+                {diaryData?.isFinalised ? (
                      <Button onClick={() => window.print()} variant="outline">
                         <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
                     </Button>
                 ) : (
-                    <Button 
-                        variant="outline" 
-                        disabled={isSaving}
-                        onClick={() => {
-                            if (isManager && !clientSignature) {
-                                toast({
-                                    variant: "destructive",
-                                    title: "Signature Required",
-                                    description: "As a manager, you must sign the document in the Client section before approving.",
-                                });
-                            } else {
-                                form.handleSubmit(handleSaveForApproval)();
-                            }
-                        }}
-                    >
-                        For Approval
-                    </Button>
+                    <div className="flex gap-2">
+                        {(isManager || isAdmin) ? (
+                            <Button 
+                                onClick={handleApprove} 
+                                disabled={isSaving || !diaryData?.isSignedOff}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
+                                Approve Diary
+                            </Button>
+                        ) : (
+                            <Button 
+                                onClick={form.handleSubmit((data) => handleSave(data, false))} 
+                                disabled={!uniqueId || isIdLoading || isSaving || isSignedOff}
+                            >
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                {isSaving ? 'Saving...' : 'Save Progress'}
+                            </Button>
+                        )}
+                    </div>
                 )}
             </div>
+
             <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSave)}>
-                <fieldset disabled={!canEdit || diaryData?.isFinalised}>
+            <form onSubmit={form.handleSubmit((data) => handleSave(data, false))}>
+                <fieldset disabled={diaryData?.isFinalised}>
                     <Card className="p-8 shadow-lg" id="diary-form">
                         <header className="flex items-start justify-between mb-4 border-b pb-4">
                             <AltekLogo className="h-10" />
@@ -960,7 +835,7 @@ export default function NewDailyDiaryPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="grid grid-cols-2 gap-8 mt-8">
+                        <div className="mt-8 grid grid-cols-1 md:w-1/2 mx-auto">
                             <Card>
                                 <CardHeader className="p-4">
                                     <CardTitle className="text-base text-center">CONTRACTOR</CardTitle>
@@ -1041,89 +916,6 @@ export default function NewDailyDiaryPage() {
                                     </div>
                                 </CardContent>
                             </Card>
-                            <Card>
-                                <CardHeader className="p-4">
-                                    <CardTitle className="text-base text-center">CLIENT</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-4 space-y-4">
-                                    <div className="space-y-1">
-                                        <Label>Name</Label>
-                                        <Input 
-                                            value={clientName} 
-                                            onChange={(e) => setClientName(e.target.value)} 
-                                            disabled={isSignedOff} 
-                                            placeholder="Client Representative Name"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label>Signature</Label>
-                                        
-                                        {clientSignature ? (
-                                            <div className="relative border rounded-md p-4 bg-white flex flex-col items-center">
-                                                <img src={clientSignature} alt="Client Sig" className="h-24 object-contain" />
-                                                {!isSignedOff && (
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        className="absolute top-1 right-1 h-6 w-6 p-0 text-red-500 hover:bg-red-50" 
-                                                        onClick={() => setClientSignature(null)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center bg-slate-50 gap-3">
-                                                {userData?.signatureUrl ? (
-                                                    <Button 
-                                                        type="button" 
-                                                        variant="default" 
-                                                        disabled={isSignedOff}
-                                                        className="w-full bg-blue-600 hover:bg-blue-700"
-                                                        onClick={() => {
-                                                            setClientSignature(userData.signatureUrl);
-                                                            if (!clientName) setClientName(userData.name || '');
-                                                            setClientDate(new Date());
-                                                            toast({ title: "Approved", description: "Client signature applied." });
-                                                        }}
-                                                    >
-                                                        <Pencil className="mr-2 h-4 w-4" />
-                                                        Click to Sign as {userData.name}
-                                                    </Button>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-2 w-full">
-                                                        <p className="text-sm text-red-500 font-medium text-center">
-                                                            No signature found.
-                                                        </p>
-                                                        <Button 
-                                                            type="button" 
-                                                            variant="outline" 
-                                                            className="w-full border-red-200 text-red-600 hover:bg-red-50"
-                                                            onClick={() => router.push('/capture-signature')}
-                                                        >
-                                                            Create Signature Now
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label>Date</Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button variant={"outline"} disabled={isSignedOff} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {clientDate ? format(clientDate, "PPP") : <span>Pick a date</span>}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <Calendar mode="single" selected={clientDate} onSelect={setClientDate} initialFocus />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-                                </CardContent>
-                            </Card>
                         </div>
                     </Card>
                 </fieldset>
@@ -1132,5 +924,3 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
-
-    

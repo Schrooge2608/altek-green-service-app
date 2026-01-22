@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useSearchParams, notFound, useRouter } from 'next/navigation';
@@ -237,6 +236,7 @@ export default function ViewDiaryPage() {
                     </Card>
                 </div>
 
+
                 <Card className="mt-4">
                     <CardHeader>
                         <CardTitle>Gallery</CardTitle>
@@ -250,7 +250,7 @@ export default function ViewDiaryPage() {
                     </CardContent>
                 </Card>
                 
-                 <div className="grid grid-cols-2 gap-8 mt-8">
+                <div className="mt-8 grid grid-cols-1 md:w-1/2 mx-auto">
                     <Card>
                          <CardHeader className="p-4">
                             <CardTitle className="text-base text-center">CONTRACTOR</CardTitle>
@@ -262,19 +262,6 @@ export default function ViewDiaryPage() {
                                 {diary.contractorSignature ? <Image src={diary.contractorSignature} alt="Contractor Signature" width={200} height={100} className="border rounded-md" /> : <p>Not signed.</p>}
                             </div>
                              <DetailRow label="Date" value={diary.contractorDate} />
-                        </CardContent>
-                    </Card>
-                     <Card>
-                         <CardHeader className="p-4">
-                            <CardTitle className="text-base text-center">CLIENT</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 space-y-4">
-                            <DetailRow label="Name" value={diary.clientName} />
-                             <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground">Signature:</p>
-                                {diary.clientSignature ? <Image src={diary.clientSignature} alt="Client Signature" width={200} height={100} className="border rounded-md" /> : <p>Not signed.</p>}
-                            </div>
-                            <DetailRow label="Date" value={diary.clientDate} />
                         </CardContent>
                     </Card>
                 </div>
