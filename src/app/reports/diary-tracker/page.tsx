@@ -147,7 +147,7 @@ export default function DiaryTrackerPage() {
                                         if (diary.isSignedOff) {
                                             return <Badge variant="secondary">Completed</Badge>;
                                         }
-                                        return <Badge variant="outline">Draft</Badge>;
+                                        return <Badge variant="outline">In Progress</Badge>;
                                     })()}
                                 </TableCell>
                                 <TableCell className="text-right">
