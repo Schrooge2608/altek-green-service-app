@@ -84,7 +84,7 @@ export default function UpcomingSchedulesPage() {
                                                 <Link href={`/maintenance/resolve/${task.id}`} passHref>
                                                     <Button variant="ghost" size="sm">
                                                         <CheckCircle className="mr-2 h-4 w-4" />
-                                                        Resolve
+                                                        Action
                                                     </Button>
                                                 </Link>
                                             </TableCell>
