@@ -1,5 +1,3 @@
-
-
 export interface Equipment {
   id: string;
   name: string;
@@ -270,6 +268,7 @@ export interface DailyDiary {
   afterWorkImages?: string[];
   isSignedOff: boolean;
   createdAt?: any;
+  // --- ADDED FIELDS ---
   locationFilter?: string;
   savedEquipmentId?: string;
 }
