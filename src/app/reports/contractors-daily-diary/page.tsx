@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,8 +52,6 @@ export default function NewDailyDiaryPage() {
     const [contractorDate, setContractorDate] = useState<Date>();
     const [clientDate, setClientDate] = useState<Date>();
     
-    const [selectedLocation, setSelectedLocation] = useState('');
-    const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipmentList, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
@@ -73,23 +70,6 @@ export default function NewDailyDiaryPage() {
     const isAdmin = useMemo(() => userRole?.role && ['Admin', 'Superadmin'].includes(userRole.role), [userRole]);
     const isCreator = useMemo(() => diaryData?.userId === user?.uid, [diaryData, user]);
     const canEdit = !diaryId || isCreator || isAdmin;
-
-
-    const locationOptions = useMemo(() => {
-        if (!equipmentList) return [];
-        return [...new Set(equipmentList.map(eq => eq.location))].sort().map(loc => ({
-            value: loc,
-            label: loc,
-        }));
-    }, [equipmentList]);
-
-    const equipmentOptions = useMemo(() => {
-        if (!selectedLocation || !equipmentList) return [];
-        return equipmentList
-            .filter(eq => eq.location === selectedLocation)
-            .map(eq => ({ value: eq.id, label: eq.name }))
-            .sort((a, b) => a.label.localeCompare(b.label));
-    }, [selectedLocation, equipmentList]);
 
     const defaultValues = useMemo(() => {
         const works = Array(5).fill(null).map(() => ({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: undefined }));
@@ -118,7 +98,9 @@ export default function NewDailyDiaryPage() {
             ] as PlantEntry[],
             works: works,
             delays: Array(5).fill(''),
-            comments: Array(5).fill('')
+            comments: Array(5).fill(''),
+            locationFilter: '',
+            savedEquipmentId: '',
         }
     }, [equipmentNameFromQuery, diaryId]);
 
@@ -130,15 +112,33 @@ export default function NewDailyDiaryPage() {
     const { fields: plantFields, append: appendPlant, remove: removePlant } = useFieldArray({ control: form.control, name: "plant" });
     const { fields: workFields, append: appendWork, remove: removeWork } = useFieldArray({ control: form.control, name: "works" });
 
-    const handleEquipmentSelect = (equipmentId: string) => {
+    const watchedLocation = form.watch('locationFilter');
+
+    const locationOptions = useMemo(() => {
+        if (!equipmentList) return [];
+        return [...new Set(equipmentList.map(eq => eq.location))].sort().map(loc => ({
+            value: loc,
+            label: loc,
+        }));
+    }, [equipmentList]);
+
+    const equipmentOptions = useMemo(() => {
+        if (!watchedLocation || !equipmentList) return [];
+        return equipmentList
+            .filter(eq => eq.location === watchedLocation)
+            .map(eq => ({ value: eq.id, label: eq.name }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+    }, [watchedLocation, equipmentList]);
+
+    const onEquipmentSelectChange = (equipmentId: string) => {
+        form.setValue('savedEquipmentId', equipmentId);
         const equipment = equipmentList?.find(eq => eq.id === equipmentId);
         if (equipment) {
             form.setValue('works.0.scope', `Unscheduled work on: ${equipment.name}`);
             form.setValue('works.0.area', equipment.location);
             form.setValue('area', equipment.plant);
         }
-    };
-
+    }
 
     useEffect(() => {
         if (diaryData) {
@@ -146,6 +146,8 @@ export default function NewDailyDiaryPage() {
                 ...defaultValues,
                 ...diaryData,
                 date: diaryData.date ? new Date(diaryData.date) : new Date(),
+                locationFilter: diaryData.locationFilter || (diaryData.works && diaryData.works[0]?.area) || '',
+                savedEquipmentId: diaryData.savedEquipmentId || '',
             });
             setContractorSignature(diaryData.contractorSignature || null);
             setClientSignature(diaryData.clientSignature || null);
@@ -153,12 +155,6 @@ export default function NewDailyDiaryPage() {
             setClientName(diaryData.clientName || '');
             setContractorDate(diaryData.contractorDate ? new Date(diaryData.contractorDate) : undefined);
             setClientDate(diaryData.clientDate ? new Date(diaryData.clientDate) : undefined);
-            if (diaryData.locationFilter) {
-                setSelectedLocation(diaryData.locationFilter);
-            }
-            if (diaryData.savedEquipmentId) {
-                setSelectedEquipmentId(diaryData.savedEquipmentId);
-            }
         }
     }, [diaryData, form, defaultValues]);
     
@@ -176,48 +172,27 @@ export default function NewDailyDiaryPage() {
 
     const handleDeleteImage = async (imageUrl: string, imageType: 'beforeWorkImages' | 'afterWorkImages' | 'hseDocumentationScans') => {
         if (!diaryId || !firebaseApp) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Diary not loaded or Firebase not available. Cannot delete image.",
-            });
+            toast({ variant: "destructive", title: "Error", description: "Diary not loaded or Firebase not available." });
             return;
         }
-
         setIsSaving(true);
         try {
             const storage = getStorage(firebaseApp);
             const imageRef = ref(storage, imageUrl);
-            
             await deleteObject(imageRef);
-
             const diaryRef = doc(firestore, 'daily_diaries', diaryId);
             const currentImages = diaryData?.[imageType] || [];
             const updatedImages = currentImages.filter(url => url !== imageUrl);
-
-            await updateDoc(diaryRef, {
-                [imageType]: updatedImages
-            });
-
-            toast({
-                title: "Image Deleted",
-                description: "The selected image has been removed."
-            });
-
+            await updateDoc(diaryRef, { [imageType]: updatedImages });
+            toast({ title: "Image Deleted", description: "The selected image has been removed." });
             router.refresh();
-
         } catch (error: any) {
             console.error("Failed to delete image:", error);
-            toast({
-                variant: "destructive",
-                title: "Deletion Failed",
-                description: error.message || "An unexpected error occurred while deleting the image.",
-            });
+            toast({ variant: "destructive", title: "Deletion Failed", description: error.message });
         } finally {
             setIsSaving(false);
         }
     };
-
 
     const handleSave = async (data: DailyDiary) => {
         if (!firestore || !uniqueId || !user) {
@@ -242,6 +217,9 @@ export default function NewDailyDiaryPage() {
                 hrs: data.hrs || 0,
                 incidents: data.incidents || '',
                 toolboxTalk: data.toolboxTalk || '',
+                locationFilter: data.locationFilter || null,
+                savedEquipmentId: data.savedEquipmentId || null,
+                
                 manpower: (data.manpower || []).map(m => ({
                     designation: m.designation || '',
                     forecast: m.forecast || 0,
@@ -278,11 +256,8 @@ export default function NewDailyDiaryPage() {
                 clientName: clientName || '',
                 contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
                 clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
-                locationFilter: selectedLocation,
-                savedEquipmentId: selectedEquipmentId,
             };
 
-            // --- UPLOAD LOGIC ---
             if (beforeFile) {
                 const fileRef = ref(storage, `daily_diaries/${uniqueId}/before/${beforeFile.name}_${Date.now()}`);
                 await uploadBytes(fileRef, beforeFile);
@@ -302,22 +277,12 @@ export default function NewDailyDiaryPage() {
                 finalDiaryData.hseDocumentationScans?.push(downloadUrl);
             }
 
-
             await setDoc(diaryDocRef, finalDiaryData, { merge: true });
-            
-            toast({
-                title: 'Diary Saved',
-                description: `Document ${uniqueId} has been saved successfully.`,
-            });
-            
+            toast({ title: 'Diary Saved', description: `Document ${uniqueId} has been saved successfully.` });
             router.push(`/reports/diary-tracker`);
         } catch (error: any) {
             console.error("Failed to save diary:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Save Failed',
-                description: error.message || 'An unexpected error occurred while saving the diary.',
-            });
+            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
         } finally {
             setIsSaving(false);
         }
@@ -362,34 +327,60 @@ export default function NewDailyDiaryPage() {
                                 <CardTitle className="text-sm">SELECT EQUIPMENT (OPTIONAL)</CardTitle>
                             </CardHeader>
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-                                <div className="space-y-1">
-                                    <Label>Location</Label>
-                                    <Select onValueChange={setSelectedLocation} value={selectedLocation} disabled={equipmentLoading || !canEdit}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Location..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {equipmentLoading ? <SelectItem value="loading" disabled>Loading locations...</SelectItem> : locationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label>Equipment Name</Label>
-                                    <Select 
-                                        onValueChange={(value) => {
-                                            handleEquipmentSelect(value);
-                                            setSelectedEquipmentId(value);
-                                        }} 
-                                        value={selectedEquipmentId}
-                                        disabled={!selectedLocation || equipmentLoading || !canEdit}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Equipment..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {equipmentLoading || !selectedLocation ? <SelectItem value="loading" disabled>Select a location first...</SelectItem> : equipmentOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="locationFilter"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <Label>Location</Label>
+                                            <Select 
+                                                key={`loc-${equipmentList?.length || 0}`} 
+                                                onValueChange={field.onChange} 
+                                                value={field.value} 
+                                                disabled={equipmentLoading || !canEdit}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select Location..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {equipmentLoading ? 
+                                                        <SelectItem value="loading" disabled>Loading locations...</SelectItem> : 
+                                                        locationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)
+                                                    }
+                                                </SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="savedEquipmentId"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <Label>Equipment Name</Label>
+                                            <Select 
+                                                key={`eq-${equipmentList?.length || 0}-${watchedLocation}`} 
+                                                onValueChange={(val) => {
+                                                    field.onChange(val);
+                                                    onEquipmentSelectChange(val);
+                                                }}
+                                                value={field.value}
+                                                disabled={!watchedLocation || equipmentLoading || !canEdit}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select Equipment..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {equipmentLoading || !watchedLocation ? 
+                                                        <SelectItem value="loading" disabled>Select a location first...</SelectItem> : 
+                                                        equipmentOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)
+                                                    }
+                                                </SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )}
+                                />
                             </CardContent>
                         </Card>
 
@@ -401,10 +392,10 @@ export default function NewDailyDiaryPage() {
                                 render={({ field }) => (
                                     <FormItem className="lg:col-span-2 grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <FormLabel>Contract Title</FormLabel>
-                                        <FormControl>
-                                        <Input id="contract-title" {...field} />
-                                        </FormControl>
+                                            <FormLabel>Contract Title</FormLabel>
+                                            <FormControl>
+                                            <Input id="contract-title" {...field} />
+                                            </FormControl>
                                     </div>
                                     <FormField
                                         control={form.control}
@@ -455,17 +446,17 @@ export default function NewDailyDiaryPage() {
                                     <FormItem className="space-y-1">
                                     <FormLabel>Date</FormLabel>
                                     <Popover>
-                                        <PopoverTrigger asChild>
-                                        <FormControl>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                        </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={field.onChange} initialFocus />
-                                        </PopoverContent>
+                                            <PopoverTrigger asChild>
+                                            <FormControl>
+                                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                            </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                            <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={field.onChange} initialFocus />
+                                            </PopoverContent>
                                     </Popover>
                                     </FormItem>
                                 )}
@@ -553,13 +544,11 @@ export default function NewDailyDiaryPage() {
                                         className="w-full p-2 border rounded"
                                     />
                                     {hseFile && <p className="text-green-600 text-sm mt-1">File Selected: {hseFile.name}</p>}
-                                    {/* --- EXISTING HSE IMAGES --- */}
                                     {diaryData?.hseDocumentationScans && diaryData.hseDocumentationScans.length > 0 && (
                                     <div className="flex gap-2 mt-2 flex-wrap">
                                         {diaryData.hseDocumentationScans.map((url, index) => (
                                         <div key={index} className="relative group">
                                             <a href={url} target="_blank" rel="noopener noreferrer">
-                                            {/* Render generic icon for PDFs, Image for JPGs */}
                                             <img 
                                                 src={url} 
                                                 alt={`HSE Doc ${index + 1}`} 
@@ -757,7 +746,6 @@ export default function NewDailyDiaryPage() {
                                         className="w-full p-2 border rounded"
                                     />
                                     {beforeFile && <p className="text-green-600 text-sm mt-1">File Selected: {beforeFile.name}</p>}
-                                    {/* --- EXISTING BEFORE IMAGES --- */}
                                     {diaryData?.beforeWorkImages && diaryData.beforeWorkImages.length > 0 && (
                                     <div className="flex gap-2 mt-2 flex-wrap">
                                         {diaryData.beforeWorkImages.map((url, index) => (
@@ -793,13 +781,12 @@ export default function NewDailyDiaryPage() {
                                         className="w-full p-2 border rounded"
                                     />
                                     {afterFile && <p className="text-green-600 text-sm mt-1">File Selected: {afterFile.name}</p>}
-                                    {/* --- EXISTING AFTER IMAGES --- */}
                                     {diaryData?.afterWorkImages && diaryData.afterWorkImages.length > 0 && (
                                     <div className="flex gap-2 mt-2 flex-wrap">
                                         {diaryData.afterWorkImages.map((url, index) => (
                                         <div key={index} className="relative group">
                                             <a href={url} target="_blank" rel="noopener noreferrer">
-                                            <img src={url} alt={`After Work ${index + 1}`} className="h-24 w-24 object-cover rounded border border-gray-300" />
+                                                <img src={url} alt={`After Work ${index + 1}`} className="h-24 w-24 object-cover rounded border border-gray-300" />
                                             </a>
                                             <Button
                                                 variant="destructive"
@@ -836,13 +823,13 @@ export default function NewDailyDiaryPage() {
                                         <Label>Date</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {contractorDate ? format(contractorDate, "PPP") : <span>Pick a date</span>}
-                                            </Button>
+                                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !contractorDate && "text-muted-foreground")}>
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {contractorDate ? format(contractorDate, "PPP") : <span>Pick a date</span>}
+                                                </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar mode="single" selected={contractorDate} onSelect={setContractorDate} initialFocus />
+                                                <Calendar mode="single" selected={contractorDate} onSelect={setContractorDate} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
@@ -865,13 +852,13 @@ export default function NewDailyDiaryPage() {
                                         <Label>Date</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {clientDate ? format(clientDate, "PPP") : <span>Pick a date</span>}
-                                            </Button>
+                                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !clientDate && "text-muted-foreground")}>
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {clientDate ? format(clientDate, "PPP") : <span>Pick a date</span>}
+                                                </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar mode="single" selected={clientDate} onSelect={setClientDate} initialFocus />
+                                                <Calendar mode="single" selected={clientDate} onSelect={setClientDate} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
@@ -885,3 +872,6 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
+
+
+    
