@@ -41,8 +41,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
+import { Textarea } from '@/components/ui/textarea';
 
-function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown: Breakdown, onResolve: (b: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => void, children: React.ReactNode }) {
+function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown: Breakdown, onResolve: (b: Breakdown, resolutionDetails: {resolution: string, normal: number, overtime: number, timeBackInService: Date}) => void, children: React.ReactNode }) {
+  const [resolution, setResolution] = React.useState('');
   const [normalHours, setNormalHours] = React.useState(0);
   const [overtimeHours, setOvertimeHours] = React.useState(0);
   const [timeBackInService, setTimeBackInService] = React.useState<Date | undefined>();
@@ -53,7 +55,7 @@ function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown:
         console.error("Time back in service is required.");
         return;
     }
-    onResolve(breakdown, { normal: normalHours, overtime: overtimeHours, timeBackInService });
+    onResolve(breakdown, { resolution, normal: normalHours, overtime: overtimeHours, timeBackInService });
   };
 
   return (
@@ -69,6 +71,18 @@ function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown:
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="resolution" className="text-right pt-2">
+                    Resolution Notes
+                </Label>
+                <Textarea
+                    id="resolution"
+                    value={resolution}
+                    onChange={(e) => setResolution(e.target.value)}
+                    className="col-span-3"
+                    placeholder="Describe the fix, parts used, and root cause..."
+                />
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="normal-hours" className="text-right">
                     Normal Hours
@@ -124,7 +138,7 @@ function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown:
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleResolveClick} disabled={!timeBackInService}>
+          <AlertDialogAction onClick={handleResolveClick} disabled={!timeBackInService || !resolution}>
             Continue
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -169,7 +183,7 @@ export default function BreakdownsPage() {
   }, [breakdowns, dateRange]);
 
 
-  const handleResolve = async (breakdown: Breakdown, resolutionDetails: {normal: number, overtime: number, timeBackInService: Date}) => {
+  const handleResolve = async (breakdown: Breakdown, resolutionDetails: {resolution: string, normal: number, overtime: number, timeBackInService: Date}) => {
     const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
     const equipmentRef = doc(firestore, 'equipment', breakdown.equipmentId);
 
@@ -208,6 +222,7 @@ export default function BreakdownsPage() {
     // Update breakdown report
     updateDocumentNonBlocking(breakdownRef, { 
         resolved: true,
+        resolution: resolutionDetails.resolution,
         normalHours: resolutionDetails.normal,
         overtimeHours: resolutionDetails.overtime,
         timeBackInService: resolutionDetails.timeBackInService.toISOString(),
@@ -312,6 +327,7 @@ export default function BreakdownsPage() {
                 <TableHead>Equipment</TableHead>
                 <TableHead>Component</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Resolution</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Time Back in Service</TableHead>
                 <TableHead className="text-right">Normal Hours</TableHead>
@@ -323,7 +339,7 @@ export default function BreakdownsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center h-24">
+                  <TableCell colSpan={11} className="text-center h-24">
                     <div className='flex justify-center items-center'>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Loading breakdowns...
@@ -343,6 +359,7 @@ export default function BreakdownsPage() {
                       </TableCell>
                       <TableCell>{b.component}</TableCell>
                       <TableCell>{b.description}</TableCell>
+                      <TableCell>{b.resolution || 'N/A'}</TableCell>
                       <TableCell>
                         <Badge variant={b.resolved ? 'default' : 'destructive'}>
                           {b.resolved ? 'Resolved' : 'Pending'}
@@ -397,13 +414,13 @@ export default function BreakdownsPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center h-24">No breakdowns found{dateRange?.from ? ' for the selected date range' : ''}.</TableCell>
+                  <TableCell colSpan={11} className="text-center h-24">No breakdowns found{dateRange?.from ? ' for the selected date range' : ''}.</TableCell>
                 </TableRow>
               )}
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={8} className="font-semibold text-right">Total Hours Spent (Filtered)</TableCell>
+                    <TableCell colSpan={9} className="font-semibold text-right">Total Hours Spent (Filtered)</TableCell>
                     <TableCell className="text-right font-bold">{totalHoursSum}</TableCell>
                     <TableCell></TableCell>
                 </TableRow>
