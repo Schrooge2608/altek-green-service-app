@@ -328,8 +328,6 @@ export default function BreakdownsPage() {
                 <TableHead>Time Reported</TableHead>
                 <TableHead>Equipment</TableHead>
                 <TableHead>Component</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Resolution</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Time Back in Service</TableHead>
                 <TableHead className="text-right">Normal Hours</TableHead>
@@ -341,7 +339,7 @@ export default function BreakdownsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center h-24">
+                  <TableCell colSpan={9} className="text-center h-24">
                     <div className='flex justify-center items-center'>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Loading breakdowns...
@@ -360,8 +358,6 @@ export default function BreakdownsPage() {
                         </Link>
                       </TableCell>
                       <TableCell>{b.component}</TableCell>
-                      <TableCell>{b.description}</TableCell>
-                      <TableCell>{b.resolution || 'N/A'}</TableCell>
                       <TableCell>
                         <Badge variant={b.resolved ? 'default' : 'destructive'}>
                           {b.resolved ? 'Resolved' : 'Pending'}
@@ -427,13 +423,13 @@ export default function BreakdownsPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center h-24">No breakdowns found{dateRange?.from ? ' for the selected date range' : ''}.</TableCell>
+                  <TableCell colSpan={9} className="text-center h-24">No breakdowns found{dateRange?.from ? ' for the selected date range' : ''}.</TableCell>
                 </TableRow>
               )}
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={9} className="font-semibold text-right">Total Hours Spent (Filtered)</TableCell>
+                    <TableCell colSpan={7} className="font-semibold text-right">Total Hours Spent (Filtered)</TableCell>
                     <TableCell className="text-right font-bold">{totalHoursSum}</TableCell>
                     <TableCell></TableCell>
                 </TableRow>
@@ -444,3 +440,5 @@ export default function BreakdownsPage() {
     </div>
   );
 }
+
+    
