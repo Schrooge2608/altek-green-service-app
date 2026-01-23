@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, CheckCircle, Calendar as CalendarIcon, Trash2, Loader2, X } from 'lucide-react';
+import { PlusCircle, CheckCircle, Calendar as CalendarIcon, Trash2, Loader2, X, Eye, Pencil } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDoc, runTransaction } from 'firebase/firestore';
 import type { Breakdown, Equipment, VSD, User as AppUser } from '@/lib/types';
@@ -42,6 +42,7 @@ import { cn } from '@/lib/utils';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { Textarea } from '@/components/ui/textarea';
+import { useRouter } from 'next/navigation';
 
 function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown: Breakdown, onResolve: (b: Breakdown, resolutionDetails: {resolution: string, normal: number, overtime: number, timeBackInService: Date}) => void, children: React.ReactNode }) {
   const [resolution, setResolution] = React.useState('');
@@ -153,6 +154,7 @@ export default function BreakdownsPage() {
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const router = useRouter();
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userRole, isLoading: userRoleLoading } = useDoc<AppUser>(userRoleRef);
@@ -371,6 +373,17 @@ export default function BreakdownsPage() {
                       <TableCell className="text-right">{b.resolved ? totalHours : 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <div className='flex items-center justify-end gap-2'>
+                          <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/breakdowns/${b.id}`)}
+                          >
+                              {b.resolved ? (
+                                  <><Eye className="mr-2 h-4 w-4" /> View</>
+                              ) : (
+                                  <><Pencil className="mr-2 h-4 w-4" /> Edit</>
+                              )}
+                          </Button>
                           {!b.resolved && !isClientManager && (
                             <ResolveBreakdownDialog breakdown={b} onResolve={handleResolve}>
                                 <Button variant="ghost" size="sm">
