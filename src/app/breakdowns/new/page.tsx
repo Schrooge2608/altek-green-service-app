@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,10 +20,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Clock } from 'lucide-react';
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useFirestore, useCollection, useMemoFirebase, useDoc, updateDocumentNonBlocking, useFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useDoc, updateDocumentNonBlocking, useFirebase, useUser } from '@/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Equipment, VSD, Breakdown } from '@/lib/types';
@@ -43,21 +44,27 @@ const formSchema = z.object({
   description: z.string().min(10, 'Please provide a detailed description of the issue.').max(500),
   resolved: z.boolean().default(false),
   resolution: z.string().optional(),
+  timeReported: z.string().optional(),
+  timeArrived: z.string().optional(),
+  timeBackInService: z.string().optional(),
+  timeLeftSite: z.string().optional(),
+  hasDelays: z.boolean().default(false),
+  delayReason: z.string().optional(),
 }).refine(data => {
-    // If resolved is true, resolution must be provided.
     if (data.resolved && (!data.resolution || data.resolution.length < 10)) {
         return false;
     }
     return true;
 }, {
     message: "If the breakdown is marked as resolved, resolution notes of at least 10 characters are required.",
-    path: ["resolution"], // Point error to resolution field
+    path: ["resolution"],
 });
 
 
 export default function NewBreakdownPage() {
   const { toast } = useToast();
   const { firestore, firebaseApp } = useFirebase();
+  const { user } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const equipmentIdFromQuery = searchParams.get('equipmentId');
@@ -76,10 +83,13 @@ export default function NewBreakdownPage() {
       description: '',
       resolved: false,
       resolution: '',
+      hasDelays: false,
+      delayReason: '',
     },
   });
   
   const watchedResolved = form.watch('resolved');
+  const watchedHasDelays = form.watch('hasDelays');
 
   useEffect(() => {
     if (equipmentIdFromQuery) {
@@ -132,11 +142,11 @@ export default function NewBreakdownPage() {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!selectedEquipment) {
+    if (!selectedEquipment || !user) {
         toast({
           variant: "destructive",
-          title: 'Invalid Equipment',
-          description: `Could not find the selected equipment.`,
+          title: 'Invalid Data',
+          description: `Could not find the selected equipment or user.`,
         });
         return;
     }
@@ -150,6 +160,7 @@ export default function NewBreakdownPage() {
 
         const breakdownData: Partial<Breakdown> = {
           id: newBreakdownRef.id,
+          userId: user.uid,
           equipmentId: values.equipmentId,
           equipmentName: selectedEquipment.name,
           component: values.component.split('::')[0] as Breakdown['component'],
@@ -157,14 +168,17 @@ export default function NewBreakdownPage() {
           description: values.description,
           resolved: values.resolved,
           resolution: values.resolution || null,
-          timeReported: new Date().toISOString(),
-          timeBackInService: values.resolved ? new Date().toISOString() : null,
+          timeReported: values.timeReported || new Date().toISOString(),
+          timeArrived: values.timeArrived || null,
+          timeBackInService: values.resolved ? (values.timeBackInService || new Date().toISOString()) : null,
+          timeLeftSite: values.timeLeftSite || null,
+          hasDelays: values.hasDelays,
+          delayReason: values.hasDelays ? (values.delayReason || null) : null,
           images: imageUrls,
         };
 
         await setDoc(newBreakdownRef, breakdownData);
         
-        // Update the equipment status only if it's a new, active breakdown
         if (!values.resolved) {
             const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
             updateDocumentNonBlocking(equipmentRef, { breakdownStatus: 'Active' });
@@ -366,6 +380,59 @@ export default function NewBreakdownPage() {
                 )}
             </CardContent>
           </Card>
+
+           <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Clock />Job Timeline &amp; Logistics</CardTitle>
+                    <CardDescription>Enter the times for each stage of the job.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-6">
+                    <FormField control={form.control} name="timeReported" render={({ field }) => (<FormItem><FormLabel>Time Reported</FormLabel><FormControl><Input type="datetime-local" {...field} value={field.value ?? ''} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="timeArrived" render={({ field }) => (<FormItem><FormLabel>Time Arrived On-Site</FormLabel><FormControl><Input type="datetime-local" {...field} value={field.value ?? ''} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="timeBackInService" render={({ field }) => (<FormItem><FormLabel>Time Back in Service</FormLabel><FormControl><Input type="datetime-local" {...field} value={field.value ?? ''} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="timeLeftSite" render={({ field }) => (<FormItem><FormLabel>Time Left Site</FormLabel><FormControl><Input type="datetime-local" {...field} value={field.value ?? ''} /></FormControl></FormItem>)} />
+
+                    <div className="md:col-span-2">
+                        <FormField
+                            control={form.control}
+                            name="hasDelays"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                    <div className="space-y-0.5">
+                                        <FormLabel>Any Delays Encountered?</FormLabel>
+                                    </div>
+                                    <FormControl>
+                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+
+                    {watchedHasDelays && (
+                        <div className="md:col-span-2">
+                            <FormField
+                                control={form.control}
+                                name="delayReason"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Reason for Delay</FormLabel>
+                                    <FormControl>
+                                    <Textarea
+                                        placeholder="Describe the cause of the delay (e.g., waiting for parts, safety stand-down)."
+                                        className="resize-none"
+                                        {...field}
+                                        value={field.value || ''}
+                                    />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
           
           <Card>
               <CardHeader>
@@ -389,3 +456,5 @@ export default function NewBreakdownPage() {
     </div>
   );
 }
+
+    

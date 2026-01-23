@@ -191,6 +191,7 @@
       "description": "Represents a breakdown report.",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string", "description": "The UID of the user who created the report." },
         "equipmentId": { "type": "string" },
         "equipmentName": { "type": "string" },
         "component": { "type": "string", "enum": ["VSD", "Motor", "Pump", "Protection", "UPS", "Other"], "description": "The specific component that failed." },
@@ -201,7 +202,11 @@
         "normalHours": { "type": "number" },
         "overtimeHours": { "type": "number" },
         "timeReported": { "type": "string", "format": "date-time" },
+        "timeArrived": { "type": "string", "format": "date-time", "description": "The time the technician arrived on site." },
         "timeBackInService": { "type": "string", "format": "date-time" },
+        "timeLeftSite": { "type": "string", "format": "date-time", "description": "The time the technician left the site." },
+        "hasDelays": { "type": "boolean", "description": "Whether there were any delays during the job." },
+        "delayReason": { "type": "string", "description": "The reason for any delays." },
         "images": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images of the breakdown." }
       },
       "required": ["id", "equipmentId", "equipmentName", "component", "date", "description", "resolved", "timeReported"]
@@ -495,3 +500,6 @@
     ]
   }
 }
+
+
+    

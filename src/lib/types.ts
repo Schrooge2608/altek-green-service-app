@@ -1,3 +1,4 @@
+
 export interface Equipment {
   id: string;
   name: string;
@@ -154,17 +155,22 @@ export interface ScheduledTask {
 
 export interface Breakdown {
   id: string;
+  userId?: string;
   equipmentId: string;
   equipmentName: string;
   component: 'VSD' | 'Motor' | 'Pump' | 'Protection' | 'UPS' | 'Other';
   date: string;
   description: string;
   resolved: boolean;
-  resolution?: string;
+  resolution?: string | null;
   normalHours?: number;
   overtimeHours?: number;
   timeReported?: string;
-  timeBackInService?: string;
+  timeArrived?: string | null;
+  timeBackInService?: string | null;
+  timeLeftSite?: string | null;
+  hasDelays?: boolean;
+  delayReason?: string | null;
   images?: string[];
 }
 
@@ -310,3 +316,5 @@ export interface GeneratedReport {
   generatedByUserId: string;
   generatedByUserName: string;
 }
+
+    

@@ -1,27 +1,45 @@
+
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Save, Loader2, ArrowLeft, Lock, CheckCircle } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Lock, CheckCircle, Clock } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
-import { useUser, useMemoFirebase, useFirebase, useDoc } from '@/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useForm, useWatch } from 'react-hook-form';
+import { Form, FormControl, FormField, FormItem, FormDescription, FormMessage } from '@/components/ui/form';
+import { useUser, useMemoFirebase, useFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, notFound } from 'next/navigation';
 import type { Breakdown, User } from '@/lib/types';
+import { Switch } from '@/components/ui/switch';
+import { format, parseISO } from 'date-fns';
 
-// Let's use a type that is compatible with the main Breakdown type
-type BreakdownForm = Breakdown & {
-    priority: 'Low' | 'Medium' | 'High' | 'Critical';
-    status: 'Open' | 'In Progress' | 'Resolved';
-    reportedBy?: string; // Add this field
+type BreakdownForm = Breakdown;
+
+// Helper to format dates for datetime-local input, handling potential invalid dates
+const formatDateTimeLocal = (dateString?: string | null): string => {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        // Check if the date is valid
+        if (isNaN(date.getTime())) return '';
+        // Format to "yyyy-MM-ddTHH:mm" which is required by the input
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+        console.error("Error formatting date:", error);
+        return '';
+    }
 };
 
 export default function BreakdownDetailPage() {
@@ -31,7 +49,6 @@ export default function BreakdownDetailPage() {
     const { firestore } = useFirebase();
     const { user, isUserLoading } = useUser();
     
-    // Correctly fetch userData
     const { data: userData, isLoading: userDataLoading } = useDoc<User>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user])
     );
@@ -39,56 +56,67 @@ export default function BreakdownDetailPage() {
     const breakdownId = params?.id as string;
     const [isSaving, setIsSaving] = useState(false);
 
-    // 1. FETCH DATA from the correct collection 'breakdown_reports'
     const { data: report, isLoading: reportLoading } = useDoc<BreakdownForm>(
         useMemoFirebase(() => breakdownId ? doc(firestore, 'breakdown_reports', breakdownId) : null, [firestore, breakdownId])
     );
 
-    // 2. FORM SETUP
     const form = useForm<BreakdownForm>({
         defaultValues: {
             equipmentName: '',
             description: '',
-            priority: 'Medium',
-            status: 'Open',
-            reportedBy: '',
+            resolved: false,
+            resolution: '',
+            timeReported: '',
+            timeArrived: '',
+            timeBackInService: '',
+            timeLeftSite: '',
+            hasDelays: false,
+            delayReason: '',
         }
     });
 
-    // 3. SMART PERMISSIONS
+    const hasDelays = useWatch({
+        control: form.control,
+        name: 'hasDelays',
+    });
+
     const isCreator = user?.uid === report?.userId;
     const isManager = userData?.role === 'Manager' || userData?.role === 'Admin' || userData?.role === 'Superadmin' || userData?.role === 'Services Manager';
-    const isResolved = report?.status === 'Resolved' || report?.resolved === true;
+    const isResolved = report?.resolved === true;
     
     const canEdit = (isCreator || isManager) && !isResolved;
 
-    // 4. LOAD DATA
     useEffect(() => {
         if (report) {
-            // Map the boolean `resolved` to the string `status` if it exists
-            const status = report.resolved ? 'Resolved' : (report.status || 'Open');
             form.reset({
                 ...report,
-                status: status as 'Open' | 'In Progress' | 'Resolved'
+                timeReported: formatDateTimeLocal(report.timeReported),
+                timeArrived: formatDateTimeLocal(report.timeArrived),
+                timeBackInService: formatDateTimeLocal(report.timeBackInService),
+                timeLeftSite: formatDateTimeLocal(report.timeLeftSite),
+                hasDelays: report.hasDelays || false,
+                delayReason: report.delayReason || '',
             });
         }
     }, [report, form]);
 
-    // 5. SAVE FUNCTION
     const handleSave = async (data: BreakdownForm) => {
         if (!firestore || !breakdownId) return;
         setIsSaving(true);
+        
+        const updateData = {
+            ...data,
+            updatedAt: serverTimestamp(),
+            delayReason: data.hasDelays ? data.delayReason : null,
+        }
 
         try {
-            await setDoc(doc(firestore, 'breakdown_reports', breakdownId), {
-                ...data,
-                resolved: data.status === 'Resolved', // Keep `resolved` boolean in sync
-                updatedAt: serverTimestamp(),
-            }, { merge: true });
+            const breakdownRef = doc(firestore, 'breakdown_reports', breakdownId);
+            updateDocumentNonBlocking(breakdownRef, updateData);
 
             toast({ title: 'Success', description: 'Breakdown report updated.' });
             
-            if (data.status === 'Resolved') {
+            if (data.resolved) {
                 router.refresh();
             }
         } catch (error) {
@@ -102,6 +130,11 @@ export default function BreakdownDetailPage() {
     const isLoading = isUserLoading || userDataLoading || reportLoading;
 
     if (isLoading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
+    
+    if (!report) {
+        notFound();
+        return null;
+    }
 
     return (
         <div className="max-w-3xl mx-auto p-4 sm:p-8">
@@ -109,101 +142,27 @@ export default function BreakdownDetailPage() {
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Log
             </Button>
 
-            <Card className="shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between border-b pb-4 bg-slate-50 rounded-t-lg">
-                    <div>
-                        <CardTitle className="text-xl flex items-center gap-2">
-                            {report?.equipmentName || 'Breakdown Report'}
-                            {isResolved && <Badge className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1"/> Resolved</Badge>}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">Report ID: {breakdownId}</p>
-                    </div>
-                    
-                    {!canEdit && (
-                        <div className="flex items-center text-amber-600 bg-amber-50 px-3 py-1 rounded-full text-xs font-medium border border-amber-200">
-                            <Lock className="w-3 h-3 mr-1" />
-                            {isResolved ? 'Resolved & Locked' : 'View Only Mode'}
-                        </div>
-                    )}
-                </CardHeader>
-                
-                <CardContent className="p-6">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField
-                                    control={form.control}
-                                    name="equipmentName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <Label>Equipment</Label>
-                                            <FormControl>
-                                                <Input {...field} disabled={!canEdit} />
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="reportedBy"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <Label>Reported By</Label>
-                                            <FormControl>
-                                                <Input {...field} disabled={true} className="bg-slate-100" />
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                                
-                                <FormField
-                                    control={form.control}
-                                    name="priority"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <Label>Priority</Label>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select Priority" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Low">Low</SelectItem>
-                                                    <SelectItem value="Medium">Medium</SelectItem>
-                                                    <SelectItem value="High">High</SelectItem>
-                                                    <SelectItem value="Critical">Critical</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="status"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <Label>Status</Label>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select Status" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Open">Open</SelectItem>
-                                                    <SelectItem value="In Progress">In Progress</SelectItem>
-                                                    <SelectItem value="Resolved">Resolved (Locks Report)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </FormItem>
-                                    )}
-                                />
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+                    <Card className="shadow-lg">
+                        <CardHeader className="flex flex-row items-center justify-between border-b pb-4 bg-slate-50 rounded-t-lg">
+                            <div>
+                                <CardTitle className="text-xl flex items-center gap-2">
+                                    {report?.equipmentName || 'Breakdown Report'}
+                                    {isResolved && <Badge className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1"/> Resolved</Badge>}
+                                </CardTitle>
+                                <p className="text-sm text-muted-foreground mt-1">Report ID: {breakdownId}</p>
                             </div>
-
+                            
+                            {!canEdit && (
+                                <div className="flex items-center text-amber-600 bg-amber-50 px-3 py-1 rounded-full text-xs font-medium border border-amber-200">
+                                    <Lock className="w-3 h-3 mr-1" />
+                                    {isResolved ? 'Resolved &amp; Locked' : 'View Only Mode'}
+                                </div>
+                            )}
+                        </CardHeader>
+                        
+                        <CardContent className="p-6 space-y-6">
                             <FormField
                                 control={form.control}
                                 name="description"
@@ -221,19 +180,98 @@ export default function BreakdownDetailPage() {
                                 )}
                             />
 
-                            {canEdit && (
-                                <div className="flex justify-end pt-4 border-t">
-                                    <Button type="submit" disabled={isSaving}>
-                                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                        Save Changes
-                                    </Button>
+                             <FormField
+                                control={form.control}
+                                name="resolution"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <Label>Resolution Notes</Label>
+                                    <FormControl>
+                                    <Textarea
+                                        placeholder="Describe how the issue was resolved..."
+                                        className="resize-none"
+                                        {...field}
+                                        value={field.value || ''}
+                                        disabled={!canEdit}
+                                    />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Clock />Job Timeline &amp; Logistics</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid md:grid-cols-2 gap-6">
+                            <FormField control={form.control} name="timeReported" render={({ field }) => (<FormItem><Label>Time Reported</Label><FormControl><Input type="datetime-local" {...field} disabled={!canEdit} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="timeArrived" render={({ field }) => (<FormItem><Label>Time Arrived On-Site</Label><FormControl><Input type="datetime-local" {...field} disabled={!canEdit} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="timeBackInService" render={({ field }) => (<FormItem><Label>Time Back in Service</Label><FormControl><Input type="datetime-local" {...field} disabled={!canEdit} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="timeLeftSite" render={({ field }) => (<FormItem><Label>Time Left Site</Label><FormControl><Input type="datetime-local" {...field} disabled={!canEdit} /></FormControl></FormItem>)} />
+
+                             <div className="md:col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="hasDelays"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                            <div className="space-y-0.5">
+                                                <Label>Any Delays Encountered?</Label>
+                                                <FormDescription>Check this if work was held up for any reason (e.g., waiting for parts, safety stand-down).</FormDescription>
+                                            </div>
+                                            <FormControl>
+                                                <Switch
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                    disabled={!canEdit}
+                                                />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            {hasDelays && (
+                                <div className="md:col-span-2">
+                                    <FormField
+                                        control={form.control}
+                                        name="delayReason"
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <Label>Reason for Delay</Label>
+                                            <FormControl>
+                                            <Textarea
+                                                placeholder="Describe the cause of the delay..."
+                                                className="resize-none"
+                                                {...field}
+                                                value={field.value || ''}
+                                                disabled={!canEdit}
+                                            />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
                                 </div>
                             )}
+                        </CardContent>
+                    </Card>
 
-                        </form>
-                    </Form>
-                </CardContent>
-            </Card>
+                    {canEdit && (
+                        <div className="flex justify-end pt-4">
+                            <Button type="submit" disabled={isSaving}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Save Changes
+                            </Button>
+                        </div>
+                    )}
+                </form>
+            </Form>
         </div>
     );
 }
+
+    
