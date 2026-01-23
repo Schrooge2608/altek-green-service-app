@@ -11,6 +11,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,6 +31,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { ImageUploader } from '@/components/image-uploader';
+import { Switch } from '@/components/ui/switch';
 
 
 const formSchema = z.object({
@@ -39,6 +41,17 @@ const formSchema = z.object({
     required_error: "A breakdown date is required.",
   }),
   description: z.string().min(10, 'Please provide a detailed description of the issue.').max(500),
+  resolved: z.boolean().default(false),
+  resolution: z.string().optional(),
+}).refine(data => {
+    // If resolved is true, resolution must be provided.
+    if (data.resolved && (!data.resolution || data.resolution.length < 10)) {
+        return false;
+    }
+    return true;
+}, {
+    message: "If the breakdown is marked as resolved, resolution notes of at least 10 characters are required.",
+    path: ["resolution"], // Point error to resolution field
 });
 
 
@@ -61,8 +74,12 @@ export default function NewBreakdownPage() {
       equipmentId: equipmentIdFromQuery || '',
       component: '',
       description: '',
+      resolved: false,
+      resolution: '',
     },
   });
+  
+  const watchedResolved = form.watch('resolved');
 
   useEffect(() => {
     if (equipmentIdFromQuery) {
@@ -126,29 +143,32 @@ export default function NewBreakdownPage() {
 
     setIsSaving(true);
     
-    // Generate a unique ID for the new breakdown report
     const newBreakdownRef = doc(collection(firestore, 'breakdown_reports'));
 
     try {
         const imageUrls = await uploadImages(newBreakdownRef.id);
 
-        const breakdownData: Breakdown = {
+        const breakdownData: Partial<Breakdown> = {
           id: newBreakdownRef.id,
           equipmentId: values.equipmentId,
           equipmentName: selectedEquipment.name,
-          component: values.component.split('::')[0] as Breakdown['component'], // Store only component type
+          component: values.component.split('::')[0] as Breakdown['component'],
           date: format(values.date, "yyyy-MM-dd"),
           description: values.description,
-          resolved: false,
+          resolved: values.resolved,
+          resolution: values.resolved ? values.resolution : undefined,
           timeReported: new Date().toISOString(),
+          timeBackInService: values.resolved ? new Date().toISOString() : undefined,
           images: imageUrls,
         };
 
         await setDoc(newBreakdownRef, breakdownData);
         
-        // Update the equipment status
-        const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
-        updateDocumentNonBlocking(equipmentRef, { breakdownStatus: 'Active' });
+        // Update the equipment status only if it's a new, active breakdown
+        if (!values.resolved) {
+            const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
+            updateDocumentNonBlocking(equipmentRef, { breakdownStatus: 'Active' });
+        }
 
         toast({
           title: 'Breakdown Reported',
@@ -299,6 +319,51 @@ export default function NewBreakdownPage() {
                     )}
                 />
               </div>
+              <div className="md:col-span-2">
+                <FormField
+                    control={form.control}
+                    name="resolved"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <FormLabel>Already Resolved?</FormLabel>
+                                <FormDescription>
+                                    Check this if the issue has already been fixed and you are logging it after the fact.
+                                </FormDescription>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+              </div>
+
+                {watchedResolved && (
+                    <div className="md:col-span-2">
+                        <FormField
+                            control={form.control}
+                            name="resolution"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Resolution Info</FormLabel>
+                                <FormControl>
+                                <Textarea
+                                    placeholder="Describe how the issue was resolved, what parts were used, and the root cause."
+                                    className="resize-none"
+                                    {...field}
+                                    value={field.value || ''}
+                                />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </div>
+                )}
             </CardContent>
           </Card>
           
