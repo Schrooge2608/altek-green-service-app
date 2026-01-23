@@ -1,10 +1,11 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import {
   Table,
@@ -13,14 +14,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, CheckCircle, Calendar as CalendarIcon, Trash2, Loader2, X, Eye, Pencil } from 'lucide-react';
+import { PlusCircle, CheckCircle, Calendar as CalendarIcon, Trash2, Loader2, X, Eye, Pencil, Activity, AlertTriangle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, getDoc, runTransaction } from 'firebase/firestore';
-import type { Breakdown, Equipment, VSD, User as AppUser } from '@/lib/types';
+import { collection, doc, getDoc, runTransaction, query, orderBy } from 'firebase/firestore';
+import type { Breakdown, Equipment, User as AppUser } from '@/lib/types';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -39,10 +39,12 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { Textarea } from '@/components/ui/textarea';
 import { useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 function ResolveBreakdownDialog({ breakdown, onResolve, children }: { breakdown: Breakdown, onResolve: (b: Breakdown, resolutionDetails: {resolution: string, normal: number, overtime: number, timeBackInService: Date}) => void, children: React.ReactNode }) {
   const [resolution, setResolution] = React.useState('');
@@ -158,11 +160,14 @@ export default function BreakdownsPage() {
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userRole, isLoading: userRoleLoading } = useDoc<AppUser>(userRoleRef);
+  
+  const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+  const { data: users, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
-  const breakdownsQuery = useMemoFirebase(() => collection(firestore, 'breakdown_reports'), [firestore]);
+  const breakdownsQuery = useMemoFirebase(() => query(collection(firestore, 'breakdown_reports'), orderBy('timeReported', 'desc')), [firestore]);
   const { data: breakdowns, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const isLoading = breakdownsLoading || isUserLoading || userRoleLoading;
+  const isLoading = breakdownsLoading || isUserLoading || userRoleLoading || usersLoading;
   const isClientManager = userRole?.role === 'Client Manager';
   const canDelete = userRole?.role && (userRole.role.includes('Admin') || userRole.role.includes('Superadmin'));
 
@@ -183,20 +188,59 @@ export default function BreakdownsPage() {
         }
     });
   }, [breakdowns, dateRange]);
+  
+  const activeBreakdowns = useMemo(() => filteredBreakdowns.filter(b => !b.resolved), [filteredBreakdowns]);
+  const resolvedBreakdowns = useMemo(() => {
+      const userNameMap = new Map(users?.map(u => [u.id, u.name]));
+      return filteredBreakdowns
+        .filter(b => b.resolved)
+        .map(b => ({
+            ...b,
+            creatorName: userNameMap.get(b.userId || '') || 'Unknown',
+        }));
+  }, [filteredBreakdowns, users]);
+  
+   const kpiData = useMemo(() => {
+    if (!breakdowns) return { month: 0, year: 0 };
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    const yearStart = startOfYear(now);
+    const yearEnd = endOfYear(now);
+
+    let monthCount = 0;
+    let yearCount = 0;
+
+    breakdowns.forEach(b => {
+        if (b.resolved && b.timeBackInService) {
+            try {
+                const resolvedDate = new Date(b.timeBackInService);
+                if (isWithinInterval(resolvedDate, { start: monthStart, end: monthEnd })) {
+                    monthCount++;
+                }
+                if (isWithinInterval(resolvedDate, { start: yearStart, end: yearEnd })) {
+                    yearCount++;
+                }
+            } catch (e) {
+                // Ignore invalid dates
+            }
+        }
+    });
+
+    return { month: monthCount, year: yearCount };
+  }, [breakdowns]);
 
 
   const handleResolve = async (breakdown: Breakdown, resolutionDetails: {resolution: string, normal: number, overtime: number, timeBackInService: Date}) => {
     const breakdownRef = doc(firestore, 'breakdown_reports', breakdown.id);
     const equipmentRef = doc(firestore, 'equipment', breakdown.equipmentId);
 
-    // Calculate downtime for this specific incident
     let downtimeHours = 0;
     if (breakdown.timeReported && resolutionDetails.timeBackInService) {
         const downtimeMillis = resolutionDetails.timeBackInService.getTime() - new Date(breakdown.timeReported).getTime();
         downtimeHours = downtimeMillis / (1000 * 60 * 60);
     }
     
-    // Use a transaction to update the equipment's monthly downtime
     try {
         await runTransaction(firestore, async (transaction) => {
             const eqDoc = await transaction.get(equipmentRef);
@@ -206,9 +250,6 @@ export default function BreakdownsPage() {
             const eqData = eqDoc.data() as Equipment;
             const currentDowntime = eqData.totalDowntimeHours || 0;
             const newTotalDowntime = currentDowntime + downtimeHours;
-
-            // Update the equipment with the new downtime for the current month.
-            // The uptime percentage is now calculated on the equipment detail page.
             transaction.update(equipmentRef, { totalDowntimeHours: newTotalDowntime });
         });
     } catch (e) {
@@ -218,10 +259,9 @@ export default function BreakdownsPage() {
             title: "Update Failed",
             description: "Could not update the equipment's downtime. The breakdown status was not updated.",
         });
-        return; // Stop if we can't update the equipment
+        return;
     }
 
-    // Update breakdown report
     updateDocumentNonBlocking(breakdownRef, { 
         resolved: true,
         resolution: resolutionDetails.resolution,
@@ -250,14 +290,9 @@ export default function BreakdownsPage() {
       try {
           return format(new Date(dateString), 'yyyy-MM-dd HH:mm');
       } catch (e) {
-          return dateString; // fallback to original string if format fails
+          return dateString;
       }
   }
-
-  const totalHoursSum = useMemo(() => {
-    if (!filteredBreakdowns) return 0;
-    return filteredBreakdowns.reduce((acc, b) => acc + (b.normalHours ?? 0) + (b.overtimeHours ?? 0), 0);
-  }, [filteredBreakdowns]);
 
 
   return (
@@ -266,179 +301,160 @@ export default function BreakdownsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Breakdown Log</h1>
           <p className="text-muted-foreground">
-            History of all reported equipment breakdowns.
+            View active issues or browse the history of all reported breakdowns.
           </p>
         </div>
         <div className="flex items-center gap-2">
            <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[300px] justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                  )}
-                >
+                <Button id="date" variant={"outline"} className={cn("w-full md:w-[300px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
-                      </>
-                    ) : (
-                      format(dateRange.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
+                  {dateRange?.from ? (dateRange.to ? (<>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>) : (format(dateRange.from, "LLL dd, y"))) : (<span>Pick a date range</span>)}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
+                <Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={2} />
               </PopoverContent>
             </Popover>
-            {dateRange && (
-                <Button variant="ghost" onClick={() => setDateRange(undefined)}>
-                    <X className="mr-2 h-4 w-4"/>
-                    Clear
-                </Button>
-            )}
+            {dateRange && (<Button variant="ghost" onClick={() => setDateRange(undefined)}><X className="mr-2 h-4 w-4"/>Clear</Button>)}
             <Link href="/breakdowns/new" passHref>
             <Button variant="destructive">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Report New Breakdown
+                Report New
             </Button>
             </Link>
         </div>
       </header>
-      <Card>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Time Reported</TableHead>
-                <TableHead>Equipment</TableHead>
-                <TableHead>Component</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Time Back in Service</TableHead>
-                <TableHead className="text-right">Normal Hours</TableHead>
-                <TableHead className="text-right">Overtime Hours</TableHead>
-                <TableHead className="text-right">Total Hours</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center h-24">
-                    <div className='flex justify-center items-center'>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading breakdowns...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredBreakdowns && filteredBreakdowns.length > 0 ? (
-                filteredBreakdowns.map((b) => {
-                  const totalHours = (b.normalHours ?? 0) + (b.overtimeHours ?? 0);
-                  return (
-                    <TableRow key={b.id}>
-                      <TableCell>{formatDate(b.timeReported)}</TableCell>
-                      <TableCell className="font-medium">
-                        <Link href={`/equipment/${b.equipmentId}`} className="hover:underline text-primary">
-                            {b.equipmentName}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{b.component}</TableCell>
-                      <TableCell>
-                        <Badge variant={b.resolved ? 'default' : 'destructive'}>
-                          {b.resolved ? 'Resolved' : 'Pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{b.resolved ? formatDate(b.timeBackInService) : 'N/A'}</TableCell>
-                      <TableCell className="text-right">{b.resolved ? b.normalHours ?? 0 : 'N/A'}</TableCell>
-                      <TableCell className="text-right">{b.resolved ? b.overtimeHours ?? 0 : 'N/A'}</TableCell>
-                      <TableCell className="text-right">{b.resolved ? totalHours : 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className='flex items-center justify-end gap-2'>
-                          <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => router.push(`/breakdowns/${b.id}`)}
-                          >
-                              {b.resolved ? (
-                                  <><Eye className="mr-2 h-4 w-4" /> View</>
-                              ) : (
-                                  <><Pencil className="mr-2 h-4 w-4" /> Edit</>
-                              )}
-                          </Button>
-                          {!b.resolved && !isClientManager && (
-                            <ResolveBreakdownDialog breakdown={b} onResolve={handleResolve}>
-                                <Button variant="ghost" size="sm">
-                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                    Resolved
-                                </Button>
-                            </ResolveBreakdownDialog>
-                          )}
-                          {canDelete && (
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Delete Report</span>
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action will permanently delete the breakdown report for <strong>{b.equipmentName}</strong> logged on {formatDate(b.timeReported)}. 
-                                            This action cannot be undone.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                                            onClick={() => handleDeleteBreakdown(b)}
-                                        >
-                                            Yes, delete report
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </div>
-                      </TableCell>
+
+      <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Breakdowns This Month</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                  <div className="text-2xl font-bold">{isLoading ? <Loader2 className="animate-spin h-6 w-6"/> : kpiData.month}</div>
+                  <p className="text-xs text-muted-foreground">resolved in the current calendar month</p>
+              </CardContent>
+          </Card>
+           <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Breakdowns Year-to-Date</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                  <div className="text-2xl font-bold">{isLoading ? <Loader2 className="animate-spin h-6 w-6"/> : kpiData.year}</div>
+                  <p className="text-xs text-muted-foreground">resolved since Jan 1st</p>
+              </CardContent>
+          </Card>
+      </div>
+
+      <Tabs defaultValue="active">
+        <TabsList>
+            <TabsTrigger value="active">Active ({activeBreakdowns.length})</TabsTrigger>
+            <TabsTrigger value="resolved">Resolved ({resolvedBreakdowns.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="active">
+            <Card>
+                <CardContent className="pt-6">
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Time Reported</TableHead>
+                        <TableHead>Equipment</TableHead>
+                        <TableHead>Component</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  )
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center h-24">No breakdowns found{dateRange?.from ? ' for the selected date range' : ''}.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-            <TableFooter>
-                <TableRow>
-                    <TableCell colSpan={7} className="font-semibold text-right">Total Hours Spent (Filtered)</TableCell>
-                    <TableCell className="text-right font-bold">{totalHoursSum}</TableCell>
-                    <TableCell></TableCell>
-                </TableRow>
-            </TableFooter>
-          </Table>
-        </CardContent>
-      </Card>
+                    </TableHeader>
+                    <TableBody>
+                    {isLoading ? (
+                        <TableRow><TableCell colSpan={5} className="text-center h-24"><div className='flex justify-center items-center'><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading breakdowns...</div></TableCell></TableRow>
+                    ) : activeBreakdowns && activeBreakdowns.length > 0 ? (
+                        activeBreakdowns.map((b) => (
+                            <TableRow key={b.id}>
+                                <TableCell>{formatDate(b.timeReported)}</TableCell>
+                                <TableCell className="font-medium">
+                                    <Link href={`/equipment/${b.equipmentId}`} className="hover:underline text-primary">{b.equipmentName}</Link>
+                                </TableCell>
+                                <TableCell>{b.component}</TableCell>
+                                <TableCell><Badge variant='destructive'>Pending</Badge></TableCell>
+                                <TableCell className="text-right">
+                                    <div className='flex items-center justify-end gap-2'>
+                                        <Button variant="outline" size="sm" onClick={() => router.push(`/breakdowns/${b.id}`)}><Pencil className="mr-2 h-4 w-4" /> Edit</Button>
+                                        {!isClientManager && (
+                                            <ResolveBreakdownDialog breakdown={b} onResolve={handleResolve}>
+                                                <Button variant="ghost" size="sm"><CheckCircle className="mr-2 h-4 w-4" />Resolved</Button>
+                                            </ResolveBreakdownDialog>
+                                        )}
+                                        {canDelete && (
+                                            <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /><span className="sr-only">Delete Report</span></Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the report for <strong>{b.equipmentName}</strong>.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={() => handleDeleteBreakdown(b)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                        )}
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    ) : (
+                        <TableRow><TableCell colSpan={5} className="text-center h-24">No active breakdowns found{dateRange?.from ? ' for the selected date range' : ''}.</TableCell></TableRow>
+                    )}
+                    </TableBody>
+                </Table>
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="resolved">
+            <Card>
+                <CardContent className="pt-6">
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Date Resolved</TableHead>
+                        <TableHead>Equipment</TableHead>
+                        <TableHead>Reported By</TableHead>
+                        <TableHead className="text-right">Total Hours</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {isLoading ? (
+                        <TableRow><TableCell colSpan={5} className="text-center h-24"><div className='flex justify-center items-center'><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading breakdowns...</div></TableCell></TableRow>
+                    ) : resolvedBreakdowns && resolvedBreakdowns.length > 0 ? (
+                        resolvedBreakdowns.map((b) => (
+                            <TableRow key={b.id}>
+                                <TableCell>{formatDate(b.timeBackInService)}</TableCell>
+                                <TableCell className="font-medium">
+                                    <Link href={`/equipment/${b.equipmentId}`} className="hover:underline text-primary">{b.equipmentName}</Link>
+                                </TableCell>
+                                <TableCell>{b.creatorName}</TableCell>
+                                <TableCell className="text-right">{(b.normalHours ?? 0) + (b.overtimeHours ?? 0)}</TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="outline" size="sm" onClick={() => router.push(`/breakdowns/${b.id}`)}><Eye className="mr-2 h-4 w-4" /> View</Button>
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    ) : (
+                        <TableRow><TableCell colSpan={5} className="text-center h-24">No resolved breakdowns found{dateRange?.from ? ' for the selected date range' : ''}.</TableCell></TableRow>
+                    )}
+                    </TableBody>
+                </Table>
+                </CardContent>
+            </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
-
-    
