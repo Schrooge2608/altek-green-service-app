@@ -156,9 +156,9 @@ export default function NewBreakdownPage() {
           date: format(values.date, "yyyy-MM-dd"),
           description: values.description,
           resolved: values.resolved,
-          resolution: values.resolved ? values.resolution : undefined,
+          resolution: values.resolved ? values.resolution : null,
           timeReported: new Date().toISOString(),
-          timeBackInService: values.resolved ? new Date().toISOString() : undefined,
+          timeBackInService: values.resolved ? new Date().toISOString() : null,
           images: imageUrls,
         };
 
