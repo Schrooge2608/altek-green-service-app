@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,7 +40,7 @@ const formSchema = z.object({
   date: z.date({
     required_error: "A breakdown date is required.",
   }),
-  description: z.string().min(10, 'Please provide a detailed description of the issue.').max(500),
+  description: z.string().min(10, 'Please provide a detailed description of the issue.'),
   resolved: z.boolean().default(false),
   resolution: z.string().optional(),
   timeReported: z.string().optional(),
@@ -456,5 +455,3 @@ export default function NewBreakdownPage() {
     </div>
   );
 }
-
-    
