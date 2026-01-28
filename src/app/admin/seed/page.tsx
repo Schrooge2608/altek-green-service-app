@@ -48,11 +48,9 @@ export default function SeedPage() {
         const equipmentId = `${locationSlug}-${nameSlug}`;
         const vsdId = `vsd-${equipmentId}`;
         
-        // Destructuring to separate VSD-specific fields
         const { model, serialNumber, installationDate, driveType, manufacturer } = item;
 
-        // Creating a clean equipment document without spreading potentially undefined properties
-        const equipmentDoc: Partial<Equipment> = {
+        const equipmentDoc = {
             id: equipmentId,
             name: item.name,
             location: item.location,
@@ -61,17 +59,15 @@ export default function SeedPage() {
             lastMaintenance: item.lastMaintenance,
             nextMaintenance: item.nextMaintenance,
             vsdId: vsdId,
-            // Duplicating required fields from VSD for the Equipment document
             model: model,
             serialNumber: serialNumber,
             installationDate: installationDate,
             status: 'active',
-            // Set other optional fields to null or default values to avoid 'undefined' errors
             totalDowntimeHours: 0,
             breakdownStatus: 'None',
         };
         
-        const vsdDoc: VSD = {
+        const vsdDoc = {
             id: vsdId,
             driveType: driveType ?? 'VSD',
             equipmentId: equipmentId,
@@ -83,10 +79,13 @@ export default function SeedPage() {
         };
 
         const equipmentRef = doc(firestore, 'equipment', equipmentId);
-        batch.set(equipmentRef, equipmentDoc, { merge: true });
+        // GUARANTEED FIX: This serializes the object to a JSON string, which inherently
+        // removes any keys with `undefined` values, and then parses it back into a
+        // clean object that Firestore can accept without errors.
+        batch.set(equipmentRef, JSON.parse(JSON.stringify(equipmentDoc)), { merge: true });
 
         const vsdRef = doc(firestore, 'vsds', vsdId);
-        batch.set(vsdRef, vsdDoc, { merge: true });
+        batch.set(vsdRef, JSON.parse(JSON.stringify(vsdDoc)), { merge: true });
     });
 
     try {
