@@ -32,6 +32,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { ImageUploader } from '@/components/image-uploader';
 import { Switch } from '@/components/ui/switch';
+import { AutoFormatTextarea } from '@/components/ui/auto-format-textarea';
 
 
 const formSchema = z.object({
@@ -321,11 +322,10 @@ export default function NewBreakdownPage() {
                     <FormItem>
                         <FormLabel>Description of Issue</FormLabel>
                         <FormControl>
-                        <Textarea
+                          <AutoFormatTextarea
                             placeholder="Describe what went wrong, any error codes, or unusual behavior."
-                            className="resize-none"
                             {...field}
-                        />
+                          />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -364,12 +364,11 @@ export default function NewBreakdownPage() {
                             <FormItem>
                                 <FormLabel>Resolution Info</FormLabel>
                                 <FormControl>
-                                <Textarea
-                                    placeholder="Describe how the issue was resolved, what parts were used, and the root cause."
-                                    className="resize-none"
-                                    {...field}
-                                    value={field.value || ''}
-                                />
+                                  <AutoFormatTextarea
+                                      placeholder="Describe how the issue was resolved, what parts were used, and the root cause."
+                                      {...field}
+                                      value={field.value || ''}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
