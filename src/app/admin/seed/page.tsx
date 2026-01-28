@@ -54,6 +54,11 @@ export default function SeedPage() {
             ...baseEq,
             id: equipmentId,
             vsdId: vsdId,
+            // Re-add fields required by Equipment type but separated for VSD doc
+            model: model,
+            serialNumber: serialNumber,
+            installationDate: installationDate,
+            status: 'active'
         };
         
         const vsdDoc: VSD = {
