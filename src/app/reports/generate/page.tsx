@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, FileText, Copy, Save, Calendar as CalendarIcon, Database } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, serverTimestamp, addDoc, query, where, getDocs } from 'firebase/firestore';
-import type { GeneratedReport, Breakdown, CompletedSchedule, DailyDiary } from '@/lib/types';
+import type { GeneratedReport, Breakdown, CompletedSchedule, DailyDiary, Equipment } from '@/lib/types';
 import { generateReport, type ReportInput } from '@/ai/flows/generate-report-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -16,12 +16,14 @@ import { DateRange } from 'react-day-picker';
 import { format, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Textarea } from '@/components/ui/textarea';
 
 interface AggregatedData {
     newBreakdowns: Breakdown[];
     closedBreakdowns: Breakdown[];
     completedSchedules: CompletedSchedule[];
     dailyDiaries: DailyDiary[];
+    equipment: Equipment[];
 }
 
 export default function GenerateReportPage() {
@@ -40,6 +42,7 @@ export default function GenerateReportPage() {
       to: endOfWeek(new Date(), { weekStartsOn: 1 }),
     });
     const [aggregatedData, setAggregatedData] = useState<AggregatedData | null>(null);
+    const [customQuery, setCustomQuery] = useState('');
 
     const handleFetchData = async () => {
         if (!date?.from || !date?.to) {
@@ -82,12 +85,15 @@ export default function GenerateReportPage() {
                 where('date', '>=', startDate),
                 where('date', '<=', endDate)
             );
+            
+            const equipmentQuery = collection(firestore, 'equipment');
 
-            const [newBreakdownsSnap, closedBreakdownsSnap, schedulesSnap, diariesSnap] = await Promise.all([
+            const [newBreakdownsSnap, closedBreakdownsSnap, schedulesSnap, diariesSnap, equipmentSnap] = await Promise.all([
                 getDocs(newBreakdownsQuery),
                 getDocs(closedBreakdownsQuery),
                 getDocs(schedulesQuery),
                 getDocs(diariesQuery),
+                getDocs(equipmentQuery),
             ]);
 
             const fetchedData: AggregatedData = {
@@ -96,13 +102,12 @@ export default function GenerateReportPage() {
                 completedSchedules: schedulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompletedSchedule)),
                 dailyDiaries: diariesSnap.docs.map(doc => {
                     const data = doc.data();
-                    // Firestore Timestamps are not serializable for Server Actions.
-                    // We must convert them to a primitive type like a string before passing them.
                     if (data.createdAt && typeof data.createdAt.toDate === 'function') {
                         data.createdAt = data.createdAt.toDate().toISOString();
                     }
                     return { id: doc.id, ...data } as DailyDiary;
                 }),
+                equipment: equipmentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Equipment)),
             };
 
             setAggregatedData(fetchedData);
@@ -127,26 +132,31 @@ export default function GenerateReportPage() {
         setIsGenerating(true);
         setError(null);
         setGeneratedReport('');
+        
+        // If it's a standard report (no custom query), check if there's any activity to report.
+        if (!customQuery.trim()) {
+            const hasActivity = aggregatedData.newBreakdowns.length > 0 ||
+                                aggregatedData.closedBreakdowns.length > 0 ||
+                                aggregatedData.completedSchedules.length > 0 ||
+                                aggregatedData.dailyDiaries.length > 0;
 
-        const hasData = aggregatedData.newBreakdowns.length > 0 ||
-                        aggregatedData.closedBreakdowns.length > 0 ||
-                        aggregatedData.completedSchedules.length > 0 ||
-                        aggregatedData.dailyDiaries.length > 0;
-
-        if (!hasData) {
-            setGeneratedReport("## No Activity Recorded\n\nNo breakdowns, schedules, or diary entries were found for the selected date range.");
-            setIsGenerating(false);
-            toast({ title: 'No Data', description: 'There was no activity to report for the selected period.' });
-            return;
+            if (!hasActivity) {
+                setGeneratedReport("## No Activity Recorded\n\nNo breakdowns, schedules, or diary entries were found for the selected date range.");
+                setIsGenerating(false);
+                toast({ title: 'No Data', description: 'There was no activity to report for the selected period.' });
+                return;
+            }
         }
 
         const reportInput: ReportInput = {
             startDate: format(date.from, 'yyyy-MM-dd'),
             endDate: format(date.to, 'yyyy-MM-dd'),
+            customQuery: customQuery,
             newBreakdowns: aggregatedData.newBreakdowns,
             closedBreakdowns: aggregatedData.closedBreakdowns,
             completedSchedules: aggregatedData.completedSchedules,
             dailyDiaries: aggregatedData.dailyDiaries,
+            equipment: aggregatedData.equipment,
         };
         
         try {
@@ -199,7 +209,7 @@ export default function GenerateReportPage() {
     return (
         <div className="flex flex-col gap-8">
             <header>
-                <h1 className="text-3xl font-bold tracking-tight">AI Weekly Report Aggregator</h1>
+                <h1 className="text-3xl font-bold tracking-tight">AI Report Aggregator</h1>
                 <p className="text-muted-foreground">
                     Select a date range to automatically fetch site activity and generate a summary report.
                 </p>
@@ -229,24 +239,44 @@ export default function GenerateReportPage() {
             </Card>
             
             {aggregatedData && (
+                <>
                 <Card>
                     <CardHeader>
-                        <CardTitle>2. Data Summary</CardTitle>
+                        <CardTitle>Data Summary</CardTitle>
                         <CardDescription>A summary of the data found for the selected period.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <CardContent className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <p><strong>New Breakdowns:</strong> {aggregatedData.newBreakdowns.length}</p>
                         <p><strong>Closed Breakdowns:</strong> {aggregatedData.closedBreakdowns.length}</p>
                         <p><strong>Schedules Completed:</strong> {aggregatedData.completedSchedules.length}</p>
                         <p><strong>Daily Diaries Logged:</strong> {aggregatedData.dailyDiaries.length}</p>
-                        <div className="md:col-span-full">
-                             <Button onClick={handleGenerateReport} disabled={isGenerating}>
-                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                                {isGenerating ? 'Generating...' : 'Generate AI Report'}
-                            </Button>
-                        </div>
+                        <p><strong>Equipment Assets:</strong> {aggregatedData.equipment.length}</p>
                     </CardContent>
                 </Card>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle>2. Custom Question / Focus Area (Optional)</CardTitle>
+                        <CardDescription>
+                            Ask a specific question about your data. If you leave this blank, a standard weekly report will be generated.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Textarea
+                            placeholder="Example: List all VSDs missing serial numbers, or Show maintenance due this month."
+                            value={customQuery}
+                            onChange={(e) => setCustomQuery(e.target.value)}
+                        />
+                    </CardContent>
+                </Card>
+
+                <div className="flex justify-start">
+                     <Button onClick={handleGenerateReport} disabled={isGenerating}>
+                        {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        {isGenerating ? 'Generating...' : 'Generate AI Report'}
+                    </Button>
+                </div>
+                </>
             )}
 
             {error && (
