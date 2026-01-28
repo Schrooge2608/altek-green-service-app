@@ -88,7 +88,7 @@ export default function GenerateReportPage() {
                 getDocs(newBreakdownsQuery),
                 getDocs(closedBreakdownsQuery),
                 getDocs(schedulesQuery),
-                getDocs(diariesSnap),
+                getDocs(diariesQuery),
             ]);
 
             const fetchedData: AggregatedData = {
