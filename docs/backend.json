@@ -402,6 +402,23 @@
         "generatedByUserName": { "type": "string", "description": "The name of the user who generated the report." }
       },
       "required": ["id", "reportText", "startDate", "endDate", "generatedAt", "generatedByUserId"]
+    },
+    "Tool": {
+      "title": "Tool",
+      "type": "object",
+      "description": "A tool or piece of equipment in the inventory.",
+      "properties": {
+        "id": { "type": "string" },
+        "assetNumber": { "type": "string" },
+        "description": { "type": "string" },
+        "make": { "type": "string" },
+        "model": { "type": "string" },
+        "serial": { "type": "string" },
+        "assignedToId": { "type": "string" },
+        "assignedToName": { "type": "string" },
+        "status": { "type": "string", "enum": ["Available", "In Use", "Lost", "Maintenance"] }
+      },
+      "required": ["assetNumber", "description"]
     }
   },
   "auth": {
@@ -495,6 +512,14 @@
           "entityName": "GeneratedReport",
           "schema": { "$ref": "#/entities/GeneratedReport" },
           "description": "Stores saved AI-generated weekly reports."
+        }
+      },
+      {
+        "path": "/tools/{toolId}",
+        "definition": {
+          "entityName": "Tool",
+          "schema": { "$ref": "#/entities/Tool" },
+          "description": "Stores tools and equipment inventory."
         }
       }
     ]

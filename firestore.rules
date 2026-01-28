@@ -66,5 +66,10 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && (request.auth.uid == resource.data.userId || isManager());
     }
+
+    match /tools/{toolId} {
+      allow read, list: if isAuthenticated();
+      allow write: if isAuthenticated() && isManager();
+    }
   }
 }
