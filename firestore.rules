@@ -26,15 +26,12 @@ service cloud.firestore {
       allow read, write, list: if isAuthenticated();
     }
     
-    match /completed_work/{scheduleId} {
-      allow read: if isAuthenticated();
-      // Assuming completed work also has a userId field for the creator
-      allow write: if isAuthenticated() && (request.auth.uid == resource.data.userId || isManager());
+    match /completed_schedules/{scheduleId} {
+      allow read, write, list: if isAuthenticated();
     }
     
-    match /upcoming_work/{scheduleId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (request.auth.uid == resource.data.userId || isManager());
+    match /upcoming_schedules/{scheduleId} {
+      allow read, write, list: if isAuthenticated();
     }
     
     match /equipment/{equipmentId} {
