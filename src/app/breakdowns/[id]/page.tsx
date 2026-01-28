@@ -19,6 +19,7 @@ import { useRouter, useParams, notFound } from 'next/navigation';
 import type { Breakdown, User } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 import { format, parseISO } from 'date-fns';
+import { AutoFormatTextarea } from '@/components/ui/auto-format-textarea';
 
 type BreakdownForm = Breakdown;
 
@@ -170,12 +171,13 @@ export default function BreakdownDetailPage() {
                                     <FormItem>
                                         <Label>Fault Description</Label>
                                         <FormControl>
-                                            <Textarea 
-                                                {...field} 
-                                                className="min-h-[120px]" 
-                                                disabled={!canEdit} 
+                                            <AutoFormatTextarea
+                                                {...field}
+                                                placeholder="Describe what went wrong, any error codes, or unusual behavior."
+                                                disabled={!canEdit}
                                             />
                                         </FormControl>
+                                        <FormMessage />
                                     </FormItem>
                                 )}
                             />
@@ -187,13 +189,12 @@ export default function BreakdownDetailPage() {
                                 <FormItem>
                                     <Label>Resolution Notes</Label>
                                     <FormControl>
-                                    <Textarea
-                                        placeholder="Describe how the issue was resolved..."
-                                        className="resize-none"
-                                        {...field}
-                                        value={field.value || ''}
-                                        disabled={!canEdit}
-                                    />
+                                        <AutoFormatTextarea
+                                            placeholder="Describe how the issue was resolved..."
+                                            {...field}
+                                            value={field.value || ''}
+                                            disabled={!canEdit}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -273,5 +274,3 @@ export default function BreakdownDetailPage() {
         </div>
     );
 }
-
-    
