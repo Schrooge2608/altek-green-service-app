@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -135,8 +134,8 @@ export function SidebarNav() {
   const isTechnologist = userData?.role?.includes('Technologist');
 
 
-  const isEquipmentPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter');
-  const [isAssetsOpen, setIsAssetsOpen] = React.useState(isEquipmentPath);
+  const isAssetsPath = pathname.startsWith('/equipment') || pathname.startsWith('/smelter') || pathname.startsWith('/assets');
+  const [isAssetsOpen, setIsAssetsOpen] = React.useState(isAssetsPath);
   const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment/mining'));
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(pathname.startsWith('/equipment/smelter'));
   const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin') || pathname.startsWith('/time-attendance'));
@@ -150,10 +149,10 @@ export function SidebarNav() {
   const [isReportsOpen, setIsReportsOpen] = React.useState(pathname.startsWith('/reports'));
 
   React.useEffect(() => {
-    if (isEquipmentPath) {
+    if (isAssetsPath) {
       setIsAssetsOpen(true);
     }
-  }, [isEquipmentPath]);
+  }, [isAssetsPath]);
 
   const dashboardLink = mainLinks.find(link => link.label === 'Dashboard');
   const breakdownLink = mainLinks.find(link => link.label === 'Breakdowns');
@@ -187,7 +186,7 @@ export function SidebarNav() {
            <Collapsible open={isAssetsOpen} onOpenChange={setIsAssetsOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Assets" isActive={isEquipmentPath}>
+                        <SidebarMenuButton tooltip="Assets" isActive={isAssetsPath}>
                             <Archive />
                             <span>Assets</span>
                             <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
@@ -240,6 +239,14 @@ export function SidebarNav() {
                                 </SidebarMenuSub>
                             </CollapsibleContent>
                         </Collapsible>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={pathname === '/assets/tools-equipment'} tooltip="Tools &amp; Equipment">
+                                <Link href="/assets/tools-equipment">
+                                    <Wrench />
+                                    <span>Tools &amp; Equipment</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
                     </SidebarMenuSub>
                 </CollapsibleContent>
            </Collapsible>
