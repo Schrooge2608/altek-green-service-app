@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -128,6 +127,18 @@ export default function GenerateReportPage() {
         setIsGenerating(true);
         setError(null);
         setGeneratedReport('');
+
+        const hasData = aggregatedData.newBreakdowns.length > 0 ||
+                        aggregatedData.closedBreakdowns.length > 0 ||
+                        aggregatedData.completedSchedules.length > 0 ||
+                        aggregatedData.dailyDiaries.length > 0;
+
+        if (!hasData) {
+            setGeneratedReport("## No Activity Recorded\n\nNo breakdowns, schedules, or diary entries were found for the selected date range.");
+            setIsGenerating(false);
+            toast({ title: 'No Data', description: 'There was no activity to report for the selected period.' });
+            return;
+        }
 
         const reportInput: ReportInput = {
             startDate: format(date.from, 'yyyy-MM-dd'),

@@ -72,7 +72,7 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert technical writer for Altek Green, an industrial maintenance company.
 Your task is to generate a professional and clear weekly summary report for a client based on the activity data provided for the period from {{{startDate}}} to {{{endDate}}}.
 
-The report MUST have the following structure exactly. For each section, if no data is provided for that category, state 'No activity to report for this period.' and nothing else for that section.
+The report MUST have the following structure exactly. For each section, if the data array for that category (e.g., Breakdowns, Schedules, Diaries) is empty, you MUST state 'No activity to report for this period.' and nothing else. Do not hallucinate or invent data if a section is empty.
 
 **Subject Line:** "Weekly Operations & Maintenance Report: {{{startDate}}} to {{{endDate}}}"
 
