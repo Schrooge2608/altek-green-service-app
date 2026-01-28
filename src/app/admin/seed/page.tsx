@@ -48,17 +48,27 @@ export default function SeedPage() {
         const equipmentId = `${locationSlug}-${nameSlug}`;
         const vsdId = `vsd-${equipmentId}`;
         
-        const { model, serialNumber, installationDate, driveType, manufacturer, ...baseEq } = item;
+        // Destructuring to separate VSD-specific fields
+        const { model, serialNumber, installationDate, driveType, manufacturer } = item;
 
+        // Creating a clean equipment document without spreading potentially undefined properties
         const equipmentDoc: Partial<Equipment> = {
-            ...baseEq,
             id: equipmentId,
+            name: item.name,
+            location: item.location,
+            plant: item.plant,
+            division: item.division,
+            lastMaintenance: item.lastMaintenance,
+            nextMaintenance: item.nextMaintenance,
             vsdId: vsdId,
-            // Re-add fields required by Equipment type but separated for VSD doc
+            // Duplicating required fields from VSD for the Equipment document
             model: model,
             serialNumber: serialNumber,
             installationDate: installationDate,
-            status: 'active'
+            status: 'active',
+            // Set other optional fields to null or default values to avoid 'undefined' errors
+            totalDowntimeHours: 0,
+            breakdownStatus: 'None',
         };
         
         const vsdDoc: VSD = {
