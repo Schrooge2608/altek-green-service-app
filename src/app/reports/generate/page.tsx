@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -25,6 +26,29 @@ interface AggregatedData {
     dailyDiaries: DailyDiary[];
     equipment: Equipment[];
 }
+
+const sanitizeForServer = (data: any): any => {
+  if (Array.isArray(data)) {
+    return data.map(sanitizeForServer);
+  } else if (data !== null && typeof data === 'object') {
+    // Check if it's a Firestore Timestamp (has seconds/nanoseconds)
+    if ('seconds' in data && 'nanoseconds' in data && typeof data.toDate === 'function') {
+      return data.toDate().toISOString();
+    }
+    // Check if it's a generic Date object
+    if (data instanceof Date) {
+      return data.toISOString();
+    }
+    // Recursively clean object keys
+    const cleanObj: any = {};
+    for (const key in data) {
+      cleanObj[key] = sanitizeForServer(data[key]);
+    }
+    return cleanObj;
+  }
+  return data; // Return primitives as is
+};
+
 
 export default function GenerateReportPage() {
     const { toast } = useToast();
@@ -152,11 +176,11 @@ export default function GenerateReportPage() {
             startDate: format(date.from, 'yyyy-MM-dd'),
             endDate: format(date.to, 'yyyy-MM-dd'),
             customQuery: customQuery,
-            newBreakdowns: aggregatedData.newBreakdowns,
-            closedBreakdowns: aggregatedData.closedBreakdowns,
-            completedSchedules: aggregatedData.completedSchedules,
-            dailyDiaries: aggregatedData.dailyDiaries,
-            equipment: aggregatedData.equipment,
+            newBreakdowns: sanitizeForServer(aggregatedData.newBreakdowns),
+            closedBreakdowns: sanitizeForServer(aggregatedData.closedBreakdowns),
+            completedSchedules: sanitizeForServer(aggregatedData.completedSchedules),
+            dailyDiaries: sanitizeForServer(aggregatedData.dailyDiaries),
+            equipment: sanitizeForServer(aggregatedData.equipment),
         };
         
         try {
