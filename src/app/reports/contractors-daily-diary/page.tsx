@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { DailyDiary, User as AppUser, User, WorkEntry, PlantEntry, ManpowerEntry, Equipment } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AutoFormatTextarea } from '@/components/ui/auto-format-textarea';
 
 export default function NewDailyDiaryPage() {
     const searchParams = useSearchParams();
@@ -130,7 +131,7 @@ export default function NewDailyDiaryPage() {
         form.setValue('savedEquipmentId', equipmentId);
         const equipment = equipmentList?.find(eq => eq.id === equipmentId);
         if (equipment) {
-            form.setValue('works.0.scope', `Unscheduled work on: ${equipment.name}`);
+            form.setValue('works.0.scope', `Unscheduled work on: ${'${equipment.name}'}`);
             form.setValue('works.0.area', equipment.location);
             form.setValue('area', equipment.plant);
         }
@@ -194,7 +195,7 @@ export default function NewDailyDiaryPage() {
         } else {
             setIsIdLoading(true);
             const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-            setUniqueId(`AG-RBM-DD-${randomPart}`);
+            setUniqueId(`AG-RBM-DD-${'${randomPart}'}`);
             setIsIdLoading(false);
         }
     }, [diaryId]);
@@ -317,19 +318,19 @@ export default function NewDailyDiaryPage() {
             };
 
             if (beforeFile) {
-                const fileRef = ref(storage, `daily_diaries/${uniqueId}/before/${beforeFile.name}_${Date.now()}`);
+                const fileRef = ref(storage, `daily_diaries/${'${uniqueId}'}/before/${'${beforeFile.name}'}_${'${Date.now()}'}`);
                 await uploadBytes(fileRef, beforeFile);
                 const downloadUrl = await getDownloadURL(fileRef);
                 finalDiaryData.beforeWorkImages?.push(downloadUrl);
             }
             if (afterFile) {
-                const fileRef = ref(storage, `daily_diaries/${uniqueId}/after/${afterFile.name}_${Date.now()}`);
+                const fileRef = ref(storage, `daily_diaries/${'${uniqueId}'}/after/${'${afterFile.name}'}_${'${Date.now()}'}`);
                 await uploadBytes(fileRef, afterFile);
                 const downloadUrl = await getDownloadURL(fileRef);
                 finalDiaryData.afterWorkImages?.push(downloadUrl);
             }
             if (hseFile) {
-                const fileRef = ref(storage, `daily_diaries/${uniqueId}/hse/${hseFile.name}_${Date.now()}`);
+                const fileRef = ref(storage, `daily_diaries/${'${uniqueId}'}/hse/${'${hseFile.name}'}_${'${Date.now()}'}`);
                 await uploadBytes(fileRef, hseFile);
                 const downloadUrl = await getDownloadURL(fileRef);
                 finalDiaryData.hseDocumentationScans?.push(downloadUrl);
@@ -338,9 +339,9 @@ export default function NewDailyDiaryPage() {
             await setDoc(diaryDocRef, finalDiaryData, { merge: true });
             
             if (isApprovalAction) {
-                 toast({ title: 'Approved', description: `Diary ${uniqueId} has been successfully approved and signed.` });
+                 toast({ title: 'Approved', description: `Diary ${'${uniqueId}'} has been successfully approved and signed.` });
             } else {
-                 toast({ title: 'Saved', description: `Diary ${uniqueId} saved.` });
+                 toast({ title: 'Saved', description: `Diary ${'${uniqueId}'} saved.` });
             }
             
             router.push(`/reports/diary-tracker`);
@@ -412,7 +413,7 @@ export default function NewDailyDiaryPage() {
                                         <FormItem className="space-y-1">
                                             <Label>Location</Label>
                                             <Select 
-                                                key={`loc-${equipmentList?.length || 0}`} 
+                                                key={`loc-${'${equipmentList?.length || 0}'}`} 
                                                 onValueChange={field.onChange} 
                                                 value={field.value || ''} 
                                                 disabled={equipmentLoading || !canEdit}
@@ -438,7 +439,7 @@ export default function NewDailyDiaryPage() {
                                         <FormItem className="space-y-1">
                                             <Label>Equipment Name</Label>
                                             <Select 
-                                                key={`eq-${equipmentList?.length || 0}-${watchedLocation}`} 
+                                                key={`eq-${'${equipmentList?.length || 0}'}-${'${watchedLocation}'}`} 
                                                 onValueChange={(val) => {
                                                     field.onChange(val);
                                                     onEquipmentSelectChange(val);
@@ -629,7 +630,7 @@ export default function NewDailyDiaryPage() {
                                             <a href={url} target="_blank" rel="noopener noreferrer">
                                             <img 
                                                 src={url} 
-                                                alt={`HSE Doc ${index + 1}`} 
+                                                alt={`HSE Doc ${'${index + 1}'}`} 
                                                 className="h-20 w-20 object-cover rounded border border-gray-300 bg-gray-100"
                                                 onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://placehold.co/100?text=PDF' }} 
                                             />
@@ -674,14 +675,14 @@ export default function NewDailyDiaryPage() {
                                     <TableBody>
                                         {manpowerFields.map((field, index) => (
                                             <TableRow key={field.id}>
-                                                <TableCell><Input {...form.register(`manpower.${index}.designation`)}/></TableCell>
-                                                <TableCell><Input type="number" {...form.register(`manpower.${index}.forecast`, { valueAsNumber: true })}/></TableCell>
-                                                <TableCell><Input type="number" {...form.register(`manpower.${index}.actual`, { valueAsNumber: true })}/></TableCell>
-                                                <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.normalHrs`, { valueAsNumber: true })}/></TableCell>
-                                                <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.overtime1_5`, { valueAsNumber: true })}/></TableCell>
-                                                <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${index}.overtime2_0`, { valueAsNumber: true })}/></TableCell>
-                                                <TableCell><Input type="number" {...form.register(`manpower.${index}.totalManHrs`, { valueAsNumber: true })} readOnly className="bg-muted"/></TableCell>
-                                                <TableCell><Input {...form.register(`manpower.${index}.comments`)}/></TableCell>
+                                                <TableCell><Input {...form.register(`manpower.${'${index}'}.designation`)}/></TableCell>
+                                                <TableCell><Input type="number" {...form.register(`manpower.${'${index}'}.forecast`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" {...form.register(`manpower.${'${index}'}.actual`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${'${index}'}.normalHrs`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${'${index}'}.overtime1_5`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" step="0.1" {...form.register(`manpower.${'${index}'}.overtime2_0`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input type="number" {...form.register(`manpower.${'${index}'}.totalManHrs`, { valueAsNumber: true })} readOnly className="bg-muted"/></TableCell>
+                                                <TableCell><Input {...form.register(`manpower.${'${index}'}.comments`)}/></TableCell>
                                                 {canEdit && <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removeManpower(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>}
                                             </TableRow>
                                         ))}
@@ -701,21 +702,21 @@ export default function NewDailyDiaryPage() {
                                     <TableBody>
                                         {plantFields.map((field, index) => (
                                             <TableRow key={field.id}>
-                                                <TableCell><Input {...form.register(`plant.${index}.description`)}/></TableCell>
-                                                <TableCell><Input type="number" {...form.register(`plant.${index}.qty`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input {...form.register(`plant.${'${index}'}.description`)}/></TableCell>
+                                                <TableCell><Input type="number" {...form.register(`plant.${'${index}'}.qty`, { valueAsNumber: true })}/></TableCell>
                                                 <TableCell>
                                                     <Controller
                                                         control={form.control}
-                                                        name={`plant.${index}.inspectionDone`}
+                                                        name={`plant.${'${index}'}.inspectionDone`}
                                                         render={({ field: radioField }) => (
                                                             <RadioGroup className="flex gap-4" onValueChange={radioField.onChange} value={radioField.value}>
-                                                                <div className="flex items-center space-x-2"><RadioGroupItem value="yes" id={`plant-y-${index}`} /><Label htmlFor={`plant-y-${index}`}>Y</Label></div>
-                                                                <div className="flex items-center space-x-2"><RadioGroupItem value="no" id={`plant-n-${index}`} /><Label htmlFor={`plant-n-${index}`}>N</Label></div>
+                                                                <div className="flex items-center space-x-2"><RadioGroupItem value="yes" id={`plant-y-${'${index}'}`} /><Label htmlFor={`plant-y-${'${index}'}`}>Y</Label></div>
+                                                                <div className="flex items-center space-x-2"><RadioGroupItem value="no" id={`plant-n-${'${index}'}`} /><Label htmlFor={`plant-n-${'${index}'}`}>N</Label></div>
                                                             </RadioGroup>
                                                         )}
                                                     />
                                                 </TableCell>
-                                                <TableCell><Input {...form.register(`plant.${index}.comments`)}/></TableCell>
+                                                <TableCell><Input {...form.register(`plant.${'${index}'}.comments`)}/></TableCell>
                                                 {canEdit && <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removePlant(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>}
                                             </TableRow>
                                         ))}
@@ -744,11 +745,23 @@ export default function NewDailyDiaryPage() {
                                     <TableBody>
                                         {workFields.map((field, index) => (
                                             <TableRow key={field.id}>
-                                                <TableCell><Input {...form.register(`works.${index}.area`)}/></TableCell>
-                                                <TableCell><Textarea {...form.register(`works.${index}.scope`)}/></TableCell>
-                                                <TableCell><Input type="time" {...form.register(`works.${index}.timeStart`)}/></TableCell>
-                                                <TableCell><Input type="time" {...form.register(`works.${index}.timeEnd`)}/></TableCell>
-                                                <TableCell><Input type="number" className="w-[70px]" {...form.register(`works.${index}.hrs`, { valueAsNumber: true })}/></TableCell>
+                                                <TableCell><Input {...form.register(`works.${'${index}'}.area`)}/></TableCell>
+                                                <TableCell>
+                                                    <Controller
+                                                        control={form.control}
+                                                        name={`works.${'${index}'}.scope`}
+                                                        render={({ field }) => (
+                                                            <AutoFormatTextarea
+                                                                {...field}
+                                                                value={field.value || ''}
+                                                                placeholder="Describe scope of work..."
+                                                            />
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                                <TableCell><Input type="time" {...form.register(`works.${'${index}'}.timeStart`)}/></TableCell>
+                                                <TableCell><Input type="time" {...form.register(`works.${'${index}'}.timeEnd`)}/></TableCell>
+                                                <TableCell><Input type="number" className="w-[70px]" {...form.register(`works.${'${index}'}.hrs`, { valueAsNumber: true })}/></TableCell>
                                                 {canEdit && <TableCell><Button variant="ghost" size="icon" type="button" onClick={() => removeWork(index)}><Trash2 className="h-4 w-4"/></Button></TableCell>}
                                             </TableRow>
                                         ))}
@@ -767,7 +780,7 @@ export default function NewDailyDiaryPage() {
                                         <FormField
                                             key={index}
                                             control={form.control}
-                                            name={`delays.${index}`}
+                                            name={`delays.${'${index}'}`}
                                             render={({ field }) => (
                                                 <FormItem className="flex items-center gap-2">
                                                     <FormLabel className="w-6 shrink-0">{index + 1}.</FormLabel>
@@ -790,7 +803,7 @@ export default function NewDailyDiaryPage() {
                                         <FormField
                                             key={index}
                                             control={form.control}
-                                            name={`comments.${index}`}
+                                            name={`comments.${'${index}'}`}
                                             render={({ field }) => (
                                                 <FormItem className="flex items-center gap-2">
                                                     <FormLabel className="w-6 shrink-0">{index + 1}.</FormLabel>
@@ -829,7 +842,7 @@ export default function NewDailyDiaryPage() {
                                         {diaryData.beforeWorkImages.map((url, index) => (
                                         <div key={index} className="relative group">
                                             <a href={url} target="_blank" rel="noopener noreferrer">
-                                                <img src={url} alt={`Before Work ${index + 1}`} className="h-24 w-24 object-cover rounded border border-gray-300" />
+                                                <img src={url} alt={`Before Work ${'${index + 1}'}`} className="h-24 w-24 object-cover rounded border border-gray-300" />
                                             </a>
                                             <Button
                                                 variant="destructive"
@@ -864,7 +877,7 @@ export default function NewDailyDiaryPage() {
                                         {diaryData.afterWorkImages.map((url, index) => (
                                         <div key={index} className="relative group">
                                             <a href={url} target="_blank" rel="noopener noreferrer">
-                                                <img src={url} alt={`After Work ${index + 1}`} className="h-24 w-24 object-cover rounded border border-gray-300" />
+                                                <img src={url} alt={`After Work ${'${index + 1}'}`} className="h-24 w-24 object-cover rounded border border-gray-300" />
                                             </a>
                                             <Button
                                                 variant="destructive"
