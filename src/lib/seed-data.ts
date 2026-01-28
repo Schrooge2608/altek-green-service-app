@@ -1,4 +1,3 @@
-
 import type { Equipment } from './types';
 import { format } from 'date-fns';
 
