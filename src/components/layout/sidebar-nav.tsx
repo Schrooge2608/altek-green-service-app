@@ -613,6 +613,11 @@ export function SidebarNav() {
                                         <Link href="/admin/seed">Seed Data</Link>
                                     </SidebarMenuSubButton>
                                 </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname === '/admin/fix-dates'}>
+                                        <Link href="/admin/fix-dates">Fix Dates</Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuItem>
                             </>
                         )}
                     </SidebarMenuSub>
