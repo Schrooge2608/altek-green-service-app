@@ -110,6 +110,8 @@ export default function EquipmentDetailPage() {
   const { data: userData } = useDoc<AppUser>(userRoleRef);
   const canEdit = userData?.role && userData.role !== 'Client Manager';
   const isClientManager = userData?.role === 'Client Manager';
+  const isManagerOrAdmin = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Manager') || userData.role.includes('Supervisor'));
+
 
   const uptimePercentage = useMemo(() => {
     if (!eq) return 100;
@@ -169,7 +171,7 @@ export default function EquipmentDetailPage() {
                     Generate Daily Diary for Unscheduled work
                 </Button>
             </Link>
-            <CreateUnscheduledScheduleDialog equipment={eq} vsd={vsd} />
+            {isManagerOrAdmin && <CreateUnscheduledScheduleDialog equipment={eq} vsd={vsd} />}
         </div>
       </header>
 

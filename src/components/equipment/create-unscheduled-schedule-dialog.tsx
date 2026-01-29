@@ -52,14 +52,15 @@ export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnsche
     const [selectedComponent, setSelectedComponent] = useState<MaintenanceTask['component'] | ''>('');
     const [selectedFrequency, setSelectedFrequency] = useState<MaintenanceTask['frequency'] | ''>('');
     const [scheduledForDate, setScheduledForDate] = useState<Date | undefined>();
+    const [assignedToId, setAssignedToId] = useState<string>('');
     
     const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
-    const { data: users } = useCollection<User>(usersQuery);
+    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
-    const currentUserData = useMemo(() => {
-        if (!user || !users) return null;
-        return users.find(u => u.id === user.uid);
-    }, [user, users]);
+    const technicians = useMemo(() => {
+        if (!users) return [];
+        return users.filter(u => u.role?.includes('Technician') || u.role?.includes('Engineer') || u.role?.includes('Technologist'));
+    }, [users]);
 
 
     const componentOptions = useMemo(() => {
@@ -75,13 +76,20 @@ export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnsche
     const frequencyOptions = selectedComponent ? availableFrequencies[selectedComponent as keyof typeof availableFrequencies] || [] : [];
 
     const handleCreateSchedule = async () => {
-        if (!selectedComponent || !selectedFrequency || !scheduledForDate || !user || !currentUserData) {
+        if (!selectedComponent || !selectedFrequency || !scheduledForDate || !assignedToId) {
             toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.' });
             return;
         }
 
         setIsSaving(true);
         
+        const assignedUser = users?.find(u => u.id === assignedToId);
+        if (!assignedUser) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected technician.'});
+            setIsSaving(false);
+            return;
+        }
+
         const taskTitle = `${selectedComponent} ${selectedFrequency} Service`;
 
         const newScheduledTask: Omit<ScheduledTask, 'id' | 'completionNotes'> = {
@@ -91,8 +99,8 @@ export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnsche
             task: taskTitle,
             scheduledFor: format(scheduledForDate, 'yyyy-MM-dd'),
             status: 'Pending',
-            assignedToId: user.uid,
-            assignedToName: currentUserData.name,
+            assignedToId: assignedToId,
+            assignedToName: assignedUser.name,
             component: selectedComponent,
             frequency: selectedFrequency as MaintenanceTask['frequency'],
         };
@@ -178,15 +186,28 @@ export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnsche
                         </Popover>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="assigned-to-display">Assign To</Label>
-                        <Input id="assigned-to-display" value={currentUserData?.name || 'Loading...'} disabled />
+                        <Label htmlFor="assignedToId">Assign To</Label>
+                        <Select onValueChange={setAssignedToId} value={assignedToId}>
+                            <SelectTrigger id="assignedToId">
+                                <SelectValue placeholder="Select a technician..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {usersLoading ? (
+                                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                                ) : (
+                                    technicians?.map(tech => (
+                                        <SelectItem key={tech.id} value={tech.id}>{tech.name} ({tech.role})</SelectItem>
+                                    ))
+                                )}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button onClick={handleCreateSchedule} disabled={isSaving || !selectedComponent || !selectedFrequency || !scheduledForDate || !user}>
+                    <Button onClick={handleCreateSchedule} disabled={isSaving || !selectedComponent || !selectedFrequency || !scheduledForDate || !user || !assignedToId}>
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         {isSaving ? 'Saving...' : 'Create Schedule'}
                     </Button>
