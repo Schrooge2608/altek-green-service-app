@@ -309,51 +309,6 @@ export default function EquipmentDetailPage() {
                     <DetailRow label="Assigned Technician" value={eq.motorAssignedToName} />
                 </CardContent>
             </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Breakdown History</CardTitle>
-                        <CardDescription>Log of all reported issues for this equipment.</CardDescription>
-                    </div>
-                    {(canEdit || isClientManager) && (
-                        <Link href={`/breakdowns/new?equipmentId=${eq.id}`} passHref>
-                            <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Log Breakdown</Button>
-                        </Link>
-                    )}
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {breakdownsLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24">Loading history...</TableCell>
-                                </TableRow>
-                            ) : eqBreakdowns && eqBreakdowns.length > 0 ? eqBreakdowns.map(b => (
-                                <TableRow key={b.id}>
-                                    <TableCell>{b.date}</TableCell>
-                                    <TableCell>{b.description}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={b.resolved ? 'default' : 'destructive'}>
-                                            {b.resolved ? 'Resolved' : 'Pending'}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24">No breakdowns reported.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
         </div>
 
         <div className="space-y-8">
@@ -476,6 +431,53 @@ export default function EquipmentDetailPage() {
                             data-ai-hint="industrial pump"
                         />
                     </div>
+                </CardContent>
+            </Card>
+        </div>
+         <div className="lg:col-span-3">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Breakdown History</CardTitle>
+                        <CardDescription>Log of all reported issues for this equipment.</CardDescription>
+                    </div>
+                    {(canEdit || isClientManager) && (
+                        <Link href={`/breakdowns/new?equipmentId=${eq.id}`} passHref>
+                            <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Log Breakdown</Button>
+                        </Link>
+                    )}
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {breakdownsLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center h-24">Loading history...</TableCell>
+                                </TableRow>
+                            ) : eqBreakdowns && eqBreakdowns.length > 0 ? eqBreakdowns.map(b => (
+                                <TableRow key={b.id}>
+                                    <TableCell>{b.date}</TableCell>
+                                    <TableCell>{b.description}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={b.resolved ? 'default' : 'destructive'}>
+                                            {b.resolved ? 'Resolved' : 'Pending'}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center h-24">No breakdowns reported.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
         </div>
