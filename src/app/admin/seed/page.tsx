@@ -10,6 +10,7 @@ import { equipmentToSeed } from '@/lib/seed-data';
 import type { Equipment, VSD } from '@/lib/types';
 import { useState } from 'react';
 import { Loader2, Database } from 'lucide-react';
+import { format } from 'date-fns';
 
 export default function SeedPage() {
   const { toast } = useToast();
@@ -48,7 +49,7 @@ export default function SeedPage() {
         const equipmentId = `${locationSlug}-${nameSlug}`;
         const vsdId = `vsd-${equipmentId}`;
         
-        const { model, serialNumber, installationDate, driveType, manufacturer } = item;
+        const { model, serialNumber, driveType, manufacturer } = item;
 
         const equipmentDoc = {
             id: equipmentId,
@@ -56,12 +57,12 @@ export default function SeedPage() {
             location: item.location,
             plant: item.plant,
             division: item.division,
-            lastMaintenance: item.lastMaintenance,
-            nextMaintenance: item.nextMaintenance,
+            lastMaintenance: '2026-01-05',
+            nextMaintenance: format(new Date(new Date('2026-01-05').setMonth(new Date('2026-01-05').getMonth() + 3)), "yyyy-MM-dd"),
             vsdId: vsdId,
             model: model,
             serialNumber: serialNumber,
-            installationDate: installationDate,
+            installationDate: '2026-01-06',
             status: 'active',
             totalDowntimeHours: 0,
             breakdownStatus: 'None',
@@ -74,7 +75,7 @@ export default function SeedPage() {
             model: model,
             manufacturer: manufacturer ?? '',
             serialNumber: serialNumber,
-            installationDate: installationDate,
+            installationDate: '2026-01-06',
             status: 'active',
         };
 

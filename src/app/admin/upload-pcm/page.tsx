@@ -57,8 +57,9 @@ export default function UploadPcmPage() {
 
     setIsLoading(true);
     const batch = writeBatch(firestore);
-    const installationDate = format(new Date(), 'yyyy-MM-dd');
-    const nextMaintenanceDate = format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd");
+    const installationDate = '2026-01-06';
+    const lastMaintenanceDate = '2026-01-05';
+    const nextMaintenanceDate = format(new Date(new Date('2026-01-05').setMonth(new Date('2026-01-05').getMonth() + 3)), "yyyy-MM-dd");
 
     const slugify = (str: string) => str.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/[\s-]+/g, '-');
 
@@ -76,7 +77,7 @@ export default function UploadPcmPage() {
             division: item.division,
             vsdId: vsdId,
             status: 'active',
-            lastMaintenance: installationDate,
+            lastMaintenance: lastMaintenanceDate,
             nextMaintenance: nextMaintenanceDate,
             totalDowntimeHours: 0,
             breakdownStatus: 'None',

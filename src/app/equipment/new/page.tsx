@@ -160,6 +160,7 @@ export default function NewEquipmentPage() {
       vsdId: '',
       serialNumber: '',
       model: '',
+      installationDate: new Date('2026-01-06'),
     },
   });
 
@@ -198,9 +199,10 @@ export default function NewEquipmentPage() {
       vsdId: values.vsdId,
       location: values.location,
       imageUrl: values.imageUrl,
-      lastMaintenance: format(new Date(), "yyyy-MM-dd"),
-      nextMaintenance: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd"),
+      lastMaintenance: '2026-01-05',
+      nextMaintenance: format(new Date(new Date('2026-01-05').setMonth(new Date('2026-01-05').getMonth() + 3)), "yyyy-MM-dd"),
       totalDowntimeHours: 0,
+      installationDate: format(values.installationDate, "yyyy-MM-dd"),
       
       breakerAssetNumber: values.breakerAssetNumber,
       breakerLocationHierarchy: values.breakerLocationHierarchy,
