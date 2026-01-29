@@ -157,7 +157,6 @@ export default function GenerateReportPage() {
         setError(null);
         setGeneratedReport('');
         
-        // If it's a standard report (no custom query), check if there's any activity to report.
         if (!customQuery.trim()) {
             const hasActivity = aggregatedData.newBreakdowns.length > 0 ||
                                 aggregatedData.closedBreakdowns.length > 0 ||
@@ -171,6 +170,16 @@ export default function GenerateReportPage() {
                 return;
             }
         }
+        
+        const minimizedEquipment = (aggregatedData.equipment || []).map((item: any) => ({
+            name: item.name,
+            serialNumber: item.serialNumber || 'N/A',
+            plant: item.plant || 'Unknown',
+            division: item.division || 'Unknown',
+            status: item.status || 'Unknown',
+            location: item.location || '',
+            vsdId: item.vsdId || '',
+        }));
 
         const reportInput: ReportInput = {
             startDate: format(date.from, 'yyyy-MM-dd'),
@@ -180,7 +189,7 @@ export default function GenerateReportPage() {
             closedBreakdowns: sanitizeForServer(aggregatedData.closedBreakdowns),
             completedSchedules: sanitizeForServer(aggregatedData.completedSchedules),
             dailyDiaries: sanitizeForServer(aggregatedData.dailyDiaries),
-            equipment: sanitizeForServer(aggregatedData.equipment),
+            equipment: minimizedEquipment,
         };
         
         try {
