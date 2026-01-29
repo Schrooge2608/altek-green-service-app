@@ -12,8 +12,8 @@ import { Save, Loader2, ArrowLeft, Lock, CheckCircle, Clock } from 'lucide-react
 import React, { useState, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormDescription, FormMessage } from '@/components/ui/form';
-import { useUser, useMemoFirebase, useFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useMemoFirebase, useFirebase, useDoc } from '@/firebase';
+import { doc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import type { Breakdown, User } from '@/lib/types';
@@ -141,7 +141,33 @@ export default function BreakdownDetailPage() {
 
         try {
             const breakdownRef = doc(firestore, 'breakdown_reports', breakdownId);
-            updateDocumentNonBlocking(breakdownRef, updateData);
+            await updateDoc(breakdownRef, updateData);
+
+            // --- SYNC WITH EQUIPMENT ---
+            if (data.equipmentId) {
+                const equipmentRef = doc(firestore, 'equipment', data.equipmentId);
+                const equipmentSnap = await getDoc(equipmentRef);
+                if (equipmentSnap.exists()) { 
+                    const currentEq = equipmentSnap.data();
+    
+                    // 1. Calculate Downtime for THIS breakdown (in hours) 
+                    let additionalDowntime = 0; 
+                    if (data.timeArrived && data.timeBackInService) { 
+                        const start = new Date(data.timeArrived).getTime(); 
+                        const end = new Date(data.timeBackInService).getTime(); 
+                        const diffHours = (end - start) / (1000 * 60 * 60); 
+                        if (diffHours > 0) additionalDowntime = diffHours; 
+                    }
+    
+                    // 2. Update Equipment Status & Total Downtime 
+                    await updateDoc(equipmentRef, { 
+                        breakdownStatus: data.resolved ? 'None' : 'Active',
+                        totalDowntimeHours: (currentEq.totalDowntimeHours || 0) + additionalDowntime,
+                        lastMaintenance: data.resolved ? data.date : currentEq.lastMaintenance
+                    });
+                }
+            }
+            // --- END SYNC ---
 
             toast({ title: 'Success', description: 'Breakdown report updated.' });
             
