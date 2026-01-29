@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -30,7 +29,7 @@ import { format } from 'date-fns';
 import React, { useState, useMemo } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
@@ -369,6 +368,48 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
           setIsSaving(false);
       }
   };
+  
+    const handleComplete = async () => {
+        if (!schedule) return;
+
+        setIsSaving(true);
+        const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+        const crewToSave = crew.map(({ localId, ...rest }) => rest);
+
+        try {
+            await updateDoc(scheduleRef, {
+                status: 'Completed',
+                workCrew: crewToSave,
+                checklist,
+                updatedAt: new Date().toISOString()
+            });
+
+            const equipmentRef = doc(firestore, 'equipment', schedule.equipmentId);
+            const equipmentSnap = await getDoc(equipmentRef);
+            if (equipmentSnap.exists()) {
+                const workDate = new Date(schedule.scheduledFor || new Date());
+                const nextDueDate = new Date(workDate);
+                nextDueDate.setMonth(workDate.getMonth() + 3);
+                const nextDateString = format(nextDueDate, 'yyyy-MM-dd');
+
+                await updateDoc(equipmentRef, {
+                    lastMaintenance: schedule.scheduledFor,
+                    nextMaintenance: nextDateString,
+                    status: 'active'
+                });
+                router.refresh();
+            }
+
+            toast({ title: 'Task Completed', description: 'The maintenance task has been marked as complete.' });
+            router.push('/maintenance/upcoming-schedules');
+        } catch (error: any) {
+            console.error("Completion Failed:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not complete the task.' });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
 
   const isEditMode = !!schedule;
   const docPrefix = "WS";
@@ -383,12 +424,16 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
         <Button onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
         </Button>
+        <Button onClick={handleComplete} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Mark as Complete
+        </Button>
       </div>
 
       <Card className="p-8 shadow-lg border-2 border-primary/20 bg-card">
         <header className="flex items-start justify-between mb-8">
           <div>
-            <AltekLogo className="h-12 w-auto" unoptimized/>
+            <AltekLogo className="h-12 w-auto" unoptimized />
             <p className="text-muted-foreground mt-2">VSD & Equipment Services</p>
           </div>
           <div className="text-right">

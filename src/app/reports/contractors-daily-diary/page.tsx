@@ -19,7 +19,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, setDocumentNonBlocking, useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from '@/firebase';
-import { doc, collection, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, collection, setDoc, serverTimestamp, updateDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -337,6 +337,27 @@ export default function NewDailyDiaryPage() {
             }
 
             await setDoc(diaryDocRef, finalDiaryData, { merge: true });
+
+            // --- AUTO-SCHEDULE LOGIC ---
+            if (data.savedEquipmentId) {
+                const equipmentRef = doc(firestore, 'equipment', data.savedEquipmentId);
+                const equipmentSnap = await getDoc(equipmentRef);
+                if (equipmentSnap.exists()) {
+                    const currentEq = equipmentSnap.data() as Equipment;
+                    const workDate = new Date(data.date || new Date());
+                    const frequency = 3; // Default to 3 months
+                    const nextDueDate = new Date(workDate);
+                    nextDueDate.setMonth(nextDueDate.getMonth() + frequency);
+                    const nextDateString = format(nextDueDate, 'yyyy-MM-dd');
+                    await updateDoc(equipmentRef, {
+                        lastMaintenance: format(workDate, 'yyyy-MM-dd'),
+                        nextMaintenance: nextDateString,
+                        status: 'active'
+                    });
+                    router.refresh();
+                }
+            }
+            // --- END AUTO-SCHEDULE LOGIC ---
             
             if (isApprovalAction) {
                  toast({ title: 'Approved', description: `Diary ${'${uniqueId}'} has been successfully approved and signed.` });

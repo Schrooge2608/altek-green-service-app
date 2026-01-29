@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -30,7 +29,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebase } from '@/firebase';
-import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -380,6 +379,47 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
         }
     };
 
+    const handleComplete = async () => {
+        if (!schedule) return;
+
+        setIsSaving(true);
+        const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+        const crewToSave = crew.map(({ localId, ...rest }) => rest);
+
+        try {
+            await updateDoc(scheduleRef, {
+                status: 'Completed',
+                workCrew: crewToSave,
+                checklist,
+                updatedAt: new Date().toISOString()
+            });
+
+            const equipmentRef = doc(firestore, 'equipment', schedule.equipmentId);
+            const equipmentSnap = await getDoc(equipmentRef);
+            if (equipmentSnap.exists()) {
+                const workDate = new Date(schedule.scheduledFor || new Date());
+                const nextDueDate = new Date(workDate);
+                nextDueDate.setMonth(workDate.getMonth() + 3);
+                const nextDateString = format(nextDueDate, 'yyyy-MM-dd');
+
+                await updateDoc(equipmentRef, {
+                    lastMaintenance: schedule.scheduledFor,
+                    nextMaintenance: nextDateString,
+                    status: 'active'
+                });
+                router.refresh();
+            }
+
+            toast({ title: 'Task Completed', description: 'The maintenance task has been marked as complete.' });
+            router.push('/maintenance/upcoming-schedules');
+        } catch (error: any) {
+            console.error("Completion Failed:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not complete the task.' });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
     const isEditMode = !!schedule;
     const docPrefix = "6MS";
 
@@ -387,10 +427,16 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
             {isEditMode ? (
-                <Button onClick={handleSaveProgress} disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Progress
-                </Button>
+                <>
+                    <Button onClick={handleSaveProgress} disabled={isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Save Progress
+                    </Button>
+                    <Button onClick={handleComplete} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Mark as Complete
+                    </Button>
+                </>
             ) : (
                  <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from './ui/calendar';
 import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { SignaturePad } from './ui/signature-pad';
@@ -345,7 +344,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     workOrderScans: newWorkOrderUrls,
                 });
             }
-
+            
             toast({
                 title: 'Schedule Saved',
                 description: 'The task has been added to the upcoming schedules list.'
@@ -358,6 +357,46 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             setIsSaving(false);
         }
     };
+    
+    const handleComplete = async () => {
+        if (!schedule) return;
+
+        setIsSaving(true);
+        const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+
+        try {
+            await updateDoc(scheduleRef, {
+                status: 'Completed',
+                completionNotes: completionNotes,
+                updatedAt: new Date().toISOString()
+            });
+
+            const equipmentRef = doc(firestore, 'equipment', schedule.equipmentId);
+            const equipmentSnap = await getDoc(equipmentRef);
+            if (equipmentSnap.exists()) {
+                const workDate = new Date(schedule.scheduledFor || new Date());
+                const nextDueDate = new Date(workDate);
+                nextDueDate.setMonth(workDate.getMonth() + 3);
+                const nextDateString = format(nextDueDate, 'yyyy-MM-dd');
+
+                await updateDoc(equipmentRef, {
+                    lastMaintenance: schedule.scheduledFor,
+                    nextMaintenance: nextDateString,
+                    status: 'active'
+                });
+                router.refresh();
+            }
+
+            toast({ title: 'Task Completed', description: 'The maintenance task has been marked as complete.' });
+            router.push('/maintenance/upcoming-schedules');
+        } catch (error: any) {
+            console.error("Completion Failed:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not complete the task.' });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
 
     const isEditMode = !!schedule;
     const docPrefix = getFrequencyPrefix(frequency);
@@ -367,10 +406,16 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
             {isEditMode ? (
-                <Button onClick={handleSaveProgress} disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Progress
-                </Button>
+                <>
+                    <Button onClick={handleSaveProgress} disabled={isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Save Progress
+                    </Button>
+                    <Button onClick={handleComplete} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Mark as Complete
+                    </Button>
+                </>
             ) : (
                  <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -492,7 +537,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 </AlertDescription>
             </Alert>
 
-            <Card className="my-8">
+             <Card className="my-8">
                 <CardHeader>
                     <CardTitle>Safety Documentation</CardTitle>
                     <CardDescription>Upload scans of the completed safety documents.</CardDescription>
@@ -581,7 +626,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 </CardContent>
             </Card>
 
-            <Card className="my-8">
+             <Card className="my-8">
                 <CardHeader>
                     <CardTitle>Task Documents</CardTitle>
                     <CardDescription>Upload scans of the Permit to Work and Work Order.</CardDescription>
