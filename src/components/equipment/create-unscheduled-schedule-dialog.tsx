@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -26,6 +27,7 @@ import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBl
 import { useToast } from '@/hooks/use-toast';
 import { collection } from 'firebase/firestore';
 import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
 
 
 interface CreateUnscheduledScheduleDialogProps {
@@ -53,6 +55,7 @@ export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnsche
     const [selectedFrequency, setSelectedFrequency] = useState<MaintenanceTask['frequency'] | ''>('');
     const [scheduledForDate, setScheduledForDate] = useState<Date | undefined>();
     const [assignedToId, setAssignedToId] = useState<string>('');
+    const [comments, setComments] = useState('');
     
     const usersQuery = useMemoFirebase(() => (user ? collection(firestore, 'users') : null), [firestore, user]);
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
@@ -92,7 +95,7 @@ export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnsche
 
         const taskTitle = `${selectedComponent} ${selectedFrequency} Service`;
 
-        const newScheduledTask: Omit<ScheduledTask, 'id' | 'completionNotes'> = {
+        const newScheduledTask: Omit<ScheduledTask, 'id' | 'completionNotes'> & { comments?: string } = {
             originalTaskId: `${equipment.id}-${selectedComponent.toLowerCase()}-${selectedFrequency.toLowerCase()}-unscheduled`,
             equipmentId: equipment.id,
             equipmentName: equipment.name,
@@ -103,6 +106,7 @@ export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnsche
             assignedToName: assignedUser.name,
             component: selectedComponent,
             frequency: selectedFrequency as MaintenanceTask['frequency'],
+            comments: comments,
         };
         
         try {
@@ -201,6 +205,15 @@ export function CreateUnscheduledScheduleDialog({ equipment, vsd }: CreateUnsche
                                 )}
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="comments">Comments / Instructions</Label>
+                        <Textarea
+                            id="comments"
+                            placeholder="Add any specific instructions for the technician..."
+                            value={comments}
+                            onChange={(e) => setComments(e.target.value)}
+                        />
                     </div>
                 </div>
                 <DialogFooter>

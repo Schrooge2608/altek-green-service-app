@@ -1,3 +1,5 @@
+
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -117,6 +119,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     const [selectedEquipment, setSelectedEquipment] = useState<string | undefined>(schedule?.equipmentId);
     const [inspectionDate, setInspectionDate] = useState<Date | undefined>(schedule ? new Date(schedule.scheduledFor) : undefined);
     const [completionNotes, setCompletionNotes] = useState<string>(schedule?.completionNotes || '');
+    const [comments, setComments] = useState<string>(schedule?.comments || '');
 
     const [crew, setCrew] = useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -247,6 +250,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             const updateData: Partial<ScheduledTask> = {
                 workCrew: crewToSave,
                 completionNotes,
+                comments: comments,
                 updatedAt: new Date().toISOString(),
             };
             
@@ -295,7 +299,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             return;
         }
 
-        const newScheduledTask: Omit<ScheduledTask, 'id' | 'updatedAt'> = {
+        const newScheduledTask: Omit<ScheduledTask, 'id' | 'updatedAt'> & { comments?: string } = {
             originalTaskId: `${equipmentData.id}-${title.toLowerCase().replace(/ /g, '-')}`,
             equipmentId: equipmentData.id,
             equipmentName: equipmentData.name,
@@ -305,6 +309,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             assignedToId: user.uid,
             assignedToName: currentUserData.name,
             completionNotes: '',
+            comments: comments,
             component: component,
             frequency: frequency,
         };
@@ -368,6 +373,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             await updateDoc(scheduleRef, {
                 status: 'Completed',
                 completionNotes: completionNotes,
+                comments: comments,
                 updatedAt: new Date().toISOString()
             });
 
@@ -493,6 +499,15 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
                         <Input id="inspected-by" value={currentUserData?.name || 'Loading...'} disabled />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="comments">Comments / Instructions</Label>
+                        <Textarea
+                            id="comments"
+                            placeholder="Add any specific instructions for the technician..."
+                            value={comments}
+                            onChange={(e) => setComments(e.target.value)}
+                        />
                     </div>
                 </CardContent>
             </Card>

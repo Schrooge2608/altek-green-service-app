@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -39,6 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { ImageUploader } from '../image-uploader';
+import { Textarea } from '../ui/textarea';
 
 interface WorkCrewRowProps {
     member: Partial<WorkCrewMember> & { localId: number };
@@ -148,6 +150,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
     const [jhaFiles, setJhaFiles] = useState<File[]>([]);
     const [ptwFiles, setPtwFiles] = useState<File[]>([]);
     const [workOrderFiles, setWorkOrderFiles] = useState<File[]>([]);
+    const [comments, setComments] = useState<string>(schedule?.comments || '');
 
     const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -262,6 +265,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             assignedToId: user.uid,
             assignedToName: currentUserData.name,
             completionNotes: '',
+            comments: comments,
             component: 'Protection',
             frequency: '6-Monthly',
             workCrew: [],
@@ -351,6 +355,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             const updateData: Partial<ScheduledTask> = {
                 workCrew: crewToSave,
                 checklist,
+                comments: comments,
                 updatedAt: new Date().toISOString(),
             };
 
@@ -391,6 +396,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                 status: 'Completed',
                 workCrew: crewToSave,
                 checklist,
+                comments: comments,
                 updatedAt: new Date().toISOString()
             });
 
@@ -514,6 +520,15 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
                         <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="comments">Comments / Instructions</Label>
+                        <Textarea
+                            id="comments"
+                            placeholder="Add any specific instructions for the technician..."
+                            value={comments}
+                            onChange={(e) => setComments(e.target.value)}
+                        />
                     </div>
                 </CardContent>
             </Card>
@@ -801,6 +816,16 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                     </Table>
                 </CardContent>
             </Card>
+            
+            <div className="my-8">
+                 <h3 className="text-xl font-bold mb-4">Completion Notes</h3>
+                 <Textarea
+                    placeholder="Enter any notes about the work performed, issues found, or follow-up actions required..."
+                    value={completionNotes}
+                    onChange={(e) => setCompletionNotes(e.target.value)}
+                    rows={6}
+                 />
+            </div>
 
             <footer className="mt-16 text-xs text-muted-foreground text-center">
                <p>Altek Green - Confidential</p>

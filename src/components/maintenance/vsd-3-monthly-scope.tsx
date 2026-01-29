@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -5,7 +6,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
+  CardDescription
 } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { ImageUploader } from '../image-uploader';
+import { Textarea } from '../ui/textarea';
 
 interface WorkCrewRowProps {
     member: Partial<WorkCrewMember> & { localId: number };
@@ -150,6 +152,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     const [jhaFiles, setJhaFiles] = useState<File[]>([]);
     const [ptwFiles, setPtwFiles] = useState<File[]>([]);
     const [workOrderFiles, setWorkOrderFiles] = useState<File[]>([]);
+    const [comments, setComments] = useState<string>(schedule?.comments || '');
 
     const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
         (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -207,7 +210,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             const storage = getStorage(firebaseApp);
             const fileRef = ref(storage, fileUrl);
             await deleteObject(fileRef);
-            const scheduleRef = doc(firestore, 'upcoming_work', schedule.id);
+            const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
             const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
             await updateDoc(scheduleRef, { [docType]: updatedScans });
             toast({ title: "File Deleted", description: "The selected document has been removed." });
@@ -222,7 +225,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     : error.message || "An unexpected error occurred.",
             });
             if(error.code === 'storage/object-not-found'){
-                const scheduleRef = doc(firestore, 'upcoming_work', schedule.id);
+                const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
                 const updatedScans = (schedule[docType] || []).filter(url => url !== fileUrl);
                 await updateDoc(scheduleRef, { [docType]: updatedScans });
                 router.refresh();
@@ -261,6 +264,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             assignedToId: user.uid,
             assignedToName: currentUserData.name,
             completionNotes: '',
+            comments: comments,
             component: 'VSD',
             frequency: '3-Monthly',
             workCrew: [],
@@ -350,6 +354,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             const updateData: Partial<ScheduledTask> = {
                 workCrew: crewToSave,
                 checklist,
+                comments: comments,
                 updatedAt: new Date().toISOString(),
             };
 
@@ -390,6 +395,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 status: 'Completed',
                 workCrew: crewToSave,
                 checklist,
+                comments: comments,
                 updatedAt: new Date().toISOString()
             });
 
@@ -427,7 +433,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
             {isEditMode ? (
-                 <>
+                <>
                     <Button onClick={handleSaveProgress} disabled={isSaving}>
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         Save Progress
@@ -515,6 +521,15 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                         <Label htmlFor="inspected-by">Inspected By</Label>
                         <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
                     </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="comments">Comments / Instructions</Label>
+                        <Textarea
+                            id="comments"
+                            placeholder="Add any specific instructions for the technician..."
+                            value={comments}
+                            onChange={(e) => setComments(e.target.value)}
+                        />
+                    </div>
                 </CardContent>
             </Card>
 
@@ -523,22 +538,13 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     <h3 className="text-lg font-bold">1. PURPOSE</h3>
                     <p>Mandatory inspections and services are needed to be carried out in order to identify, report and repair any unsafe conditions as well as to ensure reliable operation of electrical equipment.</p>
                 </div>
-                <div>
-                    <h3 className="text-lg font-bold">2. DOCUMENTATION REQUIRED</h3>
-                    <ul className="list-disc pl-5">
-                        <li>Approved Risk Assessment (JHA)</li>
-                        <li>RBM Take 5 Assessment Sheet</li>
-                        <li>Critical Control Checklists (CCC) as identified by Risk Assessment</li>
-                    </ul>
-                </div>
-                <div>
+                 <div>
                     <h3 className="text-lg font-bold">3. JOB SPECIFIC SAFETY INFORMATION</h3>
                     <ul className="list-disc pl-5">
-                        <li>Complete Take 5 and CCC’s.</li>
-                        <li>Obtain permit to work.</li>
-                        <li>Isolate units as per RBM isolation procedure.</li>
-                        <li>Carry out service/inspection/test as per Quality Control Sheet below.</li>
-                        <li>Cancel work permit after work completion.</li>
+                        <li>De-energize and Lockout/Tagout the panel or equipment before any work begins.</li>
+                        <li>Verify zero energy state with a calibrated multimeter before touching any conductive parts.</li>
+                        <li>Wear appropriate PPE, including arc-flash rated clothing if panel covers are removed on live adjacent sections.</li>
+                        <li>Never assume a breaker is off just because the handle is in the "OFF" position. Test before touch.</li>
                     </ul>
                 </div>
             </div>

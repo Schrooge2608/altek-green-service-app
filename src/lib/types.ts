@@ -1,4 +1,5 @@
 
+
 export interface Equipment {
   id: string;
   name: string;
@@ -141,6 +142,7 @@ export interface ScheduledTask {
   assignedToId: string;
   assignedToName: string;
   completionNotes?: string;
+  comments?: string;
   component: MaintenanceTask['component'];
   frequency: MaintenanceTask['frequency'];
   workCrew?: WorkCrewMember[];

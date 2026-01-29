@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -37,6 +38,7 @@ import { useRouter } from 'next/navigation';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { ImageUploader } from '@/components/image-uploader';
 import { SignaturePad } from '../ui/signature-pad';
+import { Textarea } from '../ui/textarea';
 
 
 const checklistItems = [
@@ -123,6 +125,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
   const [jhaFiles, setJhaFiles] = useState<File[]>([]);
   const [ptwFiles, setPtwFiles] = useState<File[]>([]);
   const [workOrderFiles, setWorkOrderFiles] = useState<File[]>([]);
+  const [comments, setComments] = useState<string>(schedule?.comments || '');
 
   const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
     (schedule?.workCrew && schedule.workCrew.length > 0)
@@ -251,6 +254,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
         assignedToId: user.uid,
         assignedToName: currentUserData.name,
         completionNotes: '',
+        comments: comments,
         component: 'VSD',
         frequency: 'Weekly',
         workCrew: [],
@@ -341,6 +345,8 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
           const updateData: Partial<ScheduledTask> = {
               workCrew: crewToSave,
               checklist,
+              comments: comments,
+              updatedAt: new Date().toISOString(),
           };
           
           if (newTake5Urls.length > 0) updateData.take5Scans = [...(schedule.take5Scans || []), ...newTake5Urls];
@@ -349,7 +355,6 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
           if (newPtwUrls.length > 0) updateData.ptwScans = [...(schedule.ptwScans || []), ...newPtwUrls];
           if (newWorkOrderUrls.length > 0) updateData.workOrderScans = [...(schedule.workOrderScans || []), ...newWorkOrderUrls];
 
-          updateData.updatedAt = new Date().toISOString(); 
           await updateDoc(scheduleRef, updateData);
 
           toast({ title: 'Progress Saved', description: 'Your changes have been saved successfully.' });
@@ -381,6 +386,7 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
                 status: 'Completed',
                 workCrew: crewToSave,
                 checklist,
+                comments: comments,
                 updatedAt: new Date().toISOString()
             });
 
@@ -496,6 +502,15 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
             <div className="space-y-2">
                 <Label htmlFor="inspected-by">Inspected By</Label>
                  <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="comments">Comments / Instructions</Label>
+                <Textarea
+                    id="comments"
+                    placeholder="Add any specific instructions for the technician..."
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                />
             </div>
           </CardContent>
         </Card>
