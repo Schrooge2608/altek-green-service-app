@@ -196,16 +196,11 @@ export default function GenerateReportPage() {
         try {
             const result = await generateReport(reportInput);
             
-            // --- FIX: CLEAN THE TEXT ---
-            let finalText = result.report;
+            let rawText = result.report;
+            rawText = rawText.replace(/\\n/g, '\n');
+            rawText = rawText.replace(/^"|"$/g, '');
 
-            // 1. Convert literal "\n" strings to actual line breaks
-            finalText = finalText.replace(/\\n/g, '\n');
-
-            // 2. Remove any accidental wrapping quotes
-            finalText = finalText.replace(/^"|"$/g, '');
-
-            setGeneratedReport(finalText);
+            setGeneratedReport(rawText);
 
             toast({ title: 'Report Generated', description: 'The weekly summary report has been created below.' });
         } catch (e: any) {
@@ -354,7 +349,7 @@ export default function GenerateReportPage() {
                                 {/* Left Side: Logo (Ensure logo.png is in /public folder) */}
                                 <div className="w-1/3">
                                 <img 
-                                    src="/logo.png" 
+                                    src="/Altek-Logo.jpeg" 
                                     alt="Altek Green Logo" 
                                     className="h-24 w-auto object-contain" 
                                 />
@@ -381,9 +376,9 @@ export default function GenerateReportPage() {
                             className="space-y-6 font-sans text-slate-800 leading-relaxed"
                             components={{
                             // Main Title (H1) - Big, Bold, Uppercase, with a thick bottom border
-                            h1: ({ node, ...props }) => (
-                                <h1 className="text-3xl font-extrabold text-slate-900 mb-8 pb-4 border-b-4 border-slate-800 uppercase tracking-tight" {...props} />
-                            ),
+                            h1: ({ node, ...props }) => {
+                                return null;
+                            },
                             // Section Headings (H2) - Bold with a thin divider line
                             h2: ({ node, ...props }) => (
                                 <h2 className="text-xl font-bold text-slate-900 mt-8 mb-4 border-b border-slate-300 pb-1 break-after-avoid" {...props} />
