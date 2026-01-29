@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow for generating comprehensive weekly client reports from aggregated Firestore data.

@@ -128,7 +128,7 @@
       "properties": {
         "id": { "type": "string" },
         "equipmentId": { "type": "string" },
-        "period": { "type": "string", "description": "The period this record represents, e.g., '2024-07' for July 2024." },
+        "period": { "type": "string", "description": "The period this record represents, e.g., '2026-07' for July 2026." },
         "uptime": { "type": "number" },
         "downtimeHours": { "type": "number" },
         "powerConsumption": { "type": "number" }
@@ -143,7 +143,7 @@
         "id": { "type": "string" },
         "equipmentId": { "type": "string" },
         "equipmentName": { "type": "string" },
-        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump"] },
+        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump", "UPS"] },
         "task": { "type": "string" },
         "dueDate": { "type": "string", "format": "date" },
         "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
@@ -153,12 +153,45 @@
       },
       "required": ["id", "equipmentId", "equipmentName", "component", "task", "dueDate", "frequency", "status"]
     },
+    "ScheduledTask": {
+      "title": "ScheduledTask",
+      "type": "object",
+      "description": "Represents a maintenance task that has been scheduled for a specific week by a technician.",
+      "properties": {
+        "id": { "type": "string" },
+        "originalTaskId": { "type": "string", "description": "The ID of the master maintenance task this was generated from." },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "task": { "type": "string" },
+        "scheduledFor": { "type": "string", "format": "date", "description": "The target date for the task." },
+        "status": { "type": "string", "enum": ["Pending", "In Progress", "Completed", "Cancelled"] },
+        "assignedToId": { "type": "string" },
+        "assignedToName": { "type": "string" },
+        "completionNotes": { "type": "string" },
+        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump", "UPS"] },
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
+        "workCrew": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "rtbsNo": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "signature": { "type": "string", "description": "Base64 encoded signature image." }
+            }
+          }
+        }
+      },
+      "required": ["id", "originalTaskId", "equipmentId", "task", "scheduledFor", "status", "assignedToId"]
+    },
     "BreakdownReport": {
       "title": "BreakdownReport",
       "type": "object",
       "description": "Represents a breakdown report.",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string", "description": "The UID of the user who created the report." },
         "equipmentId": { "type": "string" },
         "equipmentName": { "type": "string" },
         "component": { "type": "string", "enum": ["VSD", "Motor", "Pump", "Protection", "UPS", "Other"], "description": "The specific component that failed." },
@@ -169,7 +202,12 @@
         "normalHours": { "type": "number" },
         "overtimeHours": { "type": "number" },
         "timeReported": { "type": "string", "format": "date-time" },
-        "timeBackInService": { "type": "string", "format": "date-time" }
+        "timeArrived": { "type": "string", "format": "date-time", "description": "The time the technician arrived on site." },
+        "timeBackInService": { "type": "string", "format": "date-time" },
+        "timeLeftSite": { "type": "string", "format": "date-time", "description": "The time the technician left the site." },
+        "hasDelays": { "type": "boolean", "description": "Whether there were any delays during the job." },
+        "delayReason": { "type": "string", "description": "The reason for any delays." },
+        "images": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images of the breakdown." }
       },
       "required": ["id", "equipmentId", "equipmentName", "component", "date", "description", "resolved", "timeReported"]
     },
@@ -232,7 +270,8 @@
             "department": { "type": "string", "description": "RBM Information: Department." },
             "section": { "type": "string", "description": "RBM Information: Section." },
             "purchaseOrderNo": { "type": "string", "description": "RBM Information: Purchase Order No." },
-            "justification": { "type": "string", "description": "RBM Information: Justification." }
+            "justification": { "type": "string", "description": "RBM Information: Justification." },
+            "signatureUrl": { "type": "string", "description": "URL of the user's saved signature image." }
         },
         "required": ["id", "name", "email", "role"]
     },
@@ -252,17 +291,18 @@
             "hrs": { "type": "number" },
             "incidents": { "type": "string" },
             "toolboxTalk": { "type": "string" },
+            "hseDocumentationScans": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for scanned HSE documents like Take 5 or CCC." },
             "manpower": {
-            "type": "array",
-            "items": { "$ref": "#/entities/ManpowerEntry" }
+              "type": "array",
+              "items": { "$ref": "#/entities/ManpowerEntry" }
             },
             "plant": {
-            "type": "array",
-            "items": { "$ref": "#/entities/PlantEntry" }
+              "type": "array",
+              "items": { "$ref": "#/entities/PlantEntry" }
             },
             "works": {
-            "type": "array",
-            "items": { "$ref": "#/entities/WorkEntry" }
+              "type": "array",
+              "items": { "$ref": "#/entities/WorkEntry" }
             },
             "delays": { "type": "array", "items": { "type": "string" } },
             "comments": { "type": "array", "items": { "type": "string" } },
@@ -275,7 +315,10 @@
             "beforeWorkImages": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images taken before work." },
             "afterWorkImages": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images taken after work." },
             "isSignedOff": { "type": "boolean", "description": "True if the diary has been signed off and locked from editing." },
-            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the document was created." }
+            "isFinalised": { "type": "boolean", "description": "True if the diary has been finalised by a manager." },
+            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the document was created." },
+            "locationFilter": { "type": "string" },
+            "savedEquipmentId": { "type": "string" }
         },
         "required": ["id", "userId", "date", "contractTitle", "contractNumber"]
     },
@@ -344,6 +387,38 @@
         }
       },
       "required": ["id", "userId", "userName", "period"]
+    },
+    "GeneratedReport": {
+      "title": "GeneratedReport",
+      "type": "object",
+      "description": "Represents an AI-generated weekly report.",
+      "properties": {
+        "id": { "type": "string" },
+        "reportText": { "type": "string", "description": "The full text of the generated report." },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "generatedByUserId": { "type": "string", "description": "The UID of the user who generated the report." },
+        "generatedByUserName": { "type": "string", "description": "The name of the user who generated the report." }
+      },
+      "required": ["id", "reportText", "startDate", "endDate", "generatedAt", "generatedByUserId"]
+    },
+    "Tool": {
+      "title": "Tool",
+      "type": "object",
+      "description": "A tool or piece of equipment in the inventory.",
+      "properties": {
+        "id": { "type": "string" },
+        "assetNumber": { "type": "string" },
+        "description": { "type": "string" },
+        "make": { "type": "string" },
+        "model": { "type": "string" },
+        "serial": { "type": "string" },
+        "assignedToId": { "type": "string" },
+        "assignedToName": { "type": "string" },
+        "status": { "type": "string", "enum": ["Available", "In Use", "Lost", "Maintenance"] }
+      },
+      "required": ["assetNumber", "description"]
     }
   },
   "auth": {
@@ -381,6 +456,14 @@
           "entityName": "MaintenanceTask",
           "schema": { "$ref": "#/entities/MaintenanceTask" },
           "description": "Stores maintenance tasks."
+        }
+      },
+      {
+        "path": "/upcoming_schedules/{scheduleId}",
+        "definition": {
+          "entityName": "ScheduledTask",
+          "schema": { "$ref": "#/entities/ScheduledTask" },
+          "description": "Stores technician-scheduled tasks for the upcoming week."
         }
       },
       {
@@ -422,6 +505,22 @@
           "schema": { "$ref": "#/entities/Timesheet" },
           "description": "Stores user timesheet data."
         }
+      },
+      {
+        "path": "/generated_reports/{reportId}",
+        "definition": {
+          "entityName": "GeneratedReport",
+          "schema": { "$ref": "#/entities/GeneratedReport" },
+          "description": "Stores saved AI-generated weekly reports."
+        }
+      },
+      {
+        "path": "/tools/{toolId}",
+        "definition": {
+          "entityName": "Tool",
+          "schema": { "$ref": "#/entities/Tool" },
+          "description": "Stores tools and equipment inventory."
+        }
       }
     ]
   }
@@ -430,4 +529,3 @@
 
     
 
-    
