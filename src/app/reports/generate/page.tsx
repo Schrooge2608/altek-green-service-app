@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -349,6 +348,34 @@ export default function GenerateReportPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="bg-white p-8 md:p-12 border shadow-sm print:shadow-none print:border-none min-h-[29.7cm] mx-auto max-w-[21cm]">
+                            {/* --- LETTERHEAD START --- */}
+                            <div className="flex justify-between items-center border-b-2 border-slate-800 pb-6 mb-8">
+                                
+                                {/* Left Side: Logo (Ensure logo.png is in /public folder) */}
+                                <div className="w-1/3">
+                                <img 
+                                    src="/logo.png" 
+                                    alt="Altek Green Logo" 
+                                    className="h-24 w-auto object-contain" 
+                                />
+                                </div>
+                                {/* Right Side: Official Company Details from Doc */}
+                                <div className="text-right text-[10px] text-slate-600 space-y-1 font-sans">
+                                <h2 className="text-2xl font-extrabold text-slate-900 uppercase tracking-tighter">ALTEK GREEN (PTY) LTD</h2>
+                                
+                                <div className="space-y-0">
+                                    <p>163 Van Der Bijl Street, Unit 6 Astro Place</p>
+                                    <p>Meadowdale, Johannesburg, 1614</p>
+                                    <p>PO Box 11400, Aerorand, 1070</p>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-slate-200">
+                                    <p><strong>Reg No:</strong> 2012/099539/07 &nbsp;|&nbsp; <strong>VAT No:</strong> 4660304447</p>
+                                    <p><strong>Tel:</strong> +27 10 500 4654 &nbsp;|&nbsp; <strong>Cell:</strong> +27 63 640 9209</p>
+                                    <p><strong>Email:</strong> simon@altekgreen.com &nbsp;|&nbsp; <strong>Web:</strong> www.altekgreen.com</p>
+                                </div>
+                                </div>
+                            </div>
+                            {/* --- LETTERHEAD END --- */}
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             className="space-y-6 font-sans text-slate-800 leading-relaxed"
