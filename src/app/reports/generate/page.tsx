@@ -18,6 +18,8 @@ import { format, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Textarea } from '@/components/ui/textarea';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface AggregatedData {
     newBreakdowns: Breakdown[];
@@ -335,9 +337,57 @@ export default function GenerateReportPage() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <pre className="p-4 bg-muted rounded-md border font-mono text-sm whitespace-pre-wrap overflow-x-auto">
+                        <div className="bg-white p-8 md:p-12 border shadow-sm print:shadow-none print:border-none min-h-[29.7cm] mx-auto max-w-[21cm]">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            className="space-y-6 font-sans text-slate-800 leading-relaxed"
+                            components={{
+                            // Main Title (H1) - Big, Bold, Uppercase, with a thick bottom border
+                            h1: ({ node, ...props }) => (
+                                <h1 className="text-3xl font-extrabold text-slate-900 mb-8 pb-4 border-b-4 border-slate-800 uppercase tracking-tight" {...props} />
+                            ),
+                            // Section Headings (H2) - Bold with a thin divider line
+                            h2: ({ node, ...props }) => (
+                                <h2 className="text-xl font-bold text-slate-900 mt-8 mb-4 border-b border-slate-300 pb-1 break-after-avoid" {...props} />
+                            ),
+                            // Sub-headings (H3) - Underlined as requested
+                            h3: ({ node, ...props }) => (
+                                <h3 className="text-lg font-bold text-slate-800 mt-6 mb-2 underline decoration-slate-400 underline-offset-4" {...props} />
+                            ),
+                            // Bullet Points - Specific disc style and spacing
+                            ul: ({ node, ...props }) => (
+                                <ul className="list-disc list-outside pl-6 space-y-2 mb-4 text-slate-700" {...props} />
+                            ),
+                            // Numbered Lists
+                            ol: ({ node, ...props }) => (
+                                <ol className="list-decimal list-outside pl-6 space-y-2 mb-4 text-slate-700" {...props} />
+                            ),
+                            // Paragraphs - Justified text for professional look
+                            p: ({ node, ...props }) => (
+                                <p className="mb-4 text-justify text-sm md:text-base" {...props} />
+                            ),
+                            // Tables - Full width with clear borders
+                            table: ({ node, ...props }) => (
+                                <div className="overflow-x-auto my-6">
+                                <table className="min-w-full border-collapse border border-slate-300 text-sm" {...props} />
+                                </div>
+                            ),
+                            thead: ({ node, ...props }) => <thead className="bg-slate-100" {...props} />,
+                            th: ({ node, ...props }) => (
+                                <th className="border border-slate-300 px-4 py-2 text-left font-bold text-slate-900" {...props} />
+                            ),
+                            td: ({ node, ...props }) => (
+                                <td className="border border-slate-300 px-4 py-2 text-slate-700 align-top" {...props} />
+                            ),
+                            // Blockquotes - For notes or key takeaways
+                            blockquote: ({ node, ...props }) => (
+                                <blockquote className="border-l-4 border-slate-400 pl-4 italic text-slate-600 my-4" {...props} />
+                            ),
+                            }}
+                        >
                             {generatedReport}
-                        </pre>
+                        </ReactMarkdown>
+                        </div>
                     </CardContent>
                 </Card>
             )}
