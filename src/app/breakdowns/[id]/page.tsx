@@ -105,11 +105,33 @@ export default function BreakdownDetailPage() {
         if (!firestore || !breakdownId) return;
         setIsSaving(true);
 
-        if (data.timeBackInService && data.timeArrived && new Date(data.timeBackInService) < new Date(data.timeArrived)) {
-            toast({ variant: "destructive", title: "Invalid Date", description: "Time Back In Service cannot be earlier than Time Arrived." });
+        // --- DATE VALIDATION START ---
+        const reportedDate = data.timeReported ? new Date(data.timeReported) : null;
+        const arrivedDate = data.timeArrived ? new Date(data.timeArrived) : null;
+        const backInServiceDate = data.timeBackInService ? new Date(data.timeBackInService) : null;
+        
+        // Rule 1: You cannot arrive before the problem is reported
+        if (arrivedDate && reportedDate && arrivedDate < reportedDate) {
+            toast({
+                variant: 'destructive',
+                title: 'Timeline Error',
+                description: "Technician 'Time Arrived' cannot be earlier than 'Time Reported'.",
+            });
             setIsSaving(false);
-            return;
+            return; // Stop saving
         }
+
+        // Rule 2: You cannot finish the job before you arrive
+        if (backInServiceDate && arrivedDate && backInServiceDate < arrivedDate) {
+            toast({
+                variant: 'destructive',
+                title: 'Timeline Error',
+                description: "Time 'Back In Service' cannot be earlier than 'Time Arrived'.",
+            });
+            setIsSaving(false);
+            return; // Stop saving
+        }
+        // --- DATE VALIDATION END ---
         
         const updateData = {
             ...data,
