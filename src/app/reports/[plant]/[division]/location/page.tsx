@@ -1,75 +1,111 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { Equipment } from '@/lib/types';
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import type { Equipment } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
-// Config for Uptime chart
-const uptimeChartConfig = {
+const plantDivisionMap = {
+    mining: {
+        'boosters': 'Boosters',
+        'dredgers': 'Dredgers',
+        'pump-stations': 'Pump Stations',
+        'ups-btus': "UPS/BTU's",
+    },
+    smelter: {
+        'msp': 'MSP',
+        'roaster': 'Roaster',
+        'char-plant': 'Char Plant',
+        'smelter': 'Smelter',
+        'iron-injection': 'Iron injection',
+        'stripping-crane': 'Stripping Crane',
+        'slag-plant': 'Slag plant',
+        'north-screen': 'North Screen',
+        'ups-btus': "UPS/BTU's",
+    }
+} as const;
+
+
+const chartConfig = {
     uptime: {
-        label: 'Avg. Uptime (%)',
+        label: 'Uptime (%)',
         color: 'hsl(var(--accent))',
     },
-};
-
-// Config for Power Consumption chart
-const powerChartConfig = {
     power: {
-        label: 'Total Power (MWh)',
+        label: 'Power (MWh)',
         color: 'hsl(var(--primary))',
     },
 };
 
 const getUptimeColor = (uptime: number) => {
-    if (uptime < 60) {
-        return '#C00000';
-    }
-    if (uptime < 80) {
-      return '#EE0000'; // Red for critical
-    }
-    if (uptime < 90) {
-      return '#FFC000'; // Orange for warning
-    }
-    if (uptime < 95) {
-      return '#FFFF00'; // Yellow for caution
-    }
-    if (uptime < 100) {
-      return '#92D050'; // Light Green for good
-    }
-    return 'hsl(var(--accent))'; // Dark Green for excellent
+    if (uptime < 60) return '#C00000';
+    if (uptime < 80) return '#EE0000';
+    if (uptime < 90) return '#FFC000';
+    if (uptime < 95) return '#FFFF00';
+    if (uptime < 100) return '#92D050';
+    return 'hsl(var(--accent))';
 };
 
-export default function ReportsPage() {
-    const firestore = useFirestore();
+export default function EquipmentReportPage() {
+    const params = useParams();
     const router = useRouter();
-    const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
-    const { data: equipment, isLoading } = useCollection<Equipment>(equipmentQuery);
+    const firestore = useFirestore();
+    
+    const plantSlug = Array.isArray(params.plant) ? params.plant[0] : params.plant;
+    const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
+    const locationSlug = Array.isArray(params.location) ? params.location[0] : params.location;
 
-    const divisionSummary = useMemo(() => {
-        if (!equipment) return [];
-        
-        const divisions: { [key: string]: { totalUptime: number; totalPower: number; count: number } } = {};
+    const plantName = useMemo(() => {
+        if (plantSlug !== 'mining' && plantSlug !== 'smelter') return '';
+        return plantSlug.charAt(0).toUpperCase() + plantSlug.slice(1);
+    }, [plantSlug]);
+
+    const divisionName = useMemo(() => {
+        if (plantSlug !== 'mining' && plantSlug !== 'smelter') return '';
+        const divisions = plantDivisionMap[plantSlug as keyof typeof plantDivisionMap];
+        type DivisionSlug = keyof typeof divisions;
+        if (divisionSlug in divisions) {
+            return divisions[divisionSlug as DivisionSlug];
+        }
+        return '';
+    }, [plantSlug, divisionSlug]);
+
+    const locationName = useMemo(() => decodeURIComponent(locationSlug), [locationSlug]);
+
+    const pageTitle = useMemo(() => {
+        if (!plantName || !divisionName || !locationName) return 'Equipment Report';
+        // For display purposes, uppercase short location names as they are likely acronyms.
+        const displayLocation = locationName.length <= 4 ? locationName.toUpperCase() : locationName;
+        return `Report for: ${displayLocation}`;
+    }, [plantName, divisionName, locationName]);
+
+    const equipmentQuery = useMemoFirebase(() => {
+        if (!plantName || !divisionName || !locationName) return null;
+        return query(
+            collection(firestore, 'equipment'),
+            where('plant', '==', plantName),
+            where('division', '==', divisionName),
+            where('location', '==', locationName)
+        );
+    }, [firestore, plantName, divisionName, locationName]);
+
+    const { data: equipmentList, isLoading } = useCollection<Equipment>(equipmentQuery);
+
+    const chartData = useMemo(() => {
+        if (!equipmentList) return [];
         const now = new Date();
         const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         const totalHoursInMonth = daysInMonth * 24;
 
-        equipment.forEach(eq => {
-            if (!eq.division) return;
-            
-            const key = `${eq.plant} - ${eq.division}`;
-            if (!divisions[key]) {
-                divisions[key] = { totalUptime: 0, totalPower: 0, count: 0 };
-            }
-            
+        return equipmentList.map(eq => {
             const downtimeHours = eq.totalDowntimeHours || 0;
             const uptimeHours = totalHoursInMonth - downtimeHours;
             const uptimePercent = (uptimeHours / totalHoursInMonth) * 100;
@@ -78,29 +114,22 @@ export default function ReportsPage() {
             const runningHours = totalHoursInMonth - downtimeHours;
             const currentPowerConsumption = (eq.motorPower || 0) * runningHours;
 
-            divisions[key].totalUptime += currentUptime;
-            divisions[key].totalPower += currentPowerConsumption;
-            divisions[key].count += 1;
-        });
-
-        return Object.keys(divisions).map(key => ({
-            name: key,
-            uptime: divisions[key].count > 0 ? parseFloat((divisions[key].totalUptime / divisions[key].count).toFixed(2)) : 0,
-            power: parseFloat((divisions[key].totalPower / 1000).toFixed(2)), // Convert to MWh
-        })).sort((a, b) => a.name.localeCompare(b.name));
-
-    }, [equipment]);
-
+            return {
+                id: eq.id,
+                name: eq.name,
+                uptime: parseFloat(currentUptime.toFixed(2)),
+                power: parseFloat((currentPowerConsumption / 1000).toFixed(2)), // Convert to MWh
+            };
+        }).sort((a,b) => a.name.localeCompare(b.name));
+    }, [equipmentList]);
+    
     const handleBarClick = (data: any) => {
         if (data && data.activePayload && data.activePayload.length > 0) {
             const payload = data.activePayload[0].payload;
-            const [plant, ...divisionParts] = payload.name.split(' - ');
-            const division = divisionParts.join(' - ');
-            
-            const plantSlug = plant.toLowerCase();
-            const divisionSlug = division.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
-            
-            router.push(`/reports/${plantSlug}/${divisionSlug}`);
+            const equipmentId = payload.id;
+            if (equipmentId) {
+                router.push(`/equipment/${equipmentId}`);
+            }
         }
     };
 
@@ -108,30 +137,30 @@ export default function ReportsPage() {
         <div className="flex flex-col gap-8">
             <header className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{pageTitle}</h1>
                     <p className="text-muted-foreground">
-                        High-level performance and maintenance reports by division.
+                        Performance breakdown for each piece of equipment.
                     </p>
                 </div>
-                <Button variant="outline" onClick={() => router.push('/')}>
+                <Button variant="outline" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Dashboard
+                    Back
                 </Button>
             </header>
 
             <div className="grid gap-8">
-                <Card>
+                 <Card>
                     <CardHeader>
-                        <CardTitle>Average Uptime by Division</CardTitle>
-                        <CardDescription>Click a bar to see a detailed breakdown. Comparing the average equipment uptime percentage for each division.</CardDescription>
+                        <CardTitle>Equipment Uptime</CardTitle>
+                        <CardDescription>Click a bar to view equipment details. Uptime percentage for each piece of equipment in {locationName.length <= 4 ? locationName.toUpperCase() : locationName}.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
-                            <ChartContainer config={uptimeChartConfig} className="min-h-[200px] w-full">
+                            <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                                 <ResponsiveContainer width="100%" height={350}>
-                                    <BarChart 
-                                        accessibilityLayer 
-                                        data={divisionSummary} 
+                                    <BarChart
+                                        accessibilityLayer
+                                        data={chartData}
                                         margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
                                         onClick={handleBarClick}
                                         className="[&_.recharts-bar-rectangle]:cursor-pointer"
@@ -159,7 +188,7 @@ export default function ReportsPage() {
                                         />
                                         <ChartTooltip cursor={{fill: 'hsl(var(--muted))'}} content={<ChartTooltipContent />} />
                                         <Bar dataKey="uptime" radius={4}>
-                                            {divisionSummary.map((entry, index) => (
+                                            {chartData.map((entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={getUptimeColor(entry.uptime)} />
                                             ))}
                                         </Bar>
@@ -172,16 +201,16 @@ export default function ReportsPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Total Power Consumption by Division</CardTitle>
-                        <CardDescription>Click a bar to see a detailed breakdown. Comparing the total energy usage (in Megawatt-hours) for each division.</CardDescription>
+                        <CardTitle>Equipment Power Consumption</CardTitle>
+                         <CardDescription>Click a bar to view equipment details. Total power consumption (MWh) for each piece of equipment in {locationName.length <= 4 ? locationName.toUpperCase() : locationName}.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
-                            <ChartContainer config={powerChartConfig} className="min-h-[200px] w-full">
+                           <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                                 <ResponsiveContainer width="100%" height={350}>
-                                    <BarChart 
-                                        accessibilityLayer 
-                                        data={divisionSummary} 
+                                    <BarChart
+                                        accessibilityLayer
+                                        data={chartData}
                                         margin={{ top: 20, right: 20, bottom: 100, left: 20 }}
                                         onClick={handleBarClick}
                                         className="[&_.recharts-bar-rectangle]:cursor-pointer"
@@ -197,12 +226,12 @@ export default function ReportsPage() {
                                             fontSize={12}
                                             stroke="hsl(var(--muted-foreground))"
                                         />
-                                        <YAxis 
-                                            tickLine={false} 
-                                            axisLine={false} 
-                                            tickMargin={8} 
-                                            fontSize={12} 
-                                            stroke="hsl(var(--muted-foreground))" 
+                                        <YAxis
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={8}
+                                            fontSize={12}
+                                            stroke="hsl(var(--muted-foreground))"
                                             tickFormatter={(value) => `${value.toLocaleString()}`}
                                             label={{ value: 'MWh', position: 'insideLeft', angle: -90, dy: 0, dx: -10, fill: 'hsl(var(--muted-foreground))' }}
                                         />

@@ -104,6 +104,12 @@ export default function BreakdownDetailPage() {
     const handleSave = async (data: BreakdownForm) => {
         if (!firestore || !breakdownId) return;
         setIsSaving(true);
+
+        if (data.timeBackInService && data.timeArrived && new Date(data.timeBackInService) < new Date(data.timeArrived)) {
+            toast({ variant: "destructive", title: "Invalid Date", description: "Time Back In Service cannot be earlier than Time Arrived." });
+            setIsSaving(false);
+            return;
+        }
         
         const updateData = {
             ...data,

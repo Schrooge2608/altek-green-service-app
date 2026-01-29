@@ -66,7 +66,8 @@ export function DivisionPerformanceDashboard({ plantName }: DivisionPerformanceD
 
             const downtimeHours = eq.totalDowntimeHours || 0;
             const uptimeHours = totalHoursInMonth - downtimeHours;
-            const currentUptime = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
+            const uptimePercent = (uptimeHours / totalHoursInMonth) * 100;
+            const currentUptime = Math.min(100, Math.max(0, uptimePercent));
 
             const runningHours = totalHoursInMonth - downtimeHours;
             const currentPowerConsumption = (eq.motorPower || 0) * runningHours;
@@ -109,7 +110,8 @@ export function DivisionPerformanceDashboard({ plantName }: DivisionPerformanceD
         const total = equipment.reduce((acc, eq) => {
             const downtimeHours = eq.totalDowntimeHours || 0;
             const uptimeHours = totalHoursInMonth - downtimeHours;
-            const currentUptime = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
+            const uptimePercent = (uptimeHours / totalHoursInMonth) * 100;
+            const currentUptime = Math.min(100, Math.max(0, uptimePercent));
             return acc + currentUptime;
         }, 0);
         return total / equipment.length;

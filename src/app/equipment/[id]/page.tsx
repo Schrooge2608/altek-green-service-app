@@ -121,8 +121,8 @@ export default function EquipmentDetailPage() {
     const downtimeHours = eq.totalDowntimeHours || 0;
     const uptimeHours = totalHoursInMonth - downtimeHours;
     
-    const percentage = Math.max(0, (uptimeHours / totalHoursInMonth) * 100);
-    return percentage;
+    const percentage = (uptimeHours / totalHoursInMonth) * 100;
+    return Math.min(100, Math.max(0, percentage));
   }, [eq]);
 
   const backLink = useMemo(() => {
