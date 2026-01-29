@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -196,9 +197,21 @@ export default function GenerateReportPage() {
         try {
             const result = await generateReport(reportInput);
             
-            let rawText = result.report;
+            // --- SMART TEXT CLEANUP ---
+            let rawText = typeof result === 'string' ? result : (result as any).report || '';
+
+            // 1. Fix literal "\n" strings (turn them into real line breaks)
             rawText = rawText.replace(/\\n/g, '\n');
+            
+            // 2. Remove wrapping quotes if present
             rawText = rawText.replace(/^"|"$/g, '');
+
+            // 3. FIX TABLES: Force a blank line before any Markdown table header
+            // Looks for a colon followed immediately by a pipe '|', and adds spacing
+            rawText = rawText.replace(/:\s*\|/g, ':\n\n|');
+            
+            // 4. Ensure table separator starts on its own line
+            rawText = rawText.replace(/([^\n])(\|---)/g, '$1\n$2');
 
             setGeneratedReport(rawText);
 
@@ -375,7 +388,6 @@ export default function GenerateReportPage() {
                             remarkPlugins={[remarkGfm]}
                             className="space-y-6 font-sans text-slate-800 leading-relaxed"
                             components={{
-                            // Main Title (H1) - Big, Bold, Uppercase, with a thick bottom border
                             h1: ({ node, ...props }) => {
                                 return null;
                             },
