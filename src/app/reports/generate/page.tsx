@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -195,7 +196,18 @@ export default function GenerateReportPage() {
         
         try {
             const result = await generateReport(reportInput);
-            setGeneratedReport(result.report);
+            
+            // --- FIX: CLEAN THE TEXT ---
+            let finalText = result.report;
+
+            // 1. Convert literal "\n" strings to actual line breaks
+            finalText = finalText.replace(/\\n/g, '\n');
+
+            // 2. Remove any accidental wrapping quotes
+            finalText = finalText.replace(/^"|"$/g, '');
+
+            setGeneratedReport(finalText);
+
             toast({ title: 'Report Generated', description: 'The weekly summary report has been created below.' });
         } catch (e: any) {
             console.error(e);
