@@ -147,23 +147,32 @@ export default function BreakdownDetailPage() {
             if (data.equipmentId) {
                 const equipmentRef = doc(firestore, 'equipment', data.equipmentId);
                 const equipmentSnap = await getDoc(equipmentRef);
-                if (equipmentSnap.exists()) { 
+                if (equipmentSnap.exists()) {
                     const currentEq = equipmentSnap.data();
-    
-                    // 1. Calculate Downtime for THIS breakdown (in hours) 
-                    let additionalDowntime = 0; 
-                    if (data.timeArrived && data.timeBackInService) { 
-                        const start = new Date(data.timeArrived).getTime(); 
-                        const end = new Date(data.timeBackInService).getTime(); 
-                        const diffHours = (end - start) / (1000 * 60 * 60); 
-                        if (diffHours > 0) additionalDowntime = diffHours; 
+
+                    // 1. Calculate Downtime (in hours)
+                    let additionalDowntime = 0;
+                    if (data.timeArrived && data.timeBackInService) {
+                        const start = new Date(data.timeArrived).getTime();
+                        const end = new Date(data.timeBackInService).getTime();
+                        const diffHours = (end - start) / (1000 * 60 * 60);
+                        if (diffHours > 0) additionalDowntime = diffHours;
                     }
-    
-                    // 2. Update Equipment Status & Total Downtime 
-                    await updateDoc(equipmentRef, { 
+                    
+                    // 2. CALCULATE NEXT DATE (The Fix)
+                    const frequencyMonths = 3; // Default to 3 months
+                    const completionDate = new Date(data.date);
+                    const nextDueDate = new Date(completionDate);
+                    nextDueDate.setMonth(completionDate.getMonth() + frequencyMonths);
+                    const nextMaintenanceString = format(nextDueDate, "yyyy-MM-dd");
+
+                    // 3. Update Equipment
+                    await updateDoc(equipmentRef, {
                         breakdownStatus: data.resolved ? 'None' : 'Active',
+                        status: data.resolved ? 'active' : 'maintenance',
                         totalDowntimeHours: (currentEq.totalDowntimeHours || 0) + additionalDowntime,
-                        lastMaintenance: data.resolved ? data.date : currentEq.lastMaintenance
+                        lastMaintenance: data.resolved ? data.date : currentEq.lastMaintenance,
+                        nextMaintenance: data.resolved ? nextMaintenanceString : currentEq.nextMaintenance
                     });
                 }
             }
