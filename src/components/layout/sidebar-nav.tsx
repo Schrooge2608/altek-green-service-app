@@ -605,6 +605,11 @@ export function SidebarNav() {
                                     </SidebarMenuSubButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname === '/admin/recalc-uptime'}>
+                                        <Link href="/admin/recalc-uptime">Recalculate Uptime</Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
                                     <SidebarMenuSubButton asChild isActive={pathname === '/seed-admin'}>
                                         <Link href="/seed-admin">Seed Admin</Link>
                                     </SidebarMenuSubButton>
