@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -25,7 +23,7 @@ import { Textarea } from './ui/textarea';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { ImageUploader } from './image-uploader';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { PinSigner } from '../auth/PinSigner';
+import { PinSigner } from '@/components/auth/PinSigner';
 
 
 interface MaintenanceScopeDocumentProps {
@@ -776,7 +774,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     <CardContent className="p-4 space-y-4">
                         <PinSigner
                             label="Technician"
-                            users={technicians}
+                            users={technicians || []}
                             onSigned={(url, name) => { setTechSignature(url); setTechName(name); setTechDate(format(new Date(), 'yyyy-MM-dd')); }}
                             initialSignatureUrl={techSignature}
                             initialSignerName={techName}
@@ -789,7 +787,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     <CardContent className="p-4 space-y-4">
                         <PinSigner
                             label="Client/Manager"
-                            users={managers}
+                            users={managers || []}
                             onSigned={(url, name) => { setClientSignature(url); setClientName(name); setClientDate(format(new Date(), 'yyyy-MM-dd')); }}
                             initialSignatureUrl={clientSignature}
                             initialSignerName={clientName}
