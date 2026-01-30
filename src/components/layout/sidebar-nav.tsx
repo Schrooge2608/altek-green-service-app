@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -140,7 +139,7 @@ export function SidebarNav() {
   const [isMiningOpen, setIsMiningOpen] = React.useState(pathname.startsWith('/equipment/mining'));
   const [isSmelterOpen, setIsSmelterOpen] = React.useState(pathname.startsWith('/equipment/smelter'));
   const [isAdminOpen, setIsAdminOpen] = React.useState(pathname.startsWith('/admin') || pathname.startsWith('/time-attendance'));
-  const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed'));
+  const [isCompletedOpen, setIsCompletedOpen] = React.useState(pathname.startsWith('/maintenance/completed') || pathname.startsWith('/completed-work'));
   const [isTeamOpen, setIsTeamOpen] = React.useState(pathname.startsWith('/team'));
   const [isInventoryOpen, setIsInventoryOpen] = React.useState(pathname.startsWith('/inventory'));
   const [isLibraryOpen, setIsLibraryOpen] = React.useState(pathname.startsWith('/library') || pathname === '/scan');
@@ -382,7 +381,7 @@ export function SidebarNav() {
             <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Completed Work" isActive={pathname.startsWith('/maintenance/completed')}>
+                        <SidebarMenuButton tooltip="Completed Work" isActive={pathname.startsWith('/maintenance/completed') || pathname.startsWith('/completed-work')}>
                             <FileText />
                             <span>Completed Work</span>
                             <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
@@ -398,6 +397,11 @@ export function SidebarNav() {
                                 </SidebarMenuSubButton>
                             </SidebarMenuItem>
                         ))}
+                        <SidebarMenuItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/completed-work/unscheduled'}>
+                                <Link href="/completed-work/unscheduled">All Completed Unscheduled Work</Link>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
                     </SidebarMenuSub>
                 </CollapsibleContent>
             </Collapsible>

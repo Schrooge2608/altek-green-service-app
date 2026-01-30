@@ -7,9 +7,9 @@ import { AltekLogo } from '@/components/altek-logo';
 import { useDoc, useFirestore, useMemoFirebase, useUser, useCollection } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { DailyDiary, User } from '@/lib/types';
-import { Loader2, Printer, ArrowLeft } from 'lucide-react';
+import { Loader2, Printer, ArrowLeft, Archive } from 'lucide-react';
 import Image from 'next/image';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -61,6 +61,7 @@ export default function ViewDiaryPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const { user, isUserLoading } = useUser();
+    const [isSaving, setIsSaving] = useState(false);
 
     const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
@@ -107,6 +108,29 @@ export default function ViewDiaryPage() {
             toast({ variant: 'destructive', title: 'Signature Failed', description: error.message });
         }
     };
+    
+    const handleFinalize = async () => {
+        if (!id) return;
+        if (!confirm('Are you sure you want to finalize and archive this diary? This action cannot be undone.')) return;
+        
+        setIsSaving(true);
+        try {
+            const diaryRef = doc(firestore, 'daily_diaries', id);
+            await updateDoc(diaryRef, {
+                isFinalised: true,
+            });
+            toast({
+                title: 'Diary Finalized',
+                description: 'The diary has been archived and locked from further edits.',
+            });
+            router.push('/completed-work/unscheduled');
+        } catch (error: any) {
+            console.error("Failed to finalize diary:", error);
+            toast({ variant: 'destructive', title: 'Finalization Failed', description: error.message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -132,6 +156,16 @@ export default function ViewDiaryPage() {
                 <Button onClick={() => window.print()}>
                     <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
                 </Button>
+                 {isManager && !diary.isFinalised && (
+                    <Button
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                        onClick={handleFinalize}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2 h-4 w-4" />}
+                        Finalize & Archive
+                    </Button>
+                )}
             </div>
             <Card className="p-8 shadow-lg">
                 <header className="flex items-start justify-between mb-4 border-b pb-4">
@@ -149,7 +183,7 @@ export default function ViewDiaryPage() {
                      <CardContent className="grid md:grid-cols-3 gap-6 text-sm">
                         <DetailRow label="Contract Title" value={diary.contractTitle} />
                         <DetailRow label="Contract Number" value={diary.contractNumber} />
-                        <DetailRow label="Date" value={diary.date} />
+                        <DetailRow label="Date" value={diary.date as string} />
                         <DetailRow label="Area" value={diary.area} />
                         <DetailRow label="Shift Start" value={diary.shiftStart} />
                         <DetailRow label="Shift End" value={diary.shiftEnd} />
@@ -278,7 +312,7 @@ export default function ViewDiaryPage() {
                              <ul className="list-disc pl-5">
                                 {diary.comments?.length && diary.comments.some(c => c) ? diary.comments.map((item, index) => (
                                     item && <li key={index}>{item}</li>
-                                )) : <li>No comments.</li>}
+                                )) : <li className="list-none">No comments.</li>}
                             </ul>
                         </CardContent>
                     </Card>
