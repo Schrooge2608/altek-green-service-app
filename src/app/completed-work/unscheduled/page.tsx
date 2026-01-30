@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -86,7 +87,7 @@ export default function CompletedUnscheduledWorkPage() {
                     ) : diariesWithCreator && diariesWithCreator.length > 0 ? (
                         diariesWithCreator.map(diary => (
                             <TableRow key={diary.id}>
-                                <TableCell>{typeof diary.date === 'string' ? diary.date : format(new Date(diary.date), 'yyyy-MM-dd')}</TableCell>
+                                <TableCell>{typeof diary.date === 'string' ? diary.date : format(new Date(diary.date as Date), 'yyyy-MM-dd')}</TableCell>
                                 <TableCell>{diary.creatorName}</TableCell>
                                 <TableCell>{diary.equipmentName}</TableCell>
                                 <TableCell>{diary.issue}</TableCell>

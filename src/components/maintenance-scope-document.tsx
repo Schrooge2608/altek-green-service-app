@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -296,7 +297,6 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             if (newWorkOrderUrls.length > 0) setWorkOrderFiles([]);
 
             router.refresh();
-
         } catch (error: any) {
             console.error("Error saving progress:", error);
             toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'An unexpected error occurred.' });
@@ -531,15 +531,6 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
                         <Input id="inspected-by" value={currentUserData?.name || 'Loading...'} disabled />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="comments">Comments / Instructions</Label>
-                        <Textarea
-                            id="comments"
-                            placeholder="Add any specific instructions for the technician..."
-                            value={comments}
-                            onChange={(e) => setComments(e.target.value)}
-                        />
                     </div>
                 </CardContent>
             </Card>

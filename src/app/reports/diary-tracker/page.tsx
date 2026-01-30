@@ -77,7 +77,7 @@ export default function DiaryTrackerPage() {
           creatorName: userNameMap.get(diary.userId) || 'Unknown User',
           equipmentName,
         };
-      }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      }).sort((a, b) => new Date(b.date as string).getTime() - new Date(a.date as string).getTime());
   }, [diaries, users]);
 
   const handleDeleteDiary = (diaryToDelete: DailyDiary) => {
@@ -154,7 +154,7 @@ export default function DiaryTrackerPage() {
                                 <TableCell>{diary.creatorName}</TableCell>
                                 <TableCell>{diary.contractTitle}</TableCell>
                                 <TableCell>{diary.equipmentName}</TableCell>
-                                <TableCell>{diary.date}</TableCell>
+                                <TableCell>{diary.date as string}</TableCell>
                                 <TableCell>{diary.area}</TableCell>
                                 <TableCell>
                                     <Badge className={getStatusStyles(statusText)}>{statusText}</Badge>

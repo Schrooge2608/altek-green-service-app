@@ -71,7 +71,7 @@ export default function NewDailyDiaryPage() {
     const managerUsers = useMemo(() => {
         if (!users) return [];
         const managerRoles = ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'];
-        return users.filter(u => managerRoles.some(role => u.role.includes(role)));
+        return users.filter(u => u.role && managerRoles.some(role => u.role.includes(role)));
     }, [users]);
 
 
@@ -82,7 +82,7 @@ export default function NewDailyDiaryPage() {
     }, [userData]);
 
     const isAdmin = useMemo(() => userData?.role && ['Admin', 'Superadmin'].includes(userData.role), [userData]);
-    const isCreator = useMemo(() => diaryData?.userId === user?.uid, [diaryData, user]);
+    const isCreator = useMemo(() => !diaryId || (diaryData?.userId === user?.uid), [diaryId, diaryData, user]);
 
     const isSignedOff = diaryData?.isSignedOff || false;
     const canEdit = !isSignedOff && (isCreator || isAdmin);
@@ -155,7 +155,7 @@ export default function NewDailyDiaryPage() {
                 manpower: (diaryData.manpower && diaryData.manpower.length > 0) ? diaryData.manpower : defaultValues.manpower,
                 plant: (diaryData.plant && diaryData.plant.length > 0) ? diaryData.plant : defaultValues.plant,
                 works: (diaryData.works && diaryData.works.length > 0) ? diaryData.works : defaultValues.works,
-                date: diaryData.date ? new Date(diaryData.date) : new Date(),
+                date: diaryData.date ? new Date(diaryData.date as string) : new Date(),
                 locationFilter: diaryData.locationFilter || (diaryData.works && diaryData.works[0]?.area) || '',
                 savedEquipmentId: diaryData.savedEquipmentId || '',
             });
@@ -409,8 +409,8 @@ export default function NewDailyDiaryPage() {
                         <Card className="mb-4">
                             <CardHeader className="bg-muted p-2 rounded-t-lg"><CardTitle className="text-sm">SELECT EQUIPMENT (OPTIONAL)</CardTitle></CardHeader>
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-                                <FormField control={form.control} name="locationFilter" render={({ field }) => (<FormItem className="space-y-1"><Label>Location</Label><Select key={`loc-${equipmentList?.length || 0}`} onValueChange={field.onChange} value={field.value || ''} disabled={equipmentLoading || !canEdit}><SelectTrigger><SelectValue placeholder="Select Location..." /></SelectTrigger><SelectContent>{equipmentLoading ? <SelectItem value="loading" disabled>Loading locations...</SelectItem> : locationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent></Select></FormItem>)} />
-                                <FormField control={form.control} name="savedEquipmentId" render={({ field }) => (<FormItem className="space-y-1"><Label>Equipment Name</Label><Select key={`eq-${equipmentList?.length || 0}-${watchedLocation}`} onValueChange={(val) => { field.onChange(val); onEquipmentSelectChange(val); }} value={field.value || ''} disabled={!watchedLocation || equipmentLoading || !canEdit}><SelectTrigger><SelectValue placeholder="Select Equipment..." /></SelectTrigger><SelectContent>{equipmentLoading || !watchedLocation ? <SelectItem value="loading" disabled>Select a location first...</SelectItem> : equipmentOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent></Select></FormItem>)} />
+                                <FormField control={form.control} name="locationFilter" render={({ field }) => (<FormItem className="space-y-1"><Label>Location</Label><Select key={`loc-${equipmentList?.length || 0}`} onValueChange={field.onChange} value={field.value || ''} disabled={equipmentLoading}><SelectTrigger><SelectValue placeholder="Select Location..." /></SelectTrigger><SelectContent>{equipmentLoading ? <SelectItem value="loading" disabled>Loading locations...</SelectItem> : locationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent></Select></FormItem>)} />
+                                <FormField control={form.control} name="savedEquipmentId" render={({ field }) => (<FormItem className="space-y-1"><Label>Equipment Name</Label><Select key={`eq-${equipmentList?.length || 0}-${watchedLocation}`} onValueChange={(val) => { field.onChange(val); onEquipmentSelectChange(val); }} value={field.value || ''} disabled={!watchedLocation || equipmentLoading}><SelectTrigger><SelectValue placeholder="Select Equipment..." /></SelectTrigger><SelectContent>{equipmentLoading || !watchedLocation ? <SelectItem value="loading" disabled>Select a location first...</SelectItem> : equipmentOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent></Select></FormItem>)} />
                             </CardContent>
                         </Card>
 
@@ -469,5 +469,3 @@ export default function NewDailyDiaryPage() {
         </div>
     );
 }
-
-    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useSearchParams, notFound, useRouter } from 'next/navigation';
@@ -44,7 +45,7 @@ function ImageGallery({ title, images }: { title: string; images?: string[] }) {
                 {images.map((url, index) => (
                     <a key={index} href={url} target="_blank" rel="noopener noreferrer">
                         <div className="relative group aspect-square border rounded-md overflow-hidden">
-                            <Image src={url} alt={`${title} image ${index + 1}`} layout="fill" className="object-cover transition-transform group-hover:scale-105" />
+                            <Image src={url} alt={`${title} image ${index + 1}`} fill className="object-cover transition-transform group-hover:scale-105" />
                         </div>
                     </a>
                 ))}
