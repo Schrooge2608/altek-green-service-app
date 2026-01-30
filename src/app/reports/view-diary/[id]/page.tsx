@@ -5,12 +5,12 @@ import { useParams, notFound, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AltekLogo } from '@/components/altek-logo';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { DailyDiary } from '@/lib/types';
+import { useDoc, useFirestore, useMemoFirebase, useUser, useCollection } from '@/firebase';
+import { collection, doc, updateDoc } from 'firebase/firestore';
+import type { DailyDiary, User } from '@/lib/types';
 import { Loader2, Printer, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -20,6 +20,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
+import { PinSigner } from '@/components/auth/PinSigner';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
     return (
@@ -57,9 +60,54 @@ export default function ViewDiaryPage() {
     const router = useRouter();
     const id = typeof params.id === 'string' ? params.id : '';
     const firestore = useFirestore();
+    const { toast } = useToast();
+    const { user, isUserLoading } = useUser();
+
+    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
+
+    const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+    const { data: currentUserData, isLoading: currentUserLoading } = useDoc<User>(userRoleRef);
 
     const diaryRef = useMemoFirebase(() => id ? doc(firestore, 'daily_diaries', id) : null, [firestore, id]);
-    const { data: diary, isLoading } = useDoc<DailyDiary>(diaryRef);
+    const { data: diary, isLoading: diaryLoading } = useDoc<DailyDiary>(diaryRef);
+
+    const managerUsers = useMemo(() => {
+        if (!users) return [];
+        const managerRoles = ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'];
+        return users.filter(u => u.role && managerRoles.includes(u.role));
+    }, [users]);
+
+    const isManager = useMemo(() => {
+        if (!currentUserData?.role) return false;
+        const managerRoles = ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'];
+        return managerRoles.includes(currentUserData.role);
+    }, [currentUserData]);
+
+    const isLoading = diaryLoading || isUserLoading || usersLoading || currentUserLoading;
+
+    const handleClientSign = async (signatureUrl: string | null, signerName: string | null) => {
+        if (!id || !diary) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Diary data is not loaded.' });
+            return;
+        }
+
+        try {
+            const diaryRef = doc(firestore, 'daily_diaries', id);
+            await updateDoc(diaryRef, {
+                clientSignature: signatureUrl,
+                clientName: signerName,
+                clientDate: format(new Date(), 'yyyy-MM-dd'),
+                isFinalised: true,
+                isSignedOff: true,
+            });
+            toast({ title: 'Diary Approved', description: 'The daily diary has been successfully signed.' });
+            router.refresh();
+        } catch (error: any) {
+            console.error('Failed to save signature:', error);
+            toast({ variant: 'destructive', title: 'Signature Failed', description: error.message });
+        }
+    };
 
     if (isLoading) {
         return (
@@ -266,16 +314,31 @@ export default function ViewDiaryPage() {
                         </CardContent>
                     </Card>
                      <Card>
-                         <CardHeader className="p-4">
-                            <CardTitle className="text-base text-center">CLIENT</CardTitle>
+                        <CardHeader className="p-4">
+                            <CardTitle className="text-base text-center">CLIENT / MANAGER</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
-                            <DetailRow label="Name" value={diary.clientName} />
-                             <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground">Signature:</p>
-                                {diary.clientSignature ? <Image src={diary.clientSignature} alt="Client Signature" width={200} height={100} className="border rounded-md" /> : <p>Not signed.</p>}
-                            </div>
-                            <DetailRow label="Date" value={diary.clientDate} />
+                            {diary.clientSignature ? (
+                                <>
+                                    <DetailRow label="Name" value={diary.clientName} />
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Signature:</p>
+                                        <Image src={diary.clientSignature} alt="Client Signature" width={200} height={100} className="border rounded-md" />
+                                    </div>
+                                    <DetailRow label="Date" value={diary.clientDate} />
+                                </>
+                            ) : isManager ? (
+                                <PinSigner
+                                    label="Client/Manager"
+                                    users={managerUsers}
+                                    onSigned={handleClientSign}
+                                    disabled={diary.isFinalised}
+                                />
+                            ) : (
+                                <div className="text-center text-muted-foreground p-4">
+                                    <p>Awaiting manager sign-off.</p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
