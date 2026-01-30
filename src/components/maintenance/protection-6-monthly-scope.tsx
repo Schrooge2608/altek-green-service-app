@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -521,15 +520,6 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                         <Label htmlFor="inspected-by">Inspected By</Label>
                         <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="comments">Comments / Instructions</Label>
-                        <Textarea
-                            id="comments"
-                            placeholder="Add any specific instructions for the technician..."
-                            value={comments}
-                            onChange={(e) => setComments(e.target.value)}
-                        />
-                    </div>
                 </CardContent>
             </Card>
 
@@ -818,12 +808,12 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             </Card>
             
             <div className="my-8">
-                 <h3 className="text-xl font-bold mb-4">Completion Notes</h3>
+                 <h3 className="text-xl font-bold mb-4">Comments / Instructions</h3>
                  <Textarea
-                    placeholder="Enter any notes about the work performed, issues found, or follow-up actions required..."
-                    value={completionNotes}
-                    onChange={(e) => setCompletionNotes(e.target.value)}
-                    rows={6}
+                    placeholder="Add any specific instructions for the technician..."
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                    rows={4}
                  />
             </div>
 

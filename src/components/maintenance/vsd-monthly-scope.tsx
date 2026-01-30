@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -454,16 +453,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
             </div>
             <div className="space-y-2">
                 <Label htmlFor="inspected-by">Inspected By</Label>
-                 <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="comments">Comments / Instructions</Label>
-                <Textarea
-                    id="comments"
-                    placeholder="Add any specific instructions for the technician..."
-                    value={comments}
-                    onChange={(e) => setComments(e.target.value)}
-                />
+                <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
             </div>
           </CardContent>
         </Card>
@@ -752,6 +742,18 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
                 </TableBody>
             </Table>
         </Card>
+        
+        <div className="my-8">
+            <h3 className="text-xl font-bold mb-4">Comments / Instructions</h3>
+            <Textarea
+                placeholder="Add any specific instructions for the technician..."
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                rows={4}
+                disabled={!isEditMode && !!schedule}
+            />
+        </div>
+
         <footer className="mt-16 text-xs text-muted-foreground text-center">
           <p>Altek Green - Confidential</p>
         </footer>
