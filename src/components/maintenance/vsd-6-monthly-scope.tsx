@@ -292,7 +292,7 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             status: 'Pending',
             assignedToId: user.uid,
             assignedToName: currentUserData.name,
-            completionNotes: '',
+            completionNotes,
             component: 'VSD',
             frequency: '6-Monthly',
             workCrew: [],
@@ -436,7 +436,7 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             if (equipmentSnap.exists()) {
                 const workDate = new Date(schedule.scheduledFor || new Date());
                 const nextDueDate = new Date(workDate);
-                nextDueDate.setMonth(workDate.getMonth() + 3);
+                nextDueDate.setMonth(workDate.getMonth() + 6);
                 const nextDateString = format(nextDueDate, 'yyyy-MM-dd');
 
                 await updateDoc(equipmentRef, {
@@ -464,7 +464,7 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
             {isEditMode ? (
-                 <Button onClick={handleSaveProgress} disabled={isSaving}>
+                <Button onClick={handleSaveProgress} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Save Progress
                 </Button>
@@ -850,7 +850,7 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     </Table>
                 </CardContent>
             </Card>
-
+            
             <div className="my-8">
                  <h3 className="text-xl font-bold mb-4">Completion Notes</h3>
                  <Textarea
