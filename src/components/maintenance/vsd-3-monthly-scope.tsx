@@ -5,7 +5,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription
 } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
@@ -33,8 +32,6 @@ import { collection, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { SignaturePad } from '@/components/ui/signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -50,15 +47,16 @@ interface WorkCrewRowProps {
     onChange: (field: keyof WorkCrewMember, value: string) => void;
     users: User[] | null;
     usersLoading: boolean;
+    disabled?: boolean;
 }
 
 
-function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCrewRowProps) {
+function WorkCrewRow({ member, onRemove, onChange, users, usersLoading, disabled }: WorkCrewRowProps) {
   return (
     <TableRow>
       <TableCell>
          <Select
-            disabled={usersLoading}
+            disabled={usersLoading || disabled}
             value={users?.find(u => u.name === member.name)?.id}
             onValueChange={(userId) => {
                 const user = users?.find(u => u.id === userId);
@@ -78,7 +76,7 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
         </Select>
       </TableCell>
       <TableCell>
-        <Input placeholder="RTBS No..." value={member.rtbsNo || ''} onChange={(e) => onChange('rtbsNo', e.target.value)} />
+        <Input placeholder="RTBS No..." value={member.rtbsNo || ''} onChange={(e) => onChange('rtbsNo', e.target.value)} disabled={disabled} />
       </TableCell>
       <TableCell className="w-[180px]">
         <Popover>
@@ -89,6 +87,7 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
                 'w-full justify-start text-left font-normal',
                 !member.date && 'text-muted-foreground'
               )}
+              disabled={disabled}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
               {member.date ? format(new Date(member.date), 'PPP') : <span>Pick a date</span>}
@@ -105,14 +104,16 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
         </Popover>
       </TableCell>
       <TableCell className="text-right">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onRemove}
-          className="print:hidden"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {!disabled && (
+            <Button
+            variant="ghost"
+            size="icon"
+            onClick={onRemove}
+            className="print:hidden"
+            >
+            <Trash2 className="h-4 w-4" />
+            </Button>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -211,9 +212,14 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         if (!currentUserData) return false;
         return ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'].includes(currentUserData.role);
     }, [currentUserData]);
+    
+    const isEditMode = !!schedule;
+    const isAssignee = user?.uid === schedule?.assignedToId;
+    const isReadOnly = (schedule?.status === 'Approved' || schedule?.status === 'Completed') || (isEditMode && !isAssignee);
+    const docPrefix = "3MS";
 
     const addCrewMember = () => {
-        setCrew(c => [...c, { localId: Date.now() }]);
+        setCrew(c => [...c, { localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]);
     };
 
     const removeCrewMember = (localId: number) => {
@@ -228,7 +234,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
 
     const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans' | 'jhaScans' | 'ptwScans' | 'workOrderScans') => {
         if (!schedule || !firebaseApp) {
-            toast({ variant: "destructive", title: "Error", description: "Cannot delete file." });
+            toast({ variant: "destructive", title: "Error", description: "Cannot delete file. Schedule or Firebase app not available." });
             return;
         }
         setIsSaving(true);
@@ -247,7 +253,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 variant: "destructive",
                 title: "Deletion Failed",
                 description: error.code === 'storage/object-not-found' 
-                    ? "File not found. Removing from record."
+                    ? "File not found in storage. Removing from record."
                     : error.message || "An unexpected error occurred.",
             });
             if(error.code === 'storage/object-not-found'){
@@ -260,7 +266,6 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             setIsSaving(false);
         }
     };
-
 
     const handleSaveToUpcoming = async () => {
         if (!selectedEquipment || !inspectionDate || !currentUserData || !user) {
@@ -290,8 +295,8 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             status: 'Pending',
             assignedToId: user.uid,
             assignedToName: currentUserData.name,
-            completionNotes,
-            comments,
+            completionNotes: '',
+            comments: comments,
             component: 'VSD',
             frequency: '3-Monthly',
             workCrew: [],
@@ -434,7 +439,6 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
 
             const equipmentRef = doc(firestore, 'equipment', schedule.equipmentId);
             const equipmentSnap = await getDoc(equipmentRef);
-            
             if (equipmentSnap.exists()) {
                 const equipmentData = equipmentSnap.data() as Equipment;
                 const workDate = new Date(schedule.scheduledFor || new Date());
@@ -481,10 +485,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             setIsSaving(false);
         }
     };
-
-    const isEditMode = !!schedule;
-    const docPrefix = "3MS";
-
+    
     const waScheduleMsg = schedule ? `
   *📅 SCHEDULED TASK UPDATE*
   ---------------------------
@@ -501,12 +502,13 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
             {schedule && <WhatsAppShare text={waScheduleMsg} label="Share Update" />}
-            {isEditMode ? (
+            {!isReadOnly && isEditMode && (
                 <Button onClick={handleSaveProgress} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Save Progress
                 </Button>
-            ) : (
+            )}
+            {!isEditMode && (
                  <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     {isSaving ? 'Saving...' : 'Save to Upcoming Schedule List'}
@@ -552,7 +554,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="area">Area</Label>
-                        <Input id="area" placeholder="e.g., MPA Pump Station" />
+                        <Input id="area" placeholder="e.g., MPA Pump Station" disabled={isReadOnly} />
                     </div>
                     <div className="space-y-2">
                         <Label>Date</Label>
@@ -564,7 +566,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                                     'w-full justify-start text-left font-normal',
                                     !inspectionDate && 'text-muted-foreground'
                                 )}
-                                disabled={isEditMode}
+                                disabled={isEditMode || isReadOnly}
                                 >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {inspectionDate ? format(inspectionDate, 'PPP') : <span>Pick a date</span>}
@@ -581,8 +583,12 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                         </Popover>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="inspected-by">Inspected By</Label>
-                        <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
+                        <Label>Inspected By</Label>
+                        <Input 
+                            value={schedule ? schedule.assignedToName : currentUserData?.name || 'Loading...'}
+                            disabled={true}
+                            className="bg-slate-100 font-bold text-slate-700"
+                        />
                     </div>
                 </CardContent>
             </Card>
@@ -640,15 +646,17 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                                                 )}
                                                 <span className="text-sm text-primary group-hover:underline truncate">Take 5 Scan {i + 1}</span>
                                             </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
+                                            {!isReadOnly && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-                        <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />
+                        {!isReadOnly && <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />}
                     </div>
                     <Separator />
                     <div>
@@ -667,15 +675,17 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                                                 )}
                                                 <span className="text-sm text-primary group-hover:underline truncate">CCC Scan {i + 1}</span>
                                             </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
+                                            {!isReadOnly && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-                        <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />
+                        {!isReadOnly && <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />}
                     </div>
                     <Separator />
                     <div>
@@ -694,15 +704,17 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                                                 )}
                                                 <span className="text-sm text-primary group-hover:underline truncate">JHA Scan {i + 1}</span>
                                             </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'jhaScans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
+                                            {!isReadOnly && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'jhaScans')}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-                        <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />
+                        {!isReadOnly && <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />}
                     </div>
                 </CardContent>
             </Card>
@@ -725,15 +737,17 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                                                 {isImageUrl(url) ? (<img src={url} alt={`Permit to Work Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
                                                 <span className="text-sm text-primary group-hover:underline truncate">Permit to Work Scan {i + 1}</span>
                                             </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'ptwScans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
+                                            {!isReadOnly && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'ptwScans')}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-                        <ImageUploader onImagesChange={setPtwFiles} title="Permit to Work Documents" />
+                        {!isReadOnly && <ImageUploader onImagesChange={setPtwFiles} title="Permit to Work Documents" />}
                     </div>
                     <Separator />
                     <div>
@@ -748,15 +762,17 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                                                 {isImageUrl(url) ? (<img src={url} alt={`Works Order Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
                                                 <span className="text-sm text-primary group-hover:underline truncate">Works Order Scan {i + 1}</span>
                                             </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'workOrderScans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
+                                            {!isReadOnly && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'workOrderScans')}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-                        <ImageUploader onImagesChange={setWorkOrderFiles} title="Works Order Documents" />
+                        {!isReadOnly && <ImageUploader onImagesChange={setWorkOrderFiles} title="Works Order Documents" />}
                     </div>
                 </CardContent>
             </Card>
@@ -764,9 +780,11 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             <div className="my-8">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold">Work Crew</h3>
-                    <Button variant="outline" size="sm" onClick={addCrewMember} className="print:hidden">
-                        <Plus className="mr-2 h-4 w-4" /> Add Crew Member
-                    </Button>
+                    {!isReadOnly && (
+                        <Button variant="outline" size="sm" onClick={addCrewMember} className="print:hidden">
+                            <Plus className="mr-2 h-4 w-4" /> Add Crew Member
+                        </Button>
+                    )}
                 </div>
                 <Table>
                     <TableHeader>
@@ -786,6 +804,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                                 onChange={(field, value) => handleCrewChange(index, field, value)}
                                 users={users}
                                 usersLoading={usersLoading}
+                                disabled={isReadOnly}
                             />
                         ))}
                     </TableBody>
@@ -806,15 +825,15 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     <div className="grid gap-4 md:grid-cols-3 mb-6">
                         <div className="space-y-2">
                             <Label htmlFor="asset-id">Asset ID:</Label>
-                            <Input id="asset-id" placeholder="Enter Asset ID" />
+                            <Input id="asset-id" placeholder="Enter Asset ID" disabled={isReadOnly} />
                         </div>
                          <div className="space-y-2">
                              <Label htmlFor="log-date">Date:</Label>
-                            <Input id="log-date" type="date" />
+                            <Input id="log-date" type="date" disabled={isReadOnly} />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="tech-name">Tech Name:</Label>
-                            <Input id="tech-name" placeholder="Enter Technician Name" />
+                            <Input id="tech-name" placeholder="Enter Technician Name" disabled={isReadOnly} />
                         </div>
                     </div>
                      <Table>
@@ -834,12 +853,14 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                                             placeholder="Notes..."
                                             value={checklist[index]?.comments || ''}
                                             onChange={(e) => handleChecklistChange(index, 'comments', e.target.value)}
+                                            disabled={isReadOnly}
                                         />
                                     </TableCell>
                                     <TableCell>
                                         <Select
                                             value={checklist[index]?.status || 'not-checked'}
                                             onValueChange={(value) => handleChecklistChange(index, 'status', value)}
+                                            disabled={isReadOnly}
                                         >
                                             <SelectTrigger><SelectValue/></SelectTrigger>
                                             <SelectContent>
@@ -863,6 +884,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     value={completionNotes}
                     onChange={(e) => setCompletionNotes(e.target.value)}
                     rows={6}
+                    disabled={isReadOnly}
                  />
             </div>
             
@@ -889,7 +911,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                         label="Sign & Complete Task"
                         users={technicians || []}
                         onSigned={handleTechnicianSign}
-                        disabled={isSaving}
+                        disabled={isSaving || isReadOnly}
                       />
                     </div>
                   )}
