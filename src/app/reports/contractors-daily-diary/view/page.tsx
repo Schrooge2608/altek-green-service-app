@@ -97,15 +97,14 @@ export default function ViewDiaryPage() {
         return 'General Work';
     }, [diary]);
 
-    const statusText = diary?.isFinalised ? '✅ APPROVED' : diary?.isSignedOff ? 'REVIEW PENDING' : '⚠️ IN PROGRESS';
+    const statusText = diary?.isFinalised ? '✅ COMPLETED & SIGNED' : diary?.isSignedOff ? 'REVIEW PENDING' : '⚠️ IN PROGRESS';
 
-    const waMessage = `📢 DAILY DIARY UPDATE
------------------------
-🆔 ID: ${diary?.id.slice(-6)}
-👷 By: ${diary?.contractorName || 'N/A'}
-📍 Area: ${diary?.area}
-⚙️ Equip: ${equipmentName}
-📝 Scope: ${diary?.works?.[0]?.scope || 'N/A'}
+    const waMessage = `
+*📢 MAINTENANCE UPDATE*
+🆔 *Job:* ${diary?.id.slice(-6).toUpperCase()}
+👷 *Tech:* ${diary?.contractorName || 'N/A'}
+📍 *Loc:* ${diary?.area} - ${equipmentName}
+Scope: ${diary?.works?.[0]?.scope || 'N/A'}
 
 Status: ${statusText}
 `.trim();
