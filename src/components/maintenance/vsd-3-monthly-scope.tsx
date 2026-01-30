@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -5,6 +6,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import { AltekLogo } from '@/components/altek-logo';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,8 @@ import { collection, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { SignaturePad } from '@/components/ui/signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -351,7 +355,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             setIsSaving(false);
         }
     };
-    
+
     const handleSaveProgress = async () => {
         if (!schedule || !firebaseApp) {
             toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
@@ -415,7 +419,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             setIsSaving(false);
         }
     };
-
+    
     const handleTechnicianSign = async (signatureUrl: string | null, signerName: string | null) => {
         if (!schedule || !signatureUrl || !signerName) return;
 
@@ -522,7 +526,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         <Card className="p-8 shadow-lg border-2 border-primary/20 bg-card">
             <header className="flex items-start justify-between mb-8">
                 <div>
-                    <AltekLogo className="h-12 w-auto" />
+                    <AltekLogo className="h-12 w-auto" unoptimized />
                     <p className="text-muted-foreground mt-2">VSD & Equipment Services</p>
                 </div>
                 <div className="text-right">
@@ -715,64 +719,6 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                             </div>
                         )}
                         {!isReadOnly && <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />}
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="my-8">
-                <CardHeader>
-                    <CardTitle>Task Documents</CardTitle>
-                    <CardDescription>Upload scans of the Permit to Work and Work Order.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div>
-                        <h4 className="font-semibold text-muted-foreground mb-2">Permit to Work Scan(s)</h4>
-                        {schedule?.ptwScans && schedule.ptwScans.length > 0 && (
-                            <div className="mb-4 space-y-2">
-                                <Label>Uploaded Documents</Label>
-                                <div className="flex flex-col gap-2 rounded-md border p-2">
-                                    {schedule.ptwScans.map((url, i) => (
-                                        <div key={i} className="flex items-center justify-between">
-                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
-                                                {isImageUrl(url) ? (<img src={url} alt={`Permit to Work Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
-                                                <span className="text-sm text-primary group-hover:underline truncate">Permit to Work Scan {i + 1}</span>
-                                            </a>
-                                            {!isReadOnly && (
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'ptwScans')}>
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        {!isReadOnly && <ImageUploader onImagesChange={setPtwFiles} title="Permit to Work Documents" />}
-                    </div>
-                    <Separator />
-                    <div>
-                        <h4 className="font-semibold text-muted-foreground mb-2">Works Order Scan(s)</h4>
-                        {schedule?.workOrderScans && schedule.workOrderScans.length > 0 && (
-                            <div className="mb-4 space-y-2">
-                                <Label>Uploaded Documents</Label>
-                                <div className="flex flex-col gap-2 rounded-md border p-2">
-                                     {schedule.workOrderScans.map((url, i) => (
-                                        <div key={i} className="flex items-center justify-between">
-                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
-                                                {isImageUrl(url) ? (<img src={url} alt={`Works Order Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
-                                                <span className="text-sm text-primary group-hover:underline truncate">Works Order Scan {i + 1}</span>
-                                            </a>
-                                            {!isReadOnly && (
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'workOrderScans')}>
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        {!isReadOnly && <ImageUploader onImagesChange={setWorkOrderFiles} title="Works Order Documents" />}
                     </div>
                 </CardContent>
             </Card>
