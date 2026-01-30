@@ -19,13 +19,13 @@ import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFir
 import { collection, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { SignaturePad } from './ui/signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Textarea } from './ui/textarea';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { ImageUploader } from './image-uploader';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { PinSigner } from '../auth/PinSigner';
 
 
 interface MaintenanceScopeDocumentProps {
@@ -139,6 +139,13 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     const [ptwFiles, setPtwFiles] = useState<File[]>([]);
     const [workOrderFiles, setWorkOrderFiles] = useState<File[]>([]);
 
+    const [techSignature, setTechSignature] = useState<string | null>(schedule?.techSignature || null);
+    const [techName, setTechName] = useState<string | null>(schedule?.techName || null);
+    const [techDate, setTechDate] = useState<string | undefined>(schedule?.techSignatureDate);
+    const [clientSignature, setClientSignature] = useState<string | null>(schedule?.clientSignature || null);
+    const [clientName, setClientName] = useState<string | null>(schedule?.clientName || null);
+    const [clientDate, setClientDate] = useState<string | undefined>(schedule?.clientSignatureDate);
+
     const equipmentQuery = useMemoFirebase(() => collection(firestore, 'equipment'), [firestore]);
     const { data: equipment, isLoading: equipmentLoading } = useCollection<Equipment>(equipmentQuery);
 
@@ -149,6 +156,21 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
         if (!user || !users) return null;
         return users.find(u => u.id === user.uid);
     }, [user, users]);
+
+    const technicians = useMemo(() => {
+        if (!users) return [];
+        return users.filter(u => u.role?.includes('Technician') || u.role?.includes('Engineer') || u.role?.includes('Technologist'));
+    }, [users]);
+    
+    const managers = useMemo(() => {
+        if (!users) return [];
+        return users.filter(u => u.role && ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'].includes(u.role));
+    }, [users]);
+
+    const currentUserIsManager = useMemo(() => {
+        if (!currentUserData) return false;
+        return ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'].includes(currentUserData.role);
+    }, [currentUserData]);
 
     const addCrewMember = () => {
         setCrew(c => [...c, { localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]);
@@ -251,6 +273,12 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 workCrew: crewToSave,
                 completionNotes,
                 comments: comments,
+                techSignature,
+                techName,
+                techSignatureDate: techDate,
+                clientSignature,
+                clientName,
+                clientSignatureDate: clientDate,
                 updatedAt: new Date().toISOString(),
             };
             
@@ -374,6 +402,12 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 status: 'Completed',
                 completionNotes: completionNotes,
                 comments: comments,
+                techSignature,
+                techName,
+                techSignatureDate: techDate,
+                clientSignature,
+                clientName,
+                clientSignatureDate: clientDate,
                 updatedAt: new Date().toISOString()
             });
 
@@ -641,7 +675,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 </CardContent>
             </Card>
 
-             <Card className="my-8">
+            <Card className="my-8">
                 <CardHeader>
                     <CardTitle>Task Documents</CardTitle>
                     <CardDescription>Upload scans of the Permit to Work and Work Order.</CardDescription>
@@ -734,6 +768,35 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     rows={6}
                     disabled={!isEditMode}
                  />
+            </div>
+            
+            <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card>
+                    <CardHeader className="p-4"><CardTitle className="text-base text-center">TECHNICIAN SIGN-OFF</CardTitle></CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                        <PinSigner
+                            label="Technician"
+                            users={technicians}
+                            onSigned={(url, name) => { setTechSignature(url); setTechName(name); setTechDate(format(new Date(), 'yyyy-MM-dd')); }}
+                            initialSignatureUrl={techSignature}
+                            initialSignerName={techName}
+                            disabled={!isEditMode}
+                        />
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="p-4"><CardTitle className="text-base text-center">CLIENT / SUPERVISOR SIGN-OFF</CardTitle></CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                        <PinSigner
+                            label="Client/Manager"
+                            users={managers}
+                            onSigned={(url, name) => { setClientSignature(url); setClientName(name); setClientDate(format(new Date(), 'yyyy-MM-dd')); }}
+                            initialSignatureUrl={clientSignature}
+                            initialSignerName={clientName}
+                            disabled={!isEditMode || !currentUserIsManager}
+                        />
+                    </CardContent>
+                </Card>
             </div>
 
 

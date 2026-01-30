@@ -153,6 +153,12 @@ export interface ScheduledTask {
   ptwScans?: string[];
   workOrderScans?: string[];
   updatedAt?: string;
+  techSignature?: string | null;
+  techName?: string | null;
+  techSignatureDate?: string;
+  clientSignature?: string | null;
+  clientName?: string | null;
+  clientSignatureDate?: string;
 }
 
 export interface Breakdown {
@@ -274,8 +280,6 @@ export interface DailyDiary {
   clientName?: string;
   clientSignature?: string | null; // base64
   clientDate?: string;
-  beforeWorkImages?: string[];
-  afterWorkImages?: string[];
   isSignedOff: boolean;
   isFinalised?: boolean;
   createdAt?: any;
