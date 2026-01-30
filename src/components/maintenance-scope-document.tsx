@@ -756,69 +756,86 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                  />
             </div>
             
-             <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card>
-                    <CardHeader className="p-4"><CardTitle className="text-base text-center">TECHNICIAN SIGN-OFF</CardTitle></CardHeader>
-                    <CardContent className="p-4 space-y-4">
-                        {schedule?.techSignature ? (
-                            <div>
-                                <p className="text-sm"><strong>Signed By:</strong> {schedule.techName}</p>
-                                <Image src={schedule.techSignature} alt="Technician Signature" width={200} height={100} className="border rounded-md mt-2" />
-                                <p className="text-xs text-muted-foreground mt-1">On: {schedule.techSignatureDate}</p>
-                            </div>
-                        ) : (
-                            <PinSigner
-                                label="Sign & Complete Task"
-                                users={technicians || []}
-                                onSigned={handleTechnicianSign}
-                                disabled={isSaving}
-                            />
-                        )}
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="p-4"><CardTitle className="text-base text-center">CLIENT / SUPERVISOR SIGN-OFF</CardTitle></CardHeader>
-                    <CardContent className="p-4 space-y-4">
-                        {schedule?.clientSignature ? (
-                             <div>
-                                <p className="text-sm"><strong>Approved By:</strong> {schedule.clientName}</p>
-                                <Image src={schedule.clientSignature} alt="Manager Signature" width={200} height={100} className="border rounded-md mt-2" />
-                                <p className="text-xs text-muted-foreground mt-1">On: {schedule.clientSignatureDate}</p>
-                            </div>
-                        ) : (
-                            <div>
-                                {(schedule?.status !== 'Completed' || !schedule?.techSignature) ? (
-                                     <div className="p-3 bg-amber-100 border border-amber-200 rounded text-amber-800 text-sm">
-                                        <p className="font-bold flex items-center"><AlertTriangle className="h-4 w-4 mr-2" /> Waiting for Technician</p>
-                                        <p className="mt-1 text-xs">Technician must complete and sign the task before you can approve it.</p>
-                                    </div>
-                                ) : (
-                                    <div className="mt-2">
-                                        <p className="text-sm text-emerald-600 font-medium mb-2">Ready for Sign-off</p>
-                                        <PinSigner
-                                            label="Approve Schedule"
-                                            users={managers || []}
-                                            onSigned={async (url, name) => {
-                                                if (!url || !name) return;
-                                                await updateDoc(doc(firestore, 'upcoming_schedules', schedule.id), {
-                                                    clientSignature: url,
-                                                    clientName: name,
-                                                    clientSignatureDate: format(new Date(), 'yyyy-MM-dd'),
-                                                    status: 'Approved' 
-                                                });
-                                                toast({ title: 'Schedule Approved', description: 'The maintenance task has been approved.' });
-                                                router.refresh();
-                                            }}
-                                            disabled={!currentUserIsManager || isSaving}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
+            <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Card>
+                <CardHeader className="p-4 bg-slate-50 border-b">
+                  <CardTitle className="text-base text-center">TECHNICIAN SIGN-OFF</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  {schedule?.techSignature ? (
+                    <div className="text-center">
+                      <div className="flex justify-center mb-2">
+                        <Image src={schedule.techSignature} alt="Tech Sig" width={200} height={100} className="h-16 border-b-2 border-slate-200" />
+                      </div>
+                      <p className="font-bold text-slate-700">{schedule.techName}</p>
+                      <p className="text-xs text-muted-foreground">Signed: {schedule.techSignatureDate}</p>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-sm text-slate-500 mb-4">
+                        Enter your PIN to complete this schedule and lock the form.
+                      </p>
+                      <PinSigner
+                        label="Sign & Complete Task"
+                        users={technicians || []}
+                        onSigned={handleTechnicianSign}
+                        disabled={isSaving}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
+              <Card>
+                <CardHeader className="p-4 bg-slate-50 border-b">
+                  <CardTitle className="text-base text-center">MANAGER APPROVAL</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  
+                  {schedule?.clientSignature ? (
+                    <div className="text-center">
+                      <div className="flex justify-center mb-2">
+                         <Image src={schedule.clientSignature} alt="Manager Sig" width={200} height={100} className="h-16 border-b-2 border-slate-200" />
+                      </div>
+                      <p className="font-bold text-green-700">{schedule.clientName}</p>
+                      <p className="text-xs text-muted-foreground">Approved: {schedule.clientSignatureDate}</p>
+                    </div>
+                  ) : (
+                    <div>
+                       {(schedule?.status !== 'Completed' || !schedule?.techSignature) ? (
+                         <div className="p-4 bg-amber-50 border border-amber-200 rounded text-center">
+                           <p className="text-amber-600 font-bold mb-1 flex items-center justify-center gap-2"><AlertTriangle className="h-4 w-4"/>Work In Progress</p>
+                           <p className="text-xs text-amber-800">
+                             Technician must complete and sign this schedule before you can approve it.
+                           </p>
+                         </div>
+                       ) : (
+                         <div className="text-center">
+                           <p className="text-sm text-emerald-600 font-medium mb-4">
+                             Job Completed. Ready for Sign-off.
+                           </p>
+                           <PinSigner
+                              label="Approve Schedule"
+                              users={managers || []}
+                              onSigned={async (url, name) => {
+                                if (!schedule) return;
+                                await updateDoc(doc(firestore, 'upcoming_schedules', schedule.id), {
+                                  clientSignature: url,
+                                  clientName: name,
+                                  clientSignatureDate: new Date().toISOString().split('T')[0],
+                                  status: 'Approved'
+                                });
+                                router.refresh();
+                              }}
+                              disabled={!currentUserIsManager || isSaving}
+                           />
+                         </div>
+                       )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
             <Separator className="my-8" />
 

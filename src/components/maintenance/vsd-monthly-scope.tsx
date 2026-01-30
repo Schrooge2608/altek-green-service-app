@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import React, { useState, useMemo } from 'react';
 import { Input } from '../ui/input';
 import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '../ui/label';
@@ -40,6 +40,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'fire
 import { ImageUploader } from '../image-uploader';
 import { Textarea } from '../ui/textarea';
 import { WhatsAppShare } from '../ui/whatsapp-share';
+import { PinSigner } from '@/components/auth/PinSigner';
+import Image from 'next/image';
 
 
 const monthlyChecklistItems = [
@@ -132,6 +134,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
   const [jhaFiles, setJhaFiles] = useState<File[]>([]);
   const [ptwFiles, setPtwFiles] = useState<File[]>([]);
   const [workOrderFiles, setWorkOrderFiles] = useState<File[]>([]);
+  const [completionNotes, setCompletionNotes] = useState<string>(schedule?.completionNotes || '');
   const [comments, setComments] = useState<string>(schedule?.comments || '');
 
   const [crew, setCrew] = React.useState<(Partial<WorkCrewMember> & { localId: number })[]>(() =>
@@ -168,6 +171,21 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
     if (!user || !users) return null;
     return users.find(u => u.id === user.uid);
   }, [user, users]);
+  
+  const technicians = useMemo(() => {
+    if (!users) return [];
+    return users.filter(u => u.role?.includes('Technician') || u.role?.includes('Engineer') || u.role?.includes('Technologist'));
+  }, [users]);
+  
+  const managers = useMemo(() => {
+    if (!users) return [];
+    return users.filter(u => u.role && ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'].includes(u.role));
+  }, [users]);
+
+  const currentUserIsManager = useMemo(() => {
+    if (!currentUserData) return false;
+    return ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'].includes(currentUserData.role);
+  }, [currentUserData]);
 
   const addCrewMember = () => {
     setCrew(c => [...c, { localId: Date.now() }]);
@@ -339,6 +357,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
           const updateData: Partial<ScheduledTask> = {
               workCrew: crewToSave,
               checklist,
+              completionNotes,
               comments: comments,
               updatedAt: new Date().toISOString(),
           };
@@ -367,6 +386,53 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
           setIsSaving(false);
       }
   };
+
+  const handleTechnicianSign = async (signatureUrl: string | null, signerName: string | null) => {
+    if (!schedule || !signatureUrl || !signerName) return;
+
+    setIsSaving(true);
+    const scheduleRef = doc(firestore, 'upcoming_schedules', schedule.id);
+    const crewToSave = crew.map(({ localId, ...rest }) => rest);
+
+    try {
+        const updateData: Partial<ScheduledTask> = {
+            status: 'Completed',
+            workCrew: crewToSave,
+            checklist,
+            completionNotes,
+            comments,
+            techSignature: signatureUrl,
+            techName: signerName,
+            techSignatureDate: format(new Date(), 'yyyy-MM-dd'),
+            updatedAt: new Date().toISOString()
+        };
+        await updateDoc(scheduleRef, updateData);
+
+        const equipmentRef = doc(firestore, 'equipment', schedule.equipmentId);
+        const equipmentSnap = await getDoc(equipmentRef);
+        if (equipmentSnap.exists()) {
+            const workDate = new Date(schedule.scheduledFor || new Date());
+            const nextDueDate = new Date(workDate);
+            nextDueDate.setMonth(workDate.getMonth() + 3);
+            const nextDateString = format(nextDueDate, 'yyyy-MM-dd');
+
+            await updateDoc(equipmentRef, {
+                lastMaintenance: schedule.scheduledFor,
+                nextMaintenance: nextDateString,
+                status: 'active'
+            });
+        }
+
+        toast({ title: 'Task Completed', description: 'The maintenance task has been marked as complete and signed.' });
+        router.push('/maintenance/upcoming-schedules');
+    } catch (error: any) {
+        console.error("Completion Failed:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not complete the task.' });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
 
   const isEditMode = !!schedule;
   const docPrefix = "MS";
@@ -468,7 +534,7 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
             </div>
             <div className="space-y-2">
                 <Label htmlFor="inspected-by">Inspected By</Label>
-                <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
+                 <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
             </div>
           </CardContent>
         </Card>
@@ -759,15 +825,96 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
         </Card>
         
         <div className="my-8">
-            <h3 className="text-xl font-bold mb-4">Comments / Instructions</h3>
+            <h3 className="text-xl font-bold mb-4">Completion Notes</h3>
             <Textarea
-                placeholder="Add any specific instructions for the technician..."
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                rows={4}
-                disabled={!isEditMode && !!schedule}
+                placeholder="Enter any notes about the work performed, issues found, or follow-up actions required..."
+                value={completionNotes}
+                onChange={(e) => setCompletionNotes(e.target.value)}
+                rows={6}
             />
         </div>
+        
+        <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Card>
+            <CardHeader className="p-4 bg-slate-50 border-b">
+              <CardTitle className="text-base text-center">TECHNICIAN SIGN-OFF</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              {schedule?.techSignature ? (
+                <div className="text-center">
+                  <div className="flex justify-center mb-2">
+                    <Image src={schedule.techSignature} alt="Tech Sig" width={200} height={100} className="h-16 border-b-2 border-slate-200" />
+                  </div>
+                  <p className="font-bold text-slate-700">{schedule.techName}</p>
+                  <p className="text-xs text-muted-foreground">Signed: {schedule.techSignatureDate}</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <p className="text-sm text-slate-500 mb-4">
+                    Enter your PIN to complete this schedule and lock the form.
+                  </p>
+                  <PinSigner
+                    label="Sign & Complete Task"
+                    users={technicians || []}
+                    onSigned={handleTechnicianSign}
+                    disabled={isSaving}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="p-4 bg-slate-50 border-b">
+              <CardTitle className="text-base text-center">MANAGER APPROVAL</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              
+              {schedule?.clientSignature ? (
+                <div className="text-center">
+                  <div className="flex justify-center mb-2">
+                     <Image src={schedule.clientSignature} alt="Manager Sig" width={200} height={100} className="h-16 border-b-2 border-slate-200" />
+                  </div>
+                  <p className="font-bold text-green-700">{schedule.clientName}</p>
+                  <p className="text-xs text-muted-foreground">Approved: {schedule.clientSignatureDate}</p>
+                </div>
+              ) : (
+                <div>
+                   {(schedule?.status !== 'Completed' || !schedule?.techSignature) ? (
+                     <div className="p-4 bg-amber-50 border border-amber-200 rounded text-center">
+                       <p className="text-amber-600 font-bold mb-1 flex items-center justify-center gap-2"><AlertTriangle className="h-4 w-4"/>Work In Progress</p>
+                       <p className="text-xs text-amber-800">
+                         Technician must complete and sign this schedule before you can approve it.
+                       </p>
+                     </div>
+                   ) : (
+                     <div className="text-center">
+                       <p className="text-sm text-emerald-600 font-medium mb-4">
+                         Job Completed. Ready for Sign-off.
+                       </p>
+                       <PinSigner
+                          label="Approve Schedule"
+                          users={managers || []}
+                          onSigned={async (url, name) => {
+                            if (!schedule) return;
+                            await updateDoc(doc(firestore, 'upcoming_schedules', schedule.id), {
+                              clientSignature: url,
+                              clientName: name,
+                              clientSignatureDate: new Date().toISOString().split('T')[0],
+                              status: 'Approved'
+                            });
+                            router.refresh();
+                          }}
+                          disabled={!currentUserIsManager || isSaving}
+                       />
+                     </div>
+                   )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
 
         <footer className="mt-16 text-xs text-muted-foreground text-center">
           <p>Altek Green - Confidential</p>
