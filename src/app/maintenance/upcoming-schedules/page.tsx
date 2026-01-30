@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -11,6 +10,7 @@ import { Loader2, CheckCircle, Edit, Eye, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function UpcomingSchedulesPage() {
     const firestore = useFirestore();
