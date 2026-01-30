@@ -217,7 +217,9 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
         return ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'].includes(currentUserData.role);
     }, [currentUserData]);
     
-    const isFormLocked = schedule?.status === 'Completed' || schedule?.status === 'Approved';
+    const isEditMode = !!schedule;
+    const isAssignee = user?.uid === schedule?.assignedToId;
+    const isLocked = (schedule?.status === 'Approved' || schedule?.status === 'Completed') || (!isAssignee && !!schedule);
 
     const addCrewMember = () => {
         setCrew(c => [...c, { localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]);
@@ -488,13 +490,12 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
     };
 
 
-    const isEditMode = !!schedule;
     const docPrefix = "6MS";
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
-            {!isFormLocked && isEditMode && (
+            {!isLocked && isEditMode && (
                 <Button onClick={handleSaveProgress} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Save Progress
@@ -546,7 +547,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="area">Area</Label>
-                        <Input id="area" placeholder="e.g., MPA Pump Station" disabled={isFormLocked} />
+                        <Input id="area" placeholder="e.g., MPA Pump Station" disabled={isLocked} />
                     </div>
                     <div className="space-y-2">
                         <Label>Date</Label>
@@ -558,7 +559,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                     'w-full justify-start text-left font-normal',
                                     !inspectionDate && 'text-muted-foreground'
                                 )}
-                                disabled={isEditMode || isFormLocked}
+                                disabled={isEditMode || isLocked}
                                 >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {inspectionDate ? format(inspectionDate, 'PPP') : <span>Pick a date</span>}
@@ -576,7 +577,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
-                        <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
+                        <Input id="inspected-by" value={isEditMode ? schedule.assignedToName : currentUserData?.name || 'Loading...'} disabled />
                     </div>
                 </CardContent>
             </Card>
@@ -634,7 +635,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                                 )}
                                                 <span className="text-sm text-primary group-hover:underline truncate">Take 5 Scan {i + 1}</span>
                                             </a>
-                                            {!isFormLocked && (
+                                            {!isLocked && (
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
@@ -644,7 +645,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                 </div>
                             </div>
                         )}
-                        {!isFormLocked && <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />}
+                        {!isLocked && <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />}
                     </div>
                     <Separator />
                     <div>
@@ -663,7 +664,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                                 )}
                                                 <span className="text-sm text-primary group-hover:underline truncate">CCC Scan {i + 1}</span>
                                             </a>
-                                            {!isFormLocked && (
+                                            {!isLocked && (
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
@@ -673,7 +674,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                 </div>
                             </div>
                         )}
-                        {!isFormLocked && <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />}
+                        {!isLocked && <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />}
                     </div>
                     <Separator />
                     <div>
@@ -692,7 +693,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                                 )}
                                                 <span className="text-sm text-primary group-hover:underline truncate">JHA Scan {i + 1}</span>
                                             </a>
-                                            {!isFormLocked && (
+                                            {!isLocked && (
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'jhaScans')}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
@@ -702,7 +703,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                 </div>
                             </div>
                         )}
-                        {!isFormLocked && <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />}
+                        {!isLocked && <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />}
                     </div>
                 </CardContent>
             </Card>
@@ -725,7 +726,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                                 {isImageUrl(url) ? (<img src={url} alt={`Permit to Work Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
                                                 <span className="text-sm text-primary group-hover:underline truncate">Permit to Work Scan {i + 1}</span>
                                             </a>
-                                            {!isFormLocked && (
+                                            {!isLocked && (
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'ptwScans')}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
@@ -735,7 +736,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                 </div>
                             </div>
                         )}
-                        {!isFormLocked && <ImageUploader onImagesChange={setPtwFiles} title="Permit to Work Documents" />}
+                        {!isLocked && <ImageUploader onImagesChange={setPtwFiles} title="Permit to Work Documents" />}
                     </div>
                     <Separator />
                     <div>
@@ -750,7 +751,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                                 {isImageUrl(url) ? (<img src={url} alt={`Works Order Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
                                                 <span className="text-sm text-primary group-hover:underline truncate">Works Order Scan {i + 1}</span>
                                             </a>
-                                            {!isFormLocked && (
+                                            {!isLocked && (
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'workOrderScans')}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
@@ -760,7 +761,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                 </div>
                             </div>
                         )}
-                        {!isFormLocked && <ImageUploader onImagesChange={setWorkOrderFiles} title="Works Order Documents" />}
+                        {!isLocked && <ImageUploader onImagesChange={setWorkOrderFiles} title="Works Order Documents" />}
                     </div>
                 </CardContent>
             </Card>
@@ -768,7 +769,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
             <div className="my-8">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold">Work Crew</h3>
-                    {!isFormLocked && (
+                    {!isLocked && (
                         <Button variant="outline" size="sm" onClick={addCrewMember} className="print:hidden">
                             <Plus className="mr-2 h-4 w-4" /> Add Crew Member
                         </Button>
@@ -792,7 +793,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                 onChange={(field, value) => handleCrewChange(index, field, value)}
                                 users={users}
                                 usersLoading={usersLoading}
-                                disabled={isFormLocked}
+                                disabled={isLocked}
                             />
                         ))}
                     </TableBody>
@@ -823,9 +824,9 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                             {qualityControlItems.map((item, index) => (
                                 <TableRow key={index}>
                                     <TableCell>{item.text}</TableCell>
-                                    <TableCell><Input placeholder="Comments..." value={checklist[index]?.comments || ''} onChange={(e) => handleChecklistChange(index, 'comments', e.target.value)} disabled={isFormLocked} /></TableCell>
+                                    <TableCell><Input placeholder="Comments..." value={checklist[index]?.comments || ''} onChange={(e) => handleChecklistChange(index, 'comments', e.target.value)} disabled={isLocked} /></TableCell>
                                     <TableCell>
-                                        <Select value={checklist[index]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(index, 'status', value)} disabled={isFormLocked}>
+                                        <Select value={checklist[index]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(index, 'status', value)} disabled={isLocked}>
                                             <SelectTrigger><SelectValue/></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="checked">Checked</SelectItem>
@@ -860,9 +861,9 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                                 return (
                                 <TableRow key={index}>
                                     <TableCell>{item.text}</TableCell>
-                                    <TableCell><Input placeholder="Comments..." value={checklist[checklistIndex]?.comments || ''} onChange={(e) => handleChecklistChange(checklistIndex, 'comments', e.target.value)} disabled={isFormLocked} /></TableCell>
+                                    <TableCell><Input placeholder="Comments..." value={checklist[checklistIndex]?.comments || ''} onChange={(e) => handleChecklistChange(checklistIndex, 'comments', e.target.value)} disabled={isLocked} /></TableCell>
                                     <TableCell>
-                                        <Select value={checklist[checklistIndex]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(checklistIndex, 'status', value)} disabled={isFormLocked}>
+                                        <Select value={checklist[checklistIndex]?.status || 'not-checked'} onValueChange={(value) => handleChecklistChange(checklistIndex, 'status', value)} disabled={isLocked}>
                                             <SelectTrigger><SelectValue/></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="checked">Checked</SelectItem>
@@ -885,7 +886,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                     value={completionNotes}
                     onChange={(e) => setCompletionNotes(e.target.value)}
                     rows={6}
-                    disabled={isFormLocked}
+                    disabled={isLocked}
                  />
             </div>
             
@@ -912,7 +913,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                         label="Sign & Complete Task"
                         users={technicians || []}
                         onSigned={handleTechnicianSign}
-                        disabled={isSaving}
+                        disabled={isSaving || isLocked}
                       />
                     </div>
                   )}
