@@ -385,7 +385,7 @@ export default function BreakdownsPage() {
                                         <Button variant="outline" size="sm" onClick={() => router.push(`/breakdowns/${b.id}`)}><Pencil className="mr-2 h-4 w-4" /> Edit</Button>
                                         {!isClientManager && (
                                             <ResolveBreakdownDialog breakdown={b} onResolve={handleResolve}>
-                                                <Button variant="ghost" size="sm"><CheckCircle className="mr-2 h-4 w-4" />Resolved</Button>
+                                                <Button variant="ghost" size="sm"><CheckCircle className="mr-2 h-4 w-4" />Resolve</Button>
                                             </ResolveBreakdownDialog>
                                         )}
                                         {canDelete && (
