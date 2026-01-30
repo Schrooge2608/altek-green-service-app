@@ -116,6 +116,13 @@ const getFrequencyPrefix = (frequency: MaintenanceTask['frequency']): string => 
 
 const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
 
+const determineNextTaskType = (baseDate: Date, nextDate: Date): MaintenanceTask['frequency'] => {
+  const monthDiff = (nextDate.getFullYear() - baseDate.getFullYear()) * 12 + (nextDate.getMonth() - baseDate.getMonth());
+  
+  if (monthDiff % 12 === 0) return 'Yearly';
+  if (monthDiff % 6 === 0) return '6-Monthly';
+  return '3-Monthly';
+};
 
 export function MaintenanceScopeDocument({ title, component, frequency, schedule }: MaintenanceScopeDocumentProps) {
     const [selectedEquipment, setSelectedEquipment] = useState<string | undefined>(schedule?.equipmentId);
@@ -355,7 +362,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 uploadScans(ptwFiles, 'ptw'),
                 uploadScans(workOrderFiles, 'work_order'),
             ]);
-
+            
             if (newTake5Urls.length > 0 || newCccUrls.length > 0 || newJhaUrls.length > 0 || newPtwUrls.length > 0 || newWorkOrderUrls.length > 0) {
                 await updateDoc(docRef, { 
                     take5Scans: newTake5Urls,
@@ -403,14 +410,38 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
             const equipmentRef = doc(firestore, 'equipment', schedule.equipmentId);
             const equipmentSnap = await getDoc(equipmentRef);
             if (equipmentSnap.exists()) {
+                const equipmentData = equipmentSnap.data() as Equipment;
                 const workDate = new Date(schedule.scheduledFor || new Date());
+
                 const nextDueDate = new Date(workDate);
                 nextDueDate.setMonth(workDate.getMonth() + 3);
-                const nextDateString = format(nextDueDate, 'yyyy-MM-dd');
+
+                const baseDate = equipmentData?.installationDate ? new Date(equipmentData.installationDate) : new Date(schedule.scheduledFor);
+                const nextType = determineNextTaskType(baseDate, nextDueDate);
+                
+                const nextTaskData: Omit<ScheduledTask, 'id' | 'updatedAt'> = {
+                    originalTaskId: `${schedule.equipmentId}-${nextType.toLowerCase()}-auto`,
+                    equipmentId: schedule.equipmentId,
+                    equipmentName: schedule.equipmentName,
+                    task: `${schedule.component} ${nextType} Service`,
+                    component: schedule.component,
+                    frequency: nextType,
+                    scheduledFor: format(nextDueDate, 'yyyy-MM-dd'),
+                    status: 'Pending',
+                    assignedToId: schedule.assignedToId,
+                    assignedToName: schedule.assignedToName,
+                };
+
+                await addDocumentNonBlocking(collection(firestore, 'upcoming_schedules'), nextTaskData);
+
+                toast({
+                    title: "Next Schedule Created",
+                    description: `System automatically scheduled a ${nextType} Service for ${nextDueDate.toLocaleDateString()}`
+                });
 
                 await updateDoc(equipmentRef, {
                     lastMaintenance: schedule.scheduledFor,
-                    nextMaintenance: nextDateString,
+                    nextMaintenance: format(nextDueDate, 'yyyy-MM-dd'),
                     status: 'active'
                 });
             }

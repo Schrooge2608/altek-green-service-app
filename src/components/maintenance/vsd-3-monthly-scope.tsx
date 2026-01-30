@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -140,6 +139,14 @@ const combined3MonthlyTasks = [
 
 const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
 
+const determineNextTaskType = (baseDate: Date, nextDate: Date): MaintenanceTask['frequency'] => {
+  const monthDiff = (nextDate.getFullYear() - baseDate.getFullYear()) * 12 + (nextDate.getMonth() - baseDate.getMonth());
+  
+  if (monthDiff % 12 === 0) return 'Yearly';
+  if (monthDiff % 6 === 0) return '6-Monthly';
+  return '3-Monthly';
+};
+
 export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask }) {
     const title = "VSDs 3-Monthly Service Scope";
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
@@ -218,10 +225,10 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         (newCrew[index] as any)[field] = value;
         setCrew(newCrew);
     };
-    
+
     const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans' | 'jhaScans' | 'ptwScans' | 'workOrderScans') => {
         if (!schedule || !firebaseApp) {
-            toast({ variant: "destructive", title: "Error", description: "Cannot delete file. Schedule or Firebase app not available." });
+            toast({ variant: "destructive", title: "Error", description: "Cannot delete file." });
             return;
         }
         setIsSaving(true);
@@ -240,7 +247,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                 variant: "destructive",
                 title: "Deletion Failed",
                 description: error.code === 'storage/object-not-found' 
-                    ? "File not found in storage. Removing from record."
+                    ? "File not found. Removing from record."
                     : error.message || "An unexpected error occurred.",
             });
             if(error.code === 'storage/object-not-found'){
@@ -283,8 +290,8 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             status: 'Pending',
             assignedToId: user.uid,
             assignedToName: currentUserData.name,
-            completionNotes: '',
-            comments: comments,
+            completionNotes,
+            comments,
             component: 'VSD',
             frequency: '3-Monthly',
             workCrew: [],
@@ -295,7 +302,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             const schedulesRef = collection(firestore, 'upcoming_schedules');
             const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
             await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
-
+            
             const scheduleId = docRef.id;
             const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha' | 'ptw' | 'work_order'): Promise<string[]> => {
                 if (!firebaseApp || files.length === 0) return [];
@@ -326,7 +333,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     workOrderScans: newWorkOrderUrls,
                 });
             }
-
+            
             toast({
                 title: 'Schedule Saved',
                 description: 'The task has been added to the upcoming schedules list.'
@@ -339,7 +346,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             setIsSaving(false);
         }
     };
-
+    
     const handleSaveProgress = async () => {
         if (!schedule || !firebaseApp) {
             toast({ variant: 'destructive', title: 'Error', description: 'Cannot save progress without a schedule context.' });
@@ -403,7 +410,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             setIsSaving(false);
         }
     };
-    
+
     const handleTechnicianSign = async (signatureUrl: string | null, signerName: string | null) => {
         if (!schedule || !signatureUrl || !signerName) return;
 
@@ -427,15 +434,40 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
 
             const equipmentRef = doc(firestore, 'equipment', schedule.equipmentId);
             const equipmentSnap = await getDoc(equipmentRef);
+            
             if (equipmentSnap.exists()) {
+                const equipmentData = equipmentSnap.data() as Equipment;
                 const workDate = new Date(schedule.scheduledFor || new Date());
+
                 const nextDueDate = new Date(workDate);
                 nextDueDate.setMonth(workDate.getMonth() + 3);
-                const nextDateString = format(nextDueDate, 'yyyy-MM-dd');
+
+                const baseDate = equipmentData?.installationDate ? new Date(equipmentData.installationDate) : new Date(schedule.scheduledFor);
+                const nextType = determineNextTaskType(baseDate, nextDueDate);
+                
+                const nextTaskData: Omit<ScheduledTask, 'id' | 'updatedAt'> = {
+                    originalTaskId: `${schedule.equipmentId}-${nextType.toLowerCase()}-auto`,
+                    equipmentId: schedule.equipmentId,
+                    equipmentName: schedule.equipmentName,
+                    task: `VSD ${nextType} Service`,
+                    component: schedule.component,
+                    frequency: nextType,
+                    scheduledFor: format(nextDueDate, 'yyyy-MM-dd'),
+                    status: 'Pending',
+                    assignedToId: schedule.assignedToId,
+                    assignedToName: schedule.assignedToName,
+                };
+
+                await addDocumentNonBlocking(collection(firestore, 'upcoming_schedules'), nextTaskData);
+
+                toast({
+                    title: "Next Schedule Created",
+                    description: `System automatically scheduled a ${nextType} Service for ${nextDueDate.toLocaleDateString()}`
+                });
 
                 await updateDoc(equipmentRef, {
                     lastMaintenance: schedule.scheduledFor,
-                    nextMaintenance: nextDateString,
+                    nextMaintenance: format(nextDueDate, 'yyyy-MM-dd'),
                     status: 'active'
                 });
             }
@@ -823,7 +855,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     </Table>
                 </CardContent>
             </Card>
-
+            
             <div className="my-8">
                  <h3 className="text-xl font-bold mb-4">Completion Notes</h3>
                  <Textarea

@@ -148,6 +148,14 @@ const commissioningItems = [
 
 const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
 
+const determineNextTaskType = (baseDate: Date, nextDate: Date): MaintenanceTask['frequency'] => {
+  const monthDiff = (nextDate.getFullYear() - baseDate.getFullYear()) * 12 + (nextDate.getMonth() - baseDate.getMonth());
+  
+  if (monthDiff % 12 === 0) return 'Yearly';
+  if (monthDiff % 6 === 0) return '6-Monthly';
+  return '3-Monthly';
+};
+
 export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask }) {
     const title = "VSDs 6-Monthly Service Scope";
     const [selectedEquipment, setSelectedEquipment] = React.useState<string | undefined>(schedule?.equipmentId);
@@ -303,7 +311,7 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             const schedulesRef = collection(firestore, 'upcoming_schedules');
             const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
             await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
-
+            
             const scheduleId = docRef.id;
             const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha' | 'ptw' | 'work_order'): Promise<string[]> => {
                 if (!firebaseApp || files.length === 0) return [];
@@ -334,7 +342,7 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
                     workOrderScans: newWorkOrderUrls,
                 });
             }
-
+            
             toast({
                 title: 'Schedule Saved',
                 description: 'The task has been added to the upcoming schedules list.'
@@ -434,14 +442,38 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             const equipmentRef = doc(firestore, 'equipment', schedule.equipmentId);
             const equipmentSnap = await getDoc(equipmentRef);
             if (equipmentSnap.exists()) {
+                const equipmentData = equipmentSnap.data() as Equipment;
                 const workDate = new Date(schedule.scheduledFor || new Date());
+
                 const nextDueDate = new Date(workDate);
-                nextDueDate.setMonth(workDate.getMonth() + 6);
-                const nextDateString = format(nextDueDate, 'yyyy-MM-dd');
+                nextDueDate.setMonth(workDate.getMonth() + 3);
+
+                const baseDate = equipmentData?.installationDate ? new Date(equipmentData.installationDate) : new Date(schedule.scheduledFor);
+                const nextType = determineNextTaskType(baseDate, nextDueDate);
+                
+                const nextTaskData: Omit<ScheduledTask, 'id' | 'updatedAt'> = {
+                    originalTaskId: `${schedule.equipmentId}-${nextType.toLowerCase()}-auto`,
+                    equipmentId: schedule.equipmentId,
+                    equipmentName: schedule.equipmentName,
+                    task: `VSD ${nextType} Service`,
+                    component: schedule.component,
+                    frequency: nextType,
+                    scheduledFor: format(nextDueDate, 'yyyy-MM-dd'),
+                    status: 'Pending',
+                    assignedToId: schedule.assignedToId,
+                    assignedToName: schedule.assignedToName,
+                };
+
+                await addDocumentNonBlocking(collection(firestore, 'upcoming_schedules'), nextTaskData);
+
+                toast({
+                    title: "Next Schedule Created",
+                    description: `System automatically scheduled a ${nextType} Service for ${nextDueDate.toLocaleDateString()}`
+                });
 
                 await updateDoc(equipmentRef, {
                     lastMaintenance: schedule.scheduledFor,
-                    nextMaintenance: nextDateString,
+                    nextMaintenance: format(nextDueDate, 'yyyy-MM-dd'),
                     status: 'active'
                 });
             }
