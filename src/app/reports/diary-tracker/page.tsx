@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -146,6 +147,7 @@ export default function DiaryTrackerPage() {
                     ) : diariesWithCreator && diariesWithCreator.length > 0 ? (
                         diariesWithCreator.map(diary => {
                             const statusText = diary.isFinalised ? 'Approved' : diary.isSignedOff ? 'Completed' : 'In Progress';
+                            const isInProgress = statusText === 'In Progress';
                             return (
                             <TableRow key={diary.id}>
                                 <TableCell className="font-mono">{diary.id}</TableCell>
@@ -158,16 +160,19 @@ export default function DiaryTrackerPage() {
                                     <Badge className={getStatusStyles(statusText)}>{statusText}</Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Link href={`/reports/contractors-daily-diary/view?id=${diary.id}`} passHref>
-                                        <Button variant="ghost" size="icon">
-                                            <FileText className="h-4 w-4" />
-                                            <span className="sr-only">View Diary</span>
-                                        </Button>
-                                    </Link>
-                                    {/* Edit button should only be visible if the diary is not finalized */}
-                                    {!diary.isFinalised && (user?.uid === diary.userId || currentUserData?.role.includes("Admin")) && (
+                                    {/* VIEW BUTTON - Only show if NOT in progress */}
+                                    {!isInProgress && (
+                                        <Link href={`/reports/contractors-daily-diary/view?id=${diary.id}`} passHref>
+                                            <Button variant="ghost" size="icon" title="View Report">
+                                                <FileText className="h-4 w-4" />
+                                                <span className="sr-only">View Diary</span>
+                                            </Button>
+                                        </Link>
+                                    )}
+                                    {/* EDIT BUTTON - Only show if IN PROGRESS and user has permission */}
+                                    {isInProgress && (user?.uid === diary.userId || (currentUserData?.role && currentUserData.role.includes("Admin"))) && (
                                         <Link href={`/reports/contractors-daily-diary?id=${diary.id}`} passHref>
-                                            <Button variant="ghost" size="icon">
+                                            <Button variant="ghost" size="icon" title="Continue Editing">
                                                 <Pencil className="h-4 w-4" />
                                                 <span className="sr-only">Edit Diary</span>
                                             </Button>
