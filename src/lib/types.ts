@@ -138,7 +138,7 @@ export interface ScheduledTask {
   equipmentName: string;
   task: string;
   scheduledFor: string;
-  status: 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Cancelled' | 'Approved';
   assignedToId: string;
   assignedToName: string;
   completionNotes?: string;
