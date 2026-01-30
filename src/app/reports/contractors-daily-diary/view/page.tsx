@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useSearchParams, notFound, useRouter } from 'next/navigation';
@@ -314,7 +313,7 @@ export default function ViewDiaryPage() {
                         </CardContent>
                     </Card>
                      <Card>
-                         <CardHeader className="p-4">
+                        <CardHeader className="p-4">
                             <CardTitle className="text-base text-center">CLIENT / MANAGER</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
@@ -327,17 +326,25 @@ export default function ViewDiaryPage() {
                                     </div>
                                     <DetailRow label="Date" value={diary.clientDate} />
                                 </>
-                            ) : isManager ? (
-                                <PinSigner
-                                    label="Client/Manager"
-                                    users={managerUsers}
-                                    onSigned={handleClientSign}
-                                    disabled={diary.isFinalised}
-                                />
                             ) : (
-                                <div className="text-center text-muted-foreground p-4">
-                                    <p>Awaiting manager sign-off.</p>
-                                </div>
+                                <>
+                                {diary.contractorSignature && isManager ? (
+                                    <div className="mt-2">
+                                        <p className="text-sm text-emerald-600 font-medium mb-2 text-center">Ready for Manager Approval</p>
+                                        <PinSigner
+                                            label="Sign Approval"
+                                            users={managerUsers}
+                                            onSigned={handleClientSign}
+                                            disabled={diary.isFinalised}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-amber-50 border border-amber-200 rounded text-center">
+                                        <p className="text-amber-700 font-bold mb-1">Work In Progress</p>
+                                        <p className="text-xs text-amber-800">The contractor must sign this diary before a manager can approve it.</p>
+                                    </div>
+                                )}
+                                </>
                             )}
                         </CardContent>
                     </Card>
