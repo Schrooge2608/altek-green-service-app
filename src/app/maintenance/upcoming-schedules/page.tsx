@@ -2,18 +2,25 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
-import type { ScheduledTask } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import type { ScheduledTask, User as AppUser } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, CheckCircle, Edit, Eye, UserCheck } from 'lucide-react';
+import { Loader2, UserCheck, Edit, Eye, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 export default function UpcomingSchedulesPage() {
     const firestore = useFirestore();
+    const router = useRouter();
+    const { user } = useUser();
+
+    const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+    const { data: currentUserData } = useDoc<AppUser>(userRoleRef);
+
 
     const schedulesQuery = useMemoFirebase(
         () => query(collection(firestore, 'upcoming_schedules'), orderBy('scheduledFor', 'asc')),
@@ -21,14 +28,6 @@ export default function UpcomingSchedulesPage() {
     );
     
     const { data: schedules, isLoading } = useCollection<ScheduledTask>(schedulesQuery);
-
-    const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-        'Pending': 'secondary',
-        'In Progress': 'default',
-        'Completed': 'outline',
-        'Approved': 'default',
-        'Cancelled': 'destructive',
-    };
     
     const getStatusStyles = (status: string) => {
         const normalized = status.toLowerCase();
@@ -85,10 +84,12 @@ export default function UpcomingSchedulesPage() {
                             ) : schedules && schedules.length > 0 ? (
                                 schedules.map(task => {
                                     const status = task.status || 'Pending';
+                                    const isAssignee = user?.uid === task.assignedToId;
+
                                     return (
                                         <TableRow key={task.id}>
                                             <TableCell className="font-medium">
-                                                <Link href={`/maintenance/resolve/${task.id}`} className="hover:underline text-primary">
+                                                <Link href={`/equipment/${task.equipmentId}`} className="hover:underline text-primary">
                                                     {task.equipmentName}
                                                 </Link>
                                             </TableCell>
@@ -99,15 +100,32 @@ export default function UpcomingSchedulesPage() {
                                                 <Badge className={cn("capitalize", getStatusStyles(status))}>{status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                 <Link href={`/maintenance/resolve/${task.id}`} passHref>
-                                                    {status === 'Approved' ? (
-                                                        <Button variant="ghost" size="sm"><Eye className="mr-2 h-4 w-4" />View</Button>
-                                                    ) : status === 'Completed' ? (
-                                                         <Button variant="outline" size="sm" className="text-amber-600 border-amber-400 hover:bg-amber-50 hover:text-amber-700"><UserCheck className="mr-2 h-4 w-4" />For Approval</Button>
-                                                    ) : (
-                                                        <Button variant="default" size="sm"><Edit className="mr-2 h-4 w-4" />Action</Button>
-                                                    )}
-                                                </Link>
+                                                 {(() => {
+                                                    if (task.status === 'Approved') {
+                                                        return (
+                                                            <Button variant="ghost" size="sm" onClick={() => router.push(`/maintenance/resolve/${task.id}`)}><Eye className="mr-2 h-4 w-4" />View</Button>
+                                                        );
+                                                    }
+                                                    if (task.status === 'Completed') {
+                                                        return (
+                                                            <Button variant="outline" size="sm" className="border-amber-500 text-amber-600" onClick={() => router.push(`/maintenance/resolve/${task.id}`)}>
+                                                                <UserCheck className="mr-2 h-4 w-4" /> For Approval
+                                                            </Button>
+                                                        );
+                                                    }
+                                                    if (isAssignee) {
+                                                        return (
+                                                            <Button variant="default" size="sm" onClick={() => router.push(`/maintenance/resolve/${task.id}`)}>
+                                                                <Pencil className="mr-2 h-4 w-4" /> Action
+                                                            </Button>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <Button variant="secondary" size="sm" onClick={() => router.push(`/maintenance/resolve/${task.id}`)}>
+                                                            <Eye className="mr-2 h-4 w-4" /> View Only
+                                                        </Button>
+                                                    );
+                                                })()}
                                             </TableCell>
                                         </TableRow>
                                     );

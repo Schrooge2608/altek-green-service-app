@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -43,14 +41,15 @@ interface WorkCrewRowProps {
     onChange: (field: keyof WorkCrewMember, value: string) => void;
     users: User[] | null;
     usersLoading: boolean;
+    disabled?: boolean;
 }
 
-function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCrewRowProps) {
+function WorkCrewRow({ member, onRemove, onChange, users, usersLoading, disabled }: WorkCrewRowProps) {
     return (
         <TableRow>
             <TableCell>
                  <Select
-                    disabled={usersLoading}
+                    disabled={usersLoading || disabled}
                     value={users?.find(u => u.name === member.name)?.id}
                     onValueChange={(userId) => {
                         const user = users?.find(u => u.id === userId);
@@ -69,7 +68,7 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
                     </SelectContent>
                 </Select>
             </TableCell>
-            <TableCell><Input placeholder="RTBS No..." value={member.rtbsNo || ''} onChange={(e) => onChange('rtbsNo', e.target.value)} /></TableCell>
+            <TableCell><Input placeholder="RTBS No..." value={member.rtbsNo || ''} onChange={(e) => onChange('rtbsNo', e.target.value)} disabled={disabled} /></TableCell>
             <TableCell className="w-[180px]">
                  <Popover>
                     <PopoverTrigger asChild>
@@ -79,6 +78,7 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
                             "w-full justify-start text-left font-normal",
                             !member.date && "text-muted-foreground"
                         )}
+                        disabled={disabled}
                         >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {member.date ? format(new Date(member.date), "PPP") : <span>Pick a date</span>}
@@ -95,9 +95,11 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: WorkCr
                 </Popover>
             </TableCell>
             <TableCell className="text-right">
-                <Button variant="ghost" size="icon" onClick={onRemove} className="print:hidden">
-                    <Trash2 className="h-4 w-4" />
-                </Button>
+                {!disabled && (
+                    <Button variant="ghost" size="icon" onClick={onRemove} className="print:hidden">
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                )}
             </TableCell>
         </TableRow>
     )
@@ -173,6 +175,10 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
         if (!currentUserData) return false;
         return ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'].includes(currentUserData.role);
     }, [currentUserData]);
+
+    const isEditMode = !!schedule;
+    const isAssignee = user?.uid === schedule?.assignedToId;
+    const isFormLocked = (schedule?.status === 'Completed' || schedule?.status === 'Approved') || (isEditMode && !isAssignee);
 
     const addCrewMember = () => {
         setCrew(c => [...c, { localId: Date.now(), name: '', rtbsNo: '', date: '', signature: '' }]);
@@ -456,7 +462,6 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
         }
     };
 
-    const isEditMode = !!schedule;
     const docPrefix = getFrequencyPrefix(frequency);
     
     const waScheduleMsg = schedule ? `
@@ -476,17 +481,17 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
             {schedule && <WhatsAppShare text={waScheduleMsg} label="Share Update" />}
-            {isEditMode ? (
+            {isEditMode && !isFormLocked ? (
                 <Button onClick={handleSaveProgress} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Save Progress
                 </Button>
-            ) : (
+            ) : !isEditMode ? (
                  <Button variant="outline" onClick={handleSaveToUpcoming} disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     {isSaving ? 'Saving...' : 'Save to Upcoming Schedule List'}
                 </Button>
-            )}
+            ) : null}
             <Button onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
             </Button>
@@ -527,7 +532,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="area">Area</Label>
-                        <Input id="area" placeholder="e.g., MPA Pump Station" />
+                        <Input id="area" placeholder="e.g., MPA Pump Station" disabled={isFormLocked} />
                     </div>
                     <div className="space-y-2">
                         <Label>Date</Label>
@@ -539,7 +544,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                                     'w-full justify-start text-left font-normal',
                                     !inspectionDate && 'text-muted-foreground'
                                 )}
-                                disabled={isEditMode}
+                                disabled={isEditMode || isFormLocked}
                                 >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {inspectionDate ? format(inspectionDate, "PPP") : <span>Pick a date</span>}
@@ -557,52 +562,16 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
-                        <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
+                        <Input id="inspected-by" value={isEditMode ? schedule.assignedToName : currentUserData?.name || 'Loading...'} disabled />
                     </div>
                 </CardContent>
             </Card>
 
             <div className="prose prose-sm max-w-none dark:prose-invert mt-8 space-y-6">
-                <div>
-                    <h3 className="text-lg font-bold">1. PURPOSE</h3>
-                    <p>Mandatory inspections and services are needed to be carried out in order to identify, report and repair any unsafe conditions as well as to ensure reliable operation of electrical equipment.</p>
-                </div>
-                <div>
-                    <h3 className="text-lg font-bold">2. DOCUMENTATION REQUIRED</h3>
-                    <ul className="list-disc pl-5">
-                        <li>Approved Risk Assessment (JHA)</li>
-                        <li>RBM Take 5 Assessment Sheet</li>
-                        <li>Critical Control Checklists (CCC) as identified by Risk Assessment</li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 className="text-lg font-bold">3. JOB SPECIFIC SAFETY INFORMATION</h3>
-                    <ul className="list-disc pl-5">
-                        <li>Complete Take 5 and CCC’s.</li>
-                        <li>Obtain permit to work.</li>
-                        <li>Isolate units as per RBM isolation procedure.</li>
-                        <li>Carry out service/inspection/test as per Quality Control Sheet below.</li>
-                        <li>Cancel work permit after work completion.</li>
-                    </ul>
-                </div>
+                <p className="text-center italic">This is a generic document for a {frequency} {component} service. Add specific checklist items and safety information below.</p>
             </div>
 
-            <Alert variant="destructive" className="my-8">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Safety Warning</AlertTitle>
-                <AlertDescription>
-                    <ul className="list-disc pl-5 space-y-1">
-                        <li>Always make sure you identify any control voltages that might be present inside the VSD panel.</li>
-                        <li>A lethally dangerous voltage is present in the VSD even after isolation. Ensure that the VSD is safe to work on by applying the “test before touch” principle. The capacitors might need time to completely discharge to zero potential.</li>
-                        <li>Live voltages in VSD’s once switched on pose a flash over risk. Arc rated PPE (Minimum Cat 2) and only insulated tools must be used.</li>
-                        <li>During the cleaning process excessive dust, pose a risk. To mitigate in cases of excessive dust, wear a dust mask.</li>
-                        <li>During the cleaning process when making use of an electrical blower loose flying objects, pose a risk. Use correct safety glasses/goggles to mitigate against eye injury.</li>
-                        <li>Do not brush or blow dust into protection relays, control equipment or switchgear mechanisms.</li>
-                    </ul>
-                </AlertDescription>
-            </Alert>
-
-             <Card className="my-8">
+            <Card className="my-8">
                 <CardHeader>
                     <CardTitle>Safety Documentation</CardTitle>
                     <CardDescription>Upload scans of the completed safety documents.</CardDescription>
@@ -624,15 +593,17 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                                                 )}
                                                 <span className="text-sm text-primary group-hover:underline truncate">Take 5 Scan {i + 1}</span>
                                             </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
+                                            {!isFormLocked && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'take5Scans')}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-                        <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />
+                        {!isFormLocked && <ImageUploader onImagesChange={setTake5Files} title="Take 5 Documents" />}
                     </div>
                     <Separator />
                     <div>
@@ -651,15 +622,17 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                                                 )}
                                                 <span className="text-sm text-primary group-hover:underline truncate">CCC Scan {i + 1}</span>
                                             </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
+                                            {!isFormLocked && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'cccScans')}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-                        <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />
+                        {!isFormLocked && <ImageUploader onImagesChange={setCccFiles} title="CCC Documents" />}
                     </div>
                     <Separator />
                     <div>
@@ -678,113 +651,30 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                                                 )}
                                                 <span className="text-sm text-primary group-hover:underline truncate">JHA Scan {i + 1}</span>
                                             </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'jhaScans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
+                                            {!isFormLocked && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'jhaScans')}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-                        <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="my-8">
-                <CardHeader>
-                    <CardTitle>Task Documents</CardTitle>
-                    <CardDescription>Upload scans of the Permit to Work and Work Order.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div>
-                        <h4 className="font-semibold text-muted-foreground mb-2">Permit to Work Scan(s)</h4>
-                        {schedule?.ptwScans && schedule.ptwScans.length > 0 && (
-                            <div className="mb-4 space-y-2">
-                                <Label>Uploaded Documents</Label>
-                                <div className="flex flex-col gap-2 rounded-md border p-2">
-                                    {schedule.ptwScans.map((url, i) => (
-                                        <div key={i} className="flex items-center justify-between">
-                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
-                                                {isImageUrl(url) ? (<img src={url} alt={`Permit to Work Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
-                                                <span className="text-sm text-primary group-hover:underline truncate">Permit to Work Scan {i + 1}</span>
-                                            </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'ptwScans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        <ImageUploader onImagesChange={setPtwFiles} title="Permit to Work Documents" />
-                    </div>
-                    <Separator />
-                    <div>
-                        <h4 className="font-semibold text-muted-foreground mb-2">Works Order Scan(s)</h4>
-                        {schedule?.workOrderScans && schedule.workOrderScans.length > 0 && (
-                            <div className="mb-4 space-y-2">
-                                <Label>Uploaded Documents</Label>
-                                <div className="flex flex-col gap-2 rounded-md border p-2">
-                                     {schedule.workOrderScans.map((url, i) => (
-                                        <div key={i} className="flex items-center justify-between">
-                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
-                                                {isImageUrl(url) ? (<img src={url} alt={`Works Order Scan ${i + 1}`} className="w-10 h-10 rounded-md object-cover" />) : (<Paperclip className="h-4 w-4 shrink-0" />)}
-                                                <span className="text-sm text-primary group-hover:underline truncate">Works Order Scan {i + 1}</span>
-                                            </a>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteScan(url, 'workOrderScans')}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        <ImageUploader onImagesChange={setWorkOrderFiles} title="Works Order Documents" />
+                        {!isFormLocked && <ImageUploader onImagesChange={setJhaFiles} title="JHA Documents" />}
                     </div>
                 </CardContent>
             </Card>
 
             <div className="my-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold">Work Crew</h3>
-                    <Button variant="outline" size="sm" onClick={addCrewMember} className="print:hidden">
-                        <Plus className="mr-2 h-4 w-4" /> Add Crew Member
-                    </Button>
-                </div>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>WORK CREW - NAME</TableHead>
-                            <TableHead>RTBS NO.</TableHead>
-                            <TableHead>DATE</TableHead>
-                            <TableHead className="w-[50px] print:hidden"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {crew.map((member, index) => (
-                            <WorkCrewRow
-                                key={member.localId}
-                                member={member}
-                                onRemove={() => removeCrewMember(member.localId)}
-                                onChange={(field, value) => handleCrewChange(index, field, value)}
-                                users={users}
-                                usersLoading={usersLoading}
-                            />
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-
-            <div className="my-8">
-                 <h3 className="text-xl font-bold mb-4">Completion Notes</h3>
-                 <Textarea
+                <h3 className="text-xl font-bold mb-4">Completion Notes</h3>
+                <Textarea
                     placeholder="Enter any notes about the work performed, issues found, or follow-up actions required..."
                     value={completionNotes}
                     onChange={(e) => setCompletionNotes(e.target.value)}
                     rows={6}
-                    disabled={!isEditMode}
-                 />
+                    disabled={isFormLocked}
+                />
             </div>
             
             <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -810,7 +700,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                         label="Sign & Complete Task"
                         users={technicians || []}
                         onSigned={handleTechnicianSign}
-                        disabled={isSaving}
+                        disabled={isSaving || isFormLocked}
                       />
                     </div>
                   )}
@@ -867,9 +757,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                 </CardContent>
               </Card>
             </div>
-
-            <Separator className="my-8" />
-
+            
             <footer className="mt-16 text-xs text-muted-foreground text-center">
                <p>Altek Green - Confidential</p>
             </footer>
