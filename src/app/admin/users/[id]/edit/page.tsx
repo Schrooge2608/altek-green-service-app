@@ -43,6 +43,8 @@ const formSchema = z.object({
   section: z.string().optional(),
   purchaseOrderNo: z.string().optional(),
   justification: z.string().optional(),
+  signatureUrl: z.string().url().optional().or(z.literal('')),
+  signingPin: z.string().regex(/^\d{4}$/, 'PIN must be 4 digits.').optional().or(z.literal('')),
 });
 
 const roleOptions = (backendConfig.entities.User.properties.role.enum || []).map(role => ({
@@ -80,6 +82,8 @@ export default function EditUserPage() {
       section: '',
       purchaseOrderNo: '',
       justification: '',
+      signatureUrl: '',
+      signingPin: '',
     },
   });
 
@@ -101,6 +105,8 @@ export default function EditUserPage() {
         section: user.section || '',
         purchaseOrderNo: user.purchaseOrderNo || '',
         justification: user.justification || '',
+        signatureUrl: user.signatureUrl || '',
+        signingPin: user.signingPin || '',
       });
     }
   }, [user, form]);
@@ -112,9 +118,6 @@ export default function EditUserPage() {
         return;
     }
     
-    // Note: Updating email in Firestore does not update it in Firebase Auth.
-    // This requires a backend function for security reasons. For this UI,
-    // we'll show a toast to remind the admin of this.
     if (values.email !== user?.email) {
       toast({
         title: 'Email Change Notice',
@@ -166,166 +169,50 @@ export default function EditUserPage() {
               <CardDescription>You can change the user's name, role, and contact information here.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., john.doe@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                     <Combobox
-                        options={roleOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select or create a role..."
-                        searchPlaceholder="Search roles..."
-                        noResultsMessage="No roles found."
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phoneNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., +27 12 345 6789" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="md:col-span-2">
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Home Address</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="e.g., 123 Industrial Way, Factory Town" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., John Doe" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email Address</FormLabel><FormControl><Input placeholder="e.g., john.doe@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><Combobox options={roleOptions} value={field.value} onChange={field.onChange} placeholder="Select or create a role..." searchPlaceholder="Search roles..." noResultsMessage="No roles found." /><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input placeholder="e.g., +27 12 345 6789" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <div className="md:col-span-2"><FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Home Address</FormLabel><FormControl><Textarea placeholder="e.g., 123 Industrial Way, Factory Town" {...field} /></FormControl><FormMessage /></FormItem>)} /></div>
+            </CardContent>
+          </Card>
+          
+           <Card>
+            <CardHeader>
+              <CardTitle>Authentication &amp; Signature</CardTitle>
+              <CardDescription>Manage the user's signature URL and secure PIN for signing documents.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+                 <FormField control={form.control} name="signingPin" render={({ field }) => (<FormItem><FormLabel>4-Digit Signing PIN</FormLabel><FormControl><Input type="password" maxLength={4} placeholder="e.g., 1234" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="signatureUrl" render={({ field }) => (<FormItem><FormLabel>Signature Image URL</FormLabel><FormControl><Input placeholder="https://storage.googleapis.com/..." {...field} /></FormControl><FormMessage /></FormItem>)} />
             </CardContent>
           </Card>
 
            <Card>
-            <CardHeader>
-                <CardTitle>SAP &amp; Qualifications</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>SAP &amp; Qualifications</CardTitle></CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-                 <FormField
-                    control={form.control}
-                    name="sapNumber"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>SAP Number</FormLabel>
-                        <FormControl>
-                        <Input placeholder="Enter SAP number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="qualifications"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Qualifications</FormLabel>
-                        <FormControl>
-                        <Textarea placeholder="List qualifications" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
+                 <FormField control={form.control} name="sapNumber" render={({ field }) => (<FormItem><FormLabel>SAP Number</FormLabel><FormControl><Input placeholder="Enter SAP number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="qualifications" render={({ field }) => (<FormItem><FormLabel>Qualifications</FormLabel><FormControl><Textarea placeholder="List qualifications" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>RBM Information</CardTitle>
-              <CardDescription>
-                Contract Start Date: 1 September 2025 | Contract End Date: 31 August 2028
-              </CardDescription>
-            </CardHeader>
+            <CardHeader><CardTitle>RBM Information</CardTitle><CardDescription>Contract Start Date: 1 September 2025 | Contract End Date: 31 August 2028</CardDescription></CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
                  <FormField control={form.control} name="designatedLeaderName" render={({ field }) => (<FormItem><FormLabel>Designated Leader Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="responsibleGenManager" render={({ field }) => (<FormItem><FormLabel>Responsible Gen Manager</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="department" render={({ field }) => (<FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="section" render={({ field }) => (<FormItem><FormLabel>Section</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="purchaseOrderNo" render={({ field }) => (<FormItem><FormLabel>Purchase Order No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <div className="md:col-span-2">
-                    <FormField control={form.control} name="justification" render={({ field }) => (<FormItem><FormLabel>Justification</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
-                </div>
+                <div className="md:col-span-2"><FormField control={form.control} name="justification" render={({ field }) => (<FormItem><FormLabel>Justification</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} /></div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-                <CardTitle>Emergency Contact</CardTitle>
-                <CardDescription>Next of kin information.</CardDescription>
-            </CardHeader>
+            <CardHeader><CardTitle>Emergency Contact</CardTitle><CardDescription>Next of kin information.</CardDescription></CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-                 <FormField
-                    control={form.control}
-                    name="nextOfKinName"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Next of Kin Name</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Jane Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="nextOfKinPhone"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Next of Kin Phone</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., +27 98 765 4321" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
+                 <FormField control={form.control} name="nextOfKinName" render={({ field }) => (<FormItem><FormLabel>Next of Kin Name</FormLabel><FormControl><Input placeholder="e.g., Jane Doe" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="nextOfKinPhone" render={({ field }) => (<FormItem><FormLabel>Next of Kin Phone</FormLabel><FormControl><Input placeholder="e.g., +27 98 765 4321" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </CardContent>
           </Card>
 
@@ -341,3 +228,5 @@ export default function EditUserPage() {
     </div>
   );
 }
+
+    

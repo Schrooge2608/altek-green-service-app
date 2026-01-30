@@ -271,7 +271,8 @@
             "section": { "type": "string", "description": "RBM Information: Section." },
             "purchaseOrderNo": { "type": "string", "description": "RBM Information: Purchase Order No." },
             "justification": { "type": "string", "description": "RBM Information: Justification." },
-            "signatureUrl": { "type": "string", "description": "URL of the user's saved signature image." }
+            "signatureUrl": { "type": "string", "description": "URL of the user's saved signature image." },
+            "signingPin": { "type": "string", "description": "A 4-digit PIN for signing documents." }
         },
         "required": ["id", "name", "email", "role"]
     },
@@ -529,3 +530,5 @@
 
     
 
+
+    

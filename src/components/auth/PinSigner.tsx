@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
@@ -123,6 +124,7 @@ export function PinSigner({ label, users, onSigned, initialSignatureUrl, initial
                 value={pin}
                 onChange={e => setPin(e.target.value)}
                 className="bg-white"
+                autoComplete="new-password"
                 />
                 <Button type="button" onClick={handleVerify} disabled={loading || pin.length < 4}>
                 {loading ? <Loader2 className="animate-spin" /> : 'Sign'}
@@ -135,3 +137,5 @@ export function PinSigner({ label, users, onSigned, initialSignatureUrl, initial
     </div>
   );
 }
+
+    
