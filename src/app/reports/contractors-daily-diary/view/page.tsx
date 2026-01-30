@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useSearchParams, notFound, useRouter } from 'next/navigation';
@@ -97,18 +96,20 @@ export default function ViewDiaryPage() {
         return 'General Work';
     }, [diary]);
 
-    const statusText = diary?.isFinalised ? '✅ COMPLETED & SIGNED' : diary?.isSignedOff ? 'REVIEW PENDING' : '⚠️ IN PROGRESS';
+    const statusText = diary?.isFinalised ? '✅ APPROVED' : diary?.isSignedOff ? 'REVIEW PENDING' : '⚠️ IN PROGRESS';
 
-    const waMessage = `
-*📢 MAINTENANCE UPDATE*
-🆔 *Job:* ${diary?.id.slice(-6).toUpperCase()}
+    const commentsPart = (diary?.comments && diary.comments.filter(c=>c.trim()).length > 0) ? `\n\n📝 *NOTES:*\n${diary.comments.filter(c=>c.trim()).join('\n')}` : '';
+
+    const waMessage = `📢 *MAINTENANCE REPORT*
+🆔 *Job ID:* ${diary?.id.slice(-6).toUpperCase() || 'N/A'}
 👷 *Tech:* ${diary?.contractorName || 'N/A'}
-📍 *Loc:* ${diary?.area} - ${equipmentName}
-Scope: ${diary?.works?.[0]?.scope || 'N/A'}
+📍 *Loc:* ${diary?.area || 'N/A'}
+⚙️ *Equip:* ${equipmentName}
 
-Status: ${statusText}
-`.trim();
-    
+🔧 *WORK DONE:* ${diary?.works?.[0]?.scope || 'N/A'}${commentsPart}
+
+*Status:* ${statusText}`.trim();
+
     const handleClientSign = async (signatureUrl: string | null, signerName: string | null) => {
         if (!id || !diary) {
             toast({ variant: 'destructive', title: 'Error', description: 'Diary data is not loaded.' });
