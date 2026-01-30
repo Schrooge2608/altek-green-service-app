@@ -128,7 +128,7 @@
       "properties": {
         "id": { "type": "string" },
         "equipmentId": { "type": "string" },
-        "period": { "type": "string", "description": "The period this record represents, e.g., '2024-07' for July 2024." },
+        "period": { "type": "string", "description": "The period this record represents, e.g., '2026-07' for July 2026." },
         "uptime": { "type": "number" },
         "downtimeHours": { "type": "number" },
         "powerConsumption": { "type": "number" }
@@ -271,7 +271,8 @@
             "section": { "type": "string", "description": "RBM Information: Section." },
             "purchaseOrderNo": { "type": "string", "description": "RBM Information: Purchase Order No." },
             "justification": { "type": "string", "description": "RBM Information: Justification." },
-            "signatureUrl": { "type": "string", "description": "URL of the user's saved signature image." }
+            "signatureUrl": { "type": "string", "description": "URL of the user's saved signature image." },
+            "signingPin": { "type": "string", "description": "A 4-digit PIN for signing documents." }
         },
         "required": ["id", "name", "email", "role"]
     },

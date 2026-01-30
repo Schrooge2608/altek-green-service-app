@@ -220,6 +220,7 @@ export interface User {
   purchaseOrderNo?: string;
   justification?: string;
   signatureUrl?: string;
+  signingPin?: string;
 }
 
 export interface ManpowerEntry {
@@ -268,8 +269,11 @@ export interface DailyDiary {
   delays?: string[];
   comments?: string[];
   contractorName?: string;
-  contractorSignature?: string; // base64
+  contractorSignature?: string | null; // base64
   contractorDate?: string;
+  clientName?: string;
+  clientSignature?: string | null; // base64
+  clientDate?: string;
   beforeWorkImages?: string[];
   afterWorkImages?: string[];
   isSignedOff: boolean;
