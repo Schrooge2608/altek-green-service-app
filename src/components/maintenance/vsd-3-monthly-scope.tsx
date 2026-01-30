@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -29,7 +30,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebase } from '@/firebase';
-import { collection, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember, ChecklistItem } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -40,6 +41,7 @@ import { useRouter } from 'next/navigation';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { ImageUploader } from '../image-uploader';
 import { Textarea } from '../ui/textarea';
+import { WhatsAppShare } from '../ui/whatsapp-share';
 
 interface WorkCrewRowProps {
     member: Partial<WorkCrewMember> & { localId: number };
@@ -198,7 +200,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
         (newCrew[index] as any)[field] = value;
         setCrew(newCrew);
     };
-
+    
     const handleDeleteScan = async (fileUrl: string, docType: 'take5Scans' | 'cccScans' | 'jhaScans' | 'ptwScans' | 'workOrderScans') => {
         if (!schedule || !firebaseApp) {
             toast({ variant: "destructive", title: "Error", description: "Cannot delete file." });
@@ -233,6 +235,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             setIsSaving(false);
         }
     };
+
 
     const handleSaveToUpcoming = async () => {
         if (!selectedEquipment || !inspectionDate || !currentUserData || !user) {
@@ -274,7 +277,7 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             const schedulesRef = collection(firestore, 'upcoming_schedules');
             const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
             await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
-            
+
             const scheduleId = docRef.id;
             const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha' | 'ptw' | 'work_order'): Promise<string[]> => {
                 if (!firebaseApp || files.length === 0) return [];
@@ -428,9 +431,22 @@ export function Vsd3MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
     const isEditMode = !!schedule;
     const docPrefix = "3MS";
 
+    const waScheduleMsg = schedule ? `
+  *📅 SCHEDULED TASK UPDATE*
+  ---------------------------
+  🗓️ *Date:* ${schedule.scheduledFor}
+  👤 *Tech:* ${schedule.assignedToName}
+  ⚙️ *Equip:* ${schedule.equipmentName}
+  📝 *Task:* ${schedule.task}
+  🔁 *Freq:* ${schedule.frequency}
+  
+  Status: *${schedule.status}*
+  `.trim() : '';
+
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
+            {schedule && <WhatsAppShare text={waScheduleMsg} label="Share Update" />}
             {isEditMode ? (
                 <>
                     <Button onClick={handleSaveProgress} disabled={isSaving}>

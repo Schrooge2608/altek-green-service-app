@@ -23,6 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import { PinSigner } from '@/components/auth/PinSigner';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { WhatsAppShare } from '@/components/ui/whatsapp-share';
 
 function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
     return (
@@ -87,6 +88,28 @@ export default function ViewDiaryPage() {
 
     const isLoading = diaryLoading || isUserLoading || usersLoading || currentUserLoading;
     
+    const equipmentName = useMemo(() => {
+        if (!diary?.works) return 'General Work';
+        const workWithEquipment = diary.works.find(w => w.scope?.startsWith('Unscheduled work on: '));
+        if (workWithEquipment?.scope) {
+            return workWithEquipment.scope.replace('Unscheduled work on: ', '');
+        }
+        return 'General Work';
+    }, [diary]);
+
+    const statusText = diary?.isFinalised ? '✅ APPROVED' : diary?.isSignedOff ? 'REVIEW PENDING' : '⚠️ IN PROGRESS';
+
+    const waMessage = `📢 DAILY DIARY UPDATE
+-----------------------
+🆔 ID: ${diary?.id.slice(-6)}
+👷 By: ${diary?.contractorName || 'N/A'}
+📍 Area: ${diary?.area}
+⚙️ Equip: ${equipmentName}
+📝 Scope: ${diary?.works?.[0]?.scope || 'N/A'}
+
+Status: ${statusText}
+`.trim();
+    
     const handleClientSign = async (signatureUrl: string | null, signerName: string | null) => {
         if (!id || !diary) {
             toast({ variant: 'destructive', title: 'Error', description: 'Diary data is not loaded.' });
@@ -150,6 +173,7 @@ export default function ViewDiaryPage() {
     return (
          <div className="max-w-6xl mx-auto p-4 sm:p-8 bg-background">
             <div className="flex justify-end mb-4 gap-2 print:hidden">
+                <WhatsAppShare text={waMessage} label="Share Update" />
                 <Button onClick={() => router.back()} variant="outline">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Tracker

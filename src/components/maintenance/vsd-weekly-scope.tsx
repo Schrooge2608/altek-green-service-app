@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -38,6 +39,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'fire
 import { ImageUploader } from '@/components/image-uploader';
 import { SignaturePad } from '../ui/signature-pad';
 import { Textarea } from '../ui/textarea';
+import { WhatsAppShare } from '../ui/whatsapp-share';
 
 
 const checklistItems = [
@@ -418,10 +420,23 @@ export function VsdWeeklyScopeDocument({ schedule }: { schedule?: ScheduledTask 
 
   const isEditMode = !!schedule;
   const docPrefix = "WS";
+  
+    const waScheduleMsg = schedule ? `
+  *📅 SCHEDULED TASK UPDATE*
+  ---------------------------
+  🗓️ *Date:* ${schedule.scheduledFor}
+  👤 *Tech:* ${schedule.assignedToName}
+  ⚙️ *Equip:* ${schedule.equipmentName}
+  📝 *Task:* ${schedule.task}
+  🔁 *Freq:* ${schedule.frequency}
+  
+  Status: *${schedule.status}*
+  `.trim() : '';
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
       <div className="flex justify-end mb-4 gap-2 print:hidden">
+        {schedule && <WhatsAppShare text={waScheduleMsg} label="Share Update" />}
         <Button onClick={handleSaveProgress} disabled={isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Progress

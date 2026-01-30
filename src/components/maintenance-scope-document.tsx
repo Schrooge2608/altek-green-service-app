@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from './ui/calendar';
 import { useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, useFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import type { Equipment, User, ScheduledTask, MaintenanceTask, WorkCrewMember } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'fire
 import { ImageUploader } from './image-uploader';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { PinSigner } from '@/components/auth/PinSigner';
+import { WhatsAppShare } from '@/components/ui/whatsapp-share';
 
 
 interface MaintenanceScopeDocumentProps {
@@ -438,11 +439,24 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
 
     const isEditMode = !!schedule;
     const docPrefix = getFrequencyPrefix(frequency);
+    
+    const waScheduleMsg = schedule ? `
+  *📅 SCHEDULED TASK UPDATE*
+  ---------------------------
+  🗓️ *Date:* ${schedule.scheduledFor}
+  👤 *Tech:* ${schedule.assignedToName}
+  ⚙️ *Equip:* ${schedule.equipmentName}
+  📝 *Task:* ${schedule.task}
+  🔁 *Freq:* ${schedule.frequency}
+  
+  Status: *${schedule.status}*
+  `.trim() : '';
 
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
         <div className="flex justify-end mb-4 gap-2 print:hidden">
+            {schedule && <WhatsAppShare text={waScheduleMsg} label="Share Update" />}
             {isEditMode ? (
                 <>
                     <Button onClick={handleSaveProgress} disabled={isSaving}>
@@ -530,7 +544,7 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="inspected-by">Inspected By</Label>
-                        <Input id="inspected-by" value={currentUserData?.name || 'Loading...'} disabled />
+                        <Input id="inspected-by" value={currentUserData?.name || (isEditMode ? schedule.assignedToName : 'Loading...')} disabled />
                     </div>
                 </CardContent>
             </Card>
@@ -742,7 +756,8 @@ export function MaintenanceScopeDocument({ title, component, frequency, schedule
                                 onRemove={() => removeCrewMember(member.localId)}
                                 onChange={(field, value) => handleCrewChange(index, field, value)}
                                 users={users}
-                                usersLoading={usersLoading} />
+                                usersLoading={usersLoading}
+                            />
                         ))}
                     </TableBody>
                 </Table>
