@@ -35,8 +35,8 @@ const slugToComponentMap: Record<string, MaintenanceTask['component']> = {
 
 export default function MaintenanceScopePage() {
   const params = useParams();
-  const categorySlug = Array.isArray(params.category) ? params.category[0] : params.category;
-  const frequencySlug = Array.isArray(params.frequency) ? params.frequency[0] : params.frequency;
+  const categorySlug = params.category as string;
+  const frequencySlug = params.frequency as string;
 
   const category = validCategories[categorySlug];
   const frequency = validFrequencies[frequencySlug] as MaintenanceTask['frequency'];

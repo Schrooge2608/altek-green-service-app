@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, notFound } from 'next/navigation';
@@ -77,7 +78,7 @@ function CompletedSchedulesTable({ schedules, isLoading }: { schedules: Complete
 
 export default function CompletedSchedulesByCategoryPage() {
   const params = useParams();
-  const categorySlug = Array.isArray(params.category) ? params.category[0] : params.category;
+  const categorySlug = params.category as string;
   const category = validCategories[categorySlug];
 
   const firestore = useFirestore();

@@ -59,9 +59,9 @@ export default function EquipmentReportPage() {
     const router = useRouter();
     const firestore = useFirestore();
     
-    const plantSlug = Array.isArray(params.plant) ? params.plant[0] : params.plant;
-    const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
-    const locationSlug = Array.isArray(params.location) ? params.location[0] : params.location;
+    const plantSlug = params.plant as string;
+    const divisionSlug = params.division as string;
+    const locationSlug = params.location as string;
 
     const plantName = useMemo(() => {
         if (plantSlug !== 'mining' && plantSlug !== 'smelter') return '';

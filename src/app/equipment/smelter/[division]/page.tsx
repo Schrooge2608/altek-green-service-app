@@ -46,7 +46,7 @@ const validDivisions: Record<string, string> = {
 
 function AuthenticatedSmelterDivisionPage() {
   const params = useParams();
-  const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
+  const divisionSlug = params.division as string;
   const { user } = useUser();
   const { toast } = useToast();
   

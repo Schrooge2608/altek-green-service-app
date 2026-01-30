@@ -65,8 +65,8 @@ export default function DivisionReportPage() {
     const router = useRouter();
     const firestore = useFirestore();
     
-    const plantSlug = Array.isArray(params.plant) ? params.plant[0] : params.plant;
-    const divisionSlug = Array.isArray(params.division) ? params.division[0] : params.division;
+    const plantSlug = params.plant as string;
+    const divisionSlug = params.division as string;
 
     const plantName = useMemo(() => {
         if (plantSlug !== 'mining' && plantSlug !== 'smelter') return '';
