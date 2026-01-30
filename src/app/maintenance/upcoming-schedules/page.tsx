@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -6,7 +7,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { ScheduledTask } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, CheckCircle, Edit } from 'lucide-react';
+import { Loader2, CheckCircle, Edit, Eye, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -21,12 +22,28 @@ export default function UpcomingSchedulesPage() {
     
     const { data: schedules, isLoading } = useCollection<ScheduledTask>(schedulesQuery);
 
-    const statusVariantMap = {
+    const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
         'Pending': 'secondary',
         'In Progress': 'default',
         'Completed': 'outline',
+        'Approved': 'default',
         'Cancelled': 'destructive',
-    } as const;
+    };
+    
+    const getStatusStyles = (status: string) => {
+        const normalized = status.toLowerCase();
+        
+        if (normalized === 'pending' || normalized === 'in progress') {
+          return 'bg-amber-100 text-amber-800 border-amber-200';
+        }
+        if (normalized === 'completed') {
+            return 'bg-blue-100 text-blue-800 border-blue-200';
+        }
+        if (normalized === 'approved') {
+          return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        }
+        return 'bg-slate-100 text-slate-600 border-slate-200';
+      };
 
     return (
         <div className="flex flex-col gap-8">
@@ -67,6 +84,7 @@ export default function UpcomingSchedulesPage() {
                                 </TableRow>
                             ) : schedules && schedules.length > 0 ? (
                                 schedules.map(task => {
+                                    const status = task.status || 'Pending';
                                     return (
                                         <TableRow key={task.id}>
                                             <TableCell className="font-medium">
@@ -78,14 +96,17 @@ export default function UpcomingSchedulesPage() {
                                             <TableCell>{task.scheduledFor}</TableCell>
                                             <TableCell>{task.assignedToName}</TableCell>
                                             <TableCell>
-                                                <Badge variant={statusVariantMap[task.status]}>{task.status}</Badge>
+                                                <Badge className={cn("capitalize", getStatusStyles(status))}>{status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Link href={`/maintenance/resolve/${task.id}`} passHref>
-                                                    <Button variant="ghost" size="sm">
-                                                        <CheckCircle className="mr-2 h-4 w-4" />
-                                                        Action
-                                                    </Button>
+                                                 <Link href={`/maintenance/resolve/${task.id}`} passHref>
+                                                    {status === 'Approved' ? (
+                                                        <Button variant="ghost" size="sm"><Eye className="mr-2 h-4 w-4" />View</Button>
+                                                    ) : status === 'Completed' ? (
+                                                         <Button variant="outline" size="sm" className="text-amber-600 border-amber-400 hover:bg-amber-50 hover:text-amber-700"><UserCheck className="mr-2 h-4 w-4" />For Approval</Button>
+                                                    ) : (
+                                                        <Button variant="default" size="sm"><Edit className="mr-2 h-4 w-4" />Action</Button>
+                                                    )}
                                                 </Link>
                                             </TableCell>
                                         </TableRow>
