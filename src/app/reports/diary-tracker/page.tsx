@@ -23,6 +23,20 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
+// Helper to get colors based on status
+const getStatusStyles = (status: string) => {
+  const normalized = status.toLowerCase();
+  
+  if (normalized === 'in progress') {
+    return 'bg-amber-100 text-amber-800 border-amber-200'; // Yellow
+  }
+  if (normalized === 'completed' || normalized === 'approved') {
+    return 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Green
+  }
+  return 'bg-slate-100 text-slate-600 border-slate-200'; // Default Grey
+};
+
+
 export default function DiaryTrackerPage() {
   const firestore = useFirestore();
   const { user } = useUser();
@@ -130,7 +144,9 @@ export default function DiaryTrackerPage() {
                             </TableCell>
                         </TableRow>
                     ) : diariesWithCreator && diariesWithCreator.length > 0 ? (
-                        diariesWithCreator.map(diary => (
+                        diariesWithCreator.map(diary => {
+                            const statusText = diary.isFinalised ? 'Approved' : diary.isSignedOff ? 'Completed' : 'In Progress';
+                            return (
                             <TableRow key={diary.id}>
                                 <TableCell className="font-mono">{diary.id}</TableCell>
                                 <TableCell>{diary.creatorName}</TableCell>
@@ -139,15 +155,7 @@ export default function DiaryTrackerPage() {
                                 <TableCell>{diary.date}</TableCell>
                                 <TableCell>{diary.area}</TableCell>
                                 <TableCell>
-                                    {(() => {
-                                        if (diary.isFinalised) {
-                                            return <Badge variant="default">Approved</Badge>;
-                                        }
-                                        if (diary.isSignedOff) {
-                                            return <Badge variant="secondary">Completed</Badge>;
-                                        }
-                                        return <Badge variant="outline">In Progress</Badge>;
-                                    })()}
+                                    <Badge className={getStatusStyles(statusText)}>{statusText}</Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <Link href={`/reports/contractors-daily-diary/view?id=${diary.id}`} passHref>
@@ -195,7 +203,7 @@ export default function DiaryTrackerPage() {
                                     )}
                                 </TableCell>
                             </TableRow>
-                        ))
+                        )})
                     ) : (
                         <TableRow>
                             <TableCell colSpan={8} className="h-24 text-center">
