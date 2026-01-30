@@ -42,6 +42,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'fire
 import { ImageUploader } from '../image-uploader';
 import { PinSigner } from '@/components/auth/PinSigner';
 import Image from 'next/image';
+import { Textarea } from '@/components/ui/textarea';
 
 interface WorkCrewRowProps {
     member: Partial<WorkCrewMember> & { localId: number };
@@ -302,7 +303,7 @@ export function Vsd6MonthlyScopeDocument({ schedule }: { schedule?: ScheduledTas
             const schedulesRef = collection(firestore, 'upcoming_schedules');
             const docRef = await addDocumentNonBlocking(schedulesRef, newScheduledTask);
             await setDoc(doc(schedulesRef, docRef.id), { id: docRef.id }, { merge: true });
-            
+
             const scheduleId = docRef.id;
             const uploadScans = async (files: File[], docType: 'take5' | 'ccc' | 'jha' | 'ptw' | 'work_order'): Promise<string[]> => {
                 if (!firebaseApp || files.length === 0) return [];
