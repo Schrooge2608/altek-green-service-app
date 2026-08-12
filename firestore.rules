@@ -1,0 +1,183 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // -----------------------------------------------------------------
+    // GLOBAL HELPERS
+    // -----------------------------------------------------------------
+    function isAuthenticated() { 
+      return request.auth != null; 
+    }
+
+    // Helper function to safely get the user's role
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Helper function to check if the user has one of the specified manager roles
+    function isManager() {
+      return (request.auth != null) && (
+        (request.auth.token.email == 'admin@altekgreen.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         userRole() in ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Corporate Manager (Beta)', 'Services Manager', 'Services Manager (Beta)', 'Site Supervisor', 'Site Supervisor (Beta)'])
+      );
+    }
+
+    // -----------------------------------------------------------------
+    // COLLECTION RULES
+    // -----------------------------------------------------------------
+
+    match /users/{userId} {
+      // Required for Offline Cache population
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isManager());
+    }
+    
+    match /vsds/{vsdId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /completed_schedules/{scheduleId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /upcoming_schedules/{scheduleId} {
+      // Explicitly allow read (get/list) and write (create/update) for authenticated users
+      // Technicians must be able to view the list and mark tasks as completed.
+      allow read, create, update: if isAuthenticated();
+      // Deletion is a destructive audit action reserved for management.
+      allow delete: if isManager();
+    }
+
+    match /upcoming_work/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /equipment/{equipmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      
+      match /performance_records/{recordId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    match /breakdown_reports/{document=**} {
+      allow read: if isAuthenticated();
+      // Allow authenticated users to create reports
+      allow create: if isAuthenticated();
+      // Allow updates if any authenticated user (facilitates hand-offs and shifts)
+      allow update: if isAuthenticated();
+      // Delete is STRICTLY restricted to Admin roles as requested
+      allow delete: if isAuthenticated() && (request.auth.token.email == 'admin@altekgreen.com' || userRole() in ['Admin', 'Superadmin']);
+    }
+    
+    match /daily_diaries/{document=**} {
+      allow read: if isAuthenticated();
+      // ENFORCE OWNERSHIP ON CREATE
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // VALIDATE OWNERSHIP ON UPDATE
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isManager());
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isManager());
+    }
+
+    match /field_service_reports/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /generated_reports/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /tasks/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /timesheets/{document=**} {
+      allow read: if isAuthenticated();
+      // Loosened for Kiosk master-device submissions
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || (isManager() && !(userRole() in ['Site Supervisor', 'Site Supervisor (Beta)'])));
+    }
+
+    match /tools/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isManager();
+    }
+
+    match /safety_meetings/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isManager();
+    }
+
+    match /assets/{document=**} {
+      // Client Managers are explicitly denied access to the asset register per site logistics requirements
+      allow read: if isAuthenticated() && (userRole() != 'Client Manager');
+      allow write: if isAuthenticated() && isManager() && (userRole() != 'Client Manager');
+    }
+
+    match /standby_shifts/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (userRole() in ['Admin', 'Superadmin', 'Site Supervisor', 'Site Supervisor (Beta)'] || request.auth.token.email == 'admin@altekgreen.com');
+    }
+
+    match /roster_overrides/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (userRole() in ['Admin', 'Superadmin'] || request.auth.token.email == 'admin@altekgreen.com');
+    }
+
+    match /settings/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (userRole() in ['Admin', 'Superadmin'] || request.auth.token.email == 'admin@altekgreen.com');
+    }
+
+    match /service_rates/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (
+        userRole() in ['Admin', 'Superadmin', 'Client Manager', 'Services Manager', 'Corporate Manager', 'Corporate Manager (Beta)', 'Services Manager (Beta)'] ||
+        request.auth.token.email == 'admin@altekgreen.com'
+      );
+    }
+
+    match /quotations/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (
+        userRole() in ['Admin', 'Superadmin', 'Corporate Manager', 'Corporate Manager (Beta)', 'Services Manager', 'Services Manager (Beta)']
+      );
+    }
+
+    match /channels/{document=**} {
+      allow read, create, update: if request.auth != null;
+
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+
+    match /consumables/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (isManager() || request.auth.token.email == 'admin@altekgreen.com');
+    }
+
+    match /ipr_requests/{document=**} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isManager() || request.auth.token.email == 'admin@altekgreen.com');
+    }
+
+    match /purchase_orders/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /clients/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isManager() && !(userRole() in ['Site Supervisor', 'Site Supervisor (Beta)']);
+    }
+
+    match /organogram/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && userRole() in ['Admin', 'Superadmin'];
+    }
+  }
+}

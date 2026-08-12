@@ -1,0 +1,44 @@
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // -----------------------------------------------------------------
+    // SAFETY MEETINGS: Orange Banner Incidents
+    // -----------------------------------------------------------------
+    match /safety_meetings/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // -----------------------------------------------------------------
+    // USER PROFILES: Avatars and Signatures
+    // -----------------------------------------------------------------
+    match /users/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // -----------------------------------------------------------------
+    // MAINTENANCE: Breakdown photos and Schedule scans
+    // -----------------------------------------------------------------
+    match /breakdown_reports/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /scheduled_tasks/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /daily_diaries/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /purchase_orders/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /clients/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

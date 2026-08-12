@@ -1,0 +1,24 @@
+
+{
+  "name": "Altek Green Plant Maintenance",
+  "short_name": "Altek Green",
+  "description": "Industrial maintenance tracking and asset management for Altek Green.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/000000/FFFFFF/png?text=Altek",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://placehold.co/512x512/000000/FFFFFF/png?text=Altek",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

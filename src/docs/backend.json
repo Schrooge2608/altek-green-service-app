@@ -1,0 +1,617 @@
+{
+  "entities": {
+    "VSD": {
+      "title": "VSD",
+      "type": "object",
+      "description": "Represents a Variable Speed Drive or Soft Starter.",
+      "properties": {
+        "id": { "type": "string" },
+        "driveType": { "type": "string", "enum": ["VSD", "Soft Starter"] },
+        "serialNumber": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "model": { "type": "string" },
+        "manufacturer": { "type": "string" },
+        "installationDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the VSD." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the VSD." }
+      },
+      "required": ["id", "driveType", "serialNumber", "equipmentId", "model", "installationDate", "status"]
+    },
+    "Equipment": {
+      "title": "Equipment",
+      "type": "object",
+      "description": "Represents a piece of equipment.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string", "description": "The physical location or plant heading of the equipment.", "enum": ["MPA","MPC","MPD","MPE", "Tailings Booster Pumps", "Concentrator Booster Pumps","MPC DRY MINING", "MPE Dry Mining", "Smelter Area 1", "Smelter Area 2", "RWBS", "MSP - TTP", "Pilot Plant", "Drymill", "Roaster 1&2", "3,3KV Blowers", "Mag Separation", "Roaster - RTR Magnets", "Smelter feed", "Charplant - Stoker 1", "Charplant - Stoker 2", "Charplant - Baghouse", "Smelter - SF1", "Smelter - Common", "Smelter - SF2", "Smelter - SF3", "Smelter - SF4", "Smelter - Clay gun", "Smelter Elevator", "Iron Injection - West Crane", "Iron Injection - East Crane", "Iron Injection", "Iron Injection - PCM1", "Iron Injection - PCM2", "Iron Injection - Fumehood", "Iron Injection - Turn Table", "Stripping crane 1", "Stripping crane 2", "Slag plant", "North Screen"] },
+        "plant": { "type": "string", "enum": ["Mining", "Smelter"] },
+        "division": { "type": "string", "enum": ["Boosters", "Dredgers", "Pump Stations", "MSP", "Roaster", "Char Plant", "Smelter", "Iron injection", "Stripping Crane", "Slag plant", "North Screen", "UPS/BTU's", "MPC Dry Mining", "MPE Dry Mining"], "description": "The specific division within the Mining or Smelter plant." },
+        "vsdId": { "type": "string" },
+        "lastMaintenance": { "type": "string", "format": "date" },
+        "nextMaintenance": { "type": "string", "format": "date" },
+        "imageUrl": { "type": "string", "description": "URL of the equipment image." },
+        "motorModel": { "type": "string" },
+        "motorPower": { "type": "number" },
+        "motorVoltage": { "type": "number" },
+        "motorSerialNumber": { "type": "string" },
+        "motorFrameType": { "type": "string" },
+        "motorInstallationDate": { "type": "string", "format": "date" },
+        "motorAssignedToId": { "type": "string", "description": "The UID of the user assigned to the motor." },
+        "motorAssignedToName": { "type": "string", "description": "The name of the user assigned to the motor." },
+        "totalDowntimeHours": { "type": "number", "description": "Total accumulated downtime in hours for the current reporting period." },
+        "breakerAssetNumber": { "type": "string", "description": "The unique asset number or tag ID for the breaker." },
+        "breakerLocationHierarchy": { "type": "string", "description": "e.g., Substation > DB > Cubicle" },
+        "breakerServiceDescription": { "type": "string", "description": "What the breaker feeds." },
+        "breakerManufacturer": { "type": "string" },
+        "breakerModelRange": { "type": "string" },
+        "breakerType": { "type": "string", "enum": ["MCB", "MCCB", "ACB", "VCB"] },
+        "breakerRatedVoltage": { "type": "number", "description": "Rated Voltage (Ue) in Volts." },
+        "breakerFrameSize": { "type": "number", "description": "Frame Size (In or Iu) in Amps." },
+        "breakerBreakingCapacity": { "type": "number", "description": "Breaking Capacity (Icu) in kA." },
+        "breakerNumberOfPoles": { "type": "number", "enum": [3, 4] },
+        "breakerTripUnitType": { "type": "string", "enum": ["Thermal-Magnetic", "Electronic"] },
+        "breakerOverloadSetting": { "type": "number", "description": "Overload Setting (Ir or L) in Amps." },
+        "breakerShortCircuitSetting": { "type": "number", "description": "Short Circuit Setting (Isd or S)." },
+        "breakerInstantaneousSetting": { "type": "number", "description": "Instantaneous Setting (Ii)." },
+        "breakerGroundFaultSetting": { "type": "string", "description": "Ground Fault Setting (Ig)." },
+        "breakerOperationMechanism": { "type": "string", "enum": ["Manual", "Motorized"] },
+        "breakerMotorVoltage": { "type": "number", "description": "Voltage for motorized operation." },
+        "breakerShuntTripVoltage": { "type": "number", "description": "Voltage for shunt trip coil." },
+        "breakerUndervoltageRelease": { "type": "string", "enum": ["Yes", "No"] },
+        "breakerAuxiliaryContacts": { "type": "string", "description": "e.g., 2NO+2NC" },
+        "protectionInstallationDate": { "type": "string", "format": "date" },
+        "protectionAssignedToId": { "type": "string", "description": "The UID of the user assigned to the protection system." },
+        "protectionAssignedToName": { "type": "string", "description": "The name of the user assigned to the protection system." },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the equipment." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the equipment." },
+        "upsModel": { "type": "string", "description": "The model of the UPS." },
+        "upsSerialNumber": { "type": "string", "description": "The serial number of the UPS." },
+        "batteryType": { "type": "string", "description": "The type of batteries used in the UPS." },
+        "upsInstallationDate": { "type": "string", "format": "date" },
+        "lastBatteryReplacement": { "type": "string", "format": "date", "description": "The date the UPS batteries were last replaced." },
+        "upsAssignedToId": { "type": "string", "description": "The UID of the user assigned to the UPS." },
+        "upsAssignedToName": { "type": "string", "description": "The name of the user assigned to the UPS." },
+        "pumpHead": { "type": "number", "description": "The head of the pump in meters." },
+        "flowRate": { "type": "number", "description": "The flow rate of the pump in m³/h." },
+        "pumpType": { "type": "string" },
+        "pumpBrand": { "type": "string" },
+        "pumpSerialNumber": { "type": "string" },
+        "pumpManufacturer": { "type": "string" },
+        "pumpImpellerDiameter": { "type": "number" },
+        "pumpCommissionDate": { "type": "string", "format": "date" },
+        "pumpFlangeSizeIn": { "type": "number" },
+        "pumpFlangeSizeOutlet": { "type": "number" },
+        "pumpFrameSize": { "type": "string" },
+        "pumpFrameType": { "type": "string" },
+        "pumpAssignedToId": { "type": "string", "description": "The UID of the user assigned to the pump." },
+        "pumpAssignedToName": { "type": "string", "description": "The name of the user assigned to the pump." },
+        "gearboxModel": { "type": "string", "description": "The model of the gearbox." },
+        "gearboxBrand": { "type": "string", "description": "The brand of the gearbox." },
+        "gearboxRatio": { "type": "string", "description": "The gear ratio, e.g., '50:1'." },
+        "gearboxSerialNumber": { "type": "string", "description": "The serial number of the gearbox." },
+        "gearboxOilType": { "type": "string", "description": "The type of oil used." },
+        "gearboxOilCapacityLiters": { "type": "number", "description": "Oil capacity in liters." },
+        "gearboxAssignedToId": { "type": "string", "description": "The UID of the user assigned to the gearbox." },
+        "gearboxAssignedToName": { "type": "string", "description": "The name of the user assigned to the gearbox." },
+        "fanType": { "type": "string", "description": "The type of fan, e.g., Axial, Centrifugal." },
+        "fanBrand": { "type": "string", "description": "The brand of the fan." },
+        "fanModel": { "type": "string", "description": "The model of the fan." },
+        "fanSerialNumber": { "type": "string", "description": "The serial number of the fan." },
+        "fanAirflowCFM": { "type": "number", "description": "Airflow in cubic feet per minute." },
+        "fanBladeDiameter": { "type": "number", "description": "Diameter of the fan blades in inches." },
+        "fanAssignedToId": { "type": "string", "description": "The UID of the user assigned to the fan." },
+        "fanAssignedToName": { "type": "string", "description": "The name of the user assigned to the fan." },
+        "valveType": { "type": "string", "description": "The type of valve, e.g., Ball, Gate, Butterfly." },
+        "valveBrand": { "type": "string", "description": "The brand of the valve." },
+        "valveModel": { "type": "string", "description": "The model of the valve." },
+        "valveSerialNumber": { "type": "string", "description": "The serial number of the valve." },
+        "valveSizeInches": { "type": "number", "description": "The size of the valve in inches." },
+        "valveActuatorType": { "type": "string", "description": "The actuator type, e.g., Manual, Electric, Pneumatic." },
+        "valveAssignedToId": { "type": "string", "description": "The UID of the user assigned to the valve." },
+        "valveAssignedToName": { "type": "string", "description": "The name of the user assigned to the valve." },
+        "breakdownStatus": {
+          "type": "string",
+          "enum": ["None", "Active", "Resolved", "Pending PO", "Awaiting OT", "Signed Off", "Invoiced"],
+          "description": "The current status of a breakdown workflow for the equipment."
+        }
+      },
+      "required": ["id", "name", "location", "vsdId", "plant"]
+    },
+    "PerformanceRecord": {
+      "title": "PerformanceRecord",
+      "type": "object",
+      "description": "Stores a snapshot of equipment performance for a specific period (e.g., a month).",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "period": { "type": "string", "description": "The period this record represents, e.g., '2026-07' for July 2026." },
+        "uptime": { "type": "number" },
+        "downtimeHours": { "type": "number" },
+        "powerConsumption": { "type": "number" }
+      },
+      "required": ["id", "equipmentId", "period", "uptime", "downtimeHours", "powerConsumption"]
+    },
+    "MaintenanceTask": {
+      "title": "MaintenanceTask",
+      "type": "object",
+      "description": "Represents a maintenance task.",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump", "UPS"] },
+        "task": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date" },
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
+        "status": { "type": "string", "enum": ["pending", "completed", "overdue"] },
+        "assignedToId": { "type": "string", "description": "The UID of the user assigned to the task." },
+        "assignedToName": { "type": "string", "description": "The name of the user assigned to the task." }
+      },
+      "required": ["id", "equipmentId", "equipmentName", "component", "task", "dueDate", "frequency", "status"]
+    },
+    "ScheduledTask": {
+      "title": "ScheduledTask",
+      "type": "object",
+      "description": "Represents a maintenance task that has been scheduled for a specific week by a technician.",
+      "properties": {
+        "id": { "type": "string" },
+        "originalTaskId": { "type": "string", "description": "The ID of the master maintenance task this was generated from." },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "task": { "type": "string" },
+        "scheduledFor": { "type": "string", "format": "date", "description": "The target date for the task." },
+        "status": { "type": "string", "enum": ["Pending", "In Progress", "Completed", "Cancelled", "Approved"] },
+        "assignedToId": { "type": "string" },
+        "assignedToName": { "type": "string" },
+        "completionNotes": { "type": "string" },
+        "component": { "type": "string", "enum": ["VSD", "Protection", "Motor", "Pump", "UPS"] },
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
+        "workCrew": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "rtbsNo": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "signature": { "type": "string", "description": "Base64 encoded signature image." }
+            }
+          }
+        }
+      },
+      "required": ["id", "originalTaskId", "equipmentId", "task", "scheduledFor", "status", "assignedToId"]
+    },
+    "BreakdownReport": {
+      "title": "BreakdownReport",
+      "type": "object",
+      "description": "Represents a breakdown report.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "The UID of the user who created the report." },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "component": { "type": "string", "enum": ["VSD", "Motor", "Pump", "Protection", "UPS", "Other"], "description": "The specific component that failed." },
+        "date": { "type": "string", "format": "date" },
+        "description": { "type": "string" },
+        "resolved": { "type": "boolean" },
+        "resolution": { "type": "string" },
+        "normalHours": { "type": "number" },
+        "overtimeHours": { "type": "number" },
+        "timeReported": { "type": "string", "format": "date-time" },
+        "timeArrived": { "type": "string", "format": "date-time", "description": "The time the technician arrived on site." },
+        "timeBackInService": { "type": "string", "format": "date-time" },
+        "timeLeftSite": { "type": "string", "format": "date-time", "description": "The time the technician left the site." },
+        "hasDelays": { "type": "boolean", "description": "Whether there were any delays during the job." },
+        "delayReason": { "type": "string", "description": "The reason for any delays." },
+        "images": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images of the breakdown." },
+        "purchaseOrderNumber": { "type": "string", "description": "The Purchase Order number authorizing the callout." },
+        "teamMembers": { "type": "array", "items": { "type": "string" }, "description": "Names of team members who assisted on the job." }
+      },
+      "required": ["id", "equipmentId", "equipmentName", "component", "date", "description", "resolved", "timeReported"]
+    },
+     "CompletedSchedule": {
+      "title": "CompletedSchedule",
+      "type": "object",
+      "description": "Represents a completed maintenance schedule document.",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "area": { "type": "string" },
+        "completionDate": { "type": "string", "format": "date" },
+        "inspectedBy": { "type": "string" },
+        "maintenanceType": { "type": "string", "enum": ["VSDs", "Protection", "Motors", "Pumps"]},
+        "frequency": { "type": "string", "enum": ["Weekly", "Monthly", "3-Monthly", "6-Monthly", "Yearly"] },
+        "workCrew": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "rtbsNo": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "signature": { "type": "string", "description": "Base64 encoded signature image." }
+            }
+          }
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "task": { "type": "string" },
+              "status": { "type": "string", "enum": ["checked", "not-checked", "n/a"] },
+              "comments": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["id", "equipmentId", "equipmentName", "completionDate", "inspectedBy", "maintenanceType", "frequency"]
+    },
+    "User": {
+        "title": "User",
+        "type": "object",
+        "description": "Represents a user of the application.",
+        "properties": {
+            "id": { "type": "string", "description": "The user's unique ID, same as their Firebase Auth UID." },
+            "name": { "type": "string" },
+            "email": { "type": "string", "format": "email" },
+            "role": { "type": "string", "enum": ["Admin", "Client Manager", "Corporate Manager", "Corporate Manager (Beta)", "Data Admin", "Data Admin (Beta)", "HVAC product specialist", "HVAC product specialist (Beta)", "Junior Technician", "Junior Technician (Beta)", "Power systems engineer", "Power systems engineer (Beta)", "Services Manager", "Services Manager (Beta)", "Site Supervisor", "Site Supervisor (Beta)", "Superadmin", "Technician", "Technician (Beta)", "Technologist", "Technologist (Beta)"] },
+            "phoneNumber": { "type": "string" },
+            "address": { "type": "string" },
+            "nextOfKinName": { "type": "string" },
+            "nextOfKinPhone": { "type": "string" },
+            "sapNumber": { "type": "string", "description": "Existing SAP number." },
+            "rtbsNumber": { "type": "string", "description": "The user's unique RTBS number." },
+            "qualifications": { "type": "string", "description": "User's qualifications." },
+            "designatedLeaderName": { "type": "string", "description": "RBM Information: Designated Leader name." },
+            "responsibleGenManager": { "type": "string", "description": "RBM Information: Responsible General Manager." },
+            "department": { "type": "string", "description": "RBM Information: Department." },
+            "section": { "type": "string", "description": "RBM Information: Section." },
+            "purchaseOrderNo": { "type": "string", "description": "RBM Information: Purchase Order No." },
+            "justification": { "type": "string", "description": "RBM Information: Justification." },
+            "signatureUrl": { "type": "string", "description": "URL of the user's saved signature image." },
+            "signingPin": { "type": "string", "description": "A 4-digit PIN for signing documents." },
+            "timesheetEnabled": { "type": "boolean", "description": "Whether the user's personal timesheet is enabled for viewing/editing." }
+        },
+        "required": ["id", "name", "email", "role"]
+    },
+    "StandbyShift": {
+      "title": "StandbyShift",
+      "type": "object",
+      "description": "Represents a single shift in the standby roster.",
+      "properties": {
+        "id": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "technicianName": { "type": "string" }
+      },
+      "required": ["startDate", "endDate", "technicianName"]
+    },
+    "RosterOverride": {
+      "title": "RosterOverride",
+      "type": "object",
+      "description": "A manual override for a specific standby week.",
+      "properties": {
+        "id": { "type": "string", "description": "The start date of the week (YYYY-MM-DD)." },
+        "techName": { "type": "string", "description": "The name of the overridden technician." }
+      }
+    },
+    "DailyDiary": {
+        "title": "DailyDiary",
+        "type": "object",
+        "description": "Represents a contractor's daily diary entry.",
+        "properties": {
+            "id": { "type": "string" },
+            "userId": { "type": "string", "description": "The UID of the user who created the entry." },
+            "contractTitle": { "type": "string" },
+            "contractNumber": { "type": "string" },
+            "workType": { "type": "string", "enum": ["Normal", "Callout"] },
+            "purchaseOrderNumber": { "type": "string" },
+            "quotationNumber": { "type": "string" },
+            "area": { "type": "string", "enum": ["Mining", "Smelter"] },
+            "date": { "type": "string", "format": "date" },
+            "shiftStart": { "type": "string" },
+            "shiftEnd": { "type": "string" },
+            "hrs": { "type": "number" },
+            "incidents": { "type": "string" },
+            "toolboxTalk": { "type": "string" },
+            "hseDocumentationScans": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for scanned HSE documents like Take 5 or CCC." },
+            "manpower": {
+              "type": "array",
+              "items": { "$ref": "#/entities/ManpowerEntry" }
+            },
+            "plant": {
+              "type": "array",
+              "items": { "$ref": "#/entities/PlantEntry" }
+            },
+            "works": {
+              "type": "array",
+              "items": { "$ref": "#/entities/WorkEntry" }
+            },
+            "delays": { "type": "array", "items": { "type": "string" } },
+            "comments": { "type": "array", "items": { "type": "string" } },
+            "contractorName": { "type": "string" },
+            "contractorSignature": { "type": "string" },
+            "contractorDate": { "type": "string", "format": "date" },
+            "clientName": { "type": "string" },
+            "clientSignature": { "type": "string" },
+            "clientDate": { "type": "string", "format": "date" },
+            "beforeWorkImages": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images taken before work." },
+            "afterWorkImages": { "type": "array", "items": { "type": "string" }, "description": "Array of URLs for images taken after work." },
+            "isSignedOff": { "type": "boolean", "description": "True if the diary has been signed off and locked from editing." },
+            "isFinalised": { "type": "boolean", "description": "True if the diary has been finalised by a manager." },
+            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the document was created." },
+            "locationFilter": { "type": "string" },
+            "savedEquipmentId": { "type": "string" },
+            "version": { "type": "string", "description": "Optional version tag (e.g. 'v2') to identify the UI layout used to create the diary." }
+        },
+        "required": ["id", "userId", "date", "contractTitle", "contractNumber"]
+    },
+    "ManpowerEntry": {
+        "title": "ManpowerEntry",
+        "type": "object",
+        "properties": {
+            "designation": { "type": "string" },
+            "forecast": { "type": "number" },
+            "actual": { "type": "number" },
+            "normalHrs": { "type": "number" },
+            "overtime1_5": { "type": "number" },
+            "overtime2_0": { "type": "number" },
+            "totalManHrs": { "type": "number" },
+            "comments": { "type": "string" }
+        }
+    },
+    "PlantEntry": {
+        "title": "PlantEntry",
+        "type": "object",
+        "properties": {
+            "description": { "type": "string" },
+            "qty": { "type": "number" },
+            "inspectionDone": { "type": "string", "enum": ["yes", "no"] },
+            "comments": { "type": "string" }
+        }
+    },
+    "WorkEntry": {
+        "title": "WorkEntry",
+        "type": "object",
+        "properties": {
+            "area": { "type": "string" },
+            "scope": { "type": "string" },
+            "timeStart": { "type": "string" },
+            "timeEnd": { "type": "string" },
+            "hrs": { "type": "number" }
+        }
+    },
+    "Timesheet": {
+      "title": "Timesheet",
+      "type": "object",
+      "description": "Represents a monthly timesheet for a user.",
+      "properties": {
+        "id": { "type": "string", "description": "Composite key: {userId}_{period}" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "period": { "type": "string", "description": "The end month of the timesheet period, e.g., '2026-01'." },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string", "format": "date" },
+              "timeIn": { "type": "string" },
+              "lunchOut": { "type": "string" },
+              "lunchIn": { "type": "string" },
+              "timeOut": { "type": "string" },
+              "normalHrs": { "type": "number" },
+              "overtimeHrs": { "type": "number" },
+              "overtimeReason": { "type": "string" },
+              "signature": { "type": "string", "description": "Base64 encoded signature image." },
+              "comments": { "type": "string" }
+            },
+            "required": ["date"]
+          }
+        }
+      },
+      "required": ["id", "userId", "userName", "period"]
+    },
+    "GeneratedReport": {
+      "title": "GeneratedReport",
+      "type": "object",
+      "description": "Represents an AI-generated weekly report.",
+      "properties": {
+        "id": { "type": "string" },
+        "reportText": { "type": "string", "description": "The full text of the generated report." },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "generatedByUserId": { "type": "string", "description": "The UID of the user who generated the report." },
+        "generatedByUserName": { "type": "string", "description": "The name of the user who generated the report." }
+      },
+      "required": ["id", "reportText", "startDate", "endDate", "generatedAt", "generatedByUserId"]
+    },
+    "Tool": {
+      "title": "Tool",
+      "type": "object",
+      "description": "A tool or piece of equipment in the inventory.",
+      "properties": {
+        "id": { "type": "string" },
+        "assetNumber": { "type": "string" },
+        "description": { "type": "string" },
+        "make": { "type": "string" },
+        "model": { "type": "string" },
+        "serial": { "type": "string" },
+        "assignedToId": { "type": "string" },
+        "assignedToName": { "type": "string" },
+        "status": { "type": "string", "enum": ["Available", "In Use", "Lost", "Maintenance"] }
+      },
+      "required": ["assetNumber", "description"]
+    },
+    "SafetyMeeting": {
+      "title": "SafetyMeeting",
+      "type": "object",
+      "description": "Represents a record of a monthly safety briefing.",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string" },
+        "conductorName": { "type": "string" },
+        "conductorId": { "type": "string" },
+        "conductorSignature": { "type": "string", "description": "Base64 signature of the conductor." },
+        "agendaTopics": { "type": "array", "items": { "type": "string" } },
+        "orangeBanners": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        },
+        "attendance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "userId": { "type": "string" },
+              "userName": { "type": "string" },
+              "role": { "type": "string" },
+              "isPresent": { "type": "boolean" }
+            }
+          }
+        },
+        "status": { "type": "string", "enum": ["draft", "finalized"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["password", "anonymous"]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/vsds/{vsdId}",
+        "definition": {
+          "entityName": "VSD",
+          "schema": { "$ref": "#/entities/VSD" },
+          "description": "Stores VSD records."
+        }
+      },
+      {
+        "path": "/equipment/{equipmentId}",
+        "definition": {
+          "entityName": "Equipment",
+          "schema": { "$ref": "#/entities/Equipment" },
+          "description": "Stores equipment details."
+        }
+      },
+      {
+        "path": "/equipment/{equipmentId}/performance_records/{recordId}",
+        "definition": {
+            "entityName": "PerformanceRecord",
+            "schema": { "$ref": "#/entities/PerformanceRecord" },
+            "description": "Stores monthly performance snapshots for a piece of equipment."
+        }
+      },
+      {
+        "path": "/tasks/{taskId}",
+        "definition": {
+          "entityName": "MaintenanceTask",
+          "schema": { "$ref": "#/entities/MaintenanceTask" },
+          "description": "Stores maintenance tasks."
+        }
+      },
+      {
+        "path": "/upcoming_schedules/{scheduleId}",
+        "definition": {
+          "entityName": "ScheduledTask",
+          "schema": { "$ref": "#/entities/ScheduledTask" },
+          "description": "Stores technician-scheduled tasks for the upcoming week."
+        }
+      },
+      {
+        "path": "/breakdown_reports/{breakdownReportId}",
+        "definition": {
+          "entityName": "BreakdownReport",
+          "schema": { "$ref": "#/entities/BreakdownReport" },
+          "description": "Stores breakdown reports."
+        }
+      },
+      {
+        "path": "/completed_schedules/{scheduleId}",
+        "definition": {
+          "entityName": "CompletedSchedule",
+          "schema": { "$ref": "#/entities/CompletedSchedule" },
+          "description": "Stores records of completed maintenance schedules."
+        }
+      },
+      {
+          "path": "/users/{userId}",
+          "definition": {
+              "entityName": "User",
+              "schema": { "$ref": "#/entities/User" },
+              "description": "Stores user profiles and roles."
+          }
+      },
+      {
+        "path": "/daily_diaries/{diaryId}",
+        "definition": {
+          "entityName": "DailyDiary",
+          "schema": { "$ref": "#/entities/DailyDiary" },
+          "description": "Stores contractor daily diary entries."
+        }
+      },
+      {
+        "path": "/timesheets/{timesheetId}",
+        "definition": {
+          "entityName": "Timesheet",
+          "schema": { "$ref": "#/entities/Timesheet" },
+          "description": "Stores user timesheet data."
+        }
+      },
+      {
+        "path": "/generated_reports/{reportId}",
+        "definition": {
+          "entityName": "GeneratedReport",
+          "schema": { "$ref": "#/entities/GeneratedReport" },
+          "description": "Stores saved AI-generated weekly reports."
+        }
+      },
+      {
+        "path": "/tools/{toolId}",
+        "definition": {
+          "entityName": "Tool",
+          "schema": { "$ref": "#/entities/Tool" },
+          "description": "Stores tools and equipment inventory."
+        }
+      },
+      {
+        "path": "/consumables/{consumableId}",
+        "definition": {
+          "entityName": "Consumable",
+          "schema": { "$ref": "#/entities/Consumable" },
+          "description": "Stores consumable items."
+        }
+      },
+      {
+        "path": "/ipr_requests/{requestId}",
+        "definition": {
+          "entityName": "IPRRequest",
+          "schema": { "$ref": "#/entities/IPRRequest" },
+          "description": "Stores IPR requests."
+        }
+      },
+      {
+        "path": "/safety_meetings/{meetingId}",
+        "definition": {
+          "entityName": "SafetyMeeting",
+          "schema": { "$ref": "#/entities/SafetyMeeting" },
+          "description": "Stores digital records of monthly safety briefings."
+        }
+      }
+    ]
+  }
+}
