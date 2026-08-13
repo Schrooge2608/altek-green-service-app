@@ -259,7 +259,10 @@ export default function NewDailyDiaryV2Page() {
                         date: safeExtracted.date ? new Date(safeExtracted.date) : new Date(),
                     });
 
-                    toast({ title: 'Scan Complete', description: 'Form populated with extracted data. Please review.' });
+                    toast({ 
+                        title: 'Scan Complete', 
+                        description: `Data: ${JSON.stringify(safeExtracted).substring(0, 150)}` 
+                    });
                 } catch (err: any) {
                     toast({ variant: 'destructive', title: 'Scan Failed', description: err.message });
                 } finally {
