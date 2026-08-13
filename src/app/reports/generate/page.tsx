@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, FileText, Copy, Save, Calendar as CalendarIcon, Database, ShieldAlert } from 'lucide-react';
 import { useFirestore, useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, serverTimestamp, addDoc, query, where, getDocs, doc } from 'firebase/firestore';
-import type { GeneratedReport, Breakdown, CompletedSchedule, DailyDiary, Equipment, User } from '@/lib/types';
+import type { GeneratedReport, Breakdown, CompletedSchedule, DailyDiary, Equipment, User, FieldServiceReport } from '@/lib/types';
 import { generateReport, type ReportInput } from '@/ai/flows/generate-report-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -26,6 +26,7 @@ interface AggregatedData {
     completedSchedules: CompletedSchedule[];
     dailyDiaries: DailyDiary[];
     equipment: Equipment[];
+    fieldServiceReports: FieldServiceReport[];
 }
 
 const sanitizeForServer = (data: any): any => {
@@ -117,13 +118,20 @@ export default function GenerateReportPage() {
                 where('date', '<=', endDate)
             );
             
+            const fsrQuery = query(
+                collection(firestore, 'field_service_reports'),
+                where('date', '>=', startDate),
+                where('date', '<=', endDate)
+            );
+            
             const equipmentQuery = collection(firestore, 'equipment');
 
-            const [newBreakdownsSnap, closedBreakdownsSnap, schedulesSnap, diariesSnap, equipmentSnap] = await Promise.all([
+            const [newBreakdownsSnap, closedBreakdownsSnap, schedulesSnap, diariesSnap, fsrSnap, equipmentSnap] = await Promise.all([
                 getDocs(newBreakdownsQuery),
                 getDocs(closedBreakdownsQuery),
                 getDocs(schedulesQuery),
                 getDocs(diariesQuery),
+                getDocs(fsrQuery),
                 getDocs(equipmentQuery),
             ]);
 
@@ -138,6 +146,7 @@ export default function GenerateReportPage() {
                     }
                     return { id: doc.id, ...data } as DailyDiary;
                 }),
+                fieldServiceReports: fsrSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FieldServiceReport)),
                 equipment: equipmentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Equipment)),
             };
 
@@ -196,6 +205,7 @@ export default function GenerateReportPage() {
             closedBreakdowns: sanitizeBreakdowns(aggregatedData.closedBreakdowns),
             completedSchedules: sanitizeForServer(aggregatedData.completedSchedules),
             dailyDiaries: minimalDiaries as any,
+            fieldServiceReports: sanitizeForServer(aggregatedData.fieldServiceReports),
             equipment: criticalEquipment as any,
         };
         

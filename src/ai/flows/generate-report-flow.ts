@@ -43,6 +43,16 @@ const DailyDiarySchema = z.object({
     afterWorkImages: z.array(z.string()).optional(),
 });
 
+const FieldServiceReportSchema = z.object({
+    id: z.string(),
+    fsrReference: z.string().optional().default('N/A'),
+    date: z.string().optional().default('N/A'),
+    customer: z.string().optional().default('N/A'),
+    site: z.string().optional().default('N/A'),
+    assetName: z.string().optional().default('N/A'),
+    status: z.string().optional().default('N/A'),
+});
+
 const EquipmentSchema = z.object({
   name: z.string().optional().default('Unknown'),
   serialNumber: z.string().optional().default('N/A'),
@@ -62,6 +72,7 @@ const ReportInputSchema = z.object({
   closedBreakdowns: z.array(BreakdownReportSchema).describe("A list of all breakdown incidents resolved during the period."),
   completedSchedules: z.array(CompletedScheduleSchema).describe("A list of all scheduled maintenance documents completed during the period."),
   dailyDiaries: z.array(DailyDiarySchema).describe("A list of all daily diaries, which may contain unscheduled work."),
+  fieldServiceReports: z.array(FieldServiceReportSchema).describe("A list of all Field Service Reports (FSRs) logged during the period."),
   equipment: z.array(EquipmentSchema).describe("A complete list of all equipment assets in the database."),
 });
 export type ReportInput = z.infer<typeof ReportInputSchema>;
@@ -122,6 +133,11 @@ Completed Schedules:
 Daily Diaries:
 {{#each dailyDiaries}}
 - Date: {{this.date}}, Title: {{this.contractTitle}}
+{{/each}}
+
+Field Service Reports:
+{{#each fieldServiceReports}}
+- Ref: {{this.fsrReference}}, Customer: {{this.customer}}, Site: {{this.site}}, Asset: {{this.assetName}}, Date: {{this.date}}, Status: {{this.status}}
 {{/each}}
 ---
 
@@ -194,7 +210,20 @@ No unscheduled work or other activities were logged in daily diaries for this pe
 
 ---
 
-**6. Closing Remarks:**
+**6. Field Service Reports (FSRs):**
+{{#if fieldServiceReports}}
+| FSR Reference | Customer | Site | Asset | Date | Status |
+|---------------|----------|------|-------|------|--------|
+{{#each fieldServiceReports}}
+| {{{this.fsrReference}}} | {{{this.customer}}} | {{{this.site}}} | {{{this.assetName}}} | {{{this.date}}} | {{{this.status}}} |
+{{/each}}
+{{else}}
+No Field Service Reports were logged during this period.
+{{/if}}
+
+---
+
+**7. Closing Remarks:**
 A brief, positive closing statement about the commitment to reliability and proactive maintenance.
 {{/if}}
 `,

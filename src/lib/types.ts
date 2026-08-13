@@ -312,6 +312,7 @@ export interface WorkEntry {
 
 export interface DailyDiary {
   id: string;
+  diaryReference?: string;
   userId: string;
   contractTitle: string;
   contractNumber: string;

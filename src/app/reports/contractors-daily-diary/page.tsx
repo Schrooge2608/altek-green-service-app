@@ -19,6 +19,7 @@ import { SignaturePad } from '@/components/ui/signature-pad';
 import { Combobox } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Image from 'next/image';
+import { extractDailyDiaryData } from '@/ai/flows/extract-daily-diary-flow';
 
 export default function NewDailyDiaryV2Page() {
     const searchParams = useSearchParams();
@@ -32,6 +33,7 @@ export default function NewDailyDiaryV2Page() {
     const [uniqueId, setUniqueId] = useState('');
     const [isIdLoading, setIsIdLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
 
     const [contractorSignature, setContractorSignature] = useState<string | null>(null);
     const [contractorName, setContractorName] = useState('');
@@ -222,6 +224,47 @@ export default function NewDailyDiaryV2Page() {
             setIsSaving(false);
         }
     };
+
+    const handleScanPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsScanning(true);
+        toast({ title: 'Scanning Document...', description: 'Analyzing the daily diary...' });
+
+        try {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const dataUri = event.target?.result as string;
+                    const extracted = await extractDailyDiaryData({ documentDataUri: dataUri });
+
+                    if (extracted.error === 'DOCUMENT_UNCLEAR') {
+                        toast({ variant: 'destructive', title: 'Scan Failed', description: 'The document is too blurry or illegible.' });
+                        return;
+                    }
+
+                    // Reset form with extracted data merged with defaults
+                    form.reset({
+                        ...defaultValues,
+                        ...form.getValues(), // preserve existing values not overwritten
+                        ...extracted,
+                        date: extracted.date ? new Date(extracted.date) : new Date(),
+                    });
+
+                    toast({ title: 'Scan Complete', description: 'Form populated with extracted data. Please review.' });
+                } catch (err: any) {
+                    toast({ variant: 'destructive', title: 'Scan Failed', description: err.message });
+                } finally {
+                    setIsScanning(false);
+                }
+            };
+            reader.readAsDataURL(file);
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Error reading file', description: err.message });
+            setIsScanning(false);
+        }
+    };
     
     if (isUserLoading || diaryLoading || userDataLoading || usersLoading) {
         return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -254,6 +297,17 @@ export default function NewDailyDiaryV2Page() {
             `}</style>
 
             <div className="flex justify-end mb-4 gap-2 print-hidden">
+                <input 
+                    type="file"
+                    id="scan-pdf"
+                    accept="application/pdf,image/*"
+                    className="hidden"
+                    onChange={handleScanPdf}
+                />
+                <Button variant="outline" className="border-blue-200 hover:bg-blue-50 text-blue-700 bg-white shadow-sm" onClick={() => document.getElementById('scan-pdf')?.click()} disabled={isScanning}>
+                    {isScanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin text-blue-700" /> : <FileCheck className="mr-2 h-4 w-4 text-blue-500" />}
+                    Scan PDF
+                </Button>
                 {!diaryData?.isFinalised && (isManager || isAdmin) && !isCreator ? (
                     <Button onClick={handleApprove} disabled={isSaving || !diaryData?.isSignedOff} className="bg-green-600 hover:bg-green-700 text-white">
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
@@ -286,8 +340,9 @@ export default function NewDailyDiaryV2Page() {
                         <div className="col-span-4 border-r-2 border-slate-900 pdf-border flex items-center justify-center bg-white">
                             <h2 className="text-2xl font-black text-slate-800 tracking-wider">DAILY DIARY</h2>
                         </div>
-                        <div className="col-span-3 flex items-center justify-center bg-slate-200">
-                            <h2 className="text-2xl font-black text-slate-800 tracking-widest">{isIdLoading ? '...' : uniqueId}</h2>
+                        <div className="col-span-3 flex flex-col items-center justify-center bg-slate-200 p-2">
+                            <Input {...form.register('diaryReference')} placeholder="Diary Ref No." className="text-center font-bold h-full bg-white text-lg w-full" />
+                            <div className="text-[10px] text-muted-foreground mt-1">ID: {isIdLoading ? '...' : uniqueId}</div>
                         </div>
                     </div>
 
