@@ -66,7 +66,12 @@ const FsrScanOutputSchema = z.object({
 export type FsrScanOutput = z.infer<typeof FsrScanOutputSchema>;
 
 export async function extractFsrData(input: FsrScanInput): Promise<FsrScanOutput> {
-  return extractFsrFlow(input);
+  try {
+    return await extractFsrFlow(input);
+  } catch (e: any) {
+    console.error('extractFsrData error:', e);
+    return { error: e.message || 'An unknown error occurred on the server.' };
+  }
 }
 
 const prompt = ai.definePrompt({

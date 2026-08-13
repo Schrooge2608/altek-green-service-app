@@ -59,7 +59,12 @@ const DailyDiaryScanOutputSchema = z.object({
 export type DailyDiaryScanOutput = z.infer<typeof DailyDiaryScanOutputSchema>;
 
 export async function extractDailyDiaryData(input: DailyDiaryScanInput): Promise<DailyDiaryScanOutput> {
-  return extractDailyDiaryFlow(input);
+  try {
+    return await extractDailyDiaryFlow(input);
+  } catch (e: any) {
+    console.error('extractDailyDiaryData error:', e);
+    return { error: e.message || 'An unknown error occurred on the server.' };
+  }
 }
 
 const prompt = ai.definePrompt({
