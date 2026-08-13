@@ -239,17 +239,24 @@ export default function NewDailyDiaryV2Page() {
                     const dataUri = event.target?.result as string;
                     const extracted = await extractDailyDiaryData({ documentDataUri: dataUri });
 
-                    if (extracted.error === 'DOCUMENT_UNCLEAR') {
-                        toast({ variant: 'destructive', title: 'Scan Failed', description: 'The document is too blurry or illegible.' });
+                    if (extracted.error) {
+                        toast({ variant: 'destructive', title: 'Scan Failed', description: extracted.error === 'DOCUMENT_UNCLEAR' ? 'The document is too blurry or illegible.' : extracted.error });
                         return;
                     }
+
+                    const safeExtracted: any = {};
+                    Object.keys(extracted).forEach(key => {
+                        if ((extracted as any)[key] !== undefined && (extracted as any)[key] !== null) {
+                            safeExtracted[key] = (extracted as any)[key];
+                        }
+                    });
 
                     // Reset form with extracted data merged with defaults
                     form.reset({
                         ...defaultValues,
                         ...form.getValues(), // preserve existing values not overwritten
-                        ...extracted,
-                        date: extracted.date ? new Date(extracted.date) : new Date(),
+                        ...safeExtracted,
+                        date: safeExtracted.date ? new Date(safeExtracted.date) : new Date(),
                     });
 
                     toast({ title: 'Scan Complete', description: 'Form populated with extracted data. Please review.' });
