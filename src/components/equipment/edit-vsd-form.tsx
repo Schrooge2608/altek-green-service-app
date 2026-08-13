@@ -24,6 +24,13 @@ export function EditVsdForm({ vsd }: { vsd: VSD }) {
   const [dsuRight, setDsuRight] = useState(vsd.dsuRightSerialNumber || '');
   const [invLeft, setInvLeft] = useState(vsd.inverterLeftSerialNumber || '');
   const [invRight, setInvRight] = useState(vsd.inverterRightSerialNumber || '');
+  const [modL1, setModL1] = useState(vsd.moduleLeft1SerialNumber || '');
+  const [modL2, setModL2] = useState(vsd.moduleLeft2SerialNumber || '');
+  const [modL3, setModL3] = useState(vsd.moduleLeft3SerialNumber || '');
+  const [modR1, setModR1] = useState(vsd.moduleRight1SerialNumber || '');
+  const [modR2, setModR2] = useState(vsd.moduleRight2SerialNumber || '');
+  const [modR3, setModR3] = useState(vsd.moduleRight3SerialNumber || '');
+  const [capDate, setCapDate] = useState(vsd.capacitorChangeDate || '');
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -35,6 +42,13 @@ export function EditVsdForm({ vsd }: { vsd: VSD }) {
         dsuRightSerialNumber: dsuRight,
         inverterLeftSerialNumber: invLeft,
         inverterRightSerialNumber: invRight,
+        moduleLeft1SerialNumber: modL1,
+        moduleLeft2SerialNumber: modL2,
+        moduleLeft3SerialNumber: modL3,
+        moduleRight1SerialNumber: modR1,
+        moduleRight2SerialNumber: modR2,
+        moduleRight3SerialNumber: modR3,
+        capacitorChangeDate: capDate,
       });
       toast({ title: "Updated", description: "VSD details have been saved." });
       setIsOpen(false);
@@ -64,22 +78,62 @@ export function EditVsdForm({ vsd }: { vsd: VSD }) {
               <Label>Serial Number</Label>
               <Input value={serial} onChange={e => setSerial(e.target.value)} />
             </div>
-            <div className="grid gap-2">
-              <Label>DSU Left Serial Number</Label>
-              <Input value={dsuLeft} onChange={e => setDsuLeft(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label>DSU Right Serial Number</Label>
-              <Input value={dsuRight} onChange={e => setDsuRight(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Inverter Left Serial Number</Label>
-              <Input value={invLeft} onChange={e => setInvLeft(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Inverter Right Serial Number</Label>
-              <Input value={invRight} onChange={e => setInvRight(e.target.value)} />
-            </div>
+            
+            {(model.includes('800') || model.includes('880')) && (
+              <>
+                <div className="grid gap-2">
+                  <Label>DSU Left Serial Number</Label>
+                  <Input value={dsuLeft} onChange={e => setDsuLeft(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>DSU Right Serial Number</Label>
+                  <Input value={dsuRight} onChange={e => setDsuRight(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Inverter Left Serial Number</Label>
+                  <Input value={invLeft} onChange={e => setInvLeft(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Inverter Right Serial Number</Label>
+                  <Input value={invRight} onChange={e => setInvRight(e.target.value)} />
+                </div>
+              </>
+            )}
+
+            {model.includes('600') && (
+              <>
+                <div className="grid gap-2">
+                  <Label>Capacitor Change Date</Label>
+                  <Input type="date" value={capDate} onChange={e => setCapDate(e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Module Left 1 Serial</Label>
+                    <Input value={modL1} onChange={e => setModL1(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Module Right 1 Serial</Label>
+                    <Input value={modR1} onChange={e => setModR1(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Module Left 2 Serial</Label>
+                    <Input value={modL2} onChange={e => setModL2(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Module Right 2 Serial</Label>
+                    <Input value={modR2} onChange={e => setModR2(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Module Left 3 Serial</Label>
+                    <Input value={modL3} onChange={e => setModL3(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Module Right 3 Serial</Label>
+                    <Input value={modR3} onChange={e => setModR3(e.target.value)} />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </ScrollArea>
         <DialogFooter className="mt-4">

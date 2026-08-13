@@ -547,10 +547,27 @@ export default function EquipmentDetailPage() {
                       <DetailRow label="Model" value={vsd?.model} />
                       <DetailRow label="Manufacturer" value={vsd?.manufacturer} />
                       <DetailRow label="Serial Number" value={vsd?.serialNumber} />
-                      <DetailRow label="DSU Left Serial No." value={vsd?.dsuLeftSerialNumber} />
-                      <DetailRow label="DSU Right Serial No." value={vsd?.dsuRightSerialNumber} />
-                      <DetailRow label="Inverter Left Serial No." value={vsd?.inverterLeftSerialNumber} />
-                      <DetailRow label="Inverter Right Serial No." value={vsd?.inverterRightSerialNumber} />
+                      
+                      {(vsd?.model?.includes('800') || vsd?.model?.includes('880')) && (
+                        <>
+                          <DetailRow label="DSU Left Serial No." value={vsd?.dsuLeftSerialNumber} />
+                          <DetailRow label="DSU Right Serial No." value={vsd?.dsuRightSerialNumber} />
+                          <DetailRow label="Inverter Left Serial No." value={vsd?.inverterLeftSerialNumber} />
+                          <DetailRow label="Inverter Right Serial No." value={vsd?.inverterRightSerialNumber} />
+                        </>
+                      )}
+
+                      {vsd?.model?.includes('600') && (
+                        <>
+                          <DetailRow label="Capacitor Change Date" value={vsd?.capacitorChangeDate} />
+                          <DetailRow label="Module Left 1" value={vsd?.moduleLeft1SerialNumber} />
+                          <DetailRow label="Module Left 2" value={vsd?.moduleLeft2SerialNumber} />
+                          <DetailRow label="Module Left 3" value={vsd?.moduleLeft3SerialNumber} />
+                          <DetailRow label="Module Right 1" value={vsd?.moduleRight1SerialNumber} />
+                          <DetailRow label="Module Right 2" value={vsd?.moduleRight2SerialNumber} />
+                          <DetailRow label="Module Right 3" value={vsd?.moduleRight3SerialNumber} />
+                        </>
+                      )}
                       <div className="flex justify-between py-1.5 border-b border-dashed">
                           <span className="text-muted-foreground text-xs">Status:</span>
                           <Badge variant={vsd?.status === 'active' ? 'default' : (vsd?.status === 'maintenance' ? 'secondary' : 'destructive')} className="text-[10px] py-0 h-5">{vsd?.status || 'Unknown'}</Badge>

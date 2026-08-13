@@ -117,6 +117,13 @@ export interface VSD {
   dsuRightSerialNumber?: string;
   inverterLeftSerialNumber?: string;
   inverterRightSerialNumber?: string;
+  moduleLeft1SerialNumber?: string;
+  moduleLeft2SerialNumber?: string;
+  moduleLeft3SerialNumber?: string;
+  moduleRight1SerialNumber?: string;
+  moduleRight2SerialNumber?: string;
+  moduleRight3SerialNumber?: string;
+  capacitorChangeDate?: string;
   equipmentId: string;
   model: string;
   manufacturer?: string;
