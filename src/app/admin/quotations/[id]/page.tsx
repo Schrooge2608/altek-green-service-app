@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Printer, Pencil, Loader2 } from 'lucide-react';
+import { ArrowLeft, Printer, Pencil, Loader2, Trash2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -21,6 +21,19 @@ export default function ViewQuotePage() {
     [firestore, params.id]
   );
   const { data: quote, isLoading } = useDoc(quoteRef);
+
+  const handleDelete = async () => {
+    if (!firestore || !params.id) return;
+    if (confirm("Are you sure you want to delete this quotation? This cannot be undone.")) {
+      try {
+        await deleteDoc(doc(firestore, 'quotations', params.id as string));
+        router.push('/admin/quotations');
+      } catch (err) {
+        console.error("Failed to delete", err);
+        alert("Failed to delete quotation.");
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -58,6 +71,11 @@ export default function ViewQuotePage() {
                 <Pencil className="mr-2 h-4 w-4" /> Edit Quote
               </Button>
             </Link>
+
+            {/* DELETE BUTTON */}
+            <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </Button>
 
             {/* PRINT BUTTON */}
             <Button 
