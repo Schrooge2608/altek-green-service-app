@@ -128,6 +128,7 @@ export function SidebarNav() {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [isUnscheduledOpen, setIsUnscheduledOpen] = useState(false);
   const [isProceduresOpen, setIsProceduresOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isBreakdownsOpen, setIsBreakdownsOpen] = useState(false);
@@ -145,6 +146,7 @@ export function SidebarNav() {
     setIsLibraryOpen(pathname.startsWith('/library') || pathname === '/scan');
     setIsMaintenanceOpen(pathname.startsWith('/maintenance'));
     setIsScheduleOpen(pathname === '/maintenance' || pathname.startsWith('/maintenance/upcoming-schedules'));
+    setIsUnscheduledOpen(pathname.startsWith('/maintenance/unscheduled'));
     setIsProceduresOpen(pathname.startsWith('/maintenance/vsds') || pathname.startsWith('/maintenance/protection'));
     setIsReportsOpen(pathname.startsWith('/reports'));
   }, [pathname]);
@@ -422,9 +424,9 @@ export function SidebarNav() {
                             <SidebarMenuSubItem>
                                 <Collapsible open={isScheduleOpen} onOpenChange={setIsScheduleOpen} className="group/schedule">
                                     <CollapsibleTrigger asChild>
-                                        <SidebarMenuSubButton tooltip="Schedule" isActive={pathname === '/maintenance' || pathname.startsWith('/maintenance/upcoming-schedules')}>
-                                            <Calendar className="h-4 w-4 mr-2" />
-                                            <span>Schedule</span>
+                                        <SidebarMenuSubButton tooltip="Scheduled Work" isActive={pathname === '/maintenance' || pathname.startsWith('/maintenance/upcoming-schedules')}>
+                                            <Calendar className="mr-2 h-4 w-4" />
+                                            <span>Scheduled Work</span>
                                             <ChevronDown className="ml-auto h-3 w-3 transition-transform group-data-[state=open]/schedule:rotate-180" />
                                         </SidebarMenuSubButton>
                                     </CollapsibleTrigger>
@@ -433,7 +435,7 @@ export function SidebarNav() {
                                             {!isClientManager && (
                                                 <SidebarMenuSubItem>
                                                     <SidebarMenuSubButton asChild isActive={pathname === '/maintenance'}>
-                                                        <Link href="/maintenance" prefetch={true}>View All</Link>
+                                                        <Link href="/maintenance" prefetch={true}>History</Link>
                                                     </SidebarMenuSubButton>
                                                 </SidebarMenuSubItem>
                                             )}
@@ -447,10 +449,25 @@ export function SidebarNav() {
                                 </Collapsible>
                             </SidebarMenuSubItem>
                              <SidebarMenuSubItem>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/permit-to-work'}>
-                                    <Link href="/maintenance/permit-to-work" prefetch={true}>Permit to Work</Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
+                                <Collapsible open={isUnscheduledOpen} onOpenChange={setIsUnscheduledOpen} className="group/unscheduled">
+                                    <CollapsibleTrigger asChild>
+                                        <SidebarMenuSubButton tooltip="Unscheduled Work" isActive={pathname.startsWith('/maintenance/unscheduled')}>
+                                            <Calendar className="mr-2 h-4 w-4" />
+                                            <span>Unscheduled Work</span>
+                                            <ChevronDown className="ml-auto h-3 w-3 transition-transform group-data-[state=open]/unscheduled:rotate-180" />
+                                        </SidebarMenuSubButton>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <SidebarMenuSub>
+                                            <SidebarMenuSubItem>
+                                                <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/unscheduled/history'}>
+                                                    <Link href="/maintenance/unscheduled/history" prefetch={true}>History</Link>
+                                                </SidebarMenuSubButton>
+                                            </SidebarMenuSubItem>
+                                        </SidebarMenuSub>
+                                    </CollapsibleContent>
+                                </Collapsible>
+                             </SidebarMenuSubItem>
                         </SidebarMenuSub>
                     </CollapsibleContent>
                 </Collapsible>

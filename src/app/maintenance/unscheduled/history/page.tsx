@@ -23,7 +23,7 @@ const SMELTER_SECTIONS = ['MSP Roaster', 'Char Plant', 'Smelter', 'Iron Injectio
 function DiaryList({ diaries, locationTag }: { diaries: DailyDiary[] | null, locationTag: string }) {
     if (!diaries) return <div className="text-sm text-muted-foreground">Loading...</div>;
     const filtered = diaries.filter(d => d.locationTags?.includes(locationTag));
-    if (filtered.length === 0) return <div className="text-sm text-muted-foreground italic">No scheduled work recorded for {locationTag}.</div>;
+    if (filtered.length === 0) return <div className="text-sm text-muted-foreground italic">No unscheduled work recorded for {locationTag}.</div>;
 
     return (
         <ul className="space-y-2 mt-2">
@@ -39,13 +39,13 @@ function DiaryList({ diaries, locationTag }: { diaries: DailyDiary[] | null, loc
     );
 }
 
-export default function MaintenancePage() {
+export default function UnscheduledHistoryPage() {
   const { firestore } = useFirebase();
   const diariesQuery = useMemoFirebase(() => {
       if (!firestore) return null;
       // We do not order by date here because it requires a composite index if filtered by maintenanceType. 
       // We will just filter by type and sort in memory.
-      return query(collection(firestore, 'daily_diaries'), where('maintenanceType', '==', 'Scheduled'));
+      return query(collection(firestore, 'daily_diaries'), where('maintenanceType', '==', 'Unscheduled'));
   }, [firestore]);
   
   const { data: rawDiaries } = useCollection<DailyDiary>(diariesQuery);
@@ -57,9 +57,9 @@ export default function MaintenancePage() {
   return (
     <div className="flex flex-col gap-8 p-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Scheduled Work (History)</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Unscheduled Work (History)</h1>
         <p className="text-muted-foreground mt-2">
-          View all scheduled maintenance history across plants, extracted from Daily Diaries.
+          View all unscheduled maintenance history across plants, extracted from Daily Diaries.
         </p>
       </header>
 

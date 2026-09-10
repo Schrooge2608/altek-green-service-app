@@ -320,6 +320,8 @@ export interface DailyDiary {
   purchaseOrderNumber?: string;
   quotationNumber?: string;
   area: 'Mining' | 'Smelter';
+  maintenanceType?: 'Scheduled' | 'Unscheduled' | 'Both';
+  locationTags?: string[];
   date: string | Date;
   shiftStart?: string;
   shiftEnd?: string;

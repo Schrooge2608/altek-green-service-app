@@ -78,6 +78,7 @@ export default function NewDailyDiaryV2Page() {
         contractTitle: 'VSD MAINTENANCE',
         contractNumber: 'CW 22038313',
         area: 'Mining',
+        maintenanceType: 'Unscheduled',
         date: new Date(),
         shiftStart: '',
         shiftEnd: '',
@@ -199,6 +200,29 @@ export default function NewDailyDiaryV2Page() {
         setIsSaving(true);
         try {
             const finalIsFinalised = isApprovalAction ? true : (diaryData?.isFinalised || false);
+            
+            const locationTags = Array.from(new Set((data.works || []).map(w => {
+                const s = (w.area || '').toLowerCase();
+                const tags: string[] = [];
+                if (s.includes('mpa')) tags.push('MPA');
+                if (s.includes('mpb')) tags.push('MPB');
+                if (s.includes('mpc')) tags.push('MPC');
+                if (s.includes('mpd')) tags.push('MPD');
+                if (s.includes('mpe')) tags.push('MPE');
+                if (s.includes('nhlabane')) tags.push('Nhlabane');
+                if (s.includes('pozzolan')) tags.push('Pozzolan');
+                if (s.includes('monzi')) tags.push('Monzi');
+                if (s.includes('return water')) tags.push('Return Water Boosters');
+                if (s.includes('calcium') || s.includes('msp') || s.includes('roaster')) tags.push('MSP Roaster');
+                if (s.includes('char')) tags.push('Char Plant');
+                if (s.includes('smelter') && !s.includes('plant')) tags.push('Smelter');
+                if (s.includes('iron')) tags.push('Iron Injection');
+                if (s.includes('crane')) tags.push('Stripping Cranes');
+                if (s.includes('slag')) tags.push('Slag Plant');
+                if (s.includes('north screen')) tags.push('North Screen');
+                return tags;
+            }).flat()));
+
             const finalDiaryData: Partial<DailyDiary> = { 
                 ...data,
                 id: uniqueId,
@@ -212,6 +236,7 @@ export default function NewDailyDiaryV2Page() {
                 clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
                 isSignedOff: finalIsFinalised ? true : (diaryData?.isSignedOff || !!contractorSignature),
                 isFinalised: finalIsFinalised,
+                locationTags,
                 equipmentNames: Array.from(new Set((data.works || []).map(w => w.area).filter(Boolean))),
             };
 
@@ -383,6 +408,19 @@ export default function NewDailyDiaryV2Page() {
                                         </div>
                                     </>
                                 )} />
+                                <div className="border-l border-slate-900 h-full mx-2"></div>
+                                <Controller control={form.control} name="maintenanceType" render={({ field }) => (
+                                    <>
+                                        <div className="flex items-center gap-2 font-bold text-xs cursor-pointer" onClick={() => field.onChange('Scheduled')}>
+                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Scheduled' && '✓'}</div>
+                                            SCHEDULED
+                                        </div>
+                                        <div className="flex items-center gap-2 font-bold text-xs cursor-pointer" onClick={() => field.onChange('Unscheduled')}>
+                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Unscheduled' && '✓'}</div>
+                                            UNSCHEDULED
+                                        </div>
+                                    </>
+                                )} />
                             </div>
                         </div>
                         <div className="grid grid-cols-12">
@@ -525,9 +563,35 @@ export default function NewDailyDiaryV2Page() {
                     </div>
 
                     {/* SECTION C */}
-                    <div className="bg-slate-300 border-b border-slate-900 font-bold text-center text-xs py-1 pdf-border relative">
+                    <div className="bg-slate-300 border-b border-slate-900 font-bold text-center text-xs py-1 pdf-border relative flex items-center justify-center">
                         SECTION C: DESCRIPTION OF WORKS
-                        {canEdit && <Button type="button" size="sm" variant="outline" className="absolute right-1 top-0 h-6 text-[10px] print-hidden z-10" onClick={() => appendWork({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: 0 })}><Plus className="h-3 w-3 mr-1"/> Add Equipment</Button>}
+                        {canEdit && (
+                            <div className="absolute right-1 top-0 h-6 print-hidden z-10 flex gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button type="button" size="sm" variant="outline" className="h-6 text-[10px]"><Plus className="h-3 w-3 mr-1"/> Add By MCC</Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-64 p-2 text-xs">
+                                        <div className="font-bold mb-2">Select MCC to add all equipment:</div>
+                                        <div className="max-h-48 overflow-y-auto flex flex-col gap-1">
+                                            {Array.from(new Set(equipmentList?.filter(eq => !watchedArea || eq.plant === watchedArea)?.map(eq => eq.mcc || eq.location || eq.division || '').filter(Boolean) || [])).sort().map(mcc => (
+                                                <Button key={mcc} variant="ghost" size="sm" className="justify-start text-xs h-7" onClick={() => {
+                                                    const eqs = equipmentList?.filter(eq => (eq.mcc || eq.location || eq.division || '') === mcc) || [];
+                                                    eqs.forEach(eq => {
+                                                        const prefix = eq.mcc || eq.location || eq.division || '';
+                                                        const areaStr = prefix ? `${prefix} - ${eq.name}` : eq.name;
+                                                        appendWork({ area: areaStr, scope: 'Maintenance', timeStart: '', timeEnd: '', hrs: 0 });
+                                                    });
+                                                }}>
+                                                    {mcc}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                <Button type="button" size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => appendWork({ area: '', scope: '', timeStart: '', timeEnd: '', hrs: 0 })}><Plus className="h-3 w-3 mr-1"/> Add Equipment</Button>
+                            </div>
+                        )}
                     </div>
                     
                     <table className="w-full text-center border-collapse border-b-2 border-slate-900 pdf-border bg-white text-[10px]">
