@@ -388,8 +388,8 @@ export default function GenerateReportPage() {
                                 <div className="text-right text-[10px] text-slate-600 space-y-1 font-sans">
                                 <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">ALTEK GREEN (PTY) LTD</h2>
                                 <div className="space-y-0">
-                                    <p>163 Van Der Bijl Street, Unit 6 Astro Place</p>
-                                    <p>Meadowdale, Johannesburg, 1614</p>
+                                    <p>9A Langwa Street, Strijdom Park</p>
+                                    <p>Randburg, 2194</p>
                                 </div>
                                 </div>
                             </div>

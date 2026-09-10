@@ -187,9 +187,9 @@ export default function CreateQuotePage() {
               <h1 className="text-lg font-bold mb-1 text-slate-900">Altek Green</h1>
               <p className="text-[10px] text-slate-500 font-bold mb-1">Vendor Number: 11055342</p>
               <div className="font-normal text-xs text-slate-800 space-y-0.5">
-                <p>Unit 6 Astro Place</p>
-                <p>163 Van der Bijl Road, Meadowdale</p>
-                <p>Gauteng 1609 ZAF</p>
+                <p>9A Langwa Street</p>
+                <p>Strijdom Park, Randburg</p>
+                <p>Gauteng 2194 ZAF</p>
                 <p>+27875512620</p>
                 <p>sales@altekgreen.com</p>
                 <p>www.altekgreen.com</p>
