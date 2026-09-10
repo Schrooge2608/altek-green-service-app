@@ -132,7 +132,7 @@ export default function SafetyMeetingsTrackerPage() {
                 <TableHead className="pl-6 font-bold">Date / Status</TableHead>
                 <TableHead className="font-bold">Conductor</TableHead>
                 <TableHead className="font-bold">Attendance</TableHead>
-                <TableHead className="font-bold">Topics Discussed</TableHead>
+                <TableHead className="font-bold">Minutes / Topics</TableHead>
                 <TableHead className="text-right pr-6 font-bold">Audit Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -159,7 +159,7 @@ export default function SafetyMeetingsTrackerPage() {
                       </div>
                     </TableCell>
                     <TableCell className="max-w-xs truncate text-xs text-slate-500 italic">
-                      {meeting.agendaTopics?.join(', ') || 'No topics listed'}
+                      {meeting.items?.map(i => i.minute).join(', ') || meeting.agendaTopics?.join(', ') || 'No minutes recorded'}
                     </TableCell>
                     <TableCell className="text-right pr-6">
                       {/* FORCE CONDITIONAL BUTTONS */}

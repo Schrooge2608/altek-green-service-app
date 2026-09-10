@@ -15,12 +15,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import html2canvas from 'html2canvas';
 
 export default function StandbyRosterPage() {
   const { user } = useUser();
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -199,11 +202,12 @@ export default function StandbyRosterPage() {
       </TableHeader>
       <TableBody>
         {data.length > 0 ? (
-          data.map((shift) => (
+          data.map((shift, index) => (
             <TableRow 
               key={shift.id} 
               className={cn(
-                activeShift?.id === shift.id && "bg-emerald-50/50 border-l-4 border-l-emerald-500"
+                activeShift?.id === shift.id && "bg-emerald-50/50 border-l-4 border-l-emerald-500",
+                index >= 3 && "share-hide-row"
               )}
             >
               <TableCell>
@@ -298,15 +302,96 @@ export default function StandbyRosterPage() {
 
 ${activeShift.isMineTeamWeek ? 'Call-outs are handled internally by the Mine primary this week.' : 'Please contact the Altek primary for any call-outs.'}`.trim() : '';
 
+  const handleShareAsImage = async () => {
+    if (!contentRef.current) return;
+    setIsSharing(true);
+    try {
+      // Temporarily hide action buttons during screenshot
+      const buttonsToHide = contentRef.current.querySelectorAll('.screenshot-hide');
+      buttonsToHide.forEach((el: any) => el.style.opacity = '0');
+
+      // Hide extra rows
+      const rowsToHide = contentRef.current.querySelectorAll('.share-hide-row');
+      rowsToHide.forEach((el: any) => el.style.display = 'none');
+
+      // Convert native inputs/selects to static spans to prevent html2canvas cropping bugs
+      const formElements = contentRef.current.querySelectorAll('input, select');
+      const tempSpans: HTMLSpanElement[] = [];
+      formElements.forEach((el: any) => {
+        const span = document.createElement('span');
+        span.textContent = el.value;
+        span.className = 'font-mono text-sm px-2 py-1 text-slate-800';
+        el.parentNode.insertBefore(span, el);
+        el.style.display = 'none';
+        tempSpans.push(span);
+      });
+
+      const canvas = await html2canvas(contentRef.current, { scale: 2, useCORS: true, logging: false, backgroundColor: '#f8fafc' });
+      
+      // Restore everything
+      buttonsToHide.forEach((el: any) => el.style.opacity = '1');
+      rowsToHide.forEach((el: any) => el.style.display = '');
+      formElements.forEach((el: any) => el.style.display = '');
+      tempSpans.forEach(span => span.remove());
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) throw new Error("Could not create image blob");
+        
+        const file = new File([blob], 'standby-roster.png', { type: 'image/png' });
+        
+        // Try Web Share API (Mobile native sharing)
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: 'Standby Roster',
+              files: [file]
+            });
+            return;
+          } catch (shareErr) {
+            console.log('Share API error / cancelled', shareErr);
+          }
+        }
+        
+        // Fallback for Desktop: Try clipboard, if fails download
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          toast({ title: "Copied to Clipboard", description: "Image copied to clipboard. You can now paste it into WhatsApp Desktop.", variant: "default" });
+        } catch (clipboardErr) {
+          // Download fallback
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'standby-roster.png';
+          a.click();
+          URL.revokeObjectURL(url);
+          toast({ title: "Image Downloaded", description: "Image downloaded. You can now attach it to WhatsApp.", variant: "default" });
+        }
+      }, 'image/png');
+
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Failed to capture image.", variant: "destructive" });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-8 p-4 sm:p-8 max-w-6xl mx-auto">
+    <div ref={contentRef} className="flex flex-col gap-8 p-4 sm:p-8 max-w-6xl mx-auto bg-slate-50 min-h-screen">
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Standby Roster</h1>
           <p className="text-muted-foreground">Explicit site shift management (Database Driven).</p>
         </div>
-        <div className="flex items-center gap-2">
-          {activeShift && <WhatsAppShare text={waRosterMsg} label="Share Update" />}
+        <div className="flex items-center gap-2 screenshot-hide">
+          {activeShift && (
+            <Button onClick={handleShareAsImage} disabled={isSharing} className="bg-emerald-500 hover:bg-emerald-600 text-white">
+              {isSharing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>}
+              Share Update
+            </Button>
+          )}
           {canEditActive && (
             <Button onClick={handleAddShift} className="bg-primary">
               <Plus className="mr-2 h-4 w-4" /> Add Upcoming Shift

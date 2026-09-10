@@ -348,8 +348,9 @@ export default function TimesheetPage() {
         try {
           const targetTsId = `${auth.currentUser.uid}_${selectedPeriod}`;
           const tsRef = doc(firestore, 'timesheets', targetTsId);
-          await setDoc(tsRef, updated, { merge: true });
-          toast({ title: "Clock Successful", description: `Time saved to ${newEntries[targetIndex].date}` });
+          // Fire and forget for offline capability
+          setDoc(tsRef, updated, { merge: true }).catch(e => console.error("Sync error", e));
+          toast({ title: "Clock Successful", description: `Time saved locally to ${newEntries[targetIndex].date}. Will sync when online.` });
         } catch (error: any) {
           alert("CRITICAL ERROR: Failed to save time data. " + (error.message || "Permission Denied."));
         }
@@ -385,7 +386,7 @@ export default function TimesheetPage() {
     try {
       const targetTsId = `${viewedUserId}_${selectedPeriod}`;
       const tsRef = doc(firestore, 'timesheets', targetTsId);
-      await setDoc(tsRef, updated, { merge: true });
+      setDoc(tsRef, updated, { merge: true }).catch(e => console.error("Timesheet persistence: FAILURE", e));
     } catch (e: any) {
       console.error("Timesheet persistence: FAILURE", e);
       alert("Database error: " + e.message);
@@ -406,7 +407,9 @@ export default function TimesheetPage() {
 
     try {
       const tsRef = doc(firestore, 'timesheets', timesheet.id);
-      await updateDoc(tsRef, { adminOverrides: newOverrides });
+      updateDoc(tsRef, { adminOverrides: newOverrides }).catch(e => {
+        console.error("Admin override sync failed", e);
+      });
       toast({ 
         title: "Status Overridden", 
         description: `Qualification for shift ${shiftId} set to ${status || 'Automatic'}.` 

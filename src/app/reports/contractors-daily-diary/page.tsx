@@ -240,8 +240,10 @@ export default function NewDailyDiaryV2Page() {
                 equipmentNames: Array.from(new Set((data.works || []).map(w => w.area).filter(Boolean))),
             };
 
-            await setDoc(doc(firestore, 'daily_diaries', uniqueId), finalDiaryData, { merge: true });
-            toast({ title: isApprovalAction ? 'Approved' : 'Saved', description: `Diary ${uniqueId} saved.` });
+            setDoc(doc(firestore, 'daily_diaries', uniqueId), finalDiaryData, { merge: true }).catch(e => {
+                console.error("Offline sync error", e);
+            });
+            toast({ title: isApprovalAction ? 'Approved' : 'Saved (Offline Mode Active)', description: `Diary ${uniqueId} saved locally.` });
             router.push(`/reports/diary-tracker`);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Save Failed', description: error.message });

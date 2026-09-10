@@ -1,11 +1,8 @@
-
 'use client';
 
-import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   Table, 
   TableBody, 
@@ -15,224 +12,189 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { 
-  ArrowLeft, 
-  Printer, 
   Loader2, 
-  CheckCircle2, 
-  ShieldCheck,
-  AlertTriangle,
-  ExternalLink,
-  FileText
+  ArrowLeft,
+  Printer
 } from 'lucide-react';
-import { 
-  useDoc, 
-  useFirestore, 
-  useMemoFirebase 
-} from '@/firebase';
+import { useDoc, useFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { SafetyMeeting } from '@/lib/types';
-import { AltekLogo } from '@/components/altek-logo';
-import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
+import { useRouter, useParams } from 'next/navigation';
+import Image from 'next/image';
 
-/**
- * @fileOverview Official Compliance View for Safety Meeting records.
- * Displays uploaded Orange Banner documents as clickable high-visibility links.
- */
-export default function ViewSafetyMeetingPage() {
+export default function SafetyMeetingViewPage() {
   const params = useParams();
   const router = useRouter();
-  const firestore = useFirestore();
-  const id = params.id as string;
+  const { firestore } = useFirebase();
+  const { user } = useUser();
+  const meetingId = params.id as string;
 
-  // 1. Fetch record data
-  const meetingRef = useMemoFirebase(() => (id ? doc(firestore, 'safety_meetings', id) : null), [firestore, id]);
+  const meetingRef = useMemo(() => (meetingId ? doc(firestore, 'safety_meetings', meetingId) : null), [firestore, meetingId]);
   const { data: meeting, isLoading } = useDoc<SafetyMeeting>(meetingRef);
 
+  const presentList = meeting?.attendance.filter(a => a.isPresent).map(a => a.userName) || [];
+  const apologiesList = meeting?.attendance.filter(a => !a.isPresent).map(a => a.userName) || [];
+
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin h-8 w-8 text-primary" />
-        <p className="ml-2 font-bold text-slate-500">Opening Archive...</p>
-      </div>
-    );
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div>;
   }
 
-  if (!meeting) return <div className="p-20 text-center font-bold text-slate-400">Meeting record not found.</div>;
+  if (!meeting) {
+    return <div className="p-8 text-center text-muted-foreground">Meeting record not found.</div>;
+  }
 
-  const presentCount = meeting.attendance.filter(a => a.isPresent).length;
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background min-h-screen">
-      <style>{'@media print { @page { size: portrait; margin: 10mm; } }'}</style>
-      
-      {/* WEB TOOLBAR (HIDDEN ON PRINT) */}
-      <div className="flex justify-between items-center mb-6 print:hidden">
+    <div className="p-4 sm:p-8 max-w-[1200px] mx-auto pb-32">
+      {/* NO-PRINT HEADER */}
+      <div className="flex justify-between items-center mb-8 print:hidden">
         <Button variant="ghost" onClick={() => router.push('/admin/safety-meetings')}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Log
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
-        <Button onClick={() => window.print()} className="bg-emerald-600 hover:bg-emerald-700 shadow-md">
-          <Printer className="mr-2 h-4 w-4" /> Export Record to PDF
+        <Button onClick={handlePrint} className="bg-primary">
+          <Printer className="h-4 w-4 mr-2" /> Print Minutes
         </Button>
       </div>
 
-      <Card className="p-8 md:p-12 shadow-2xl border-slate-200 print:shadow-none print:border-none print:p-0 bg-white">
-        {/* OFFICIAL COMPLIANCE HEADER */}
-        <header className="flex justify-between items-start mb-10 border-b-4 border-slate-900 pb-8">
-          <div>
-            <AltekLogo className="h-16 w-auto mb-4" />
-            <div className="space-y-1">
-              <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900">Safety Meeting Record</h1>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic">Compliance Ref: AG-SAF-LOG-001</p>
+      <div className="bg-white print:shadow-none shadow-xl border p-8 space-y-8 text-black" id="print-area">
+        
+        {/* HEADER / LOGO ROW */}
+        <div className="flex justify-between items-center border-b pb-4">
+          <div className="flex items-center gap-4">
+            {/* Altek Logo */}
+            <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-black text-xl">AG</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900">Altek Green</h1>
+              <p className="text-sm font-medium text-slate-500">Minutes of HSE Meeting</p>
             </div>
           </div>
-          <div className="text-right space-y-2">
-            <Badge variant="outline" className="font-mono text-xs border-slate-300 px-3 py-1 bg-slate-50">
-              UUID: {meeting.id.slice(0, 8).toUpperCase()}
-            </Badge>
-            <div className="pt-2">
-              <p className="text-lg font-black text-slate-900 leading-none">{meeting.date}</p>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">{meeting.time}</p>
-            </div>
+          <div className="text-right">
+            <h2 className="text-xl font-bold">{meeting.monthYear || format(parseISO(meeting.date), 'MMMM yyyy')}</h2>
           </div>
-        </header>
+        </div>
 
-        {/* CRITICAL INCIDENTS (ORANGE BANNER DOCUMENTS) */}
-        {meeting.orangeBanners && meeting.orangeBanners.length > 0 && (
-          <section className="mb-12 space-y-4">
-            <div className="flex items-center justify-between bg-orange-600 text-white px-4 py-2 rounded-t-lg">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" /> Critical Safety Flashes (Attached)
-                </h3>
+        {/* METADATA TABLE */}
+        <div className="border border-slate-300 rounded overflow-hidden">
+          <div className="grid grid-cols-12 bg-slate-100 border-b border-slate-300 font-bold text-xs uppercase text-slate-600">
+            <div className="col-span-4 p-2 border-r border-slate-300">Meeting Details</div>
+            <div className="col-span-3 p-2 border-r border-slate-300 text-center">Present</div>
+            <div className="col-span-3 p-2 border-r border-slate-300 text-center">Apologies</div>
+            <div className="col-span-2 p-2 text-center">Approved By</div>
+          </div>
+          
+          <div className="grid grid-cols-12 text-sm">
+            {/* Column 1: Meeting Details */}
+            <div className="col-span-4 border-r border-slate-300 p-0 flex flex-col h-full">
+              <div className="grid grid-cols-3 border-b border-slate-200 flex-1">
+                <div className="col-span-1 p-2 font-bold bg-slate-50 border-r border-slate-200">Venue:</div>
+                <div className="col-span-2 p-2">{meeting.venue || 'N/A'}</div>
+              </div>
+              <div className="grid grid-cols-3 border-b border-slate-200 flex-1">
+                <div className="col-span-1 p-2 font-bold bg-slate-50 border-r border-slate-200">Time:</div>
+                <div className="col-span-2 p-2">{meeting.time}</div>
+              </div>
+              <div className="grid grid-cols-3 border-b border-slate-200 flex-1">
+                <div className="col-span-1 p-2 font-bold bg-slate-50 border-r border-slate-200">Date:</div>
+                <div className="col-span-2 p-2">{format(parseISO(meeting.date), 'd MMMM yyyy')}</div>
+              </div>
+              <div className="grid grid-cols-3 border-b border-slate-200 flex-1">
+                <div className="col-span-1 p-2 font-bold bg-slate-50 border-r border-slate-200">Minutes:</div>
+                <div className="col-span-2 p-2">{meeting.conductorName}</div>
+              </div>
+              <div className="grid grid-cols-3 flex-1">
+                <div className="col-span-1 p-2 font-bold bg-slate-50 border-r border-slate-200">Reviewer:</div>
+                <div className="col-span-2 p-2">{meeting.reviewerName || 'N/A'}</div>
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-2">
-                {meeting.orangeBanners.map((banner, i) => (
-                    <a 
-                      key={i} 
-                      href={banner.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-4 bg-orange-50 border-2 border-orange-100 rounded-lg group hover:bg-orange-100 transition-colors"
-                    >
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-orange-600" />
-                          <p className="font-black text-orange-950 text-sm">{banner.name}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-orange-700 uppercase opacity-60 group-hover:opacity-100">Open Full Document</span>
-                          <ExternalLink className="h-4 w-4 text-orange-700" />
-                        </div>
-                    </a>
+
+            {/* Column 2: Present */}
+            <div className="col-span-3 border-r border-slate-300 p-2 text-xs">
+              <ul className="list-none space-y-1">
+                {presentList.map((name, i) => (
+                  <li key={i}>{name}</li>
                 ))}
+              </ul>
             </div>
-          </section>
-        )}
 
-        {/* METADATA GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
-          <section className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2 py-1 rounded">01. Conductor & Scope</h3>
-            <div className="space-y-3 px-1">
-              <div className="flex justify-between items-end border-b border-dashed pb-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase">Conductor Name:</span>
-                <span className="font-bold text-slate-900">{meeting.conductorName}</span>
-              </div>
-              <div className="flex justify-between items-end border-b border-dashed pb-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase">Employee ID:</span>
-                <span className="font-mono text-xs">{meeting.conductorId.slice(-6).toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between items-end border-b border-dashed pb-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase">Attendance:</span>
-                <span className="font-bold text-slate-900">{presentCount} / {meeting.attendance.length} Personnel Present</span>
-              </div>
+            {/* Column 3: Apologies */}
+            <div className="col-span-3 border-r border-slate-300 p-2 text-xs">
+              <ul className="list-none space-y-1">
+                {apologiesList.map((name, i) => (
+                  <li key={i}>{name}</li>
+                ))}
+              </ul>
             </div>
-          </section>
 
-          <section className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2 py-1 rounded">02. Agenda Topics</h3>
-            <ul className="space-y-2 px-1">
-              {meeting.agendaTopics.map((topic, i) => (
-                <li key={i} className="text-sm font-bold text-slate-700 flex items-center gap-3">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                  {topic}
+            {/* Column 4: Approval */}
+            <div className="col-span-2 p-2 flex items-end justify-center pb-4">
+              {meeting.conductorSignature ? (
+                <div className="flex flex-col items-center">
+                  <img src={meeting.conductorSignature} alt="Sig" className="h-12 object-contain" />
+                  <span className="text-[10px] text-slate-500 italic mt-1 text-center">Signed by {meeting.conductorName}</span>
+                </div>
+              ) : (
+                <div className="w-full h-12 border-b border-slate-400 border-dashed"></div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ITEMS TABLE */}
+        <div className="mt-8">
+          <Table className="border border-slate-300">
+            <TableHeader className="bg-slate-100">
+              <TableRow>
+                <TableHead className="w-[50px] font-bold text-slate-700 border-r border-slate-300 text-xs py-2">ITEM</TableHead>
+                <TableHead className="w-[150px] font-bold text-slate-700 border-r border-slate-300 text-xs py-2">MINUTE</TableHead>
+                <TableHead className="font-bold text-slate-700 border-r border-slate-300 text-xs py-2">COMMENTS</TableHead>
+                <TableHead className="w-[120px] font-bold text-slate-700 border-r border-slate-300 text-xs py-2">ACTION</TableHead>
+                <TableHead className="w-[120px] font-bold text-slate-700 border-r border-slate-300 text-xs py-2">STATUS</TableHead>
+                <TableHead className="w-[120px] font-bold text-slate-700 text-xs py-2">COMP. DATE</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {meeting.items && meeting.items.length > 0 ? (
+                meeting.items.map((item, index) => (
+                  <TableRow key={index} className="align-top border-b border-slate-300 hover:bg-transparent">
+                    <TableCell className="border-r border-slate-300 font-bold p-2 text-xs">{item.itemNumber}</TableCell>
+                    <TableCell className="border-r border-slate-300 font-bold underline p-2 text-xs">{item.minute}</TableCell>
+                    <TableCell className="border-r border-slate-300 p-2 text-xs whitespace-pre-wrap">{item.comments}</TableCell>
+                    <TableCell className="border-r border-slate-300 p-2 text-xs text-center">{item.action}</TableCell>
+                    <TableCell className="border-r border-slate-300 p-2 text-xs text-center">{item.status}</TableCell>
+                    <TableCell className="p-2 text-xs text-center">{item.compDate}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-slate-400 italic">No minutes recorded.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* ORANGE BANNERS (ATTACHMENTS) */}
+        {meeting.orangeBanners && meeting.orangeBanners.length > 0 && (
+          <div className="mt-8 border border-orange-200 rounded p-4 bg-orange-50/50 print:bg-white print:border-none print:p-0">
+            <h3 className="font-bold text-sm uppercase text-orange-800 mb-4 print:text-black">Attachments / Orange Banners</h3>
+            <ul className="space-y-2">
+              {meeting.orangeBanners.map((banner, i) => (
+                <li key={i} className="text-sm">
+                  <a href={banner.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2">
+                    📄 {banner.name}
+                  </a>
                 </li>
               ))}
             </ul>
-          </section>
-        </div>
-
-        {/* ATTENDANCE TABLE */}
-        <section className="space-y-4 mb-16">
-          <h3 className="text-xs font-black uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2 py-1 rounded">03. Official Attendance Registry</h3>
-          <div className="border border-slate-200 rounded-lg overflow-hidden print:border-slate-300">
-            <Table>
-              <TableHeader className="bg-slate-50 print:bg-slate-100">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-black text-[10px] uppercase text-slate-500 tracking-wider">Technician Name</TableHead>
-                  <TableHead className="font-black text-[10px] uppercase text-slate-500 tracking-wider">Designation</TableHead>
-                  <TableHead className="text-right font-black text-[10px] uppercase text-slate-500 tracking-wider pr-8">Audit Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {meeting.attendance.map((person, idx) => (
-                  <TableRow key={idx} className="print:border-b border-slate-100 last:border-0 h-10">
-                    <TableCell className="font-bold text-slate-800">{person.userName}</TableCell>
-                    <TableCell className="text-[11px] text-slate-500 uppercase font-medium">{person.role}</TableCell>
-                    <TableCell className="text-right pr-8">
-                      <span className={cn(
-                        "text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded",
-                        person.isPresent ? "bg-emerald-50 text-emerald-700" : "text-slate-300"
-                      )}>
-                        {person.isPresent ? '✓ PRESENT' : 'ABSENT'}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           </div>
-        </section>
-
-        {/* VERIFICATION BLOCK */}
-        <section className="mt-auto pt-10 border-t-4 border-slate-900 print:break-inside-avoid">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
-            <div className="md:col-span-8 space-y-4">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Conductor Verification</h3>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-lg italic font-medium">
-                I, the undersigned, hereby certify that the above personnel were physically present for the safety briefing on the topics listed. 
-                This record serves as official documentation of compliance with site safety protocols and Altek Green standard operating procedures.
-              </p>
-              <div className="pt-6">
-                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Digitally Signing As:</p>
-                <p className="text-xl font-black text-slate-900 border-b-2 border-emerald-500 pb-1 w-fit uppercase">{meeting.conductorName}</p>
-                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Signed: {meeting.date} @ {meeting.time}</p>
-              </div>
-            </div>
-            
-            <div className="md:col-span-4">
-              <div className="border-2 border-slate-100 rounded-xl bg-slate-50 p-6 flex flex-col items-center justify-center min-h-[140px] print:border-slate-300 print:bg-white shadow-inner">
-                {meeting.conductorSignature ? (
-                  <img src={meeting.conductorSignature} alt="Conductor Signature" className="max-h-28 w-auto object-contain" />
-                ) : (
-                  <p className="text-[10px] text-slate-300 font-bold uppercase italic">Missing Signature</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className="mt-16 text-center border-t-2 border-slate-50 pt-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-500" />
-            <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.3em]">
-              AG COMPLIANCE SYSTEM • SAFE WORK ENVIRONMENT
-            </p>
-          </div>
-          <p className="text-[8px] text-slate-300 font-bold uppercase">
-            Altek Green (Pty) Ltd • 163 Van Der Bijl St, Meadowdale • confidential compliance record
-          </p>
-        </footer>
-      </Card>
+        )}
+      </div>
     </div>
   );
 }

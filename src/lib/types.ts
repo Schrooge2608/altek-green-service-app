@@ -591,15 +591,35 @@ export interface Client {
   updatedAt?: any;
 }
 
+export interface HSEMeetingItem {
+  id: string;
+  itemNumber: string;
+  minute: string;
+  comments: string;
+  action: string;
+  status: string;
+  compDate: string;
+}
+
 export interface SafetyMeeting {
   id: string;
   date: string;
   time: string;
-  conductorName: string;
+  venue?: string;
+  monthYear?: string;
+  conductorName: string; // "Minutes" person
+  reviewerName?: string;
   conductorId: string;
   conductorSignature: string | null;
-  agendaTopics: string[];
-  orangeBanners: { name: string; url: string }[];
+  reviewerSignature?: string | null;
+  
+  // Legacy fields (kept optional for backwards compat)
+  agendaTopics?: string[];
+  orangeBanners?: { name: string; url: string }[];
+  
+  // New V2 fields
+  items?: HSEMeetingItem[];
+  
   attendance: {
     userId: string;
     userName: string;
@@ -608,6 +628,7 @@ export interface SafetyMeeting {
   }[];
   status: 'draft' | 'finalized';
   createdAt: any;
+  updatedAt?: any;
 }
 
 export interface Asset {
