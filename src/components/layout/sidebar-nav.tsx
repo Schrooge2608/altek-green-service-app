@@ -335,9 +335,8 @@ export function SidebarNav() {
                     </CollapsibleContent>
                 </Collapsible>
            </SidebarMenuItem>
-           {(isAdmin || isManager || isTechnician) && !isClient && (
-                <SidebarMenuItem>
-                    <Collapsible open={isReportsOpen} onOpenChange={setIsReportsOpen} className="group/reports">
+           <SidebarMenuItem>
+               <Collapsible open={isReportsOpen} onOpenChange={setIsReportsOpen} className="group/reports">
                         <CollapsibleTrigger asChild>
                             <SidebarMenuButton tooltip="Reports" isActive={pathname.startsWith('/reports')}>
                                 <FileText />
@@ -347,7 +346,6 @@ export function SidebarNav() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <SidebarMenuSub>
-                                {(isAdmin || isManager) && (
                                     <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild isActive={pathname === '/reports'}>
                                             <Link href="/reports" prefetch={true}>
@@ -355,8 +353,6 @@ export function SidebarNav() {
                                             </Link>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
-                                )}
-                                {(isAdmin || isManager) && (
                                     <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild isActive={pathname === '/reports/generate'}>
                                             <Link href="/reports/generate" prefetch={true}>
@@ -365,8 +361,6 @@ export function SidebarNav() {
                                             </Link>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
-                                )}
-                                {(isAdmin || isManager) && (
                                     <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild isActive={pathname.startsWith('/reports/history')}>
                                             <Link href="/reports/history" prefetch={true}>
@@ -375,7 +369,6 @@ export function SidebarNav() {
                                             </Link>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
-                                )}
 
                                 <SidebarMenuSubItem>
                                     <Collapsible className="group/diary">
@@ -408,7 +401,6 @@ export function SidebarNav() {
                         </CollapsibleContent>
                     </Collapsible>
                 </SidebarMenuItem>
-            )}
 
            <SidebarMenuItem>
                 <Collapsible open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen} className="group/maintenance">
