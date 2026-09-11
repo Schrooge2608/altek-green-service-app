@@ -54,7 +54,7 @@ export default function DiaryTrackerV2Page() {
     return ['Admin', 'Superadmin'].includes(currentUserData.role);
   }, [currentUserData]);
 
-  const canCreate = currentUserData?.role && currentUserData.role !== 'Client';
+  const canCreate = currentUserData?.role && currentUserData.role !== 'Client' && currentUserData.role !== 'Client Manager';
 
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
 

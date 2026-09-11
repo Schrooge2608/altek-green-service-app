@@ -611,23 +611,27 @@ export function SidebarNav() {
               </SidebarMenuItem>
             )}
 
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/meters'} tooltip="Meters">
-                    <Link href="/meters" prefetch={true}>
-                        <Gauge />
-                        <span>Meters</span>
-                    </Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
+            {!isClient && (
+              <>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/meters'} tooltip="Meters">
+                        <Link href="/meters" prefetch={true}>
+                            <Gauge />
+                            <span>Meters</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
 
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/vendors'} tooltip="Vendors">
-                    <Link href="/vendors" prefetch={true}>
-                        <Store />
-                        <span>Vendors</span>
-                    </Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/vendors'} tooltip="Vendors">
+                        <Link href="/vendors" prefetch={true}>
+                            <Store />
+                            <span>Vendors</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
+            )}
 
              {(isAdmin || isManager) && (
               <SidebarMenuItem>

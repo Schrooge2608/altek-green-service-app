@@ -33,7 +33,7 @@ export default function FSRTrackerPage() {
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
-  const canCreate = userData?.role && userData.role !== 'Client';
+  const canCreate = userData?.role && userData.role !== 'Client' && userData.role !== 'Client Manager';
 
   const currentMonthStr = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const [expandedMonths, setExpandedMonths] = React.useState<Record<string, boolean>>({
