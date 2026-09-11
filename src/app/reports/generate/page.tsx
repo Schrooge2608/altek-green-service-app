@@ -74,8 +74,6 @@ export default function GenerateReportPage() {
       });
     }, []);
 
-    const isClientManager = userData?.role === 'Client Manager';
-
     const handleFetchData = async () => {
         if (!date?.from || !date?.to) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please select a valid date range.' });
@@ -260,17 +258,6 @@ export default function GenerateReportPage() {
 
     if (userDataLoading || isUserLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
-    if (isClientManager) {
-        return (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-center p-8">
-                <ShieldAlert className="h-16 w-16 text-destructive mb-4" />
-                <h2 className="text-2xl font-bold text-slate-900">Access Denied</h2>
-                <p className="text-muted-foreground max-w-xs mt-2">
-                    AI Report Generation is restricted to internal Altek maintenance and corporate staff.
-                </p>
-            </div>
-        );
-    }
 
     return (
         <div className="flex flex-col gap-8 p-4 md:p-8">
