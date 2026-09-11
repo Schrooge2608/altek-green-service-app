@@ -133,7 +133,7 @@ export default function EquipmentDetailPage() {
   const { data: userData } = useDoc<AppUser>(userRoleRef);
   const isClient = userData?.role === 'Client' || userData?.role === 'Client Manager';
   const canEdit = userData?.role && !isClient;
-  const isManagerOrAdmin = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Manager') || userData.role.includes('Supervisor'));
+  const isManagerOrAdmin = userData?.role && !isClient && (userData.role.includes('Admin') || userData.role.includes('Manager') || userData.role.includes('Supervisor'));
 
 
   const uptimePercentage = useMemo(() => {
@@ -364,12 +364,14 @@ export default function EquipmentDetailPage() {
                     Back
                 </Button>
             </Link>
-            <Link href={`/reports/contractors-daily-diary?equipmentName=${encodeURIComponent(eq.name)}`} passHref>
-                <Button size="sm">
-                    <FilePlus className="mr-2 h-4 w-4" />
-                    Daily Diary
-                </Button>
-            </Link>
+            {canEdit && (
+              <Link href={`/reports/contractors-daily-diary?equipmentName=${encodeURIComponent(eq.name)}`} passHref>
+                  <Button size="sm">
+                      <FilePlus className="mr-2 h-4 w-4" />
+                      Daily Diary
+                  </Button>
+              </Link>
+            )}
             {isManagerOrAdmin && <CreateUnscheduledScheduleDialog equipment={eq} vsd={vsd} />}
         </div>
       </header>
