@@ -23,7 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { Equipment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +31,11 @@ import { generateUUID } from '@/lib/utils';
 
 export default function MPCDredgeMCCPage() {
   const firestore = useFirestore();
+  const { user: masterUserAuth } = useUser();
+  const userRoleRefAuth = useMemoFirebase(() => (masterUserAuth ? doc(firestore, 'users', masterUserAuth.uid) : null), [firestore, masterUserAuth]);
+  const { data: userDataForAuth } = useDoc<any>(userRoleRefAuth);
+  const canDelete = userDataForAuth?.role && ['Admin', 'Superadmin'].includes(userDataForAuth.role);
+
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = useState(false);
 
@@ -163,13 +168,13 @@ export default function MPCDredgeMCCPage() {
                 <TableHead className="font-bold uppercase text-xs tracking-wider text-slate-500">Location</TableHead>
                 <TableHead className="font-bold uppercase text-xs tracking-wider text-slate-500">Assigned To</TableHead>
                 <TableHead className="font-bold uppercase text-xs tracking-wider text-slate-500">Status</TableHead>
-                <TableHead className="text-right font-bold uppercase text-xs tracking-wider text-slate-500">Actions</TableHead>
+                {canDelete && <TableHead className="text-right font-bold uppercase text-xs tracking-wider text-slate-500">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                   <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" /></TableCell>
+                      <TableCell colSpan={canDelete ? 5 : 4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" /></TableCell>
                   </TableRow>
               ) : equipmentList && equipmentList.length > 0 ? (
                   [...equipmentList].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })).map(eq => (
@@ -188,7 +193,8 @@ export default function MPCDredgeMCCPage() {
                                   {eq.breakdownStatus || 'Operational'}
                               </Badge>
                           </TableCell>
-                          <TableCell className="text-right flex items-center justify-end gap-2">
+                          {canDelete && (
+<TableCell className="text-right flex items-center justify-end gap-2">
                               <Link href={`/equipment/${eq.id}`}>
                                 <Button variant="ghost" size="sm" className="text-slate-600 hover:text-primary">
                                   Manage
@@ -198,11 +204,12 @@ export default function MPCDredgeMCCPage() {
                                   <Trash2 className="h-4 w-4" />
                               </Button>
                           </TableCell>
+)}
                       </TableRow>
                   ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center text-slate-400">
+                  <TableCell colSpan={canDelete ? 5 : 4} className="h-48 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <Settings2 className="h-8 w-8 opacity-20" />
                       <p className="text-sm font-medium">Ready for Equipment</p>

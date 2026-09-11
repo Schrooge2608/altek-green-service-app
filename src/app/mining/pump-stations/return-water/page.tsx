@@ -29,6 +29,11 @@ import { generateUUID } from '@/lib/utils';
 
 export default function ReturnWaterBoostersMCCPage() {
   const firestore = useFirestore();
+  const { user: masterUserAuth } = useUser();
+  const userRoleRefAuth = useMemoFirebase(() => (masterUserAuth ? doc(firestore, 'users', masterUserAuth.uid) : null), [firestore, masterUserAuth]);
+  const { data: userDataForAuth } = useDoc<any>(userRoleRefAuth);
+  const canDelete = userDataForAuth?.role && ['Admin', 'Superadmin'].includes(userDataForAuth.role);
+
   const { toast } = useToast();
 
   const { user } = useUser();
@@ -220,13 +225,13 @@ export default function ReturnWaterBoostersMCCPage() {
                 <TableHead className="font-bold text-slate-900">Specs</TableHead>
                 <TableHead className="font-bold text-slate-900">Status</TableHead>
                 <TableHead className="font-bold text-slate-900">Assigned</TableHead>
-                <TableHead className="text-right font-bold uppercase text-xs tracking-wider text-slate-500">Actions</TableHead>
+                {canDelete && <TableHead className="text-right font-bold uppercase text-xs tracking-wider text-slate-500">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center">
+                  <TableCell colSpan={canDelete ? 5 : 4} className="h-32 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" />
                   </TableCell>
                 </TableRow>
@@ -260,7 +265,7 @@ export default function ReturnWaterBoostersMCCPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center text-slate-500">
+                  <TableCell colSpan={canDelete ? 5 : 4} className="h-48 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center">
                       <Database className="h-8 w-8 text-slate-300 mb-2" />
                       <p className="font-medium">No equipment found.</p>
