@@ -324,11 +324,11 @@ export default function GenerateReportPage() {
                 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-sm uppercase tracking-widest font-bold text-muted-foreground">2. Focus Area (Optional)</CardTitle>
+                        <CardTitle className="text-sm uppercase tracking-widest font-bold text-muted-foreground">2. Focus Area & Report Type (Optional)</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Textarea
-                            placeholder="Example: Summarize any issues with the MPA Pump Station..."
+                            placeholder="Example: Generate a detailed FSR summary for the Smelter area, or analyze downtime trends across all pumps..."
                             value={customQuery}
                             onChange={(e) => setCustomQuery(e.target.value)}
                             className="bg-white"

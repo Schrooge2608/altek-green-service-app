@@ -102,9 +102,11 @@ const prompt = ai.definePrompt({
     ],
   },
   prompt: `{{#if customQuery}}
-You are a Maintenance Analyst. Your task is to answer the user's question based on the provided data. Be precise and answer only the question asked.
+You are an expert technical writer and Maintenance Analyst for Altek Green.
+Your task is to fulfill the user's request based on the provided data. The user may ask you to generate a specific type of report, analyze trends, summarize activities, or answer a specific question.
+Be thorough, professional, and format your response beautifully using Markdown (e.g. tables, lists, headers).
 
-User Question: "{{{customQuery}}}"
+User Request: "{{{customQuery}}}"
 
 ---
 DATA CONTEXT
