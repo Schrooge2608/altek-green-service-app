@@ -54,6 +54,8 @@ export default function DiaryTrackerV2Page() {
     return ['Admin', 'Superadmin'].includes(currentUserData.role);
   }, [currentUserData]);
 
+  const canCreate = currentUserData?.role && currentUserData.role !== 'Client';
+
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
 
   const toggleMonth = (monthStr: string) => {
@@ -126,9 +128,11 @@ export default function DiaryTrackerV2Page() {
             <h1 className="text-3xl font-bold tracking-tight">Daily Diary Tracker</h1>
             <p className="text-muted-foreground">View and manage all submitted daily diaries.</p>
         </div>
-        <Link href="/reports/contractors-daily-diary" passHref>
-            <Button><PlusCircle className="mr-2 h-4 w-4" /> New Diary</Button>
-        </Link>
+        {canCreate && (
+          <Link href="/reports/contractors-daily-diary" passHref>
+              <Button><PlusCircle className="mr-2 h-4 w-4" /> New Diary</Button>
+          </Link>
+        )}
       </header>
       <Card>
         <CardHeader>

@@ -4,16 +4,22 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Printer, Pencil, Loader2, Trash2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirebase, useMemoFirebase, useUser } from '@/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import Link from 'next/link';
+import type { User } from '@/lib/types';
 
 export default function ViewQuotePage() {
   const router = useRouter();
   const params = useParams();
   const { firestore } = useFirebase();
+  const { user } = useUser();
+
+  const userRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userData } = useDoc<User>(userRef);
+  const isAdmin = userData?.role === 'Admin' || userData?.role === 'Superadmin';
 
   // Fetch specific quote by ID
   const quoteRef = useMemoFirebase(
@@ -66,16 +72,20 @@ export default function ViewQuotePage() {
           <span className="text-sm text-slate-500 italic hidden md:inline">Review details. Click Print when ready.</span>
           <div className="flex gap-2 bg-white p-1 rounded-lg border shadow-sm">
             {/* EDIT BUTTON */}
-            <Link href={`/admin/quotations/${params.id}/edit`}>
-              <Button variant="ghost" size="sm">
-                <Pencil className="mr-2 h-4 w-4" /> Edit Quote
-              </Button>
-            </Link>
+            {isAdmin && (
+              <Link href={`/admin/quotations/${params.id}/edit`}>
+                <Button variant="ghost" size="sm">
+                  <Pencil className="mr-2 h-4 w-4" /> Edit Quote
+                </Button>
+              </Link>
+            )}
 
             {/* DELETE BUTTON */}
-            <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </Button>
+            {isAdmin && (
+              <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </Button>
+            )}
 
             {/* PRINT BUTTON */}
             <Button 

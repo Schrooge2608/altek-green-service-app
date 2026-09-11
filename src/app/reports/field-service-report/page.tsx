@@ -17,9 +17,9 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
-import type { FieldServiceReport } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import type { FieldServiceReport, User } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,10 @@ export default function FSRTrackerPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const [searchTerm, setSearchTerm] = React.useState('');
+
+  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userData } = useDoc<User>(userRoleRef);
+  const canCreate = userData?.role && userData.role !== 'Client';
 
   const currentMonthStr = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const [expandedMonths, setExpandedMonths] = React.useState<Record<string, boolean>>({
@@ -72,7 +76,7 @@ export default function FSRTrackerPage() {
   }, [filteredReports]);
 
   const handleCreateNew = async () => {
-    if (!user) return;
+    if (!user || !canCreate) return;
     
     const refId = ''; // User will manually type the FSR reference from the hard copy book
     
@@ -110,9 +114,11 @@ export default function FSRTrackerPage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Field Service Reports</h1>
           <p className="text-muted-foreground italic">Manage official AG-FSR-001 digital reports.</p>
         </div>
-        <Button onClick={handleCreateNew} className="bg-primary">
-          <PlusCircle className="mr-2 h-4 w-4" /> New Field Report
-        </Button>
+        {canCreate && (
+          <Button onClick={handleCreateNew} className="bg-primary">
+            <PlusCircle className="mr-2 h-4 w-4" /> New Field Report
+          </Button>
+        )}
       </header>
 
       <Card className="border-slate-200 shadow-sm">

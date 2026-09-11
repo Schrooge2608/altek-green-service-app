@@ -99,7 +99,7 @@ export function SidebarNav() {
 
   const isManager = userData?.role && ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin', 'Superadmin', 'Data Admin'].includes(userData.role);
   const isAdmin = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
-  const isClientManager = userData?.role === 'Client Manager';
+  const isClient = userData?.role === 'Client' || userData?.role === 'Client Manager';
   
   const isTechnician = userData?.role && (
     userData.role.includes('Technician') || 
@@ -178,7 +178,7 @@ export function SidebarNav() {
             </SidebarMenuItem>
           )}
 
-          {!isClientManager && (
+          {!isClient && (
             <SidebarMenuItem>
               <Collapsible open={isTimeOpen} onOpenChange={setIsTimeOpen} className="group/ta">
                 <CollapsibleTrigger asChild>
@@ -297,7 +297,7 @@ export function SidebarNav() {
                                 </Collapsible>
                             </SidebarMenuSubItem>
 
-                            {!isClientManager && (
+                            {!isClient && (
                                 <SidebarMenuSubItem>
                                     <SidebarMenuSubButton asChild isActive={pathname === '/assets/tools-equipment'}>
                                         <Link href="/assets/tools-equipment" prefetch={true}>
@@ -335,7 +335,7 @@ export function SidebarNav() {
                     </CollapsibleContent>
                 </Collapsible>
            </SidebarMenuItem>
-           {(isAdmin || isManager || isTechnician) && !isClientManager && (
+           {(isAdmin || isManager || isTechnician) && !isClient && (
                 <SidebarMenuItem>
                     <Collapsible open={isReportsOpen} onOpenChange={setIsReportsOpen} className="group/reports">
                         <CollapsibleTrigger asChild>
@@ -388,7 +388,7 @@ export function SidebarNav() {
                                         </CollapsibleTrigger>
                                         <CollapsibleContent>
                                             <SidebarMenuSub>
-                                                {!isClientManager && (
+                                                {!isClient && (
                                                     <SidebarMenuSubItem>
                                                         <SidebarMenuSubButton asChild isActive={pathname === '/reports/contractors-daily-diary'}>
                                                             <Link href="/reports/contractors-daily-diary" prefetch={true}>New Diary</Link>
@@ -432,7 +432,7 @@ export function SidebarNav() {
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
                                         <SidebarMenuSub>
-                                            {!isClientManager && (
+                                            {!isClient && (
                                                 <SidebarMenuSubItem>
                                                     <SidebarMenuSubButton asChild isActive={pathname === '/maintenance'}>
                                                         <Link href="/maintenance" prefetch={true}>History</Link>
@@ -501,7 +501,7 @@ export function SidebarNav() {
                 </Collapsible>
             </SidebarMenuItem>
             
-           {!isClientManager && (
+           {!isClient && (
             <SidebarMenuItem>
                 <Collapsible open={isProceduresOpen} onOpenChange={setIsProceduresOpen} className="group/procedures">
                         <CollapsibleTrigger asChild>
@@ -541,7 +541,7 @@ export function SidebarNav() {
             </SidebarMenuItem>
            )}
            
-            {!isClientManager && (
+            {!isClient && (
                 <SidebarMenuItem>
                     <Collapsible open={isInventoryOpen} onOpenChange={setIsInventoryOpen} className="group/inventory">
                         <CollapsibleTrigger asChild>
@@ -564,7 +564,7 @@ export function SidebarNav() {
                 </SidebarMenuItem>
             )}
 
-             {!isClientManager && (
+             {!isClient && (
                 <SidebarMenuItem>
                     <Collapsible open={isLibraryOpen} onOpenChange={setIsLibraryOpen} className="group/library">
                         <CollapsibleTrigger asChild>

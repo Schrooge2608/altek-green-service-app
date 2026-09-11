@@ -131,8 +131,8 @@ export default function EquipmentDetailPage() {
 
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<AppUser>(userRoleRef);
-  const canEdit = userData?.role && userData.role !== 'Client Manager';
-  const isClientManager = userData?.role === 'Client Manager';
+  const isClient = userData?.role === 'Client' || userData?.role === 'Client Manager';
+  const canEdit = userData?.role && !isClient;
   const isManagerOrAdmin = userData?.role && (userData.role.includes('Admin') || userData.role.includes('Manager') || userData.role.includes('Supervisor'));
 
 
@@ -678,7 +678,7 @@ export default function EquipmentDetailPage() {
                         <CardTitle className="text-base font-bold uppercase tracking-tight">Breakdown History</CardTitle>
                         <CardDescription className="text-xs">Audit log of reported incidents.</CardDescription>
                     </div>
-                    {(canEdit || isClientManager) && (
+                    {canEdit && (
                         <Link href={`/reports/field-service-report/new?equipmentId=${eq.id}`} passHref>
                           <Button variant="outline" className="flex-1 w-full sm:w-auto h-auto min-h-[48px] justify-start text-left whitespace-normal border-amber-200 hover:bg-amber-50 hover:text-amber-900 group">
                             <TriangleAlert className="mr-2 h-5 w-5 text-amber-500 group-hover:text-amber-600 flex-shrink-0" />
@@ -734,7 +734,7 @@ export default function EquipmentDetailPage() {
                         <CardTitle className="text-base font-bold uppercase tracking-tight">Daily Work History</CardTitle>
                         <CardDescription className="text-xs">Log of reported daily work from diaries.</CardDescription>
                     </div>
-                    {(canEdit || isClientManager) && (
+                    {canEdit && (
                         <Link href={`/reports/contractors-daily-diary`} passHref>
                             <Button variant="outline" size="sm"><FilePlus className="mr-2 h-4 w-4" /> Log Daily Work</Button>
                         </Link>
