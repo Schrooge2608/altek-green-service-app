@@ -191,6 +191,7 @@ export default function GenerateReportPage() {
         }));
 
         const minimalDiaries = aggregatedData.dailyDiaries.map(d => ({
+            id: d.id || 'unknown-id',
             date: d.date,
             works: d.works?.map(w => ({ scope: w.scope }))
         }));
