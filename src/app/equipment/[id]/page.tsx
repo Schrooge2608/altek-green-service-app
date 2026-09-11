@@ -1,6 +1,6 @@
 'use client';
 
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -84,9 +84,10 @@ function EquipmentDetailSkeleton() {
     );
 }
 
-export default function EquipmentDetailPage() {
+export default function EquipmentDetail() {
   const params = useParams();
-  const id = typeof params.id === 'string' ? params.id : '';
+  const router = useRouter();
+  const id = params.id as string;
   const firestore = useFirestore();
   const { user } = useUser();
   
@@ -136,19 +137,39 @@ export default function EquipmentDetailPage() {
   const isManagerOrAdmin = userData?.role && !isClient && (userData.role.includes('Admin') || userData.role.includes('Manager') || userData.role.includes('Supervisor'));
 
 
-  const uptimePercentage = useMemo(() => {
-    if (!eq) return 100;
+  const { uptimePercentage, downtimeHours } = useMemo(() => {
+    if (!eq) return { uptimePercentage: 100, downtimeHours: 0 };
     
     const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const totalHoursInMonth = daysInMonth * 24;
 
-    const downtimeHours = eq.totalDowntimeHours || 0;
-    const uptimeHours = totalHoursInMonth - downtimeHours;
+    let calculatedDowntime = 0;
     
+    eqBreakdowns.forEach(b => {
+      const reportDate = new Date(b.timeReported || b.date);
+      if (reportDate.getMonth() === currentMonth && reportDate.getFullYear() === currentYear) {
+         if (b.timeBackInService) {
+           const backDate = new Date(b.timeBackInService);
+           const diff = backDate.getTime() - reportDate.getTime();
+           calculatedDowntime += (diff / (1000 * 60 * 60));
+         } else {
+           const diff = now.getTime() - reportDate.getTime();
+           calculatedDowntime += (diff / (1000 * 60 * 60));
+         }
+      }
+    });
+
+    const uptimeHours = totalHoursInMonth - calculatedDowntime;
     const percentage = (uptimeHours / totalHoursInMonth) * 100;
-    return Math.min(100, Math.max(0, percentage));
-  }, [eq]);
+    
+    return { 
+      uptimePercentage: Math.min(100, Math.max(0, percentage)), 
+      downtimeHours: calculatedDowntime 
+    };
+  }, [eq, eqBreakdowns]);
 
   const backLink = useMemo(() => {
     if (!eq) return '/equipment';
@@ -358,12 +379,10 @@ export default function EquipmentDetailPage() {
             <p className="text-muted-foreground text-sm">Detailed view of equipment ID: {eq.id}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-            <Link href={backLink} passHref>
-                <Button variant="outline" size="sm">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
-                </Button>
-            </Link>
+            <Button variant="outline" size="sm" onClick={() => router.back()}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+            </Button>
             {canEdit && (
               <Link href={`/reports/contractors-daily-diary?equipmentName=${encodeURIComponent(eq.name)}`} passHref>
                   <Button size="sm">
@@ -428,7 +447,7 @@ export default function EquipmentDetailPage() {
                           </div>
                           <div className="flex items-center justify-between border-b border-primary/10 pb-2">
                               <span className="text-muted-foreground font-medium">Monthly Downtime</span>
-                              <span className="font-bold">{(eq.totalDowntimeHours || 0).toFixed(1)} hrs</span>
+                              <span className="font-bold">{downtimeHours.toFixed(1)} hrs</span>
                           </div>
                           <div className="flex items-center justify-between">
                               <span className="text-muted-foreground font-medium">Energy Consumption</span>
@@ -607,7 +626,7 @@ export default function EquipmentDetailPage() {
                       </div>
                       <div className="flex items-center justify-between border-b border-primary/10 pb-2">
                           <span className="text-muted-foreground font-medium">Monthly Downtime</span>
-                          <span className="font-bold">{(eq.totalDowntimeHours || 0).toFixed(1)} hrs</span>
+                          <span className="font-bold">{downtimeHours.toFixed(1)} hrs</span>
                       </div>
                       <div className="flex items-center justify-between">
                           <span className="text-muted-foreground font-medium">Energy Consumption</span>

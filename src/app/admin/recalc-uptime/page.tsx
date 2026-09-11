@@ -20,27 +20,52 @@ export default function RecalcUptimePage() {
         console.log("--- STARTING UPTIME RECALCULATION ---");
 
         try {
-            // 1. Get all breakdowns
-            const breakdownsSnap = await getDocs(collection(firestore, 'breakdown_reports'));
+            // 1. Get all equipment first to reset everything
+            const eqSnap = await getDocs(collection(firestore, 'equipment'));
+            const equipmentIds = eqSnap.docs.map(doc => doc.id);
             const totals: Record<string, number> = {};
             
+            // Initialize all equipment to 0 downtime
+            equipmentIds.forEach(id => {
+                totals[id] = 0;
+            });
+
+            // 2. Get all breakdowns
+            const breakdownsSnap = await getDocs(collection(firestore, 'breakdown_reports'));
             console.log(`Found ${breakdownsSnap.size} breakdown reports.`);
 
-            // 2. Sum up hours
+            // 3. Sum up hours
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
             breakdownsSnap.docs.forEach((snap) => {
                 const data = snap.data();
-                if (data.equipmentId && data.timeArrived && data.timeBackInService) {
+                if (data.equipmentId && data.timeReported) {
                     try {
-                        const start = new Date(data.timeArrived).getTime();
-                        const end = new Date(data.timeBackInService).getTime();
-                        
-                        if (!isNaN(start) && !isNaN(end) && end > start) {
-                            const hours = (end - start) / (1000 * 60 * 60);
-                            
-                            if (!totals[data.equipmentId]) {
-                                totals[data.equipmentId] = 0;
+                        const reportDate = new Date(data.timeReported);
+                        if (reportDate.getMonth() === currentMonth && reportDate.getFullYear() === currentYear) {
+                            if (data.timeBackInService) {
+                                const end = new Date(data.timeBackInService).getTime();
+                                const start = reportDate.getTime();
+                                if (!isNaN(start) && !isNaN(end) && end > start) {
+                                    const hours = (end - start) / (1000 * 60 * 60);
+                                    if (totals[data.equipmentId] === undefined) {
+                                        totals[data.equipmentId] = 0;
+                                    }
+                                    totals[data.equipmentId] += hours;
+                                }
+                            } else {
+                                const start = reportDate.getTime();
+                                const end = now.getTime();
+                                if (!isNaN(start) && end > start) {
+                                    const hours = (end - start) / (1000 * 60 * 60);
+                                    if (totals[data.equipmentId] === undefined) {
+                                        totals[data.equipmentId] = 0;
+                                    }
+                                    totals[data.equipmentId] += hours;
+                                }
                             }
-                            totals[data.equipmentId] += hours;
                         }
                     } catch (e) {
                         console.warn(`Could not parse dates for breakdown ${snap.id}`);
@@ -48,9 +73,9 @@ export default function RecalcUptimePage() {
                 }
             });
             
-            // 3. Batch Update Equipment
+            // 4. Batch Update Equipment
             setStatus('Updating equipment records...');
-            const batch = writeBatch(firestore);
+            let batch = writeBatch(firestore);
             let count = 0;
             
             for (const [eqId, totalHours] of Object.entries(totals)) {
@@ -58,6 +83,13 @@ export default function RecalcUptimePage() {
                 const ref = doc(firestore, 'equipment', eqId);
                 batch.update(ref, { totalDowntimeHours: totalHours });
                 count++;
+                
+                // Firestore batches are limited to 500 operations
+                if (count % 450 === 0) {
+                     await batch.commit();
+                     console.log(`Committed batch of 450...`);
+                     batch = writeBatch(firestore);
+                }
             }
 
             if (count > 0) {
