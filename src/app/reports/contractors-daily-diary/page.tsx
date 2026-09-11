@@ -70,6 +70,7 @@ export default function NewDailyDiaryV2Page() {
     }, [userData]);
 
     const isAdmin = useMemo(() => userData?.role && ['Admin', 'Superadmin'].includes(userData.role), [userData]);
+    const isClient = useMemo(() => userData?.role && ['Client', 'Client Manager'].includes(userData.role), [userData]);
     const isCreator = useMemo(() => !diaryId || (diaryData?.userId === user?.uid), [diaryId, diaryData, user]);
     const isSignedOff = diaryData?.isSignedOff || false;
     const canEdit = !isSignedOff && (isCreator || isAdmin);
@@ -334,27 +335,31 @@ export default function NewDailyDiaryV2Page() {
             `}</style>
 
             <div className="flex justify-end mb-4 gap-2 print-hidden">
-                <input 
-                    type="file"
-                    id="scan-pdf"
-                    accept="application/pdf,image/*"
-                    className="hidden"
-                    onChange={handleScanPdf}
-                />
-                <Button variant="outline" className="border-blue-200 hover:bg-blue-50 text-blue-700 bg-white shadow-sm" onClick={() => document.getElementById('scan-pdf')?.click()} disabled={isScanning}>
-                    {isScanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin text-blue-700" /> : <FileCheck className="mr-2 h-4 w-4 text-blue-500" />}
-                    Scan PDF
-                </Button>
-                {!diaryData?.isFinalised && (isManager || isAdmin) && !isCreator ? (
-                    <Button onClick={handleApprove} disabled={isSaving || !diaryData?.isSignedOff} className="bg-green-600 hover:bg-green-700 text-white">
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
-                        Approve Diary
-                    </Button>
-                ) : (
-                    <Button onClick={form.handleSubmit((data) => handleSave(data, false))} disabled={!uniqueId || isIdLoading || isSaving || diaryData?.isFinalised}>
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                        Save Progress
-                    </Button>
+                {!isClient && (
+                    <>
+                        <input 
+                            type="file"
+                            id="scan-pdf"
+                            accept="application/pdf,image/*"
+                            className="hidden"
+                            onChange={handleScanPdf}
+                        />
+                        <Button variant="outline" className="border-blue-200 hover:bg-blue-50 text-blue-700 bg-white shadow-sm" onClick={() => document.getElementById('scan-pdf')?.click()} disabled={isScanning}>
+                            {isScanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin text-blue-700" /> : <FileCheck className="mr-2 h-4 w-4 text-blue-500" />}
+                            Scan PDF
+                        </Button>
+                        {!diaryData?.isFinalised && (isManager || isAdmin) && !isCreator ? (
+                            <Button onClick={handleApprove} disabled={isSaving || !diaryData?.isSignedOff} className="bg-green-600 hover:bg-green-700 text-white">
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
+                                Approve Diary
+                            </Button>
+                        ) : (
+                            <Button onClick={form.handleSubmit((data) => handleSave(data, false))} disabled={!uniqueId || isIdLoading || isSaving || diaryData?.isFinalised}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Save Progress
+                            </Button>
+                        )}
+                    </>
                 )}
                 <Button variant="outline" onClick={(e) => { e.preventDefault(); window.print(); }}>
                     <Printer className="mr-2 h-4 w-4" /> Print PDF
@@ -363,7 +368,7 @@ export default function NewDailyDiaryV2Page() {
 
             <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => handleSave(data, false))}>
-                <fieldset disabled={diaryData?.isFinalised} className="border-2 border-slate-900 bg-white pdf-border text-xs md:text-sm shadow-xl print:shadow-none relative z-0">
+                <fieldset disabled={diaryData?.isFinalised || isClient} className="border-2 border-slate-900 bg-white pdf-border text-xs md:text-sm shadow-xl print:shadow-none relative z-0">
                     
                     {/* Header Top Row */}
                     <div className="grid grid-cols-12 border-b-2 border-slate-900 pdf-border items-stretch">

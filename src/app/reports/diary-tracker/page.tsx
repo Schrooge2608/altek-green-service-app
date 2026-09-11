@@ -185,8 +185,8 @@ export default function DiaryTrackerV2Page() {
                                     <TableCell className="text-right pr-6">
                                         <Link href={`/reports/contractors-daily-diary?id=${diary.id}`} passHref>
                                             <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/5">
-                                                {isInProgress ? <Pencil className="h-4 w-4 mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
-                                                {isInProgress ? "Edit" : "View"}
+                                                {(isInProgress && canCreate) ? <Pencil className="h-4 w-4 mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
+                                                {(isInProgress && canCreate) ? "Edit" : "View"}
                                             </Button>
                                         </Link>
                                         {canDelete && (
