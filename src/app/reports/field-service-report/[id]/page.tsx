@@ -332,7 +332,16 @@ export default function FieldServiceReportDetailPage() {
            text: `Please find the attached Field Service Report (${report?.fsrReference || reportId}).`
          });
       } else {
-         toast({ variant: 'destructive', title: 'Not Supported', description: 'Your browser or device does not support sharing files directly. Please use the Print PDF button.' });
+         // Fallback for desktop/unsupported browsers: Download the file and open WhatsApp
+         pdf.save(`FSR-${report?.fsrReference || reportId}.pdf`);
+         toast({ 
+           title: 'PDF Downloaded', 
+           description: 'Direct file sharing is unsupported on this browser. The PDF was downloaded—opening WhatsApp so you can attach it.' 
+         });
+         
+         // Open WhatsApp (works for both WhatsApp Web and Desktop app)
+         const text = encodeURIComponent(`Please find the downloaded Field Service Report (${report?.fsrReference || reportId}) attached.`);
+         window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
       }
     } catch (e) {
       console.error(e);
