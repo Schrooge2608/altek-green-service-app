@@ -64,9 +64,9 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className="w-full justify-between h-auto min-h-9 py-2 text-left"
         >
-          <span className="truncate">
+          <span className="break-words">
             {value ? currentSelection : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
