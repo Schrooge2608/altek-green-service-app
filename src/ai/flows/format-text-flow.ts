@@ -52,6 +52,8 @@ const formatTextFlow = ai.defineFlow(
 
       const promptText = `You are a professional maintenance planner. Rewrite the following rough notes into clear, structured, technical bullet points. If applicable, use headings like 'Issue', 'Cause', 'Action', and 'Result'. Keep it concise and professional.
 
+CRITICAL INSTRUCTION: Output ONLY the rewritten text. Do NOT include any conversational filler, prefaces, or introductions like "Here's the rewritten note:" or "Here is the rewritten information:". Start immediately with the first bullet point or heading.
+
 Rough notes:
 "${input.text}"
 `;

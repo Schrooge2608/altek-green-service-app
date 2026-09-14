@@ -2,12 +2,14 @@
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Printer, Save, Loader2, Plus, Trash2, FileCheck, X } from 'lucide-react';
+import { Printer, Save, Loader2, Plus, Trash2, FileCheck, X, Share2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useFieldArray, useForm, Controller, useWatch } from 'react-hook-form';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from '@/firebase';
@@ -303,6 +305,114 @@ export default function NewDailyDiaryV2Page() {
             setIsScanning(false);
         }
     };
+
+    const [isSharing, setIsSharing] = useState(false);
+    const handleWhatsAppShare = async () => {
+        try {
+            const element = document.getElementById('printable-diary');
+            if (!element) return;
+            
+            setIsSharing(true);
+            const originalClass = element.className;
+            element.className = originalClass + " print-mode-for-canvas";
+            
+            // Fix for html2canvas blank inputs by temporarily replacing them with spans
+            const inputs = element.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea');
+            const replacements: { original: HTMLElement, wrapper: HTMLElement }[] = [];
+            
+            inputs.forEach(input => {
+                const wrapper = document.createElement('div');
+                wrapper.className = input.className;
+                const computed = window.getComputedStyle(input);
+                
+                // Copy essential text styles
+                wrapper.style.font = computed.font;
+                wrapper.style.color = computed.color;
+                wrapper.style.padding = computed.padding;
+                wrapper.style.width = computed.width;
+                wrapper.style.boxSizing = 'border-box';
+                
+                if (input instanceof HTMLTextAreaElement) {
+                    wrapper.style.display = 'block';
+                    wrapper.style.whiteSpace = 'pre-wrap';
+                    wrapper.style.wordBreak = 'break-word';
+                    wrapper.style.minHeight = computed.height; // Allow expansion
+                } else if (input instanceof HTMLInputElement) {
+                    wrapper.style.display = 'flex';
+                    wrapper.style.alignItems = 'center';
+                    wrapper.style.justifyContent = computed.textAlign === 'center' ? 'center' : computed.textAlign === 'right' ? 'flex-end' : 'flex-start';
+                    wrapper.style.whiteSpace = 'nowrap';
+                    wrapper.style.height = computed.height; // Fixed height for inputs
+                }
+                
+                wrapper.innerText = input.value;
+                
+                if (input.parentNode) {
+                    input.parentNode.insertBefore(wrapper, input);
+                    input.style.display = 'none';
+                    replacements.push({ original: input, wrapper });
+                }
+            });
+            
+            // Also handle checkboxes
+            const checkboxes = element.querySelectorAll('input[type="checkbox"], input[type="radio"]');
+            checkboxes.forEach(input => {
+                if (input instanceof HTMLInputElement) {
+                    if (input.checked) input.setAttribute('checked', 'true');
+                    else input.removeAttribute('checked');
+                }
+            });
+            
+            // Handle combobox buttons if any are missing text
+            const buttons = element.querySelectorAll('button[role="combobox"]');
+            buttons.forEach(btn => {
+                if (btn instanceof HTMLElement) {
+                    const span = btn.querySelector('span');
+                    if (span) {
+                        span.style.whiteSpace = 'normal';
+                        span.style.wordBreak = 'break-word';
+                    }
+                }
+            });
+
+            const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+            
+            // Restore inputs
+            replacements.forEach(({ original, wrapper }) => {
+                original.style.display = '';
+                wrapper.remove();
+            });
+            element.className = originalClass;
+            
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            
+            const pdfBlob = pdf.output('blob');
+            const file = new File([pdfBlob], `DailyDiary-${uniqueId || 'Draft'}.pdf`, { type: 'application/pdf' });
+            
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: `Daily Diary ${uniqueId}`,
+                    text: `Please find the attached Daily Diary (${uniqueId}).`
+                });
+            } else {
+                pdf.save(`DailyDiary-${uniqueId || 'Draft'}.pdf`);
+                toast({ title: 'PDF Downloaded', description: 'Opening WhatsApp so you can attach it.' });
+                const text = encodeURIComponent(`Please find the downloaded Daily Diary (${uniqueId}) attached.`);
+                window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+            }
+        } catch (e) {
+            console.error(e);
+            toast({ variant: 'destructive', title: 'Share failed', description: 'Failed to generate and share the PDF.' });
+        } finally {
+            setIsSharing(false);
+        }
+    };
     
     if (isUserLoading || diaryLoading || userDataLoading || usersLoading) {
         return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -361,6 +471,10 @@ export default function NewDailyDiaryV2Page() {
                         )}
                     </>
                 )}
+                <Button variant="outline" onClick={handleWhatsAppShare} disabled={isSharing} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                    {isSharing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Share2 className="h-4 w-4 mr-2" />}
+                    Share
+                </Button>
                 <Button variant="outline" onClick={(e) => { e.preventDefault(); window.print(); }}>
                     <Printer className="mr-2 h-4 w-4" /> Print PDF
                 </Button>
@@ -368,7 +482,7 @@ export default function NewDailyDiaryV2Page() {
 
             <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => handleSave(data, false))}>
-                <fieldset disabled={diaryData?.isFinalised || isClient} className="border-2 border-slate-900 bg-white pdf-border text-xs md:text-sm shadow-xl print:shadow-none relative z-0">
+                <fieldset id="printable-diary" disabled={diaryData?.isFinalised || isClient} className="border-2 border-slate-900 bg-white pdf-border text-xs md:text-sm shadow-xl print:shadow-none relative z-0">
                     
                     {/* Header Top Row */}
                     <div className="grid grid-cols-12 border-b-2 border-slate-900 pdf-border items-stretch">

@@ -59,6 +59,8 @@ Please synthesize these logs into a formal, concise Root Cause Analysis (RCA) re
 **Preventative Recommendations:** (How to stop it happening again)
 
 Do not invent information. If a section cannot be determined from the logs, state "Insufficient data provided in logs."
+
+CRITICAL INSTRUCTION: Output ONLY the requested format. Do NOT include any conversational filler, prefaces, or introductions like "Here is the RCA:". Start immediately with "**Problem Statement:**".
 `;
 
     const result = await model.generateContent(prompt);

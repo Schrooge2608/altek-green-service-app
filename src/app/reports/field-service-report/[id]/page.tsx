@@ -24,7 +24,8 @@ import {
   ScanLine,
   Camera,
   AlertTriangle,
-  Share2
+  Share2,
+  Sparkles
 } from 'lucide-react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import html2canvas from 'html2canvas';
@@ -217,7 +218,7 @@ export default function FieldServiceReportDetailPage() {
       const payload = {
         ...data,
         ...overrides,
-        updatedAt: serverTimestamp()
+        updatedAt: new Date()
       };
 
       const sanitized = Object.fromEntries(
@@ -311,7 +312,72 @@ export default function FieldServiceReportDetailPage() {
       const originalClass = element.className;
       element.className = originalClass + " print-mode-for-canvas";
       
+      // Fix for html2canvas blank inputs by temporarily replacing them with spans
+      const inputs = element.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea');
+      const replacements: { original: HTMLElement, wrapper: HTMLElement }[] = [];
+      
+      inputs.forEach(input => {
+        const wrapper = document.createElement('div');
+        wrapper.className = input.className;
+        const computed = window.getComputedStyle(input);
+        
+        // Copy essential text styles
+        wrapper.style.font = computed.font;
+        wrapper.style.color = computed.color;
+        wrapper.style.padding = computed.padding;
+        wrapper.style.width = computed.width;
+        wrapper.style.boxSizing = 'border-box';
+        
+        if (input instanceof HTMLTextAreaElement) {
+            wrapper.style.display = 'block';
+            wrapper.style.whiteSpace = 'pre-wrap';
+            wrapper.style.wordBreak = 'break-word';
+            wrapper.style.minHeight = computed.height; // Allow expansion
+        } else if (input instanceof HTMLInputElement) {
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.justifyContent = computed.textAlign === 'center' ? 'center' : computed.textAlign === 'right' ? 'flex-end' : 'flex-start';
+            wrapper.style.whiteSpace = 'nowrap';
+            wrapper.style.height = computed.height; // Fixed height for inputs
+        }
+        
+        wrapper.innerText = input.value;
+        
+        if (input.parentNode) {
+            input.parentNode.insertBefore(wrapper, input);
+            input.style.display = 'none';
+            replacements.push({ original: input, wrapper });
+        }
+      });
+      
+      // Also handle checkboxes
+      const checkboxes = element.querySelectorAll('input[type="checkbox"], input[type="radio"]');
+      checkboxes.forEach(input => {
+         if (input instanceof HTMLInputElement) {
+             if (input.checked) input.setAttribute('checked', 'true');
+             else input.removeAttribute('checked');
+         }
+      });
+      
+      // Handle combobox buttons if any are missing text
+      const buttons = element.querySelectorAll('button[role="combobox"]');
+      buttons.forEach(btn => {
+         if (btn instanceof HTMLElement) {
+             const span = btn.querySelector('span');
+             if (span) {
+                 span.style.whiteSpace = 'normal';
+                 span.style.wordBreak = 'break-word';
+             }
+         }
+      });
+
       const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+      
+      // Restore inputs
+      replacements.forEach(({ original, wrapper }) => {
+          original.style.display = '';
+          wrapper.remove();
+      });
       element.className = originalClass; // restore
       
       const imgData = canvas.toDataURL('image/png');
@@ -348,6 +414,66 @@ export default function FieldServiceReportDetailPage() {
       toast({ variant: 'destructive', title: 'Share failed', description: 'Failed to generate and share the PDF.' });
     } finally {
       setIsSharing(false);
+    }
+  };
+
+  const [isAILoading, setIsAILoading] = useState<string | null>(null);
+
+  const handleAIAssist = async (field: 'techFindings' | 'correctiveActions') => {
+    try {
+      setIsAILoading(field);
+      const rawVal = form.getValues(field);
+      const text = typeof rawVal === 'string' ? rawVal : (rawVal ? String(rawVal) : '');
+      
+      if (!text || text.trim().length < 5) {
+        toast({ variant: 'destructive', title: 'Too short', description: 'Please enter a bit more text before using AI.' });
+        setIsAILoading(null);
+        return;
+      }
+
+      if (field === 'techFindings') {
+        // Master AI: "Brain Dump" processor
+        // The user records everything in techFindings, and the AI splits it up into all fields.
+        const { processBrainDump } = await import('@/ai/flows/process-brain-dump-flow');
+        const eqName = form.getValues('equipmentName') || 'Unknown Equipment';
+        
+        toast({ title: 'AI Processing...', description: 'Analyzing your notes and sorting them into the correct fields.' });
+        
+        const res = await processBrainDump({ rawText: text, equipmentName: eqName });
+        
+        if (res.success) {
+           if (res.findings) form.setValue('techFindings', res.findings, { shouldDirty: true });
+           if (res.actions) {
+             const currentActions = form.getValues('correctiveActions');
+             // If they already had actions, we might append or overwrite. Let's overwrite for now, assuming full brain dump.
+             form.setValue('correctiveActions', res.actions, { shouldDirty: true });
+           }
+           if (res.rca) form.setValue('rca', res.rca, { shouldDirty: true });
+           if (res.recommendations) form.setValue('recommendations', res.recommendations, { shouldDirty: true });
+           
+           handleAutosave();
+           toast({ title: 'AI Success', description: 'Your notes have been perfectly sorted and formatted into the report!' });
+        } else {
+           toast({ variant: 'destructive', title: 'AI Error', description: res.error || 'Failed to process notes.' });
+        }
+      } else {
+        // Fallback for single field formatting (if they just hit the button on Corrective Actions)
+        const { formatText } = await import('@/ai/flows/format-text-flow');
+        const formatRes = await formatText({ text });
+        
+        if (formatRes.success && formatRes.formattedText) {
+          form.setValue(field, formatRes.formattedText, { shouldDirty: true });
+          handleAutosave();
+          toast({ title: 'AI Success', description: 'Formatted text.' });
+        } else {
+          toast({ variant: 'destructive', title: 'AI Error', description: formatRes.error || 'Failed to format text.' });
+        }
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast({ variant: 'destructive', title: 'AI Error', description: e.message || 'An error occurred during AI formatting.' });
+    } finally {
+      setIsAILoading(null);
     }
   };
 
@@ -449,11 +575,11 @@ export default function FieldServiceReportDetailPage() {
                     <FormField control={form.control} name="area" render={({ field }) => (
                         <div className="flex items-center gap-4 mt-2 justify-center">
                             <div className="flex items-center gap-1 font-bold text-[10px] cursor-pointer" onClick={() => {field.onChange('Mining'); handleAutosave();}}>
-                                <div className="w-3 h-3 border border-black flex items-center justify-center">{field.value === 'Mining' && '✓'}</div>
+                                <div className="w-4 h-4 border border-black flex items-center justify-center leading-none pb-0.5">{field.value === 'Mining' && '✓'}</div>
                                 MINING
                             </div>
                             <div className="flex items-center gap-1 font-bold text-[10px] cursor-pointer" onClick={() => {field.onChange('Smelter'); handleAutosave();}}>
-                                <div className="w-3 h-3 border border-black flex items-center justify-center">{field.value === 'Smelter' && '✓'}</div>
+                                <div className="w-4 h-4 border border-black flex items-center justify-center leading-none pb-0.5">{field.value === 'Smelter' && '✓'}</div>
                                 SMELTER
                             </div>
                         </div>
@@ -465,7 +591,7 @@ export default function FieldServiceReportDetailPage() {
                       <FormField control={form.control} name="fsrReference" render={({ field }) => (
                          <div className="flex items-center text-xs font-black text-red-600 font-mono w-24 justify-end">
                            <span className="mr-1">#</span>
-                           <Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-5 text-xs font-black text-red-600 font-mono border-none p-0 bg-transparent focus-visible:ring-0 text-right w-full" placeholder="FSR-XXXX" />
+                           <Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-sm font-black text-red-600 font-mono border-none p-0 bg-transparent focus-visible:ring-0 text-right w-full" placeholder="FSR-XXXX" />
                          </div>
                       )} />
                     </div>
@@ -473,7 +599,7 @@ export default function FieldServiceReportDetailPage() {
                       <FormField control={form.control} name="date" render={({ field }) => (
                         <div className="flex justify-between items-center">
                           <DenseLabel className="mb-0">Date:</DenseLabel>
-                          <Input type="date" {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-5 text-[10px] border-none p-0 text-right bg-transparent focus-visible:ring-0 font-bold" />
+                          <Input type="date" {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-xs border-none p-0 text-right bg-transparent focus-visible:ring-0 font-bold leading-none" />
                         </div>
                       )} />
                     </div>
@@ -564,12 +690,28 @@ export default function FieldServiceReportDetailPage() {
                   <div className="border-l-2 border-b-2 border-r border-black flex flex-col">
                     <SectionHeader number="04" title="Fault Description & Root Cause" />
                     <FormField control={form.control} name="customerFault" render={({ field }) => (<div className="p-2 border-b border-black"><DenseLabel>Customer Reported Fault</DenseLabel><Textarea {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="min-h-[40px] text-[10px] border-none p-0 resize-none focus-visible:ring-0" /></div>)} />
-                    <FormField control={form.control} name="techFindings" render={({ field }) => (<div className="p-2 border-b border-black bg-slate-50/30"><DenseLabel>Findings & Observations</DenseLabel><Textarea {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="min-h-[80px] text-[10px] border-none p-0 resize-none bg-transparent focus-visible:ring-0" /></div>)} />
+                    <FormField control={form.control} name="techFindings" render={({ field }) => (<div className="p-2 border-b border-black bg-slate-50/30">
+                      <div className="flex justify-between items-center mb-1">
+                        <DenseLabel>Findings & Observations</DenseLabel>
+                        <button type="button" onClick={() => handleAIAssist('techFindings')} disabled={isAILoading === 'techFindings'} className="print:hidden text-amber-500 hover:text-amber-600 transition-colors disabled:opacity-50">
+                          {isAILoading === 'techFindings' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        </button>
+                      </div>
+                      <Textarea {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="min-h-[80px] text-[10px] border-none p-0 resize-none bg-transparent focus-visible:ring-0" />
+                    </div>)} />
                     <FormField control={form.control} name="rca" render={({ field }) => (<div className="p-2"><DenseLabel>Root Cause Analysis</DenseLabel><Textarea {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="min-h-[40px] text-[10px] border-none p-0 resize-none focus-visible:ring-0" /></div>)} />
                   </div>
                   <div className="border-r-2 border-b-2 border-black flex flex-col">
                     <SectionHeader number="05" title="Work Performed / Corrective Action" />
-                    <FormField control={form.control} name="correctiveActions" render={({ field }) => (<div className="p-2 flex-1 border-b border-black"><DenseLabel>Corrective Actions & Repairs</DenseLabel><Textarea {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="min-h-[140px] text-[10px] border-none p-0 resize-none focus-visible:ring-0" /></div>)} />
+                    <FormField control={form.control} name="correctiveActions" render={({ field }) => (<div className="p-2 flex-1 border-b border-black">
+                      <div className="flex justify-between items-center mb-1">
+                        <DenseLabel>Corrective Actions & Repairs</DenseLabel>
+                        <button type="button" onClick={() => handleAIAssist('correctiveActions')} disabled={isAILoading === 'correctiveActions'} className="print:hidden text-amber-500 hover:text-amber-600 transition-colors disabled:opacity-50">
+                          {isAILoading === 'correctiveActions' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        </button>
+                      </div>
+                      <Textarea {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="min-h-[140px] text-[10px] border-none p-0 resize-none focus-visible:ring-0" />
+                    </div>)} />
                     <FormField control={form.control} name="recommendations" render={({ field }) => (<div className="p-2 h-20"><DenseLabel>Recommendations</DenseLabel><Textarea {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="min-h-[40px] text-[10px] border-none p-0 resize-none focus-visible:ring-0" /></div>)} />
                   </div>
                 </div>
