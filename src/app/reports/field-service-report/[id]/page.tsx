@@ -23,9 +23,12 @@ import {
   Paperclip,
   ScanLine,
   Camera,
-  AlertTriangle
+  AlertTriangle,
+  Share2
 } from 'lucide-react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { useUser, useFirebase, useDoc, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, query, orderBy } from 'firebase/firestore';
@@ -296,6 +299,49 @@ export default function FieldServiceReportDetailPage() {
     router.push('/reports/field-service-report');
   };
 
+  const [isSharing, setIsSharing] = useState(false);
+  const handleWhatsAppShare = async () => {
+    try {
+      const element = document.getElementById('printable-fsr');
+      if (!element) return;
+      
+      setIsSharing(true);
+      
+      // We temporarily adjust styling to ensure crisp PDF rendering without screen artifacts
+      const originalClass = element.className;
+      element.className = originalClass + " print-mode-for-canvas";
+      
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+      element.className = originalClass; // restore
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      // If the content is taller than A4, we might need multiple pages, but FSR is designed to fit 1 page
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      
+      const pdfBlob = pdf.output('blob');
+      const file = new File([pdfBlob], `FSR-${report?.fsrReference || reportId}.pdf`, { type: 'application/pdf' });
+      
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+         await navigator.share({
+           files: [file],
+           title: `FSR ${report?.fsrReference || reportId}`,
+           text: `Please find the attached Field Service Report (${report?.fsrReference || reportId}).`
+         });
+      } else {
+         toast({ variant: 'destructive', title: 'Not Supported', description: 'Your browser or device does not support sharing files directly. Please use the Print PDF button.' });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: 'Share failed', description: 'Failed to generate and share the PDF.' });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   if (reportLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
 
   return (
@@ -357,6 +403,10 @@ export default function FieldServiceReportDetailPage() {
               </AlertDialogContent>
             </AlertDialog>
           )}
+          <Button variant="outline" onClick={handleWhatsAppShare} disabled={isSharing} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+            {isSharing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Share2 className="h-4 w-4 mr-2" />}
+            Share
+          </Button>
           <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4 mr-2" /> Print PDF</Button>
           {!isFinalized && (
             <Button variant="outline" onClick={handleManualSave} disabled={saveStatus === 'saving'} className="border-slate-300">
@@ -373,7 +423,7 @@ export default function FieldServiceReportDetailPage() {
       </header>
 
       <div className="overflow-x-auto flex justify-center">
-        <div className="bg-white shadow-2xl min-h-[29.7cm] w-[21cm] p-8 border border-slate-300 flex flex-col print:shadow-none print:border-none print:p-0">
+        <div id="printable-fsr" className="bg-white shadow-2xl min-h-[29.7cm] w-[21cm] p-8 border border-slate-300 flex flex-col print:shadow-none print:border-none print:p-0">
           
           <Form {...form}>
             <form className="space-y-0 text-slate-900" style={{ fontFamily: 'Arial, sans-serif' }}>
