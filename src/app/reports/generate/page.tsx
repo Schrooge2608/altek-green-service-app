@@ -299,7 +299,7 @@ export default function GenerateReportPage() {
                     <CardHeader>
                         <CardTitle className="text-sm uppercase tracking-widest font-bold text-muted-foreground">Data Summary</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <CardContent className="grid grid-cols-2 md:grid-cols-7 gap-4">
                         <div className="p-3 bg-slate-50 rounded border text-center">
                             <p className="text-xs text-muted-foreground uppercase font-bold mb-1">New</p>
                             <p className="text-xl font-bold">{aggregatedData.newBreakdowns.length}</p>
@@ -309,8 +309,18 @@ export default function GenerateReportPage() {
                             <p className="text-xl font-bold">{aggregatedData.closedBreakdowns.length}</p>
                         </div>
                         <div className="p-3 bg-slate-50 rounded border text-center">
-                            <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Schedules</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-bold mb-1 leading-tight">Scheduled</p>
                             <p className="text-xl font-bold">{aggregatedData.completedSchedules.length}</p>
+                        </div>
+                        <div className="p-3 bg-slate-50 rounded border text-center">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-bold mb-1 leading-tight">Unscheduled</p>
+                            <p className="text-xl font-bold">
+                                {aggregatedData.dailyDiaries.reduce((acc, d) => acc + (d.works?.length || 0), 0)}
+                            </p>
+                        </div>
+                        <div className="p-3 bg-slate-50 rounded border text-center">
+                            <p className="text-xs text-muted-foreground uppercase font-bold mb-1">FSRs</p>
+                            <p className="text-xl font-bold">{aggregatedData.fieldServiceReports.length}</p>
                         </div>
                         <div className="p-3 bg-slate-50 rounded border text-center">
                             <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Diaries</p>

@@ -5,15 +5,33 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { FileText, Loader2 } from 'lucide-react';
+import { FileText, Loader2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, orderBy, query } from 'firebase/firestore';
-import type { GeneratedReport } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, orderBy, query, doc } from 'firebase/firestore';
+import type { GeneratedReport, User } from '@/lib/types';
 import { format, isValid } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ReportHistoryPage() {
     const firestore = useFirestore();
+    const { user } = useUser();
+    const { toast } = useToast();
+
+    const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+    const { data: currentUserData } = useDoc<User>(userRoleRef);
+    const canDelete = currentUserData?.role === 'Admin' || currentUserData?.role === 'Superadmin';
 
     const reportsQuery = useMemoFirebase(() =>
         query(collection(firestore, 'generated_reports'), orderBy('generatedAt', 'desc')),
@@ -25,7 +43,6 @@ export default function ReportHistoryPage() {
     const formatDate = (timestamp: any) => {
         if (!timestamp) return 'N/A';
         try {
-            // Robustly handle Firestore Timestamp objects {seconds, nanoseconds}
             const date = timestamp.seconds ? new Date(timestamp.seconds * 1000) : new Date(timestamp);
             if (!isValid(date)) return 'Invalid Date';
             return format(date, 'yyyy-MM-dd HH:mm');
@@ -33,6 +50,12 @@ export default function ReportHistoryPage() {
             return 'Invalid Date';
         }
     }
+
+    const handleDelete = (reportId: string) => {
+        if (!reportId) return;
+        deleteDocumentNonBlocking(doc(firestore, 'generated_reports', reportId));
+        toast({ title: 'Report Deleted', description: 'The report has been permanently removed.' });
+    };
 
     return (
         <div className="flex flex-col gap-8">
@@ -73,13 +96,37 @@ export default function ReportHistoryPage() {
                                         <TableCell>{formatDate(report.generatedAt)}</TableCell>
                                         <TableCell>{report.startDate} to {report.endDate}</TableCell>
                                         <TableCell>{report.generatedByUserName}</TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right flex items-center justify-end gap-2">
                                             <Link href={`/reports/history/${report.id}`} passHref>
                                                 <Button variant="ghost" size="icon">
                                                     <FileText className="h-4 w-4" />
                                                     <span className="sr-only">View Report</span>
                                                 </Button>
                                             </Link>
+                                            {canDelete && (
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80 hover:bg-destructive/10">
+                                                            <Trash2 className="h-4 w-4" />
+                                                            <span className="sr-only">Delete Report</span>
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This action cannot be undone. This will permanently delete the saved report from the database.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDelete(report.id)}>
+                                                                Delete
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))
