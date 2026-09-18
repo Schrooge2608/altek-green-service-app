@@ -156,7 +156,7 @@ Your task is to generate a professional and clear weekly summary report for a cl
 
 The report MUST have the following structure exactly. For each section, if the data array for that category (e.g., Breakdowns, Schedules, Diaries) is empty, you MUST state 'No activity to report for this period.' and nothing else. Do not hallucinate or invent data if a section is empty.
 
-**Subject Line:** "Weekly Operations & Maintenance Report: {{{startDate}}} to {{{endDate}}}"
+**Subject Line:** "Report generated for period {{{startDate}}} to {{{endDate}}}"
 
 **1. Executive Summary:**
 A brief, high-level overview of the week's key activities based on the data provided below. Mention the total number of new and resolved breakdowns, completed maintenance tasks, and any unscheduled work. Highlight any critical issues or notable successes.
