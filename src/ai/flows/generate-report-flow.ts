@@ -1,5 +1,4 @@
 'use server';
-export const maxDuration = 60; // 60 seconds timeout for Vercel
 /**
  * @fileOverview An AI flow for generating comprehensive weekly client reports from aggregated Firestore data.
  *
