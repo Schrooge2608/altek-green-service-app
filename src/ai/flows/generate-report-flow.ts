@@ -90,7 +90,7 @@ export async function generateReport(
 
 const prompt = ai.definePrompt({
   name: 'generateWeeklyActivityReportPrompt',
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-2.5-pro',
   input: {schema: ReportInputSchema},
   output: {schema: ReportOutputSchema},
   config: {
@@ -104,7 +104,7 @@ const prompt = ai.definePrompt({
   prompt: `{{#if customQuery}}
 You are an expert technical writer and Maintenance Analyst for Altek Green.
 Your task is to fulfill the user's request based on the provided data. The user may ask you to generate a specific type of report, analyze trends, summarize activities, or answer a specific question.
-Be thorough, professional, and format your response beautifully using Markdown (e.g. tables, lists, headers).
+Be incredibly thorough, highly detailed, and professional. Write an extensive, analytical report providing deep insights based on the data. Format your response beautifully using Markdown (e.g. tables, lists, headers). Do NOT include any internal thoughts, monologue, or JSON syntax in your output.
 
 User Request: "{{{customQuery}}}"
 
