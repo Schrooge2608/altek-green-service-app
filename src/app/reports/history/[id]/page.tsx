@@ -18,6 +18,9 @@ import { useToast } from '@/hooks/use-toast';
 export default function ViewReportPage() {
     const params = useParams();
     const router = useRouter();
+    const { toast } = useToast();
+    const [isSharing, setIsSharing] = useState(false);
+    
     const id = typeof params.id === 'string' ? params.id : '';
     const firestore = useFirestore();
 
@@ -45,9 +48,6 @@ export default function ViewReportPage() {
         }
         return 'Invalid Date';
     }
-
-    const { toast } = useToast();
-    const [isSharing, setIsSharing] = useState(false);
 
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
     const shareText = `Report generated for period ${report.startDate} to ${report.endDate}\n${shareUrl}`;
