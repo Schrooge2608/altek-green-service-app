@@ -67,7 +67,7 @@ export default function NewDailyDiaryV2Page() {
 
     const isManager = useMemo(() => {
         if (!userData?.role) return false;
-        const managerRoles = ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Site Supervisor'];
+        const managerRoles = ['Admin', 'Superadmin', 'Client Manager', 'Altek Green Manager', 'Corporate Manager', 'Services Manager', 'Manager'];
         return managerRoles.some(role => userData.role.includes(role));
     }, [userData]);
 
@@ -388,8 +388,20 @@ export default function NewDailyDiaryV2Page() {
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            const pageHeight = pdf.internal.pageSize.getHeight();
             
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            let heightLeft = pdfHeight;
+            let position = 0;
+            
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+            heightLeft -= pageHeight;
+            
+            while (heightLeft > 0) {
+              position -= pageHeight;
+              pdf.addPage();
+              pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+              heightLeft -= pageHeight;
+            }
             
             const pdfBlob = pdf.output('blob');
             const file = new File([pdfBlob], `DailyDiary-${uniqueId || 'Draft'}.pdf`, { type: 'application/pdf' });
@@ -813,7 +825,7 @@ export default function NewDailyDiaryV2Page() {
                                         {canEdit && <Button type="button" variant="ghost" size="icon" onClick={() => setContractorSignature(null)} className="absolute top-0 right-0 h-6 w-6 print-hidden z-20 hover:bg-red-100"><X className="h-4 w-4 text-red-500"/></Button>}
                                     </div>
                                 ) : (
-                                    <div className="mt-4 scale-[0.6] origin-top relative z-10"><SignaturePad onSave={setContractorSignature} width={200} height={60} /></div>
+                                    <div className="mt-4 scale-[0.6] origin-top relative z-10"><SignaturePad onSave={(sig) => { setContractorSignature(sig); setContractorDate(new Date()); }} width={200} height={60} /></div>
                                 )}
                             </div>
                             <div className="flex flex-col items-center w-full relative">
@@ -835,7 +847,7 @@ export default function NewDailyDiaryV2Page() {
                             <div className="border-r border-slate-900 flex flex-col items-center w-full relative">
                                 <span className="text-[8px] font-bold py-1">NAME</span>
                                 <div className="w-full print-hidden">
-                                    <Combobox options={nameOptions} value={clientName} onChange={setClientName} creatable={true} placeholder="" disabled={!!clientSignature || !canEdit} className="border-0 text-center h-8 font-bold text-xs shadow-none w-full px-1 bg-transparent" />
+                                    <Combobox options={nameOptions} value={clientName} onChange={setClientName} creatable={true} placeholder="" disabled={!!clientSignature || diaryData?.isFinalised} className="border-0 text-center h-8 font-bold text-xs shadow-none w-full px-1 bg-transparent" />
                                 </div>
                                 <div className="hidden print:block text-xs font-bold text-center h-8 leading-8 w-full">{clientName}</div>
                             </div>
@@ -844,10 +856,10 @@ export default function NewDailyDiaryV2Page() {
                                 {clientSignature ? (
                                     <div className="w-full h-full relative flex justify-center items-center pt-2">
                                         <img src={clientSignature} alt="Client Sig" className="max-h-8 w-auto mix-blend-multiply" />
-                                        {canEdit && <Button type="button" variant="ghost" size="icon" onClick={() => setClientSignature(null)} className="absolute top-0 right-0 h-6 w-6 print-hidden z-20 hover:bg-red-100"><X className="h-4 w-4 text-red-500"/></Button>}
+                                        {!diaryData?.isFinalised && <Button type="button" variant="ghost" size="icon" onClick={() => setClientSignature(null)} className="absolute top-0 right-0 h-6 w-6 print-hidden z-20 hover:bg-red-100"><X className="h-4 w-4 text-red-500"/></Button>}
                                     </div>
                                 ) : (
-                                    <div className="mt-4 scale-[0.6] origin-top relative z-10"><SignaturePad onSave={setClientSignature} width={200} height={60} /></div>
+                                    <div className="mt-4 scale-[0.6] origin-top relative z-10"><SignaturePad onSave={(sig) => { setClientSignature(sig); setClientDate(new Date()); }} width={200} height={60} /></div>
                                 )}
                             </div>
                             <div className="flex flex-col items-center w-full relative">
@@ -855,7 +867,7 @@ export default function NewDailyDiaryV2Page() {
                                 <div className="w-full print-hidden">
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="ghost" className="h-8 text-xs font-bold w-full rounded-none" disabled={!!clientSignature || !canEdit}>{clientDate ? format(clientDate, "yyyy/MM/dd") : ''}</Button>
+                                            <Button variant="ghost" className="h-8 text-xs font-bold w-full rounded-none" disabled={!!clientSignature || diaryData?.isFinalised}>{clientDate ? format(clientDate, "yyyy/MM/dd") : ''}</Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={clientDate} onSelect={setClientDate} autoFocus /></PopoverContent>
                                     </Popover>

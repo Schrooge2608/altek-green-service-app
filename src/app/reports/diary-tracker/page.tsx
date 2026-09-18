@@ -27,7 +27,8 @@ import { Badge } from '@/components/ui/badge';
 const getStatusStyles = (status: string) => {
   const normalized = status.toLowerCase();
   if (normalized === 'in progress') return 'bg-amber-100 text-amber-800 border-amber-200';
-  if (normalized === 'completed' || normalized === 'approved') return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+  if (normalized === 'to be approved') return 'bg-blue-100 text-blue-800 border-blue-200';
+  if (normalized === 'finalized' || normalized === 'completed' || normalized === 'approved') return 'bg-emerald-100 text-emerald-800 border-emerald-200';
   return 'bg-slate-100 text-slate-600 border-slate-200';
 };
 
@@ -172,7 +173,7 @@ export default function DiaryTrackerV2Page() {
                               </TableCell>
                             </TableRow>
                             {isExpanded && group.items.map(diary => {
-                                const statusText = diary.isFinalised ? 'Approved' : diary.isSignedOff ? 'Completed' : 'In Progress';
+                                const statusText = diary.isFinalised ? 'Finalized' : diary.isSignedOff ? 'To be approved' : 'In Progress';
                                 const isInProgress = statusText === 'In Progress';
                                 return (
                                 <TableRow key={diary.id} className="hover:bg-slate-50">

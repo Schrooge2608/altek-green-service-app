@@ -75,14 +75,6 @@ const miningDivisions = [
 ];
 
 
-const completedSchedulesCategories = [
-    { href: '/maintenance/completed/protection', label: 'Protection' },
-    { href: '/maintenance/completed/ups-btus', label: "UPS/BTU's" },
-    { href: '/maintenance/completed/vsds', label: 'VSDs' },
-    { href: '/maintenance/completed/motors', label: 'Motors' },
-    { href: '/maintenance/completed/pumps', label: 'Pumps' },
-];
-
 const vsdProcedureSubMenu = [
     { href: '/maintenance/vsds/3-monthly', label: '3-Monthly' },
     { href: '/maintenance/vsds/6-monthly', label: '6-Monthly' },
@@ -97,7 +89,7 @@ export function SidebarNav() {
   const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
 
-  const isManager = userData?.role && ['Site Supervisor', 'Services Manager', 'Corporate Manager', 'Admin', 'Superadmin', 'Data Admin'].includes(userData.role);
+  const isManager = userData?.role && ['Services Manager', 'Corporate Manager', 'Admin', 'Superadmin', 'Data Admin', 'Client Manager', 'Altek Green Manager', 'Manager'].includes(userData.role);
   const isAdmin = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
   const isClient = userData?.role === 'Client' || userData?.role === 'Client Manager';
   
@@ -123,7 +115,6 @@ export function SidebarNav() {
   const [isSmelterOpen, setIsSmelterOpen] = useState(false);
   const [isSmelterV2Open, setIsSmelterV2Open] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
@@ -132,6 +123,7 @@ export function SidebarNav() {
   const [isProceduresOpen, setIsProceduresOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isBreakdownsOpen, setIsBreakdownsOpen] = useState(false);
+  const [isDiaryOpen, setIsDiaryOpen] = useState(false);
 
   useEffect(() => {
     if (!pathname) return;
@@ -141,7 +133,6 @@ export function SidebarNav() {
     setIsSmelterOpen(pathname.startsWith('/equipment/smelter'));
     setIsSmelterV2Open(pathname.startsWith('/smelter-v2'));
     setIsAdminOpen(pathname.startsWith('/admin'));
-    setIsCompletedOpen(pathname.startsWith('/maintenance/completed') || pathname.startsWith('/completed-work'));
     setIsInventoryOpen(pathname.startsWith('/inventory'));
     setIsLibraryOpen(pathname.startsWith('/library') || pathname === '/scan');
     setIsMaintenanceOpen(pathname.startsWith('/maintenance'));
@@ -335,6 +326,34 @@ export function SidebarNav() {
                     </CollapsibleContent>
                 </Collapsible>
            </SidebarMenuItem>
+           
+           <SidebarMenuItem>
+               <Collapsible open={isDiaryOpen} onOpenChange={setIsDiaryOpen} className="group/diary-main">
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Daily Diary" isActive={pathname.startsWith("/reports/contractors-daily-diary") || pathname.startsWith("/reports/diary-tracker")}>
+                            <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} className="mr-0" />
+                            <span>Daily Diary</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/diary-main:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <SidebarMenuSub>
+                            {!isClient && (
+                                <SidebarMenuSubItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname === "/reports/contractors-daily-diary"}>
+                                        <Link href="/reports/contractors-daily-diary" prefetch={true}>New Diary</Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                            )}
+                            <SidebarMenuSubItem>
+                                <SidebarMenuSubButton asChild isActive={pathname === "/reports/diary-tracker"}>
+                                    <Link href="/reports/diary-tracker" prefetch={true}>Diary Tracker</Link>
+                                </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+               </Collapsible>
+           </SidebarMenuItem>
            <SidebarMenuItem>
                <Collapsible open={isReportsOpen} onOpenChange={setIsReportsOpen} className="group/reports">
                         <CollapsibleTrigger asChild>
@@ -369,34 +388,6 @@ export function SidebarNav() {
                                             </Link>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
-
-                                <SidebarMenuSubItem>
-                                    <Collapsible className="group/diary">
-                                        <CollapsibleTrigger asChild>
-                                            <SidebarMenuSubButton isActive={pathname.startsWith('/reports/contractors-daily-diary') || pathname.startsWith('/reports/diary-tracker')}>
-                                                <Image src="/RBM.png" alt="RBM Logo" width={16} height={16} className="mr-2" />
-                                                <span>Daily Diary</span>
-                                                <ChevronDown className="ml-auto h-3 w-3 transition-transform group-data-[state=open]/diary:rotate-180" />
-                                            </SidebarMenuSubButton>
-                                        </CollapsibleTrigger>
-                                        <CollapsibleContent>
-                                            <SidebarMenuSub>
-                                                {!isClient && (
-                                                    <SidebarMenuSubItem>
-                                                        <SidebarMenuSubButton asChild isActive={pathname === '/reports/contractors-daily-diary'}>
-                                                            <Link href="/reports/contractors-daily-diary" prefetch={true}>New Diary</Link>
-                                                        </SidebarMenuSubButton>
-                                                    </SidebarMenuSubItem>
-                                                )}
-                                                <SidebarMenuSubItem>
-                                                    <SidebarMenuSubButton asChild isActive={pathname === '/reports/diary-tracker'}>
-                                                        <Link href="/reports/diary-tracker" prefetch={true}>Diary Tracker</Link>
-                                                    </SidebarMenuSubButton>
-                                                </SidebarMenuSubItem>
-                                            </SidebarMenuSub>
-                                        </CollapsibleContent>
-                                    </Collapsible>
-                                </SidebarMenuSubItem>
                             </SidebarMenuSub>
                         </CollapsibleContent>
                     </Collapsible>
@@ -465,33 +456,7 @@ export function SidebarNav() {
                 </Collapsible>
            </SidebarMenuItem>
 
-            <SidebarMenuItem>
-                <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen} className="group/completed">
-                    <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Completed Work" isActive={pathname.startsWith('/maintenance/completed') || pathname.startsWith('/completed-work')}>
-                            <FileText />
-                            <span>Completed Work</span>
-                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/completed:rotate-180" />
-                        </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                         <SidebarMenuSub>
-                            {completedSchedulesCategories.map((category) => (
-                                <SidebarMenuSubItem key={category.href}>
-                                    <SidebarMenuSubButton asChild isActive={pathname === category.href}>
-                                        <Link href={category.href} prefetch={true}>{category.label}</Link>
-                                    </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                            ))}
-                            <SidebarMenuSubItem>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/completed-work/unscheduled'}>
-                                    <Link href="/completed-work/unscheduled" prefetch={true}>All Completed Unscheduled Work</Link>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                        </SidebarMenuSub>
-                    </CollapsibleContent>
-                </Collapsible>
-            </SidebarMenuItem>
+
             
            {!isClient && (
             <SidebarMenuItem>

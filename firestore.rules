@@ -149,6 +149,7 @@ service cloud.firestore {
 
     match /channels/{document=**} {
       allow read, create, update: if request.auth != null;
+      allow delete: if isAuthenticated() && (request.auth.token.email == 'admin@altekgreen.com' || userRole() in ['Admin', 'Superadmin']);
 
       match /messages/{messageId} {
         allow read, write: if request.auth != null;

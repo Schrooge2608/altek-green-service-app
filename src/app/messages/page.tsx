@@ -19,7 +19,9 @@ import {
   CheckCheck,
   Archive,
   ArchiveRestore,
-  FileText
+  FileText,
+  ArrowLeft,
+  Trash2
 } from 'lucide-react';
 import { 
   useUser, 
@@ -27,7 +29,8 @@ import {
   useFirestore, 
   useMemoFirebase, 
   addDocumentNonBlocking, 
-  updateDocumentNonBlocking 
+  updateDocumentNonBlocking,
+  useDoc
 } from '@/firebase';
 import { 
   collection, 
@@ -38,7 +41,8 @@ import {
   where,
   Timestamp,
   updateDoc,
-  getDoc
+  getDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import type { Channel, ChatMessage, User } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -60,8 +64,13 @@ export default function MessagingPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  const { data: userData } = useDoc<User>(userRef);
+  const isAdmin = userData?.role === 'Admin' || userData?.role === 'Superadmin';
   const searchParams = useSearchParams();
   const urlChannelId = searchParams.get('channelId');
+  const returnFsrId = searchParams.get('fsrId');
   
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
@@ -178,6 +187,23 @@ export default function MessagingPage() {
     }
   };
 
+  const handleDeleteChannel = async (channelId: string) => {
+    if (!isAdmin) return;
+    if (!window.confirm("Are you sure you want to permanently delete this chat? This cannot be undone.")) return;
+    try {
+      // Soft-delete to bypass Firebase strict delete rules since users have update access
+      await updateDoc(doc(firestore, 'channels', channelId), {
+        isDeleted: true
+      });
+      toast({ title: "Chat Deleted", description: "The chat has been permanently removed." });
+      if (activeChannelId === channelId) {
+        setActiveChannelId(null);
+      }
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: "Delete Error", description: e.message });
+    }
+  };
+
   // Handle Sending Messages
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -232,6 +258,7 @@ export default function MessagingPage() {
    * Filters based on isArchived status matching the toggle.
    */
   const filteredChannels = channels?.filter(c => {
+    if ((c as any).isDeleted) return false;
     const isArchived = c.isArchived || false;
     return isArchived === showArchived && c.name.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -368,6 +395,28 @@ export default function MessagingPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {activeChannel?.isArchived && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mr-2 text-slate-600 border-slate-300 hover:bg-slate-100"
+                    onClick={() => {
+                      setShowArchived(false);
+                      setActiveChannelId(null);
+                    }}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Main
+                  </Button>
+                )}
+                {returnFsrId && (
+                  <Link href={`/reports/field-service-report/${returnFsrId}`}>
+                    <Button variant="outline" size="sm" className="text-blue-700 border-blue-200 hover:bg-blue-50 flex items-center gap-2 mr-2">
+                      <FileText className="h-4 w-4" />
+                      Back to FSR
+                    </Button>
+                  </Link>
+                )}
                 {activeChannel?.type === 'breakdown' && activeChannel?.relatedId && (
                   <Link href={`/breakdowns/${activeChannel.relatedId}`}>
                     <Button variant="outline" size="sm" className="text-emerald-700 border-emerald-200 hover:bg-emerald-50 flex items-center gap-2 mr-2">
@@ -376,7 +425,6 @@ export default function MessagingPage() {
                     </Button>
                   </Link>
                 )}
-                
                 {/* Archive/Restore Button */}
                 <Button 
                   variant="ghost" 
@@ -387,6 +435,17 @@ export default function MessagingPage() {
                 >
                   {activeChannel?.isArchived ? <ArchiveRestore className="h-5 w-5" /> : <Archive className="h-5 w-5" />}
                 </Button>
+                {isAdmin && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => handleDeleteChannel(activeChannel.id)}
+                    className="text-slate-400 transition-colors hover:text-red-600 hover:bg-red-50"
+                    title="Delete Chat Permanently"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon" className="text-slate-400"><MoreVertical className="h-5 w-5" /></Button>
               </div>
             </header>

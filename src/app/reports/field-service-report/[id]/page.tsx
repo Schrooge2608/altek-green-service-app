@@ -25,14 +25,15 @@ import {
   Camera,
   AlertTriangle,
   Share2,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from 'lucide-react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { useUser, useFirebase, useDoc, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, query, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, query, orderBy, getDocs, addDoc, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { AltekLogo } from '@/components/altek-logo';
@@ -384,9 +385,20 @@ export default function FieldServiceReportDetailPage() {
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pageHeight = pdf.internal.pageSize.getHeight();
       
-      // If the content is taller than A4, we might need multiple pages, but FSR is designed to fit 1 page
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      let heightLeft = pdfHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
       
       const pdfBlob = pdf.output('blob');
       const file = new File([pdfBlob], `FSR-${report?.fsrReference || reportId}.pdf`, { type: 'application/pdf' });
@@ -435,7 +447,7 @@ export default function FieldServiceReportDetailPage() {
         // Master AI: "Brain Dump" processor
         // The user records everything in techFindings, and the AI splits it up into all fields.
         const { processBrainDump } = await import('@/ai/flows/process-brain-dump-flow');
-        const eqName = form.getValues('equipmentName') || 'Unknown Equipment';
+        const eqName = form.getValues('equipmentName') || form.getValues('assetName') || 'Unknown Equipment';
         
         toast({ title: 'AI Processing...', description: 'Analyzing your notes and sorting them into the correct fields.' });
         
@@ -445,7 +457,6 @@ export default function FieldServiceReportDetailPage() {
            if (res.findings) form.setValue('techFindings', res.findings, { shouldDirty: true });
            if (res.actions) {
              const currentActions = form.getValues('correctiveActions');
-             // If they already had actions, we might append or overwrite. Let's overwrite for now, assuming full brain dump.
              form.setValue('correctiveActions', res.actions, { shouldDirty: true });
            }
            if (res.rca) form.setValue('rca', res.rca, { shouldDirty: true });
@@ -457,7 +468,7 @@ export default function FieldServiceReportDetailPage() {
            toast({ variant: 'destructive', title: 'AI Error', description: res.error || 'Failed to process notes.' });
         }
       } else {
-        // Fallback for single field formatting (if they just hit the button on Corrective Actions)
+        // Fallback for single field formatting
         const { formatText } = await import('@/ai/flows/format-text-flow');
         const formatRes = await formatText({ text });
         
@@ -474,6 +485,89 @@ export default function FieldServiceReportDetailPage() {
       toast({ variant: 'destructive', title: 'AI Error', description: e.message || 'An error occurred during AI formatting.' });
     } finally {
       setIsAILoading(null);
+    }
+  };
+
+  const handleOpenChat = async () => {
+    if (!firestore || !authUser) return;
+    const eqName = form.getValues('assetName') || 'Unknown Equipment';
+    const channelName = `Breakdown: ${eqName}`;
+    try {
+      const q = query(collection(firestore, 'channels'), where('name', '==', channelName), limit(1));
+      const snaps = await getDocs(q);
+      let channelId = '';
+      if (snaps.empty) {
+         const newChannel = {
+           name: channelName,
+           type: 'breakdown',
+           participants: [authUser.uid],
+           lastMessage: 'Channel created for equipment breakdown',
+           lastMessageTime: serverTimestamp(),
+           createdAt: serverTimestamp(),
+           isArchived: false
+         };
+         const ref = await addDoc(collection(firestore, 'channels'), newChannel);
+         channelId = ref.id;
+      } else {
+         channelId = snaps.docs[0].id;
+      }
+      router.push(`/messages?channelId=${channelId}&fsrId=${reportId}`);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Chat Error', description: e.message });
+    }
+  };
+
+  const [isExtractingChat, setIsExtractingChat] = useState(false);
+  const handleExtractFromChat = async () => {
+    if (!firestore) return;
+    const eqName = form.getValues('assetName');
+    if (!eqName) {
+      toast({ variant: 'destructive', title: 'Missing Equipment Name', description: 'Please fill in the Asset Name first to locate the chat.' });
+      return;
+    }
+    const channelName = `Breakdown: ${eqName}`;
+    setIsExtractingChat(true);
+    try {
+      const q = query(collection(firestore, 'channels'), where('name', '==', channelName), limit(1));
+      const snaps = await getDocs(q);
+      if (snaps.empty) {
+        toast({ variant: 'destructive', title: 'No Chat Found', description: `Could not find a chat channel for ${eqName}.` });
+        return;
+      }
+      
+      const channelId = snaps.docs[0].id;
+      const msgsQuery = query(collection(firestore, `channels/${channelId}/messages`), orderBy('createdAt', 'asc'));
+      const msgsSnaps = await getDocs(msgsQuery);
+      
+      if (msgsSnaps.empty) {
+        toast({ variant: 'destructive', title: 'Empty Chat', description: 'The chat room is empty. Nothing to extract.' });
+        return;
+      }
+
+      const chatHistory = msgsSnaps.docs.map(d => {
+        const data = d.data();
+        return `${data.senderName}: ${data.text}`;
+      }).join('\n');
+
+      toast({ title: 'AI Extraction', description: 'Extracting FSR details from chat history...' });
+      
+      const { extractFsrFromChat } = await import('@/ai/flows/extract-fsr-from-chat-flow');
+      const res = await extractFsrFromChat({ chatHistory, equipmentName: eqName });
+      
+      if (res.success) {
+         if (res.findings) form.setValue('techFindings', res.findings, { shouldDirty: true });
+         if (res.actions) form.setValue('correctiveActions', res.actions, { shouldDirty: true });
+         if (res.rca) form.setValue('rca', res.rca, { shouldDirty: true });
+         if (res.recommendations) form.setValue('recommendations', res.recommendations, { shouldDirty: true });
+         handleAutosave();
+         toast({ title: 'Extraction Complete', description: 'The FSR has been filled from the chat history.' });
+      } else {
+         toast({ variant: 'destructive', title: 'AI Error', description: res.error });
+      }
+    } catch (e: any) {
+       toast({ variant: 'destructive', title: 'Extraction Error', description: e.message });
+    } finally {
+       setIsExtractingChat(false);
     }
   };
 
@@ -494,6 +588,10 @@ export default function FieldServiceReportDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleOpenChat}>
+            <MessageSquare className="h-4 w-4 text-blue-500" />
+            Equipment Chat
+          </Button>
           {!isFinalized && (
             <div className="relative">
               <Button 
@@ -693,9 +791,14 @@ export default function FieldServiceReportDetailPage() {
                     <FormField control={form.control} name="techFindings" render={({ field }) => (<div className="p-2 border-b border-black bg-slate-50/30">
                       <div className="flex justify-between items-center mb-1">
                         <DenseLabel>Findings & Observations</DenseLabel>
-                        <button type="button" onClick={() => handleAIAssist('techFindings')} disabled={isAILoading === 'techFindings'} className="print:hidden text-amber-500 hover:text-amber-600 transition-colors disabled:opacity-50">
-                          {isAILoading === 'techFindings' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                        </button>
+                        <div className="flex gap-2 print:hidden">
+                          <button type="button" onClick={handleExtractFromChat} disabled={isExtractingChat} title="Extract from Equipment Chat" className="text-blue-500 hover:text-blue-600 transition-colors disabled:opacity-50">
+                            {isExtractingChat ? <Loader2 className="w-3 h-3 animate-spin" /> : <MessageSquare className="w-3 h-3" />}
+                          </button>
+                          <button type="button" onClick={() => handleAIAssist('techFindings')} disabled={isAILoading === 'techFindings'} title="Smart Dictation AI" className="text-amber-500 hover:text-amber-600 transition-colors disabled:opacity-50">
+                            {isAILoading === 'techFindings' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                          </button>
+                        </div>
                       </div>
                       <Textarea {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="min-h-[80px] text-[10px] border-none p-0 resize-none bg-transparent focus-visible:ring-0" />
                     </div>)} />

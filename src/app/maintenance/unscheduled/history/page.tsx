@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { DailyDiary } from '@/lib/types';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import { format, addMonths } from 'date-fns';
 import { FileText } from 'lucide-react';
 
 const MINING_PONDS: Record<string, string[]> = {
@@ -20,22 +21,86 @@ const MINING_PONDS: Record<string, string[]> = {
 const PUMP_STATIONS = ['Nhlabane', 'Pozzolan', 'Monzi', 'Return Water Boosters'];
 const SMELTER_SECTIONS = ['MSP Roaster', 'Char Plant', 'Smelter', 'Iron Injection', 'Stripping Cranes', 'Slag Plant', 'North Screen'];
 
-function DiaryList({ diaries, locationTag }: { diaries: DailyDiary[] | null, locationTag: string }) {
-    if (!diaries) return <div className="text-sm text-muted-foreground">Loading...</div>;
-    const filtered = diaries.filter(d => d.locationTags?.includes(locationTag));
-    if (filtered.length === 0) return <div className="text-sm text-muted-foreground italic">No unscheduled work recorded for {locationTag}.</div>;
+function DiaryList({ diaries, locationTag, equipmentFilter }: { diaries: DailyDiary[] | null, locationTag: string, equipmentFilter?: string }) {
+    if (!diaries) return <div className="text-sm text-muted-foreground p-2">Loading...</div>;
+    
+    interface WorkItemRow {
+        id: string;
+        diaryId: string;
+        date: Date;
+        area: string;
+        scope: string;
+    }
+    
+    const workItems: WorkItemRow[] = [];
+    
+    diaries.forEach(d => {
+        if (!d.locationTags?.includes(locationTag)) return;
+        
+        (d.works || []).forEach((w, i) => {
+            if (!w.area || !w.scope) return;
+            
+            if (equipmentFilter && !w.area.toLowerCase().includes(equipmentFilter.toLowerCase())) {
+                return;
+            }
+
+            const scopeLower = w.scope.toLowerCase();
+            const areaLower = w.area.toLowerCase();
+            
+            const maintenanceKeywords = ["maintenance", "replace", "rebuild", "service", "repair", "fix", "install"];
+            const isMaintenance = maintenanceKeywords.some(k => scopeLower.includes(k) || areaLower.includes(k));
+            
+            const transportKeywords = ["collect", "transport", "deliver", "move"];
+            const isTransport = transportKeywords.some(k => scopeLower.includes(k));
+            
+            if (!isMaintenance && isTransport) return;
+            
+            workItems.push({
+                id: `${d.id}-${i}`,
+                diaryId: d.id,
+                date: new Date(d.date),
+                area: w.area,
+                scope: w.scope
+            });
+        });
+    });
+
+    if (workItems.length === 0) {
+        return <div className="text-sm text-muted-foreground italic p-2">No maintenance work recorded for this equipment.</div>;
+    }
+
+    workItems.sort((a, b) => b.date.getTime() - a.date.getTime());
 
     return (
-        <ul className="space-y-2 mt-2">
-            {filtered.map(diary => (
-                <li key={diary.id}>
-                    <Link href={`/reports/contractors-daily-diary/${diary.id}`} className="flex items-center gap-2 text-sm text-primary hover:underline group">
-                        <FileText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                        <span>{format(new Date(diary.date), 'MMM d, yyyy')} - {diary.contractTitle} ({diary.id})</span>
-                    </Link>
-                </li>
-            ))}
-        </ul>
+        <div className="overflow-x-auto w-full">
+            <Table className="text-xs w-full bg-white border border-slate-200">
+                <TableHeader className="bg-slate-100">
+                    <TableRow>
+                        <TableHead>Equipment / Area</TableHead>
+                        <TableHead>Scope of Work</TableHead>
+                        <TableHead className="w-28">Service Date</TableHead>
+                        <TableHead className="w-32">Next Service Date</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {workItems.map(item => {
+                        const nextService = addMonths(item.date, 3);
+                        return (
+                            <TableRow key={item.id} className="hover:bg-slate-50">
+                                <TableCell className="font-medium max-w-[200px] truncate">
+                                    <Link href={`/reports/contractors-daily-diary?id=${item.diaryId}`} className="text-primary hover:underline" title="View Diary">
+                                        {item.area}
+                                    </Link>
+                                </TableCell>
+                                <TableCell>{item.scope}</TableCell>
+                                <TableCell>{format(item.date, "yyyy/MM/dd")}</TableCell>
+                                <TableCell className="font-bold text-emerald-700">{format(nextService, "yyyy/MM/dd")}</TableCell>
+                            </TableRow>
+                        );
+                    })}
+                </TableBody>
+            </Table>
+        </div>
     );
 }
 
@@ -51,7 +116,9 @@ export default function UnscheduledHistoryPage() {
   const { data: rawDiaries } = useCollection<DailyDiary>(diariesQuery);
   const diaries = React.useMemo(() => {
       if (!rawDiaries) return null;
-      return [...rawDiaries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return [...rawDiaries]
+          .filter(d => d.isFinalised)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [rawDiaries]);
 
   return (
@@ -96,7 +163,7 @@ export default function UnscheduledHistoryPage() {
                                         {sub}
                                       </AccordionTrigger>
                                       <AccordionContent className="px-4 py-2">
-                                          <DiaryList diaries={diaries} locationTag={pond} />
+                                          <DiaryList diaries={diaries} locationTag={pond} equipmentFilter={sub} />
                                       </AccordionContent>
                                     </AccordionItem>
                                   ))}
