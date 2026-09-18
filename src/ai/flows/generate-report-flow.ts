@@ -97,7 +97,7 @@ export async function generateReport(
 
 const prompt = ai.definePrompt({
   name: 'generateWeeklyActivityReportPrompt',
-  model: 'googleai/gemini-2.5-pro',
+  model: 'googleai/gemini-3.1-pro-preview',
   input: {schema: ReportInputSchema},
   output: {schema: ReportOutputSchema},
   config: {
