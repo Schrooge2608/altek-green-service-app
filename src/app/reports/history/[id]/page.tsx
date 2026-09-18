@@ -3,7 +3,7 @@
 import { useParams, notFound, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Printer, Share2, MessageCircle, Mail } from 'lucide-react';
+import { Loader2, ArrowLeft, Printer } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { GeneratedReport } from '@/lib/types';
@@ -55,28 +55,6 @@ export default function ViewReportPage() {
                 </Button>
                 
                 <Button 
-                  variant="outline" 
-                  className="gap-2"
-                  onClick={() => {
-                      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-                  }}
-                >
-                  <MessageCircle className="h-4 w-4 text-green-600" />
-                  WhatsApp
-                </Button>
-
-                <Button 
-                  variant="outline" 
-                  className="gap-2"
-                  onClick={() => {
-                      window.open(`mailto:?subject=Report generated for period ${report.startDate} to ${report.endDate}&body=${encodeURIComponent(shareText)}`, '_blank');
-                  }}
-                >
-                  <Mail className="h-4 w-4 text-blue-600" />
-                  Email
-                </Button>
-
-                <Button 
                   variant="default" 
                   className="gap-2"
                   onClick={(e) => {
@@ -85,7 +63,7 @@ export default function ViewReportPage() {
                   }}
                 >
                   <Printer className="h-4 w-4" />
-                  Print / PDF
+                  Save as PDF / Print
                 </Button>
             </div>
             <Card className="shadow-lg border-0 print:shadow-none bg-transparent">
