@@ -83,9 +83,16 @@ const ReportOutputSchema = z.object({
 export type ReportOutput = z.infer<typeof ReportOutputSchema>;
 
 export async function generateReport(
-  input: ReportInput
-): Promise<ReportOutput> {
-  return generateReportFlow(input);
+  input: any
+): Promise<{ success: boolean; data?: ReportOutput; error?: string }> {
+  try {
+    const safeInput = JSON.parse(JSON.stringify(input));
+    const result = await generateReportFlow(safeInput);
+    return { success: true, data: result };
+  } catch (e: any) {
+    console.error("AI Generation Error:", e);
+    return { success: false, error: e.message || String(e) };
+  }
 }
 
 const prompt = ai.definePrompt({

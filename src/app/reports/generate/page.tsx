@@ -210,13 +210,16 @@ export default function GenerateReportPage() {
         
         try {
             const result = await generateReport(reportInput);
-            let rawText = typeof result === 'string' ? result : (result as any).report || '';
+            if (!result.success) {
+                throw new Error(result.error || 'Unknown server error');
+            }
+            let rawText = typeof result.data === 'string' ? result.data : (result.data as any).report || '';
             rawText = rawText.replace(/\\n/g, '\n').replace(/^"|"$/g, '').replace(/:\s*\|/g, ':\n\n|').replace(/([^\n])(\|---)/g, '$1\n$2');
             setGeneratedReport(rawText);
             toast({ title: 'Report Generated', description: 'The weekly summary report has been created below.' });
         } catch (e: any) {
             console.error(e);
-            setError('Failed to generate the report. The AI model may be temporarily unavailable or the data payload is too large.');
+            setError(`Failed to generate the report: ${e.message}`);
             toast({ variant: 'destructive', title: 'Generation Failed', description: e.message || 'An unknown error occurred.' });
         } finally {
             setIsGenerating(false);
