@@ -678,3 +678,14 @@ export interface VehicleExpense {
   createdAt?: any;
   createdBy?: string;
 }
+
+export interface Vehicle {
+  id: string;
+  name: string;
+  registration: string;
+  makeModel: string;
+  year?: string;
+  status: 'Active' | 'Inactive' | 'Maintenance';
+  createdAt?: any;
+  createdBy?: string;
+}

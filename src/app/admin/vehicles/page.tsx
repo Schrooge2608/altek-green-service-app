@@ -13,11 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Car, Fuel, Loader2, Trash2, MapPin } from 'lucide-react';
 import { useCollection, useFirestore, useUser, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
-import type { VehicleTravelLog, VehicleExpense, User } from '@/lib/types';
+import type { VehicleTravelLog, VehicleExpense, User, Vehicle } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
-const VEHICLES = ['Vehicle 1', 'Vehicle 2', 'Vehicle 3'];
 const EXPENSE_TYPES = ['Fuel', 'Maintenance', 'Tolls', 'Other'];
 
 export default function VehiclesPage() {
@@ -34,6 +33,9 @@ export default function VehiclesPage() {
 
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('name', 'asc')), [firestore]);
     const { data: usersList } = useCollection<User>(usersQuery);
+
+    const vehiclesQuery = useMemoFirebase(() => query(collection(firestore, 'vehicles'), orderBy('name', 'asc')), [firestore]);
+    const { data: vehiclesList, isLoading: loadingVehicles } = useCollection<Vehicle>(vehiclesQuery);
 
     const currentUserProfile = usersList?.find(u => u.id === user?.uid);
     const canViewGPS = currentUserProfile?.role === 'Altek Green Manager' || currentUserProfile?.role === 'Admin' || currentUserProfile?.role === 'Superadmin';
@@ -61,6 +63,17 @@ export default function VehiclesPage() {
         description: ''
     });
     const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+
+    // State for Vehicle Dialog
+    const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
+    const [vehicleForm, setVehicleForm] = useState({
+        name: '',
+        registration: '',
+        makeModel: '',
+        year: '',
+        status: 'Active'
+    });
+    const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
 
     // State for Closing Travel Log
     const [closingLog, setClosingLog] = useState<VehicleTravelLog | null>(null);
@@ -209,6 +222,37 @@ export default function VehiclesPage() {
         }
     };
 
+    const handleVehicleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmittingVehicle(true);
+        try {
+            await addDoc(collection(firestore, 'vehicles'), {
+                name: vehicleForm.name,
+                registration: vehicleForm.registration,
+                makeModel: vehicleForm.makeModel,
+                year: vehicleForm.year,
+                status: vehicleForm.status,
+                createdAt: serverTimestamp(),
+                createdBy: user?.uid
+            });
+
+            toast({ title: 'Success', description: 'Vehicle saved successfully.' });
+            setIsVehicleDialogOpen(false);
+            setVehicleForm({
+                name: '',
+                registration: '',
+                makeModel: '',
+                year: '',
+                status: 'Active'
+            });
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save vehicle.' });
+        } finally {
+            setIsSubmittingVehicle(false);
+        }
+    };
+
     const handleDelete = async (collectionName: string, id: string) => {
         if (confirm('Are you sure you want to delete this record?')) {
             await deleteDocumentNonBlocking(doc(firestore, collectionName, id));
@@ -226,9 +270,10 @@ export default function VehiclesPage() {
             </header>
 
             <Tabs defaultValue="travel" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+                <TabsList className={`grid w-full ${canViewGPS ? 'grid-cols-3 max-w-[600px]' : 'grid-cols-2 max-w-[400px]'}`}>
                     <TabsTrigger value="travel">Travel Logs</TabsTrigger>
                     <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                    {canViewGPS && <TabsTrigger value="fleet">Fleet Management</TabsTrigger>}
                 </TabsList>
 
                 {/* TRAVEL LOGS TAB */}
@@ -254,7 +299,7 @@ export default function VehiclesPage() {
                                                 <Select value={travelForm.vehicleName} onValueChange={(val) => setTravelForm({...travelForm, vehicleName: val})} required>
                                                     <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                                                     <SelectContent>
-                                                        {VEHICLES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                                        {vehiclesList?.map(v => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -408,7 +453,7 @@ export default function VehiclesPage() {
                                                 <Select value={expenseForm.vehicleName} onValueChange={(val) => setExpenseForm({...expenseForm, vehicleName: val})} required>
                                                     <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                                                     <SelectContent>
-                                                        {VEHICLES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                                        {vehiclesList?.map(v => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -485,6 +530,110 @@ export default function VehiclesPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+
+                {/* FLEET MANAGEMENT TAB */}
+                {canViewGPS && (
+                    <TabsContent value="fleet" className="mt-6">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Fleet Vehicles</CardTitle>
+                                    <CardDescription>Manage available vehicles for logging.</CardDescription>
+                                </div>
+                                <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button className="gap-2"><Plus className="h-4 w-4" /> Add Vehicle</Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-md">
+                                        <DialogHeader>
+                                            <DialogTitle>Add New Vehicle</DialogTitle>
+                                        </DialogHeader>
+                                        <form onSubmit={handleVehicleSubmit} className="space-y-4 py-4">
+                                            <div className="space-y-2">
+                                                <Label>Name / Alias</Label>
+                                                <Input value={vehicleForm.name} onChange={(e) => setVehicleForm({...vehicleForm, name: e.target.value})} required placeholder="e.g. NP 200, Hilux" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Registration Number</Label>
+                                                <Input value={vehicleForm.registration} onChange={(e) => setVehicleForm({...vehicleForm, registration: e.target.value})} required placeholder="e.g. NUR 12345" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Make & Model</Label>
+                                                <Input value={vehicleForm.makeModel} onChange={(e) => setVehicleForm({...vehicleForm, makeModel: e.target.value})} required placeholder="e.g. Nissan NP200" />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label>Year (Optional)</Label>
+                                                    <Input value={vehicleForm.year} onChange={(e) => setVehicleForm({...vehicleForm, year: e.target.value})} placeholder="e.g. 2021" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Status</Label>
+                                                    <Select value={vehicleForm.status} onValueChange={(val) => setVehicleForm({...vehicleForm, status: val})} required>
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Active">Active</SelectItem>
+                                                            <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                                            <SelectItem value="Inactive">Inactive</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button type="button" variant="outline" onClick={() => setIsVehicleDialogOpen(false)}>Cancel</Button>
+                                                <Button type="submit" disabled={isSubmittingVehicle}>
+                                                    {isSubmittingVehicle ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                                                    Save Vehicle
+                                                </Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name / Alias</TableHead>
+                                            <TableHead>Registration</TableHead>
+                                            <TableHead>Make & Model</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loadingVehicles ? (
+                                            <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                        ) : vehiclesList && vehiclesList.length > 0 ? (
+                                            vehiclesList.map(vehicle => (
+                                                <TableRow key={vehicle.id}>
+                                                    <TableCell className="font-medium">{vehicle.name}</TableCell>
+                                                    <TableCell>{vehicle.registration}</TableCell>
+                                                    <TableCell>{vehicle.makeModel} {vehicle.year && `(${vehicle.year})`}</TableCell>
+                                                    <TableCell>
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                            vehicle.status === 'Active' ? 'bg-green-100 text-green-700' :
+                                                            vehicle.status === 'Maintenance' ? 'bg-orange-100 text-orange-700' :
+                                                            'bg-gray-100 text-gray-700'
+                                                        }`}>
+                                                            {vehicle.status}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete('vehicles', vehicle.id)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No vehicles registered yet.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
             </Tabs>
         </div>
     );

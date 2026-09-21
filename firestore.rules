@@ -100,6 +100,11 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && (request.auth.token.email == 'admin@altekgreen.com' || !(userRole() in ['Client', 'Client Manager']));
     }
 
+    match /vehicles/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isManager();
+    }
+
     match /tasks/{document=**} {
       allow read, write: if isAuthenticated();
     }
