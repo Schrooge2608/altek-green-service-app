@@ -25,6 +25,7 @@ import {
   Shield,
   MessageSquare,
   Archive,
+  Car,
   Library,
   Gauge,
   Store,
@@ -629,6 +630,17 @@ export function SidebarNav() {
                                   </Link>
                               </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
+
+                          {!isClient && (
+                            <SidebarMenuSubItem>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/vehicles'}>
+                                    <Link href="/admin/vehicles" prefetch={true}>
+                                        <Car className="mr-2 h-4 w-4" />
+                                        <span>Vehicle Logbook</span>
+                                    </Link>
+                                </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          )}
                           
                           <SidebarMenuSubItem>
                               <SidebarMenuSubButton asChild isActive={pathname === '/admin/organogram'}>

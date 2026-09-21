@@ -11,7 +11,9 @@ service cloud.firestore {
 
     // Helper function to safely get the user's role
     function userRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
+        : 'Unknown';
     }
 
     // Helper function to check if the user has one of the specified manager roles
@@ -88,6 +90,14 @@ service cloud.firestore {
 
     match /generated_reports/{document=**} {
       allow read, write: if isAuthenticated();
+    }
+
+    match /vehicle_travel_logs/{document=**} {
+      allow read, write: if isAuthenticated() && (request.auth.token.email == 'admin@altekgreen.com' || !(userRole() in ['Client', 'Client Manager']));
+    }
+
+    match /vehicle_expenses/{document=**} {
+      allow read, write: if isAuthenticated() && (request.auth.token.email == 'admin@altekgreen.com' || !(userRole() in ['Client', 'Client Manager']));
     }
 
     match /tasks/{document=**} {

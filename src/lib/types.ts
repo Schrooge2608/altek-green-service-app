@@ -648,3 +648,33 @@ export interface Asset {
   lostReason?: string;
   createdAt?: any;
 }
+
+export interface VehicleTravelLog {
+  id: string;
+  vehicleName: string;
+  date: string;
+  technicianId: string;
+  technicianName: string;
+  startKm: number;
+  endKm?: number;
+  distance?: number;
+  destination: string;
+  reason: string;
+  status: 'In Progress' | 'Completed';
+  startLocation?: { lat: number; lng: number };
+  endLocation?: { lat: number; lng: number };
+  createdAt?: any;
+  createdBy?: string;
+}
+
+export interface VehicleExpense {
+  id: string;
+  vehicleName: string;
+  date: string;
+  expenseType: 'Fuel' | 'Maintenance' | 'Tolls' | 'Other';
+  amount: number;
+  description: string;
+  receiptUrl?: string;
+  createdAt?: any;
+  createdBy?: string;
+}
