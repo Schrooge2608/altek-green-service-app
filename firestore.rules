@@ -19,9 +19,9 @@ service cloud.firestore {
     // Helper function to check if the user has one of the specified manager roles
     function isManager() {
       return (request.auth != null) && (
-        (request.auth.token.email == 'admin@altekgreen.com') ||
+        (request.auth.token.email == 'admin@altekgreen.com' || request.auth.token.email == 'fritz@altekgreen.com') ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         userRole() in ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Corporate Manager (Beta)', 'Services Manager', 'Services Manager (Beta)', 'Site Supervisor', 'Site Supervisor (Beta)'])
+         userRole() in ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Corporate Manager (Beta)', 'Services Manager', 'Services Manager (Beta)', 'Site Supervisor', 'Site Supervisor (Beta)', 'Altek Green Manager'])
       );
     }
 
