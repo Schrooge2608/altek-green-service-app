@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Car, Fuel, Loader2, Trash2, MapPin } from 'lucide-react';
+import { Plus, Car, Fuel, Loader2, Trash2, MapPin, Pencil } from 'lucide-react';
 import { useCollection, useFirestore, useUser, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
 import type { VehicleTravelLog, VehicleExpense, User, Vehicle } from '@/lib/types';
@@ -66,6 +66,7 @@ export default function VehiclesPage() {
 
     // State for Vehicle Dialog
     const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
+    const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
     const [vehicleForm, setVehicleForm] = useState({
         name: '',
         registration: '',
@@ -226,18 +227,32 @@ export default function VehiclesPage() {
         e.preventDefault();
         setIsSubmittingVehicle(true);
         try {
-            await addDoc(collection(firestore, 'vehicles'), {
-                name: vehicleForm.name,
-                registration: vehicleForm.registration,
-                makeModel: vehicleForm.makeModel,
-                year: vehicleForm.year,
-                status: vehicleForm.status,
-                createdAt: serverTimestamp(),
-                createdBy: user?.uid
-            });
+            if (editingVehicle) {
+                await updateDoc(doc(firestore, 'vehicles', editingVehicle.id), {
+                    name: vehicleForm.name,
+                    registration: vehicleForm.registration,
+                    makeModel: vehicleForm.makeModel,
+                    year: vehicleForm.year,
+                    status: vehicleForm.status,
+                    updatedAt: serverTimestamp(),
+                    updatedBy: user?.uid
+                });
+                toast({ title: 'Success', description: 'Vehicle updated successfully.' });
+            } else {
+                await addDoc(collection(firestore, 'vehicles'), {
+                    name: vehicleForm.name,
+                    registration: vehicleForm.registration,
+                    makeModel: vehicleForm.makeModel,
+                    year: vehicleForm.year,
+                    status: vehicleForm.status,
+                    createdAt: serverTimestamp(),
+                    createdBy: user?.uid
+                });
+                toast({ title: 'Success', description: 'Vehicle saved successfully.' });
+            }
 
-            toast({ title: 'Success', description: 'Vehicle saved successfully.' });
             setIsVehicleDialogOpen(false);
+            setEditingVehicle(null);
             setVehicleForm({
                 name: '',
                 registration: '',
@@ -542,11 +557,22 @@ export default function VehiclesPage() {
                                 </div>
                                 <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>
                                     <DialogTrigger asChild>
-                                        <Button className="gap-2"><Plus className="h-4 w-4" /> Add Vehicle</Button>
+                                        <Button className="gap-2" onClick={() => {
+                                            setEditingVehicle(null);
+                                            setVehicleForm({
+                                                name: '',
+                                                registration: '',
+                                                makeModel: '',
+                                                year: '',
+                                                status: 'Active'
+                                            });
+                                        }}>
+                                            <Plus className="h-4 w-4" /> Add Vehicle
+                                        </Button>
                                     </DialogTrigger>
                                     <DialogContent className="max-w-md">
                                         <DialogHeader>
-                                            <DialogTitle>Add New Vehicle</DialogTitle>
+                                            <DialogTitle>{editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}</DialogTitle>
                                         </DialogHeader>
                                         <form onSubmit={handleVehicleSubmit} className="space-y-4 py-4">
                                             <div className="space-y-2">
@@ -619,6 +645,19 @@ export default function VehiclesPage() {
                                                         </span>
                                                     </TableCell>
                                                     <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => {
+                                                            setEditingVehicle(vehicle);
+                                                            setVehicleForm({
+                                                                name: vehicle.name,
+                                                                registration: vehicle.registration,
+                                                                makeModel: vehicle.makeModel,
+                                                                year: vehicle.year || '',
+                                                                status: vehicle.status || 'Active'
+                                                            });
+                                                            setIsVehicleDialogOpen(true);
+                                                        }}>
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
                                                         <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete('vehicles', vehicle.id)}>
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
