@@ -137,6 +137,18 @@ const withPWA = require('@ducanh2912/next-pwa').default({
         },
       },
       {
+        urlPattern: /\/reports\/field-service-report.*/i,
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'fsr-pages',
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 86400 * 7, // 1 week
+          },
+          networkTimeoutSeconds: 5,
+        },
+      },
+      {
         urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
         handler: "StaleWhileRevalidate",
         options: {
