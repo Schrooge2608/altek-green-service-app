@@ -80,6 +80,21 @@ const withPWA = require('@ducanh2912/next-pwa').default({
         },
       },
       {
+        urlPattern: ({ url }: any) => {
+          const isRSC = url.search.includes('_rsc=');
+          return isRSC;
+        },
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'app-rsc-payloads',
+          expiration: {
+            maxEntries: 200,
+            maxAgeSeconds: 86400,
+          },
+          networkTimeoutSeconds: 5,
+        },
+      },
+      {
         urlPattern: /\/_next\/static\/.+\.js$/i,
         handler: 'CacheFirst',
         options: {
