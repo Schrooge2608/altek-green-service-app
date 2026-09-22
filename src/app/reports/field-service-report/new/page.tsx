@@ -43,6 +43,7 @@ export default function NewFSRPage() {
           status: 'Draft',
           createdAt: new Date().toISOString(),
           customer: '',
+          equipmentId: equipmentId || null,
           assetName: assetName,
           parts: [],
           personnel: [],

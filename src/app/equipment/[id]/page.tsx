@@ -9,8 +9,8 @@ import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog,
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { doc, collection, query, where, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
-import type { Equipment, Breakdown, VSD, User as AppUser, DailyDiary } from '@/lib/types';
+import { doc, collection, query, where, orderBy, updateDoc, deleteDoc, or } from 'firebase/firestore';
+import type { Equipment, Breakdown, VSD, User as AppUser, DailyDiary, FieldServiceReport } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -103,14 +103,39 @@ export default function EquipmentDetail() {
   );
   const { data: eqBreakdownsRaw, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
+  const fsrQuery = useMemoFirebase(() => 
+    (eq?.name ? query(collection(firestore, 'field_service_reports'), or(where('equipmentId', '==', id), where('assetName', '==', eq.name))) : null), 
+    [firestore, eq, id]
+  );
+  const { data: eqFsrsRaw, isLoading: fsrsLoading } = useCollection<FieldServiceReport>(fsrQuery);
+
   const eqBreakdowns = useMemo(() => {
-    if (!eqBreakdownsRaw) return [];
-    return [...eqBreakdownsRaw].sort((a, b) => {
+    const combined: Breakdown[] = [];
+    if (eqBreakdownsRaw) {
+        combined.push(...eqBreakdownsRaw);
+    }
+    if (eqFsrsRaw) {
+        const fsrMapped = eqFsrsRaw.map(fsr => ({
+            id: fsr.id,
+            equipmentId: fsr.equipmentId || id,
+            equipmentName: fsr.assetName,
+            component: 'Other' as const,
+            date: fsr.date,
+            description: `[FSR] ${fsr.customerFault || fsr.jobType || 'Field Service Report'}`,
+            resolved: fsr.status === 'Finalized',
+            status: fsr.status === 'Finalized' ? 'Closed' : 'In Progress',
+            timeReported: fsr.createdAt || fsr.date,
+            isLocked: fsr.status === 'Finalized'
+        } as Breakdown));
+        combined.push(...fsrMapped);
+    }
+    
+    return combined.sort((a, b) => {
         const dateA = a.timeReported || a.date;
         const dateB = b.timeReported || b.date;
         return (dateB > dateA) ? 1 : -1;
     });
-  }, [eqBreakdownsRaw]);
+  }, [eqBreakdownsRaw, eqFsrsRaw, id]);
 
   const diariesQuery = useMemoFirebase(() => {
     if (!eq?.name) return null;
@@ -721,7 +746,7 @@ export default function EquipmentDetail() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {breakdownsLoading ? (
+                            {(breakdownsLoading || fsrsLoading) ? (
                                 <TableRow>
                                     <TableCell colSpan={3} className="text-center h-24">
                                         <Loader2 className="animate-spin h-4 w-4 mx-auto" />

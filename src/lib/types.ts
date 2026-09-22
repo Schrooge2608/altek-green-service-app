@@ -366,6 +366,7 @@ export interface FieldServiceReport {
   email: string;
   jobCategory: 'Planned' | 'Unplanned' | 'Breakdown' | 'PM';
   // 02 Equipment
+  equipmentId?: string | null;
   assetName: string;
   tagNo: string;
   serialNo: string;
