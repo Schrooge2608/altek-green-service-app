@@ -80,6 +80,9 @@ export default function VehiclesPage() {
     const [closingLog, setClosingLog] = useState<VehicleTravelLog | null>(null);
     const [closeEndKm, setCloseEndKm] = useState('');
 
+    // State for Travel History Tab
+    const [selectedHistoryVehicle, setSelectedHistoryVehicle] = useState<Vehicle | null>(null);
+
     const getCurrentLocation = async (): Promise<{lat: number, lng: number} | null> => {
         if (!navigator.geolocation) return null;
         try {
@@ -302,8 +305,9 @@ export default function VehiclesPage() {
             </header>
 
             <Tabs defaultValue="travel" className="w-full">
-                <TabsList className={`grid w-full ${canViewGPS ? 'grid-cols-3 max-w-[600px]' : 'grid-cols-2 max-w-[400px]'}`}>
+                <TabsList className={`grid w-full ${canViewGPS ? 'grid-cols-4 max-w-[800px]' : 'grid-cols-3 max-w-[600px]'}`}>
                     <TabsTrigger value="travel">Travel Logs</TabsTrigger>
+                    <TabsTrigger value="history">Travel History</TabsTrigger>
                     <TabsTrigger value="expenses">Expenses</TabsTrigger>
                     {canViewGPS && <TabsTrigger value="fleet">Fleet Management</TabsTrigger>}
                 </TabsList>
@@ -458,6 +462,86 @@ export default function VehiclesPage() {
                                     )}
                                 </TableBody>
                             </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* TRAVEL HISTORY TAB */}
+                <TabsContent value="history" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>
+                                {selectedHistoryVehicle ? (
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="ghost" size="sm" onClick={() => setSelectedHistoryVehicle(null)}>← Back</Button>
+                                        History for {selectedHistoryVehicle.name}
+                                    </div>
+                                ) : 'Vehicle History'}
+                            </CardTitle>
+                            <CardDescription>
+                                {selectedHistoryVehicle ? 'Detailed travel logs for this vehicle.' : 'Select a vehicle to view its complete log sheet.'}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {!selectedHistoryVehicle ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {vehiclesList?.map(v => (
+                                        <Card key={v.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setSelectedHistoryVehicle(v)}>
+                                            <CardContent className="p-6 flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="bg-primary/10 p-3 rounded-full">
+                                                        <Car className="h-6 w-6 text-primary" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold">{v.name}</h3>
+                                                        <p className="text-sm text-muted-foreground">{v.registration || 'No Reg'}</p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                    {!vehiclesList?.length && !loadingVehicles && (
+                                        <div className="col-span-full text-center py-8 text-muted-foreground">No vehicles found.</div>
+                                    )}
+                                </div>
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Driver</TableHead>
+                                            <TableHead>Destination & Reason</TableHead>
+                                            <TableHead>Distance</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {travelLogs?.filter(log => log.vehicleName === selectedHistoryVehicle.name).length ? (
+                                            travelLogs.filter(log => log.vehicleName === selectedHistoryVehicle.name).map(log => (
+                                                <TableRow key={log.id}>
+                                                    <TableCell>{log.date}</TableCell>
+                                                    <TableCell>{log.technicianName}</TableCell>
+                                                    <TableCell>
+                                                        <div>{log.destination}</div>
+                                                        <div className="text-xs text-muted-foreground line-clamp-1">{log.reason}</div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {log.status === 'Completed' ? (
+                                                            <>
+                                                                <div className="font-medium">{log.distance} km</div>
+                                                                <div className="text-xs text-muted-foreground">{log.startKm} - {log.endKm}</div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="font-medium text-orange-500">In Progress (Start: {log.startKm} km)</div>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No travel logs found for this vehicle.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
