@@ -100,6 +100,11 @@ export default function VehiclesPage() {
         }
     };
 
+    const globalStats = {
+        totalDistance: travelLogs?.filter(l => l.status === 'Completed' && l.distance).reduce((acc, log) => acc + (log.distance || 0), 0) || 0,
+        totalCost: expenses?.reduce((acc, e) => acc + e.amount, 0) || 0
+    };
+
     const calculateVehicleStats = (vehicleName: string) => {
         const vLogs = travelLogs?.filter(l => l.vehicleName === vehicleName && l.status === 'Completed' && l.distance) || [];
         const vExpenses = expenses?.filter(e => e.vehicleName === vehicleName) || [];
@@ -596,10 +601,24 @@ export default function VehiclesPage() {
                                     {selectedExpenseVehicle ? 'Cost and consumption tracking for this vehicle.' : 'Select a vehicle to view its expense history.'}
                                 </CardDescription>
                             </div>
-                            <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="gap-2"><Fuel className="h-4 w-4" /> Log Expense</Button>
-                                </DialogTrigger>
+                            <div className="flex items-center gap-6">
+                                {!selectedExpenseVehicle && (
+                                    <div className="hidden md:flex gap-6 items-center px-4 bg-muted/30 p-2 rounded-lg border">
+                                        <div className="text-right">
+                                            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Fleet Distance</div>
+                                            <div className="text-lg font-bold text-primary">{globalStats.totalDistance.toFixed(1)} km</div>
+                                        </div>
+                                        <div className="h-8 w-px bg-border"></div>
+                                        <div className="text-right">
+                                            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Fleet Expenses</div>
+                                            <div className="text-lg font-bold text-destructive">R {globalStats.totalCost.toFixed(2)}</div>
+                                        </div>
+                                    </div>
+                                )}
+                                <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button className="gap-2"><Fuel className="h-4 w-4" /> Log Expense</Button>
+                                    </DialogTrigger>
                                 <DialogContent className="max-w-md">
                                     <DialogHeader>
                                         <DialogTitle>Log Vehicle Expense</DialogTitle>
@@ -658,6 +677,7 @@ export default function VehiclesPage() {
                                     </form>
                                 </DialogContent>
                             </Dialog>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             {!selectedExpenseVehicle ? (
