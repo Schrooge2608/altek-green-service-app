@@ -46,9 +46,10 @@ const formSchema = z.object({
   imageUrl: z.string().optional(),
   
   equipmentProfile: z.enum(['Standard', 'UPS/BTU']).default('Standard'),
+  starterType: z.enum(['VSD', 'Soft Starter', 'DOL', 'Star-Delta', 'None']).default('VSD'),
   mcc: z.string().optional(),
   
-  // VSD fields
+  // Starter/VSD fields
   vsdId: z.string().optional(),
   model: z.string().optional(),
   serialNumber: z.string().optional(),
@@ -162,6 +163,7 @@ function EquipmentFormContent() {
       equipmentName: '',
       location: '',
       imageUrl: '',
+      starterType: 'VSD',
       vsdId: '',
       serialNumber: '',
       model: '',
@@ -182,6 +184,11 @@ function EquipmentFormContent() {
   const watchedProfile = useWatch({
     control: form.control,
     name: 'equipmentProfile',
+  });
+
+  const watchedStarter = useWatch({
+    control: form.control,
+    name: 'starterType',
   });
 
   useEffect(() => {
@@ -336,10 +343,11 @@ function EquipmentFormContent() {
         equipmentData.division = values.division;
     }
 
-    const vsdData: VSD | null = values.equipmentProfile === 'Standard' ? {
+    const vsdData: VSD | null = values.equipmentProfile === 'Standard' && (values.starterType as string) !== 'None' ? {
         id: values.vsdId || '',
         equipmentId: values.equipmentId,
         model: values.model || '',
+        driveType: values.starterType as any,
         serialNumber: values.serialNumber || '',
         installationDate: values.installationDate ? format(values.installationDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
         status: 'active',
@@ -427,6 +435,32 @@ function EquipmentFormContent() {
                   </FormItem>
                 )}
               />
+              {watchedProfile === 'Standard' && (
+                  <FormField
+                    control={form.control}
+                    name="starterType"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Starter Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select starter type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="VSD">VSD (Variable Speed Drive)</SelectItem>
+                            <SelectItem value="Soft Starter">Soft Starter</SelectItem>
+                            <SelectItem value="DOL">Direct-On-Line (DOL)</SelectItem>
+                            <SelectItem value="Star-Delta">Star-Delta</SelectItem>
+                            <SelectItem value="None">None / Direct Feed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              )}
               <FormField
                 control={form.control}
                 name="equipmentId"
@@ -650,7 +684,7 @@ function EquipmentFormContent() {
                               </FormControl>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} />
                           </PopoverContent>
                           </Popover>
                           <FormMessage />
@@ -754,7 +788,7 @@ function EquipmentFormContent() {
                                 </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} />
                             </PopoverContent>
                             </Popover>
                             <FormMessage />
@@ -780,7 +814,7 @@ function EquipmentFormContent() {
                                 </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} />
                             </PopoverContent>
                             </Popover>
                             <FormMessage />
@@ -818,12 +852,12 @@ function EquipmentFormContent() {
               </Card>
               )}
 
-              {watchedProfile === 'Standard' && (
+              {watchedProfile === 'Standard' && (watchedStarter as string) !== 'None' && (
               <>
               <Card>
                 <CardHeader>
-                    <CardTitle>VSD Information</CardTitle>
-                    <CardDescription>Details for the Variable Speed Drive controlling this equipment.</CardDescription>
+                    <CardTitle>{watchedStarter} Information</CardTitle>
+                    <CardDescription>Details for the {watchedStarter} controlling this equipment.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-6">
                     <FormField
@@ -831,9 +865,9 @@ function EquipmentFormContent() {
                         name="vsdId"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>VSD ID</FormLabel>
+                            <FormLabel>{watchedStarter} ID</FormLabel>
                             <FormControl>
-                            <Input placeholder="e.g., vsd-001" {...field} />
+                            <Input placeholder={`e.g., ${watchedStarter.toLowerCase().replace(' ', '-')}-001`} {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -844,7 +878,7 @@ function EquipmentFormContent() {
                         name="model"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>VSD Model</FormLabel>
+                            <FormLabel>{watchedStarter} Model</FormLabel>
                             <FormControl>
                             <Input placeholder="e.g., Altek Drive 5000" {...field} />
                             </FormControl>
@@ -857,7 +891,7 @@ function EquipmentFormContent() {
                         name="serialNumber"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>VSD Serial Number</FormLabel>
+                            <FormLabel>{watchedStarter} Serial Number</FormLabel>
                             <FormControl>
                             <Input placeholder="e.g., SN-A1B2-C3D4" {...field} />
                             </FormControl>
@@ -898,7 +932,6 @@ function EquipmentFormContent() {
                                 disabled={(date) =>
                                     date > new Date() || date < new Date("1900-01-01")
                                 }
-                                initialFocus
                                 />
                             </PopoverContent>
                             </Popover>
@@ -911,7 +944,7 @@ function EquipmentFormContent() {
                         name="assignedToId"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Assigned VSD Technician</FormLabel>
+                            <FormLabel>Assigned {watchedStarter} Technician</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
@@ -938,7 +971,7 @@ function EquipmentFormContent() {
               <Card>
                   <CardHeader>
                       <CardTitle>Motor Information</CardTitle>
-                      <CardDescription>Details for the motor driven by the VSD.</CardDescription>
+                      <CardDescription>Details for the motor driven by the {(watchedStarter as string) !== 'None' ? watchedStarter : 'Direct Feed'}.</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-6">
                       <FormField control={form.control} name="motorModel" render={({ field }) => (
@@ -975,7 +1008,7 @@ function EquipmentFormContent() {
                                 </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} />
                             </PopoverContent>
                             </Popover>
                             <FormMessage />
@@ -1050,7 +1083,7 @@ function EquipmentFormContent() {
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                             </FormControl></PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus /></PopoverContent>
+                            <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} /></PopoverContent>
                         </Popover><FormMessage /></FormItem>
                     )} />
                 </div>

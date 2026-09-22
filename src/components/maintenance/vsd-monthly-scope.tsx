@@ -105,7 +105,6 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading }: { memb
                         mode="single"
                         selected={member.date ? new Date(member.date) : undefined}
                         onSelect={(date) => onChange('date', date ? format(date, 'yyyy-MM-dd') : '')}
-                        initialFocus
                         />
                     </PopoverContent>
                 </Popover>
@@ -469,7 +468,6 @@ export function VsdMonthlyScopeDocument({ schedule }: { schedule?: ScheduledTask
                         mode="single"
                         selected={inspectionDate}
                         onSelect={setInspectionDate}
-                        initialFocus
                         />
                     </PopoverContent>
                 </Popover>

@@ -3,8 +3,9 @@ export interface Equipment {
   name: string;
   location: string;
   plant: 'Mining' | 'Smelter';
-  division?: 'Boosters' | 'Dredgers' | 'Pump Stations' | 'MSP' | 'Roaster' | 'Char Plant' | 'Smelter' | 'Iron injection' | 'Stripping Crane' | 'Slag plant' | 'North Screen' | "UPS/BTU's";
+  division?: 'Boosters' | 'Dredgers' | 'Pump Stations' | 'MSP' | 'Roaster' | 'Char Plant' | 'Smelter' | 'Iron injection' | 'Stripping Crane' | 'Slag plant' | 'North Screen' | "UPS/BTU's" | "MPE Dry Mining" | "MPC Dry Mining";
   vsdId: string;
+  mcc?: string;
   lastMaintenance: string;
   nextMaintenance: string;
   imageUrl?: string;
@@ -111,7 +112,7 @@ export interface Equipment {
 
 export interface VSD {
   id: string;
-  driveType: 'VSD' | 'Soft Starter';
+  driveType: 'VSD' | 'Soft Starter' | 'DOL' | 'Star-Delta' | 'None';
   serialNumber: string;
   dsuLeftSerialNumber?: string;
   dsuRightSerialNumber?: string;

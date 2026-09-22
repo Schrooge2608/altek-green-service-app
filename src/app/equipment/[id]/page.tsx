@@ -345,9 +345,6 @@ export default function EquipmentDetail() {
     return '/equipment'; 
   }, [eq]);
 
-  const isSoftStarter = vsd?.driveType === 'Soft Starter';
-  const controllerType = isSoftStarter ? 'Soft Starter' : 'VSD';
-
   const applianceName = useMemo(() => {
     if (!eq?.name) return 'MOTOR';
     const nameLower = eq.name.toLowerCase();
@@ -610,11 +607,12 @@ export default function EquipmentDetail() {
               </Card>
           </div>
           <div className="space-y-8">
+              {vsd && vsd.driveType !== 'None' && (
               <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2 border-b bg-slate-50/50">
                       <div className="flex items-center gap-2">
                           <Cpu className="h-4 w-4 text-primary" />
-                          <CardTitle className="text-sm uppercase tracking-wider font-bold">{controllerType}</CardTitle>
+                          <CardTitle className="text-sm uppercase tracking-wider font-bold">{vsd.driveType}</CardTitle>
                       </div>
                       {canEdit && vsd && (
                           <EditVsdForm vsd={vsd} />
@@ -662,6 +660,7 @@ export default function EquipmentDetail() {
                       </div>
                   </CardContent>
               </Card>
+              )}
               <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2 border-b bg-slate-50/50">
                       <div className="flex items-center gap-2">

@@ -133,8 +133,7 @@ export function RescheduleJobDialog({ schedule }: RescheduleJobDialogProps) {
                   mode="single"
                   selected={newDate}
                   onSelect={setNewDate}
-                  initialFocus
-                />
+                  />
               </PopoverContent>
             </Popover>
           </div>

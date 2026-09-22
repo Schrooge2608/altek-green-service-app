@@ -102,8 +102,7 @@ function WorkCrewRow({ member, onRemove, onChange, users, usersLoading, disabled
               mode="single"
               selected={member.date ? new Date(member.date) : undefined}
               onSelect={(date) => onChange('date', date ? format(date, 'yyyy-MM-dd') : '')}
-              initialFocus
-            />
+              />
           </PopoverContent>
         </Popover>
       </TableCell>
@@ -414,7 +413,7 @@ export function Protection6MonthlyScopeDocument({ schedule }: { schedule?: Sched
                         </Select>
                     </div>
                     <div className="space-y-2"><Label>Area</Label><Input placeholder="e.g., MPA Pump Station" disabled={isLocked} /></div>
-                    <div className="space-y-2"><Label>Date</Label><Popover><PopoverTrigger asChild><Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !inspectionDate && 'text-muted-foreground')} disabled={isEditMode}><CalendarIcon className="mr-2 h-4 w-4" />{inspectionDate ? format(inspectionDate, 'PPP') : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={inspectionDate} onSelect={setInspectionDate} initialFocus /></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label>Date</Label><Popover><PopoverTrigger asChild><Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !inspectionDate && 'text-muted-foreground')} disabled={isEditMode}><CalendarIcon className="mr-2 h-4 w-4" />{inspectionDate ? format(inspectionDate, 'PPP') : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={inspectionDate} onSelect={setInspectionDate} /></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Inspected By</Label><Input value={isEditMode ? schedule.assignedToName : currentUserData?.name || ''} disabled /></div>
                 </CardContent>
             </Card>
