@@ -10,12 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Car, Fuel, Loader2, Trash2, MapPin, Pencil } from 'lucide-react';
+import { Plus, Car, Fuel, Loader2, Trash2, MapPin, Pencil, Camera } from 'lucide-react';
 import { useCollection, useFirestore, useUser, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
 import type { VehicleTravelLog, VehicleExpense, User, Vehicle } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { scanOdometer } from '@/ai/flows/scan-odometer-flow';
 
 const EXPENSE_TYPES = ['Fuel', 'Maintenance', 'Tolls', 'Other'];
 
@@ -52,6 +53,9 @@ export default function VehiclesPage() {
         reason: ''
     });
     const [isSubmittingTravel, setIsSubmittingTravel] = useState(false);
+    const [isScanningStartKm, setIsScanningStartKm] = useState(false);
+    const [isScanningEndKm, setIsScanningEndKm] = useState(false);
+    const [isScanningCloseKm, setIsScanningCloseKm] = useState(false);
 
     // State for Expense Dialog
     const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
@@ -97,6 +101,45 @@ export default function VehiclesPage() {
         } catch (e) {
             console.warn('Geolocation error:', e);
             return null;
+        }
+    };
+
+    const handleScanOdometer = async (e: React.ChangeEvent<HTMLInputElement>, field: 'start' | 'end' | 'close') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const setScanning = field === 'start' ? setIsScanningStartKm : field === 'end' ? setIsScanningEndKm : setIsScanningCloseKm;
+        setScanning(true);
+        toast({ title: 'Scanning...', description: 'Analyzing dashboard image for reading...' });
+
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                const dataUrl = reader.result as string;
+                const result = await scanOdometer({ imageDataUri: dataUrl });
+                if (result.success && result.kilometers) {
+                    toast({ title: 'Scan Successful', description: `Detected ${result.kilometers} km` });
+                    if (field === 'start') {
+                        setTravelForm(prev => ({ ...prev, startKm: result.kilometers?.toString() || '' }));
+                    } else if (field === 'end') {
+                        setTravelForm(prev => ({ ...prev, endKm: result.kilometers?.toString() || '' }));
+                    } else if (field === 'close') {
+                        setCloseEndKm(result.kilometers?.toString() || '');
+                    }
+                } else {
+                    toast({ variant: 'destructive', title: 'Scan Failed', description: result.error || 'Could not read odometer.' });
+                }
+                setScanning(false);
+            };
+            reader.onerror = () => {
+                toast({ variant: 'destructive', title: 'Error', description: 'Failed to read image file.' });
+                setScanning(false);
+            };
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to process image.' });
+            setScanning(false);
         }
     };
 
@@ -393,11 +436,23 @@ export default function VehiclesPage() {
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <Label>Start KM</Label>
+                                                <div className="flex justify-between items-center">
+                                                    <Label>Start KM</Label>
+                                                    <label className={`cursor-pointer ${isScanningStartKm ? 'opacity-50 pointer-events-none' : 'hover:text-primary'}`}>
+                                                        {isScanningStartKm ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Camera className="h-4 w-4 text-muted-foreground hover:text-primary" />}
+                                                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleScanOdometer(e, 'start')} />
+                                                    </label>
+                                                </div>
                                                 <Input type="number" step="0.1" value={travelForm.startKm} onChange={(e) => setTravelForm({...travelForm, startKm: e.target.value})} required />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label>End KM (Optional)</Label>
+                                                <div className="flex justify-between items-center">
+                                                    <Label>End KM (Optional)</Label>
+                                                    <label className={`cursor-pointer ${isScanningEndKm ? 'opacity-50 pointer-events-none' : 'hover:text-primary'}`}>
+                                                        {isScanningEndKm ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Camera className="h-4 w-4 text-muted-foreground hover:text-primary" />}
+                                                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleScanOdometer(e, 'end')} />
+                                                    </label>
+                                                </div>
                                                 <Input type="number" step="0.1" value={travelForm.endKm} onChange={(e) => setTravelForm({...travelForm, endKm: e.target.value})} placeholder="Leave blank if in progress" />
                                             </div>
                                         </div>
@@ -474,7 +529,13 @@ export default function VehiclesPage() {
                                                                 </DialogHeader>
                                                                 <form onSubmit={handleCloseLog} className="space-y-4 py-4">
                                                                     <div className="space-y-2">
-                                                                        <Label>Final End KM</Label>
+                                                                        <div className="flex justify-between items-center">
+                                                                            <Label>Final End KM</Label>
+                                                                            <label className={`cursor-pointer ${isScanningCloseKm ? 'opacity-50 pointer-events-none' : 'hover:text-primary'}`}>
+                                                                                {isScanningCloseKm ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Camera className="h-4 w-4 text-muted-foreground hover:text-primary" />}
+                                                                                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleScanOdometer(e, 'close')} />
+                                                                            </label>
+                                                                        </div>
                                                                         <Input type="number" step="0.1" value={closeEndKm} onChange={e => setCloseEndKm(e.target.value)} required autoFocus />
                                                                         <p className="text-xs text-muted-foreground">Start KM was: {log.startKm}</p>
                                                                     </div>
