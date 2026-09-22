@@ -93,6 +93,23 @@ export default function VehiclesPage() {
         }
     };
 
+    const handleVehicleChange = (val: string) => {
+        let latestEndKm = '';
+        if (travelLogs) {
+            const vehicleLogs = travelLogs.filter(log => log.vehicleName === val);
+            const lastCompletedLog = vehicleLogs.find(log => log.endKm !== undefined && log.endKm !== null);
+            if (lastCompletedLog && lastCompletedLog.endKm !== null) {
+                latestEndKm = lastCompletedLog.endKm.toString();
+            }
+        }
+        
+        setTravelForm(prev => ({
+            ...prev,
+            vehicleName: val,
+            startKm: latestEndKm
+        }));
+    };
+
     const handleCloseLog = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!closingLog) return;
@@ -311,7 +328,7 @@ export default function VehiclesPage() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label>Vehicle</Label>
-                                                <Select value={travelForm.vehicleName} onValueChange={(val) => setTravelForm({...travelForm, vehicleName: val})} required>
+                                                <Select value={travelForm.vehicleName} onValueChange={handleVehicleChange} required>
                                                     <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                                                     <SelectContent>
                                                         {vehiclesList?.map(v => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
