@@ -60,6 +60,7 @@ export default function VehiclesPage() {
         date: format(new Date(), 'yyyy-MM-dd'),
         expenseType: '',
         amount: '',
+        liters: '',
         description: ''
     });
     const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
@@ -83,6 +84,9 @@ export default function VehiclesPage() {
     // State for Travel History Tab
     const [selectedHistoryVehicle, setSelectedHistoryVehicle] = useState<Vehicle | null>(null);
 
+    // State for Expense History Tab
+    const [selectedExpenseVehicle, setSelectedExpenseVehicle] = useState<Vehicle | null>(null);
+
     const getCurrentLocation = async (): Promise<{lat: number, lng: number} | null> => {
         if (!navigator.geolocation) return null;
         try {
@@ -94,6 +98,17 @@ export default function VehiclesPage() {
             console.warn('Geolocation error:', e);
             return null;
         }
+    };
+
+    const calculateVehicleStats = (vehicleName: string) => {
+        const vLogs = travelLogs?.filter(l => l.vehicleName === vehicleName && l.status === 'Completed' && l.distance) || [];
+        const vExpenses = expenses?.filter(e => e.vehicleName === vehicleName) || [];
+        const totalDistance = vLogs.reduce((acc, log) => acc + (log.distance || 0), 0);
+        const totalFuelExpenses = vExpenses.filter(e => e.expenseType === 'Fuel' && e.liters);
+        const totalLiters = totalFuelExpenses.reduce((acc, e) => acc + (e.liters || 0), 0);
+        const totalCost = vExpenses.reduce((acc, e) => acc + e.amount, 0);
+        const kmPerLiter = totalLiters > 0 ? (totalDistance / totalLiters).toFixed(2) : '0.00';
+        return { totalDistance, totalLiters, kmPerLiter, totalCost };
     };
 
     const handleVehicleChange = (val: string) => {
@@ -216,15 +231,32 @@ export default function VehiclesPage() {
         e.preventDefault();
         setIsSubmittingExpense(true);
         try {
-            await addDoc(collection(firestore, 'vehicle_expenses'), {
+            const amount = parseFloat(expenseForm.amount);
+            let liters = null;
+            let rate = null;
+            if (expenseForm.expenseType === 'Fuel' && expenseForm.liters) {
+                liters = parseFloat(expenseForm.liters);
+                if (liters > 0) {
+                    rate = amount / liters;
+                }
+            }
+
+            const data: any = {
                 vehicleName: expenseForm.vehicleName,
                 date: expenseForm.date,
                 expenseType: expenseForm.expenseType,
-                amount: parseFloat(expenseForm.amount),
+                amount: amount,
                 description: expenseForm.description,
                 createdAt: serverTimestamp(),
                 createdBy: user?.uid
-            });
+            };
+
+            if (liters) {
+                data.liters = liters;
+                data.rate = rate;
+            }
+
+            await addDoc(collection(firestore, 'vehicle_expenses'), data);
 
             toast({ title: 'Success', description: 'Expense saved successfully.' });
             setIsExpenseDialogOpen(false);
@@ -233,6 +265,7 @@ export default function VehiclesPage() {
                 date: format(new Date(), 'yyyy-MM-dd'),
                 expenseType: '',
                 amount: '',
+                liters: '',
                 description: ''
             });
         } catch (error) {
@@ -551,8 +584,17 @@ export default function VehiclesPage() {
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
-                                <CardTitle>Vehicle Expenses</CardTitle>
-                                <CardDescription>Track fuel, maintenance, and toll costs.</CardDescription>
+                                <CardTitle>
+                                    {selectedExpenseVehicle ? (
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => setSelectedExpenseVehicle(null)}>← Back</Button>
+                                            Expenses for {selectedExpenseVehicle.name}
+                                        </div>
+                                    ) : 'Vehicle Expenses'}
+                                </CardTitle>
+                                <CardDescription>
+                                    {selectedExpenseVehicle ? 'Cost and consumption tracking for this vehicle.' : 'Select a vehicle to view its expense history.'}
+                                </CardDescription>
                             </div>
                             <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
                                 <DialogTrigger asChild>
@@ -593,6 +635,15 @@ export default function VehiclesPage() {
                                                 <Input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} required placeholder="e.g. 500.00" />
                                             </div>
                                         </div>
+                                        {expenseForm.expenseType === 'Fuel' && (
+                                            <div className="space-y-2">
+                                                <Label>Liters (Optional)</Label>
+                                                <Input type="number" step="0.01" value={expenseForm.liters} onChange={(e) => setExpenseForm({...expenseForm, liters: e.target.value})} placeholder="e.g. 50.5" />
+                                                {expenseForm.amount && expenseForm.liters && parseFloat(expenseForm.liters) > 0 && (
+                                                    <p className="text-xs text-muted-foreground mt-1">Calculated Rate: R {(parseFloat(expenseForm.amount) / parseFloat(expenseForm.liters)).toFixed(2)} / Liter</p>
+                                                )}
+                                            </div>
+                                        )}
                                         <div className="space-y-2">
                                             <Label>Description</Label>
                                             <Textarea value={expenseForm.description} onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} required placeholder="e.g. Filled up tank at Shell" />
@@ -609,40 +660,97 @@ export default function VehiclesPage() {
                             </Dialog>
                         </CardHeader>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Vehicle</TableHead>
-                                        <TableHead>Type</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loadingExpenses ? (
-                                        <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
-                                    ) : expenses && expenses.length > 0 ? (
-                                        expenses.map(expense => (
-                                            <TableRow key={expense.id}>
-                                                <TableCell>{expense.date}</TableCell>
-                                                <TableCell className="font-medium">{expense.vehicleName}</TableCell>
-                                                <TableCell>{expense.expenseType}</TableCell>
-                                                <TableCell className="max-w-[200px] truncate" title={expense.description}>{expense.description}</TableCell>
-                                                <TableCell className="text-right font-medium">R {expense.amount.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete('vehicle_expenses', expense.id)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No expenses recorded yet.</TableCell></TableRow>
+                            {!selectedExpenseVehicle ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {vehiclesList?.map(v => (
+                                        <Card key={v.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setSelectedExpenseVehicle(v)}>
+                                            <CardContent className="p-6 flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="bg-primary/10 p-3 rounded-full">
+                                                        <Car className="h-6 w-6 text-primary" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold">{v.name}</h3>
+                                                        <p className="text-sm text-muted-foreground">{v.registration || 'No Reg'}</p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                    {!vehiclesList?.length && !loadingVehicles && (
+                                        <div className="col-span-full text-center py-8 text-muted-foreground">No vehicles found.</div>
                                     )}
-                                </TableBody>
-                            </Table>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {/* Stats Summary */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <Card>
+                                            <CardContent className="p-4">
+                                                <div className="text-sm text-muted-foreground">Total Distance</div>
+                                                <div className="text-xl font-bold">{calculateVehicleStats(selectedExpenseVehicle.name).totalDistance.toFixed(1)} km</div>
+                                            </CardContent>
+                                        </Card>
+                                        <Card>
+                                            <CardContent className="p-4">
+                                                <div className="text-sm text-muted-foreground">Total Fuel</div>
+                                                <div className="text-xl font-bold">{calculateVehicleStats(selectedExpenseVehicle.name).totalLiters.toFixed(2)} L</div>
+                                            </CardContent>
+                                        </Card>
+                                        <Card>
+                                            <CardContent className="p-4">
+                                                <div className="text-sm text-muted-foreground">Consumption</div>
+                                                <div className="text-xl font-bold">{calculateVehicleStats(selectedExpenseVehicle.name).kmPerLiter} km/L</div>
+                                            </CardContent>
+                                        </Card>
+                                        <Card>
+                                            <CardContent className="p-4">
+                                                <div className="text-sm text-muted-foreground">Total Cost</div>
+                                                <div className="text-xl font-bold">R {calculateVehicleStats(selectedExpenseVehicle.name).totalCost.toFixed(2)}</div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+
+                                    {/* Expenses Table */}
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Description</TableHead>
+                                                <TableHead className="text-right">Amount</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {loadingExpenses ? (
+                                                <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                            ) : expenses && expenses.filter(e => e.vehicleName === selectedExpenseVehicle.name).length > 0 ? (
+                                                expenses.filter(e => e.vehicleName === selectedExpenseVehicle.name).map(expense => (
+                                                    <TableRow key={expense.id}>
+                                                        <TableCell>{expense.date}</TableCell>
+                                                        <TableCell>{expense.expenseType}</TableCell>
+                                                        <TableCell className="max-w-[200px] truncate" title={expense.description}>{expense.description}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <div className="font-medium">R {expense.amount.toFixed(2)}</div>
+                                                            {expense.expenseType === 'Fuel' && expense.liters && (
+                                                                <div className="text-xs text-muted-foreground">{expense.liters} L @ R {(expense.amount / expense.liters).toFixed(2)}/L</div>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete('vehicle_expenses', expense.id)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No expenses recorded for this vehicle.</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>

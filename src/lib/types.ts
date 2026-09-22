@@ -672,8 +672,10 @@ export interface VehicleExpense {
   id: string;
   vehicleName: string;
   date: string;
-  expenseType: 'Fuel' | 'Maintenance' | 'Tolls' | 'Other';
+  expenseType: 'Fuel' | 'Maintenance' | 'Tolls' | 'Other' | string;
   amount: number;
+  liters?: number;
+  rate?: number;
   description: string;
   receiptUrl?: string;
   createdAt?: any;
