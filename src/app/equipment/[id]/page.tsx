@@ -387,11 +387,17 @@ export default function EquipmentDetail() {
     });
   };
 
-  const toggleVsdStatus = async () => {
-      if (!vsdRef || !vsd) return;
-      const newStatus = vsd.status === 'active' ? 'inactive' : 'active';
+  const toggleEquipmentStatus = async () => {
+      if (!eqRef || !eq) return;
+      
+      const currentStatus = eq.status || (vsd ? vsd.status : 'active');
+      const newStatus = currentStatus === 'active' || (!eq.status && eq.breakdownStatus !== 'Active') ? 'inactive' : 'active';
+      
       try {
-          await updateDoc(vsdRef, { status: newStatus });
+          if (vsdRef && vsd) {
+              await updateDoc(vsdRef, { status: newStatus });
+          }
+          await updateDoc(eqRef, { status: newStatus });
       } catch (error) {
           console.error('Failed to update status', error);
       }
@@ -445,6 +451,21 @@ export default function EquipmentDetail() {
                 <DetailRow label="Location" value={eq.location} />
                 <DetailRow label="Plant" value={`${eq.plant} ${eq.division ? `> ${eq.division}` : ''}`} />
                 <DetailRow label="Assigned Technician" value={eq.assignedToName} />
+                <div className="flex justify-between items-center py-1.5 border-b border-dashed col-span-1 md:col-span-2">
+                    <span className="text-muted-foreground text-xs font-semibold">Equipment Status:</span>
+                    <button 
+                        onClick={toggleEquipmentStatus}
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                            eq.status === 'active' || (!eq.status && eq.breakdownStatus !== 'Active')
+                            ? 'bg-green-500 focus:ring-green-500' 
+                            : eq.status === 'maintenance'
+                            ? 'bg-yellow-500 focus:ring-yellow-500'
+                            : 'bg-red-500 focus:ring-red-500'
+                        }`}
+                    >
+                        {eq.status === 'inactive' ? 'Inactive' : (eq.status || 'Operational')}
+                    </button>
+                </div>
             </CardContent>
         </Card>
 
@@ -627,7 +648,7 @@ export default function EquipmentDetail() {
                       <div className="flex justify-between items-center py-1.5 border-b border-dashed">
                           <span className="text-muted-foreground text-xs">Status:</span>
                           <button 
-                            onClick={toggleVsdStatus}
+                            onClick={toggleEquipmentStatus}
                             className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                               vsd?.status === 'active' 
                                 ? 'bg-green-500 focus:ring-green-500' 

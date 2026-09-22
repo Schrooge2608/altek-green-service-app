@@ -199,8 +199,8 @@ export default function SF3Page() {
                           </TableCell>
                           <TableCell className="text-sm">{eq.assignedToName || 'Unassigned'}</TableCell>
                           <TableCell>
-                              <Badge variant={eq.breakdownStatus === 'Active' ? 'destructive' : 'default'} className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none">
-                                  {eq.breakdownStatus || 'Operational'}
+                              <Badge variant={eq.status === 'inactive' || eq.breakdownStatus === 'Active' ? 'destructive' : 'default'} className={eq.status === 'inactive' || eq.breakdownStatus === 'Active' ? 'bg-red-500 text-white hover:bg-red-600 border-none' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none'}>
+                                  {eq.status === 'inactive' ? 'Inactive' : (eq.breakdownStatus === 'Active' ? 'Breakdown' : (eq.breakdownStatus || 'Operational'))}
                               </Badge>
                           </TableCell>
                           {canDelete && (
