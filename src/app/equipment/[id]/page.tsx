@@ -387,6 +387,16 @@ export default function EquipmentDetail() {
     });
   };
 
+  const toggleVsdStatus = async () => {
+      if (!vsdRef || !vsd) return;
+      const newStatus = vsd.status === 'active' ? 'inactive' : 'active';
+      try {
+          await updateDoc(vsdRef, { status: newStatus });
+      } catch (error) {
+          console.error('Failed to update status', error);
+      }
+  };
+
   if (eqLoading || vsdLoading || breakdownsLoading) {
     return <EquipmentDetailSkeleton />;
   }
@@ -614,9 +624,20 @@ export default function EquipmentDetail() {
                           <DetailRow label="Module Right 3" value={vsd?.moduleRight3SerialNumber} />
                         </>
                       )}
-                      <div className="flex justify-between py-1.5 border-b border-dashed">
+                      <div className="flex justify-between items-center py-1.5 border-b border-dashed">
                           <span className="text-muted-foreground text-xs">Status:</span>
-                          <Badge variant={vsd?.status === 'active' ? 'default' : (vsd?.status === 'maintenance' ? 'secondary' : 'destructive')} className="text-[10px] py-0 h-5">{vsd?.status || 'Unknown'}</Badge>
+                          <button 
+                            onClick={toggleVsdStatus}
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                              vsd?.status === 'active' 
+                                ? 'bg-green-500 focus:ring-green-500' 
+                                : vsd?.status === 'maintenance'
+                                ? 'bg-yellow-500 focus:ring-yellow-500'
+                                : 'bg-red-500 focus:ring-red-500'
+                            }`}
+                          >
+                            {vsd?.status || 'Unknown'}
+                          </button>
                       </div>
                   </CardContent>
               </Card>
