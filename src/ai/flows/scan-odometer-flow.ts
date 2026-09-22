@@ -71,7 +71,7 @@ const scanOdometerFlow = ai.defineFlow(
 
       return {
         success: false,
-        error: \`AI Error: \${error.message || "An unexpected error occurred during the AI scan."}\`
+        error: `AI Error: ${error.message || "An unexpected error occurred during the AI scan."}`
       };
     }
   }
