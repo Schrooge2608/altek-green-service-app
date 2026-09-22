@@ -6,6 +6,7 @@ import { FirebaseClientProvider } from '@/firebase';
 import { AuthWrapper } from '@/components/layout/auth-wrapper';
 import { MainLayout } from '@/components/layout/main-layout';
 import { KioskProvider } from '@/components/kiosk/kiosk-provider';
+import { OfflineSyncer } from '@/components/offline-syncer';
 
 export const viewport: Viewport = {
   themeColor: '#000000',
@@ -51,6 +52,7 @@ export default function RootLayout({
                 {children}
               </MainLayout>
               <Toaster />
+              <OfflineSyncer />
             </AuthWrapper>
           </KioskProvider>
         </FirebaseClientProvider>
