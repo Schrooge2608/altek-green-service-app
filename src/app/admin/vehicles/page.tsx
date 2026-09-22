@@ -214,6 +214,18 @@ export default function VehiclesPage() {
 
     const handleTravelSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!travelForm.vehicleName) {
+            toast({ variant: 'destructive', title: 'Vehicle Required', description: 'Please select a vehicle before logging travel.' });
+            return;
+        }
+
+        const existingInProgress = travelLogs?.find(l => l.vehicleName === travelForm.vehicleName && l.status === 'In Progress');
+        if (existingInProgress) {
+            toast({ variant: 'destructive', title: 'Vehicle In Use', description: 'This vehicle already has an open travel log. Please close it before starting a new one.' });
+            return;
+        }
+
         setIsSubmittingTravel(true);
         try {
             const start = parseFloat(travelForm.startKm);
