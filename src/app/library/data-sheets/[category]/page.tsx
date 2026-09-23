@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, BookOpen, Download, FileText, FileImage, Bot, Send, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { UploadDocumentDialog } from '@/components/library/upload-document-dialog';
-import { useChat } from 'ai/react';
+import { useChat } from '@ai-sdk/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -138,7 +138,7 @@ export default function CategoryDetailsPage() {
               </div>
             )}
             
-            {messages.map(m => (
+            {messages.map((m: any) => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                   {m.role === 'assistant' ? (
