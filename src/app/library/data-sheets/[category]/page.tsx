@@ -81,8 +81,17 @@ export default function CategoryDetailsPage() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LibraryDocument));
-      // Manual sort since we might not have a composite index created yet
-      docs.sort((a, b) => (b.uploadedAt?.toMillis() || 0) - (a.uploadedAt?.toMillis() || 0));
+      docs.sort((a, b) => {
+        const getMillis = (val: any) => {
+          if (!val) return 0;
+          if (typeof val.toMillis === 'function') return val.toMillis();
+          if (val.seconds) return val.seconds * 1000;
+          if (val instanceof Date) return val.getTime();
+          if (typeof val === 'string' || typeof val === 'number') return new Date(val).getTime();
+          return 0;
+        };
+        return getMillis(b.uploadedAt) - getMillis(a.uploadedAt);
+      });
       setDocuments(docs);
       setLoading(false);
     }, (error) => {
