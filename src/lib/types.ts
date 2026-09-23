@@ -693,3 +693,14 @@ export interface Vehicle {
   createdAt?: any;
   createdBy?: string;
 }
+
+export interface LibraryDocument {
+  id: string;
+  category: string;
+  type: 'Procedure' | 'Drawing';
+  title: string;
+  fileUrl: string;
+  fileName: string;
+  uploadedBy: string;
+  uploadedAt: any;
+}

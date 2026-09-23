@@ -31,6 +31,8 @@ const dataSheetCategories = [
   },
 ];
 
+import Link from 'next/link';
+
 export default function DataSheetsPage() {
   return (
     <div className="flex flex-col gap-8">
@@ -42,17 +44,19 @@ export default function DataSheetsPage() {
       </header>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {dataSheetCategories.map((cat) => (
-          <Card key={cat.title}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <cat.icon className="h-6 w-6 text-primary" />
-                <span>{cat.title}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{cat.description}</p>
-            </CardContent>
-          </Card>
+          <Link key={cat.title} href={`/library/data-sheets/${encodeURIComponent(cat.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}`} className="block transition-transform hover:scale-[1.02]">
+            <Card className="h-full hover:border-primary/50 cursor-pointer">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <cat.icon className="h-6 w-6 text-primary" />
+                  <span>{cat.title}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">{cat.description}</p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>
