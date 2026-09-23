@@ -616,42 +616,72 @@ export default function VehiclesPage() {
                                     )}
                                 </div>
                             ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Driver</TableHead>
-                                            <TableHead>Destination & Reason</TableHead>
-                                            <TableHead>Distance</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {travelLogs?.filter(log => log.vehicleName === selectedHistoryVehicle.name).length ? (
-                                            travelLogs.filter(log => log.vehicleName === selectedHistoryVehicle.name).map(log => (
-                                                <TableRow key={log.id}>
-                                                    <TableCell>{log.date}</TableCell>
-                                                    <TableCell>{log.technicianName}</TableCell>
-                                                    <TableCell>
-                                                        <div>{log.destination}</div>
-                                                        <div className="text-xs text-muted-foreground line-clamp-1">{log.reason}</div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {log.status === 'Completed' ? (
-                                                            <>
-                                                                <div className="font-medium">{log.distance} km</div>
-                                                                <div className="text-xs text-muted-foreground">{log.startKm} - {log.endKm}</div>
-                                                            </>
-                                                        ) : (
-                                                            <div className="font-medium text-orange-500">In Progress (Start: {log.startKm} km)</div>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No travel logs found for this vehicle.</TableCell></TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                <div className="space-y-6">
+                                    {/* Stats Summary */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <Card>
+                                            <CardContent className="p-4">
+                                                <div className="text-sm text-muted-foreground">Total Distance</div>
+                                                <div className="text-xl font-bold">{calculateVehicleStats(selectedHistoryVehicle.name).totalDistance.toFixed(1)} km</div>
+                                            </CardContent>
+                                        </Card>
+                                        <Card>
+                                            <CardContent className="p-4">
+                                                <div className="text-sm text-muted-foreground">Total Fuel</div>
+                                                <div className="text-xl font-bold">{calculateVehicleStats(selectedHistoryVehicle.name).totalLiters.toFixed(2)} L</div>
+                                            </CardContent>
+                                        </Card>
+                                        <Card>
+                                            <CardContent className="p-4">
+                                                <div className="text-sm text-muted-foreground">Consumption</div>
+                                                <div className="text-xl font-bold">{calculateVehicleStats(selectedHistoryVehicle.name).kmPerLiter} km/L</div>
+                                            </CardContent>
+                                        </Card>
+                                        <Card>
+                                            <CardContent className="p-4">
+                                                <div className="text-sm text-muted-foreground">Total Cost</div>
+                                                <div className="text-xl font-bold">R {calculateVehicleStats(selectedHistoryVehicle.name).totalCost.toFixed(2)}</div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Driver</TableHead>
+                                                <TableHead>Destination & Reason</TableHead>
+                                                <TableHead>Distance</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {travelLogs?.filter(log => log.vehicleName === selectedHistoryVehicle.name).length ? (
+                                                travelLogs.filter(log => log.vehicleName === selectedHistoryVehicle.name).map(log => (
+                                                    <TableRow key={log.id}>
+                                                        <TableCell>{log.date}</TableCell>
+                                                        <TableCell>{log.technicianName}</TableCell>
+                                                        <TableCell>
+                                                            <div>{log.destination}</div>
+                                                            <div className="text-xs text-muted-foreground line-clamp-1">{log.reason}</div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {log.status === 'Completed' ? (
+                                                                <>
+                                                                    <div className="font-medium">{log.distance} km</div>
+                                                                    <div className="text-xs text-muted-foreground">{log.startKm} - {log.endKm}</div>
+                                                                </>
+                                                            ) : (
+                                                                <div className="font-medium text-orange-500">In Progress (Start: {log.startKm} km)</div>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No travel logs found for this vehicle.</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             )}
                         </CardContent>
                     </Card>
