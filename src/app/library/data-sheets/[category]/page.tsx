@@ -13,9 +13,41 @@ import { ArrowLeft, BookOpen, Download, FileText, FileImage, Bot, Send, Loader2 
 import Link from 'next/link';
 import { UploadDocumentDialog } from '@/components/library/upload-document-dialog';
 import { useChat } from '@ai-sdk/react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+const DocumentList = ({ docs, emptyMsg }: { docs: LibraryDocument[], emptyMsg: string }) => (
+  <div className="space-y-4">
+    {docs.length === 0 ? (
+      <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+        {emptyMsg}
+      </div>
+    ) : (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {docs.map(doc => (
+          <Card key={doc.id} className="overflow-hidden">
+            <div className="p-4 flex items-start gap-4">
+              <div className="p-2 bg-primary/10 text-primary rounded-lg">
+                {doc.type === 'Drawing' ? <FileImage className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium truncate" title={doc.title}>{doc.title}</h4>
+                <p className="text-xs text-muted-foreground mt-1 truncate">{doc.fileName}</p>
+                <p className="text-xs text-muted-foreground mt-1">By {doc.uploadedBy}</p>
+              </div>
+            </div>
+            <div className="bg-muted/50 p-2 flex justify-end border-t">
+              <Button variant="ghost" size="sm" className="gap-2 text-xs" asChild>
+                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-3 w-3" /> View / Download
+                </a>
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    )}
+  </div>
+);
 
 export default function CategoryDetailsPage() {
   const pathname = usePathname();
@@ -64,39 +96,7 @@ export default function CategoryDetailsPage() {
   const procedures = documents.filter(d => d.type === 'Procedure');
   const drawings = documents.filter(d => d.type === 'Drawing');
 
-  const DocumentList = ({ docs, emptyMsg }: { docs: LibraryDocument[], emptyMsg: string }) => (
-    <div className="space-y-4">
-      {docs.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-          {emptyMsg}
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {docs.map(doc => (
-            <Card key={doc.id} className="overflow-hidden">
-              <div className="p-4 flex items-start gap-4">
-                <div className="p-2 bg-primary/10 text-primary rounded-lg">
-                  {doc.type === 'Drawing' ? <FileImage className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium truncate" title={doc.title}>{doc.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-1 truncate">{doc.fileName}</p>
-                  <p className="text-xs text-muted-foreground mt-1">By {doc.uploadedBy}</p>
-                </div>
-              </div>
-              <div className="bg-muted/50 p-2 flex justify-end border-t">
-                <Button variant="ghost" size="sm" className="gap-2 text-xs" asChild>
-                  <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-3 w-3" /> View / Download
-                  </a>
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  // Document list moved outside
 
   return (
     <div className="flex flex-col gap-8 h-full max-h-screen">
@@ -142,8 +142,8 @@ export default function CategoryDetailsPage() {
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                   {m.role === 'assistant' ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-snug prose-pre:bg-black/10 prose-pre:text-foreground">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-snug prose-pre:bg-black/10 prose-pre:text-foreground whitespace-pre-wrap">
+                      {m.content}
                     </div>
                   ) : (
                     <p className="whitespace-pre-wrap">{m.content}</p>
