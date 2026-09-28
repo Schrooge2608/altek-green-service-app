@@ -516,6 +516,11 @@ export function SidebarNav() {
                                         <Link href="/inventory/consumables" prefetch={true}>Consumables</Link>
                                     </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
+                                <SidebarMenuSubItem>
+                                    <SidebarMenuSubButton asChild isActive={pathname === '/inventory/spares'}>
+                                        <Link href="/inventory/spares" prefetch={true}>Spare Parts</Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
                             </SidebarMenuSub>
                         </CollapsibleContent>
                     </Collapsible>

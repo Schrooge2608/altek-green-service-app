@@ -6,11 +6,24 @@ import { Pencil, Loader2, Save } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFirebase } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { VSD } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+const ABB_MODELS: Record<string, string[]> = {
+  "ACS 600": [
+    "ACS 607-120-6", "ACS 607-170-5", "ACS 607-210-6", "ACS 607-255-6",
+    "ACS 607-260-6", "ACS 607-320-5", "ACS 607-320-6", "ACS 607-375-6",
+    "ACS 607-400-6", "ACS 607-610-6", "ACS 607-760-5", "ACS 607-760-6",
+    "ACS 607-1040-6", "ACS 607-1380-6", "ACS 607-1710-6", "ACS 607-2120-6",
+    "ACS 607-2680-6", "ACS 607-3160-6"
+  ],
+  "ACS 800": ["ACS 800-01", "ACS 800-04", "ACS 800-07", "ACS 800-17", "ACS 800-37", "Other ACS 800"],
+  "ACS 880": ["ACS 880-01", "ACS 880-04", "ACS 880-07", "ACS 880-17", "ACS 880-37", "Other ACS 880"]
+};
 
 export function EditVsdForm({ vsd }: { vsd: VSD }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +31,20 @@ export function EditVsdForm({ vsd }: { vsd: VSD }) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
+  const [manufacturer, setManufacturer] = useState(vsd.manufacturer || '');
+  const [series, setSeries] = useState('');
   const [model, setModel] = useState(vsd.model || '');
+  
+  // Set initial series if model belongs to one
+  React.useEffect(() => {
+      if (manufacturer === 'ABB' || vsd.model?.startsWith('ACS')) {
+          if (!manufacturer) setManufacturer('ABB');
+          if (vsd.model?.includes('600') || vsd.model?.startsWith('ACS 6')) setSeries('ACS 600');
+          else if (vsd.model?.includes('800') || vsd.model?.startsWith('ACS 80')) setSeries('ACS 800');
+          else if (vsd.model?.includes('880') || vsd.model?.startsWith('ACS 88')) setSeries('ACS 880');
+      }
+  }, [vsd.model, manufacturer]);
+
   const [serial, setSerial] = useState(vsd.serialNumber || '');
   const [dsuLeft, setDsuLeft] = useState(vsd.dsuLeftSerialNumber || '');
   const [dsuRight, setDsuRight] = useState(vsd.dsuRightSerialNumber || '');
@@ -36,6 +62,7 @@ export function EditVsdForm({ vsd }: { vsd: VSD }) {
     setIsSaving(true);
     try {
       await updateDoc(doc(firestore, 'vsds', vsd.id), {
+        manufacturer,
         model,
         serialNumber: serial,
         dsuLeftSerialNumber: dsuLeft,
@@ -70,10 +97,52 @@ export function EditVsdForm({ vsd }: { vsd: VSD }) {
         <DialogHeader><DialogTitle>Edit VSD Details</DialogTitle></DialogHeader>
         <ScrollArea className="flex-grow">
           <div className="grid gap-4 py-4 pr-4">
+            
+            <div className="grid gap-2">
+              <Label>Manufacturer</Label>
+              <Select value={manufacturer} onValueChange={(val) => { setManufacturer(val); if (val !== 'ABB') setSeries(''); }}>
+                <SelectTrigger><SelectValue placeholder="Select manufacturer" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ABB">ABB</SelectItem>
+                  <SelectItem value="Siemens">Siemens</SelectItem>
+                  <SelectItem value="Schneider">Schneider</SelectItem>
+                  <SelectItem value="Danfoss">Danfoss</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {manufacturer === 'ABB' && (
+              <div className="grid gap-2">
+                <Label>ABB Series</Label>
+                <Select value={series} onValueChange={setSeries}>
+                  <SelectTrigger><SelectValue placeholder="Select series" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACS 600">ACS 600</SelectItem>
+                    <SelectItem value="ACS 800">ACS 800</SelectItem>
+                    <SelectItem value="ACS 880">ACS 880</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label>Model</Label>
-              <Input value={model} onChange={e => setModel(e.target.value)} />
+              {(manufacturer === 'ABB' && series && ABB_MODELS[series]) ? (
+                <Select value={model} onValueChange={setModel}>
+                  <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
+                  <SelectContent>
+                    {ABB_MODELS[series].map(m => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input placeholder="Enter model manually" value={model} onChange={e => setModel(e.target.value)} />
+              )}
             </div>
+
             <div className="grid gap-2">
               <Label>Serial Number</Label>
               <Input value={serial} onChange={e => setSerial(e.target.value)} />

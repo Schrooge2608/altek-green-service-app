@@ -704,3 +704,18 @@ export interface LibraryDocument {
   uploadedBy: string;
   uploadedAt: any;
 }
+
+export interface SparePart {
+  id: string;
+  rbmNumber: string;          // RBM Number
+  rtbsNumber: string;         // RTBS Number
+  oemPartNumber: string;      // e.g., ABB Code
+  name: string;               // Corresponds to "Name" column in Excel
+  type: string;               // Corresponds to "Type" column in Excel
+  manufacturer: string;       // e.g., ABB, Siemens, Schneider
+  compatibleModels: string[]; // e.g., ['ACS 800', 'ACS 607-1380-6']
+  category?: string;          // e.g., 'IGBT', 'Fan', 'Control Board', 'Fuse'
+  stockLevel?: number;
+  price?: number;
+  createdAt?: any;
+}

@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info, Fan, GitCommit, FilePlus, Loader2, Trash2, TriangleAlert } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, where, orderBy, updateDoc, deleteDoc, or } from 'firebase/firestore';
-import type { Equipment, Breakdown, VSD, User as AppUser, DailyDiary, FieldServiceReport } from '@/lib/types';
+import type { Equipment, Breakdown, VSD, User as AppUser, DailyDiary, FieldServiceReport, SparePart } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -108,6 +109,12 @@ export default function EquipmentDetail() {
     [firestore, eq, id]
   );
   const { data: eqFsrsRaw, isLoading: fsrsLoading } = useCollection<FieldServiceReport>(fsrQuery);
+
+  const sparesQuery = useMemoFirebase(() => 
+    (vsd?.model ? query(collection(firestore, 'spare_parts'), where('compatibleModels', 'array-contains', vsd.model)) : null), 
+    [firestore, vsd?.model]
+  );
+  const { data: compatibleSpares, isLoading: sparesLoading } = useCollection<SparePart>(sparesQuery);
 
   const eqBreakdowns = useMemo(() => {
     const combined: Breakdown[] = [];
@@ -876,6 +883,62 @@ export default function EquipmentDetail() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {vsd && vsd.driveType !== 'None' && (
+                <Accordion type="single" collapsible className="w-full mt-8">
+                    <AccordionItem value="spares" className="border rounded-lg bg-card text-card-foreground shadow-sm">
+                        <div className="flex items-center justify-between px-6 py-4 hover:bg-slate-50/50">
+                            <AccordionTrigger className="hover:no-underline py-0 flex-1 justify-between pr-4">
+                                <div className="text-left">
+                                    <h3 className="text-base font-bold uppercase tracking-tight">Compatible Spares & BOM</h3>
+                                    <p className="text-xs text-muted-foreground font-normal">Known spare parts for {vsd.model}</p>
+                                </div>
+                            </AccordionTrigger>
+                            <Link href={`/inventory/spares`} passHref>
+                                <Button variant="outline" size="sm">Manage Spares</Button>
+                            </Link>
+                        </div>
+                        <AccordionContent className="p-0 border-t">
+                            <Table>
+                                <TableHeader className="bg-slate-50">
+                                    <TableRow>
+                                        <TableHead className="text-[10px] font-black uppercase">RBM No.</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase">OEM Code</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase">Name</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase">Type</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase">Category</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-right">Stock</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {sparesLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center h-24">
+                                                <Loader2 className="animate-spin h-4 w-4 mx-auto" />
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : compatibleSpares && compatibleSpares.length > 0 ? (
+                                        compatibleSpares.map(spare => (
+                                            <TableRow key={spare.id} className="text-xs">
+                                                <TableCell className="font-medium whitespace-nowrap">{spare.rbmNumber}</TableCell>
+                                                <TableCell>{spare.oemPartNumber}</TableCell>
+                                                <TableCell className="max-w-md truncate">{spare.name}</TableCell>
+                                                <TableCell className="max-w-md truncate">{spare.type}</TableCell>
+                                                <TableCell>{spare.category}</TableCell>
+                                                <TableCell className="text-right font-bold">{spare.stockLevel}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center h-24 text-muted-foreground italic text-xs">No compatible spares found for this model.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            )}
         </div>
       </div>
     </div>
