@@ -158,6 +158,8 @@ export default function FieldServiceReportDetailPage() {
   const { fields: partFields, append: appendPart, remove: removePart } = useFieldArray({ control: form.control, name: "parts" });
   const { fields: personFields, append: appendPerson, remove: removePerson } = useFieldArray({ control: form.control, name: "personnel" });
 
+  const sparesQuery = useMemoFirebase(() => query(collection(firestore, 'spares'), orderBy('rbmCode')), [firestore]);
+  const { data: sparesList } = useCollection(sparesQuery);
   const watchedNT = useWatch({ control: form.control, name: 'ntHours' });
   const watchedArea = useWatch({ control: form.control, name: 'area' });
 
@@ -768,6 +770,22 @@ export default function FieldServiceReportDetailPage() {
 
                 {/* 03: CALL-OUT, TIME TRACKING & TRAVEL */}
                 <SectionHeader number="03" title="Call-Out, Time Tracking & Travel" />
+                                {/* Datalist for Spares Inventory Auto-complete */}
+                <datalist id="spares-list">
+                  {sparesList?.map((s) => (
+                    <option key={s.id} value={s.rbmCode || s.oemCode || s.description}>
+                      {s.description} ({s.manufacturer})
+                    </option>
+                  ))}
+                </datalist>
+                {/* Datalist for Spares Inventory Auto-complete */}
+                        <datalist id="spares-list">
+                          {sparesList?.map((s) => (
+                            <option key={s.id} value={s.rbmCode || s.oemCode || s.description}>
+                              {s.description} ({s.manufacturer})
+                            </option>
+                          ))}
+                        </datalist>
                 <div className="border-2 border-black mb-0 overflow-hidden">
                   <div className="grid grid-cols-6 divide-x divide-black border-b border-black bg-slate-50">
                     {['timeCallOut', 'timeArrival', 'timeStart', 'timeEnd', 'timeDeparture'].map((t, idx) => (
@@ -832,6 +850,14 @@ export default function FieldServiceReportDetailPage() {
 
                 {/* 06: PARTS & MATERIALS */}
                 <SectionHeader number="06" title="Parts & Materials Used" />
+                                {/* Datalist for Spares Inventory Auto-complete */}
+                <datalist id="spares-list">
+                  {sparesList?.map((s) => (
+                    <option key={s.id} value={s.rbmCode || s.oemCode || s.description}>
+                      {s.description} ({s.manufacturer})
+                    </option>
+                  ))}
+                </datalist>
                 <div className="border-2 border-black mb-0 overflow-hidden">
                   <Table className="border-none">
                     <TableHeader className="bg-[#263238] border-none">
@@ -846,17 +872,39 @@ export default function FieldServiceReportDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {partFields.map((field, idx) => (
-                        <TableRow key={field.id} className="h-7 border-t border-black/10 hover:bg-transparent">
-                          <TableCell className="p-1 text-[9px] text-center font-bold">{idx + 1}</TableCell>
-                          <TableCell className="p-0 border-x border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.partNo`)} onBlur={() => handleAutosave()} /></TableCell>
-                          <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.description`)} onBlur={() => handleAutosave()} /></TableCell>
-                          <TableCell className="p-0 border-r border-black/10"><Input type="number" className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1 text-center" {...form.register(`parts.${idx}.qty`)} onBlur={() => handleAutosave()} /></TableCell>
-                          <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.unit`)} onBlur={() => handleAutosave()} /></TableCell>
-                          <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.suppliedBy`)} onBlur={() => handleAutosave()} /></TableCell>
-                          <TableCell className="p-0 text-center print:hidden"><Button variant="ghost" size="icon" className="h-6 w-6 text-red-400" onClick={() => { removePart(idx); handleAutosave(); }}><Trash2 className="h-3 w-3" /></Button></TableCell>
-                        </TableRow>
-                      ))}
+                      
+                        {partFields.map((field, idx) => {
+                          const { onChange: formOnChange, ...restPartNo } = form.register(`parts.${idx}.partNo`);
+                          return (
+                          <TableRow key={field.id} className="h-7 border-t border-black/10 hover:bg-transparent">
+                            <TableCell className="p-1 text-[9px] text-center font-bold">{idx + 1}</TableCell>
+                            <TableCell className="p-0 border-x border-black/10">
+                              <Input 
+                                list="spares-list"
+                                className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" 
+                                {...restPartNo}
+                                onChange={(e) => {
+                                  formOnChange(e);
+                                  const val = e.target.value;
+                                  const selectedSpare = sparesList?.find(s => s.rbmCode === val || s.oemCode === val || s.description === val);
+                                  if (selectedSpare) {
+                                    form.setValue(`parts.${idx}.partNo`, selectedSpare.rbmCode || selectedSpare.oemCode || val);
+                                    form.setValue(`parts.${idx}.description`, selectedSpare.description || '');
+                                    form.setValue(`parts.${idx}.unit`, selectedSpare.unit || 'EA');
+                                    form.setValue(`parts.${idx}.suppliedBy`, 'Altek');
+                                    handleAutosave();
+                                  }
+                                }}
+                                onBlur={() => handleAutosave()} 
+                              />
+                            </TableCell>
+                            <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.description`)} onBlur={() => handleAutosave()} /></TableCell>
+                            <TableCell className="p-0 border-r border-black/10"><Input type="number" className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1 text-center" {...form.register(`parts.${idx}.qty`)} onBlur={() => handleAutosave()} /></TableCell>
+                            <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.unit`)} onBlur={() => handleAutosave()} /></TableCell>
+                            <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.suppliedBy`)} onBlur={() => handleAutosave()} /></TableCell>
+                            <TableCell className="p-0 text-center print:hidden"><Button variant="ghost" size="icon" className="h-6 w-6 text-red-400" onClick={() => { removePart(idx); handleAutosave(); }}><Trash2 className="h-3 w-3" /></Button></TableCell>
+                          </TableRow>
+                        )})}
                       {!isFinalized && (
                         <TableRow className="h-8 border-t border-black print:hidden">
                           <TableCell colSpan={7} className="p-0 text-center bg-slate-50 hover:bg-slate-100 transition-colors">
@@ -1014,3 +1062,5 @@ export default function FieldServiceReportDetailPage() {
     </div>
   );
 }
+
+

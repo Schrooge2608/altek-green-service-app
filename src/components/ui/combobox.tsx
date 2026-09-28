@@ -27,7 +27,7 @@ interface ComboboxProps {
     placeholder?: string;
     searchPlaceholder?: string;
     noResultsMessage?: string;
-    creatable?: boolean;
+    creatable?: boolean; triggerClassName?: string;
 }
 
 export function Combobox({ 
@@ -37,7 +37,7 @@ export function Combobox({
     placeholder = "Select option...",
     searchPlaceholder = "Search...",
     noResultsMessage = "No results found.",
-    creatable = false
+    creatable = false, triggerClassName
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState("")
@@ -64,7 +64,7 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between h-auto min-h-9 py-2 text-left"
+          className={cn("w-full justify-between h-auto min-h-9 py-2 text-left", triggerClassName)}
         >
           <span className="break-words">
             {value ? currentSelection : placeholder}
