@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Loader2, Upload, FileUp, Trash2, Camera, ScanLine, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, Loader2, Upload, FileUp, Trash2, Camera, ScanLine, CheckCircle2, Pencil } from 'lucide-react';
 import { useCollection, useFirestore, useUser, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, addDoc, serverTimestamp, doc, updateDoc, getDocs, getDoc } from 'firebase/firestore';
 import type { SparePart, Equipment, VSD, User } from '@/lib/types';
@@ -49,6 +49,7 @@ export default function SparesInventoryPage() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [editingPartId, setEditingPartId] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState('GEGELEC');
     
@@ -85,7 +86,7 @@ export default function SparesInventoryPage() {
         setIsSubmitting(true);
         try {
             const modelsArray = form.compatibleModels.split(',').map(m => m.trim()).filter(m => m);
-            await addDoc(collection(firestore, 'spare_parts'), {
+            const dataToSave = {
                 rbmNumber: form.rbmNumber,
                 rtbsNumber: form.rtbsNumber,
                 oemPartNumber: form.oemPartNumber,
@@ -96,15 +97,25 @@ export default function SparesInventoryPage() {
                 compatibleModels: modelsArray,
                 stockLevel: parseInt(form.stockLevel) || 0,
                 price: parseFloat(form.price) || 0,
-                createdAt: serverTimestamp(),
-                createdBy: user?.uid
-            });
-            toast({ title: 'Success', description: 'Spare part added successfully.' });
+            };
+
+            if (editingPartId) {
+                await updateDoc(doc(firestore, 'spare_parts', editingPartId), dataToSave);
+                toast({ title: 'Success', description: 'Spare part updated successfully.' });
+            } else {
+                await addDoc(collection(firestore, 'spare_parts'), {
+                    ...dataToSave,
+                    createdAt: serverTimestamp(),
+                    createdBy: user?.uid
+                });
+                toast({ title: 'Success', description: 'Spare part added successfully.' });
+            }
             setIsAddDialogOpen(false);
+            setEditingPartId(null);
             setForm({ rbmNumber: '', rtbsNumber: '', oemPartNumber: '', name: '', type: '', manufacturer: '', category: 'Control Board', compatibleModels: '', stockLevel: '0', price: '0' });
         } catch (error) {
             console.error(error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to add spare part.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save spare part.' });
         } finally {
             setIsSubmitting(false);
         }
@@ -564,13 +575,20 @@ export default function SparesInventoryPage() {
                         </Button>
                     )}
 
-                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="gap-2"><Plus className="h-4 w-4" /> Add Part</Button>
-                        </DialogTrigger>
+                    <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+                        if (open && !editingPartId) {
+                            setForm({ rbmNumber: '', rtbsNumber: '', oemPartNumber: '', name: '', type: '', manufacturer: '', category: 'Control Board', compatibleModels: '', stockLevel: '0', price: '0' });
+                        }
+                        setIsAddDialogOpen(open);
+                    }}>
+                        <Button className="gap-2" onClick={() => {
+                            setEditingPartId(null);
+                            setForm({ rbmNumber: '', rtbsNumber: '', oemPartNumber: '', name: '', type: '', manufacturer: '', category: 'Control Board', compatibleModels: '', stockLevel: '0', price: '0' });
+                            setIsAddDialogOpen(true);
+                        }}><Plus className="h-4 w-4" /> Add Part</Button>
                         <DialogContent className="max-w-xl">
                             <DialogHeader>
-                                <DialogTitle>Add New Spare Part</DialogTitle>
+                                <DialogTitle>{editingPartId ? 'Edit Spare Part' : 'Add New Spare Part'}</DialogTitle>
                             </DialogHeader>
                             <form onSubmit={handleSubmit} className="space-y-4 py-4">
                                 {/* ... form fields ... */}
@@ -688,9 +706,29 @@ export default function SparesInventoryPage() {
                                     <TableCell className="text-right font-medium">{spare.stockLevel}</TableCell>
                                     <TableCell className="text-right pr-6">
                                         {(userData?.role === 'Admin' || userData?.role === 'Superadmin') && (
-                                            <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDelete(spare.id)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <div className="flex justify-end gap-2">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500" onClick={() => {
+                                                    setEditingPartId(spare.id);
+                                                    setForm({
+                                                        rbmNumber: spare.rbmNumber || '',
+                                                        rtbsNumber: spare.rtbsNumber || '',
+                                                        oemPartNumber: spare.oemPartNumber || '',
+                                                        name: spare.name || '',
+                                                        type: spare.type || '',
+                                                        manufacturer: spare.manufacturer || '',
+                                                        category: spare.category || 'Control Board',
+                                                        compatibleModels: spare.compatibleModels?.join(', ') || '',
+                                                        stockLevel: spare.stockLevel?.toString() || '0',
+                                                        price: spare.price?.toString() || '0'
+                                                    });
+                                                    setIsAddDialogOpen(true);
+                                                }}>
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDelete(spare.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         )}
                                     </TableCell>
                                 </TableRow>
@@ -760,9 +798,29 @@ export default function SparesInventoryPage() {
                                                             <TableCell className="text-right font-medium">{spare.stockLevel}</TableCell>
                                                             <TableCell className="text-right pr-6">
                                                                 {(userData?.role === 'Admin' || userData?.role === 'Superadmin') && (
-                                                                    <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDelete(spare.id)}>
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
+                                                                    <div className="flex justify-end gap-2">
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500" onClick={() => {
+                                                                            setEditingPartId(spare.id);
+                                                                            setForm({
+                                                                                rbmNumber: spare.rbmNumber || '',
+                                                                                rtbsNumber: spare.rtbsNumber || '',
+                                                                                oemPartNumber: spare.oemPartNumber || '',
+                                                                                name: spare.name || '',
+                                                                                type: spare.type || '',
+                                                                                manufacturer: spare.manufacturer || '',
+                                                                                category: spare.category || 'Control Board',
+                                                                                compatibleModels: spare.compatibleModels?.join(', ') || '',
+                                                                                stockLevel: spare.stockLevel?.toString() || '0',
+                                                                                price: spare.price?.toString() || '0'
+                                                                            });
+                                                                            setIsAddDialogOpen(true);
+                                                                        }}>
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDelete(spare.id)}>
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </div>
                                                                 )}
                                                             </TableCell>
                                                         </TableRow>
