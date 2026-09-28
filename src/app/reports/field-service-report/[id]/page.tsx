@@ -254,12 +254,23 @@ export default function FieldServiceReportDetailPage() {
             description: "The document is illegible. Please ensure a high-quality scan and upload again." 
           });
           return;
+        } else if (result.error) {
+          toast({ 
+            variant: 'destructive', 
+            title: "Extraction Failed", 
+            description: result.error 
+          });
+          return;
         }
+
+        const cleanResult = Object.fromEntries(
+          Object.entries(result).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+        );
 
         // Merge extracted data into current form
         form.reset({
           ...form.getValues(),
-          ...result,
+          ...cleanResult,
           parts: [...(form.getValues('parts') || []), ...(result.parts || [])],
           personnel: [...(form.getValues('personnel') || []), ...(result.personnel || [])]
         });

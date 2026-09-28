@@ -77,7 +77,7 @@ export async function extractFsrData(input: FsrScanInput): Promise<FsrScanOutput
 
 const prompt = ai.definePrompt({
   name: 'extractFsrPrompt',
-  model: 'googleai/gemini-2.5-pro',
+  model: 'googleai/gemini-1.5-pro',
   input: { schema: FsrScanInputSchema },
   output: { schema: FsrScanOutputSchema },
   config: {
