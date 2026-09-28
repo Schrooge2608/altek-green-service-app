@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, Loader2, Upload, FileUp, Trash2, Camera, ScanLine, CheckCircle2 } from 'lucide-react';
-import { useCollection, useFirestore, useUser, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, addDoc, serverTimestamp, doc, updateDoc, getDocs, getDoc } from 'firebase/firestore';
-import type { SparePart, Equipment, VSD } from '@/lib/types';
+import type { SparePart, Equipment, VSD, User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { scanSparePart } from '@/ai/flows/scan-spare-part-flow';
 import * as XLSX from 'xlsx';
@@ -34,6 +34,9 @@ export default function SparesInventoryPage() {
     const firestore = useFirestore();
     const { user } = useUser();
     const { toast } = useToast();
+    
+    const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+    const { data: userData } = useDoc<User>(userRoleRef);
 
     const sparesQuery = useMemoFirebase(() => query(collection(firestore, 'spare_parts'), orderBy('createdAt', 'desc')), [firestore]);
     const { data: sparesList, isLoading } = useCollection<SparePart>(sparesQuery);
@@ -480,7 +483,7 @@ export default function SparesInventoryPage() {
                         <Input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanPart} disabled={isScanningPart} />
                     </Label>
 
-                    {(user?.role === 'Admin' || user?.role === 'Superadmin') && (
+                    {(userData?.role === 'Admin' || userData?.role === 'Superadmin') && (
                         <Button variant="outline" className="gap-2" onClick={async () => {
                             const confirmSeed = window.confirm("Seed ACS 607-2120-6 parts?");
                             if (!confirmSeed) return;
@@ -684,7 +687,7 @@ export default function SparesInventoryPage() {
                                     </TableCell>
                                     <TableCell className="text-right font-medium">{spare.stockLevel}</TableCell>
                                     <TableCell className="text-right pr-6">
-                                        {(user?.role === 'Admin' || user?.role === 'Superadmin') && (
+                                        {(userData?.role === 'Admin' || userData?.role === 'Superadmin') && (
                                             <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDelete(spare.id)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -756,7 +759,7 @@ export default function SparesInventoryPage() {
                                                             <TableCell>{spare.category}</TableCell>
                                                             <TableCell className="text-right font-medium">{spare.stockLevel}</TableCell>
                                                             <TableCell className="text-right pr-6">
-                                                                {(user?.role === 'Admin' || user?.role === 'Superadmin') && (
+                                                                {(userData?.role === 'Admin' || userData?.role === 'Superadmin') && (
                                                                     <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDelete(spare.id)}>
                                                                         <Trash2 className="h-4 w-4" />
                                                                     </Button>
