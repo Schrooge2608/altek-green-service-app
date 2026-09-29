@@ -901,8 +901,7 @@ export default function FieldServiceReportDetailPage() {
                     <TableHeader className="bg-[#263238] border-none">
                       <TableRow className="h-6 border-none hover:bg-transparent">
                         <TableHead className="text-[8px] font-black text-white p-1 text-center w-8">#</TableHead>
-                        <TableHead className="text-[8px] font-black text-white p-1 w-1/4">Part No</TableHead>
-                        <TableHead className="text-[8px] font-black text-white p-1">Description</TableHead>
+                        <TableHead className="text-[8px] font-black text-white p-1">Part No & Description</TableHead>
                         <TableHead className="text-[8px] font-black text-white p-1 w-12 text-center">Qty</TableHead>
                         <TableHead className="text-[8px] font-black text-white p-1 w-12">Unit</TableHead>
                         <TableHead className="text-[8px] font-black text-white p-1 w-20">Supplied By</TableHead>
@@ -916,7 +915,7 @@ export default function FieldServiceReportDetailPage() {
                           return (
                           <TableRow key={field.id} className="h-7 border-t border-black/10 hover:bg-transparent">
                             <TableCell className="p-1 text-[9px] text-center font-bold">{idx + 1}</TableCell>
-                            <TableCell className="p-0 border-x border-black/10">
+                            <TableCell className="p-0 border-x border-black/10 max-w-0">
                               <div className="print:hidden">
                                 <Combobox
                                     options={partOptions}
@@ -925,9 +924,7 @@ export default function FieldServiceReportDetailPage() {
                                         form.setValue(`parts.${idx}.partNo`, val);
                                         const spare = sparesList?.find((s: any) => (s.rbmNumber || s.oemPartNumber || s.name || s.description) === val);
                                         if (spare) {
-                                            if (!form.getValues(`parts.${idx}.description`)) {
-                                                form.setValue(`parts.${idx}.description`, spare.name || spare.description || '');
-                                            }
+                                            form.setValue(`parts.${idx}.description`, spare.name || spare.description || '');
                                             form.setValue(`parts.${idx}.unit`, spare.unit || 'EA');
                                             form.setValue(`parts.${idx}.suppliedBy`, 'Altek');
                                         }
@@ -935,34 +932,12 @@ export default function FieldServiceReportDetailPage() {
                                     }}
                                     creatable={true}
                                     placeholder=""
-                                    triggerClassName="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1 shadow-none bg-transparent hover:bg-slate-50"
+                                    triggerClassName="h-7 border-none text-[10px] rounded-none focus-visible:ring-0 px-1 shadow-none bg-transparent hover:bg-slate-50 w-full truncate text-ellipsis overflow-hidden whitespace-nowrap block"
                                 />
                               </div>
-                              <div className="hidden print:flex h-7 px-2 items-center text-[9px]">{form.watch(`parts.${idx}.partNo`) || ''}</div>
-                            </TableCell>
-                            <TableCell className="p-0 border-r border-black/10">
-                              <div className="print:hidden">
-                                <Combobox
-                                    options={descOptions}
-                                    value={form.watch(`parts.${idx}.description`) || ''}
-                                    onChange={(val) => {
-                                        form.setValue(`parts.${idx}.description`, val);
-                                        const spare = sparesList?.find((s: any) => (s.name || s.description) === val);
-                                        if (spare) {
-                                            if (!form.getValues(`parts.${idx}.partNo`)) {
-                                                form.setValue(`parts.${idx}.partNo`, spare.rbmNumber || spare.oemPartNumber || val);
-                                            }
-                                            form.setValue(`parts.${idx}.unit`, spare.unit || 'EA');
-                                            form.setValue(`parts.${idx}.suppliedBy`, 'Altek');
-                                        }
-                                        handleAutosave();
-                                    }}
-                                    creatable={true}
-                                    placeholder=""
-                                    triggerClassName="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1 shadow-none bg-transparent hover:bg-slate-50"
-                                />
+                              <div className="hidden print:flex h-7 px-2 items-center text-[10px]">
+                                {form.watch(`parts.${idx}.partNo`) ? `${form.watch(`parts.${idx}.partNo`)} - ${form.watch(`parts.${idx}.description`)}` : form.watch(`parts.${idx}.description`) || ''}
                               </div>
-                              <div className="hidden print:flex h-7 px-2 items-center text-[9px]">{form.watch(`parts.${idx}.description`) || ''}</div>
                             </TableCell>
                             <TableCell className="p-0 border-r border-black/10"><Input type="number" className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1 text-center" {...form.register(`parts.${idx}.qty`)} onBlur={() => handleAutosave()} /></TableCell>
                             <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.unit`)} onBlur={() => handleAutosave()} /></TableCell>
@@ -972,7 +947,7 @@ export default function FieldServiceReportDetailPage() {
                         )})}
                       {!isFinalized && (
                         <TableRow className="h-8 border-t border-black print:hidden">
-                          <TableCell colSpan={7} className="p-0 text-center bg-slate-50 hover:bg-slate-100 transition-colors">
+                          <TableCell colSpan={6} className="p-0 text-center bg-slate-50 hover:bg-slate-100 transition-colors">
                             <Button type="button" variant="ghost" size="sm" onClick={() => appendPart({ partNo: '', description: '', qty: 1, unit: 'EA', suppliedBy: 'Altek', remarks: '' })} className="w-full h-8 text-[9px] font-bold"><Plus className="h-3 w-3 mr-1" /> Add Part</Button>
                           </TableCell>
                         </TableRow>
