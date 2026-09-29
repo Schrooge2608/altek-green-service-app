@@ -193,15 +193,31 @@ export default function FieldServiceReportDetailPage() {
         });
     }) : sparesList;
 
+    const descMap = new Map();
+    filtered.forEach((s: any) => {
+        const desc = s.name || s.description;
+        if (desc && !descMap.has(desc)) {
+            descMap.set(desc, {
+                label: `${desc} (${s.oemPartNumber || s.rbmNumber || 'No PN'})`,
+                value: desc
+            });
+        }
+    });
+
+    const partMap = new Map();
+    filtered.forEach((s: any) => {
+        const val = s.rbmNumber || s.oemPartNumber || s.name || s.description;
+        if (val && !partMap.has(val)) {
+            partMap.set(val, {
+                label: `${s.oemPartNumber || s.rbmNumber || 'No PN'} - ${s.name || s.description}`,
+                value: val
+            });
+        }
+    });
+
     return {
-        partOptions: filtered.map((s: any) => ({
-            label: `${s.oemPartNumber || s.rbmNumber || 'No PN'} - ${s.name || s.description}`,
-            value: s.rbmNumber || s.oemPartNumber || s.name || s.description
-        })),
-        descOptions: filtered.map((s: any) => ({
-            label: `${s.name || s.description} (${s.oemPartNumber || s.rbmNumber || 'No PN'})`,
-            value: s.name || s.description
-        }))
+        partOptions: Array.from(partMap.values()),
+        descOptions: Array.from(descMap.values())
     };
   }, [sparesList, watchedModel]);
 
