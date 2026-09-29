@@ -73,7 +73,12 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-        <Command>
+        <Command filter={(value, search) => {
+          if (!search) return 1;
+          const searchTerms = search.toLowerCase().split(' ').filter(Boolean);
+          const lowerValue = value.toLowerCase();
+          return searchTerms.every(term => lowerValue.includes(term)) ? 1 : 0;
+        }}>
           <CommandInput 
             placeholder={searchPlaceholder}
             onValueChange={setInputValue}
@@ -96,11 +101,13 @@ export function Combobox({
                 )}
             </CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
+              {options.map((option) => {
+                const searchValue = `${option.label} ${option.value}`.toLowerCase();
+                return (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={handleSelect}
+                  value={searchValue}
+                  onSelect={() => handleSelect(option.value)}
                 >
                   <Check
                     className={cn(
@@ -110,7 +117,7 @@ export function Combobox({
                   />
                   {option.label}
                 </CommandItem>
-              ))}
+              )})}
             </CommandGroup>
           </CommandList>
         </Command>

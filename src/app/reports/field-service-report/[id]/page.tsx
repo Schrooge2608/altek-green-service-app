@@ -95,6 +95,9 @@ export default function FieldServiceReportDetailPage() {
   const equipmentQuery = useMemoFirebase(() => query(collection(db, 'equipment'), orderBy('name', 'asc')), [db]);
   const { data: equipmentList } = useCollection<any>(equipmentQuery);
 
+  const vsdsQuery = useMemoFirebase(() => query(collection(db, 'vsds')), [db]);
+  const { data: vsdsList } = useCollection<any>(vsdsQuery);
+
   const form = useForm<FieldServiceReport>({
     defaultValues: {
       fsrReference: '',
@@ -174,6 +177,34 @@ export default function FieldServiceReportDetailPage() {
             })
     )).map(name => ({ value: name, label: name }));
   }, [equipmentList, watchedArea]);
+
+  const watchedModel = useWatch({ control: form.control, name: 'model' });
+  const { partOptions, descOptions } = useMemo(() => {
+    if (!sparesList) return { partOptions: [], descOptions: [] };
+    
+    // Filter spares if a model is selected, otherwise show all
+    const filtered = watchedModel ? sparesList.filter((s: any) => {
+        if (!s.compatibleModels || !Array.isArray(s.compatibleModels) || s.compatibleModels.length === 0) return true;
+        return s.compatibleModels.some((m: string) => {
+            const mLower = m.toLowerCase().replace(/[\s-]/g, '');
+            const wLower = watchedModel.toLowerCase().replace(/[\s-]/g, '');
+            if (mLower.length >= 5 && wLower.length >= 5 && (mLower.startsWith(wLower.slice(0, 5)) || wLower.startsWith(mLower.slice(0, 5)))) return true;
+            return m.toLowerCase().includes(watchedModel.toLowerCase()) || watchedModel.toLowerCase().includes(m.toLowerCase());
+        });
+    }) : sparesList;
+
+    return {
+        partOptions: filtered.map((s: any) => ({
+            label: `${s.oemPartNumber || s.rbmNumber || 'No PN'} - ${s.name || s.description}`,
+            value: s.rbmNumber || s.oemPartNumber || s.name || s.description
+        })),
+        descOptions: filtered.map((s: any) => ({
+            label: `${s.name || s.description} (${s.oemPartNumber || s.rbmNumber || 'No PN'})`,
+            value: s.name || s.description
+        }))
+    };
+  }, [sparesList, watchedModel]);
+
   const watchedOT = useWatch({ control: form.control, name: 'otHours' });
   const watchedDT = useWatch({ control: form.control, name: 'dtHours' });
   const watchedKmTo = useWatch({ control: form.control, name: 'travelKmTo' });
@@ -732,7 +763,7 @@ export default function FieldServiceReportDetailPage() {
                 <SectionHeader number="02" title="Equipment Details" />
                 <div className="border-2 border-black p-2 grid grid-cols-12 gap-x-2 gap-y-2 mb-0">
                   <FormField control={form.control} name="assetName" render={({ field }) => (
-                    <div className="col-span-4 flex flex-col justify-end">
+                    <div className="col-span-6 flex flex-col justify-end">
                       <DenseLabel>Equipment / Asset Name</DenseLabel>
                       <div className="print-hidden pt-1">
                         <Combobox 
@@ -746,9 +777,22 @@ export default function FieldServiceReportDetailPage() {
                                 return label === val;
                             });
                             if (eq) {
-                                if (eq.oem) form.setValue('oem', eq.oem);
-                                if (eq.model) form.setValue('model', eq.model);
-                                if (eq.serialNo) form.setValue('serialNo', eq.serialNo);
+                                let finalOem = eq.oem || eq.manufacturer;
+                                let finalModel = eq.model;
+                                let finalSerial = eq.serialNo;
+
+                                if (eq.vsdId && vsdsList) {
+                                    const vsd = vsdsList.find((v: any) => v.id === eq.vsdId);
+                                    if (vsd) {
+                                        if (!finalOem) finalOem = vsd.manufacturer || vsd.oem;
+                                        if (!finalModel) finalModel = vsd.model;
+                                        if (!finalSerial) finalSerial = vsd.serialNumber || vsd.serialNo;
+                                    }
+                                }
+
+                                if (finalOem) form.setValue('oem', finalOem);
+                                if (finalModel) form.setValue('model', finalModel);
+                                if (finalSerial && finalSerial !== 'Pending') form.setValue('serialNo', finalSerial);
                                 if (eq.rating || eq.motorPower) form.setValue('rating', String(eq.rating || (eq.motorPower ? `${eq.motorPower}kW` : '')));
                             }
                             handleAutosave();
@@ -761,8 +805,8 @@ export default function FieldServiceReportDetailPage() {
                       <div className="hidden print:flex h-7 border border-black/20 text-[10px] px-3 items-center">{field.value}</div>
                     </div>
                   )} />
-                  <FormField control={form.control} name="oem" render={({ field }) => (<div className="col-span-4"><DenseLabel>Manufacturer / OEM</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
-                  <FormField control={form.control} name="model" render={({ field }) => (<div className="col-span-4"><DenseLabel>Model</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                  <FormField control={form.control} name="oem" render={({ field }) => (<div className="col-span-3"><DenseLabel>Manufacturer / OEM</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                  <FormField control={form.control} name="model" render={({ field }) => (<div className="col-span-3"><DenseLabel>Model</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
                   
                   <FormField control={form.control} name="serialNo" render={({ field }) => (<div className="col-span-6"><DenseLabel>Serial No</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
                   <FormField control={form.control} name="rating" render={({ field }) => (<div className="col-span-6"><DenseLabel>Rating / Capacity</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
@@ -770,22 +814,7 @@ export default function FieldServiceReportDetailPage() {
 
                 {/* 03: CALL-OUT, TIME TRACKING & TRAVEL */}
                 <SectionHeader number="03" title="Call-Out, Time Tracking & Travel" />
-                                {/* Datalist for Spares Inventory Auto-complete */}
-                <datalist id="spares-list">
-                  {sparesList?.map((s) => (
-                    <option key={s.id} value={s.rbmCode || s.oemCode || s.description}>
-                      {s.description} ({s.manufacturer})
-                    </option>
-                  ))}
-                </datalist>
-                {/* Datalist for Spares Inventory Auto-complete */}
-                        <datalist id="spares-list">
-                          {sparesList?.map((s) => (
-                            <option key={s.id} value={s.rbmCode || s.oemCode || s.description}>
-                              {s.description} ({s.manufacturer})
-                            </option>
-                          ))}
-                        </datalist>
+
                 <div className="border-2 border-black mb-0 overflow-hidden">
                   <div className="grid grid-cols-6 divide-x divide-black border-b border-black bg-slate-50">
                     {['timeCallOut', 'timeArrival', 'timeStart', 'timeEnd', 'timeDeparture'].map((t, idx) => (
@@ -850,24 +879,17 @@ export default function FieldServiceReportDetailPage() {
 
                 {/* 06: PARTS & MATERIALS */}
                 <SectionHeader number="06" title="Parts & Materials Used" />
-                                {/* Datalist for Spares Inventory Auto-complete */}
-                <datalist id="spares-list">
-                  {sparesList?.map((s) => (
-                    <option key={s.id} value={s.rbmCode || s.oemCode || s.description}>
-                      {s.description} ({s.manufacturer})
-                    </option>
-                  ))}
-                </datalist>
+
                 <div className="border-2 border-black mb-0 overflow-hidden">
                   <Table className="border-none">
                     <TableHeader className="bg-[#263238] border-none">
                       <TableRow className="h-6 border-none hover:bg-transparent">
                         <TableHead className="text-[8px] font-black text-white p-1 text-center w-8">#</TableHead>
-                        <TableHead className="text-[8px] font-black text-white p-1">Part No</TableHead>
+                        <TableHead className="text-[8px] font-black text-white p-1 w-1/4">Part No</TableHead>
                         <TableHead className="text-[8px] font-black text-white p-1">Description</TableHead>
                         <TableHead className="text-[8px] font-black text-white p-1 w-12 text-center">Qty</TableHead>
                         <TableHead className="text-[8px] font-black text-white p-1 w-12">Unit</TableHead>
-                        <TableHead className="text-[8px] font-black text-white p-1">Supplied By</TableHead>
+                        <TableHead className="text-[8px] font-black text-white p-1 w-20">Supplied By</TableHead>
                         <TableHead className="text-[8px] font-black text-white p-1 print:hidden w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -879,26 +901,53 @@ export default function FieldServiceReportDetailPage() {
                           <TableRow key={field.id} className="h-7 border-t border-black/10 hover:bg-transparent">
                             <TableCell className="p-1 text-[9px] text-center font-bold">{idx + 1}</TableCell>
                             <TableCell className="p-0 border-x border-black/10">
-                              <Input 
-                                list="spares-list"
-                                className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" 
-                                {...restPartNo}
-                                onChange={(e) => {
-                                  formOnChange(e);
-                                  const val = e.target.value;
-                                  const selectedSpare = sparesList?.find(s => s.rbmCode === val || s.oemCode === val || s.description === val);
-                                  if (selectedSpare) {
-                                    form.setValue(`parts.${idx}.partNo`, selectedSpare.rbmCode || selectedSpare.oemCode || val);
-                                    form.setValue(`parts.${idx}.description`, selectedSpare.description || '');
-                                    form.setValue(`parts.${idx}.unit`, selectedSpare.unit || 'EA');
-                                    form.setValue(`parts.${idx}.suppliedBy`, 'Altek');
-                                    handleAutosave();
-                                  }
-                                }}
-                                onBlur={() => handleAutosave()} 
-                              />
+                              <div className="print:hidden">
+                                <Combobox
+                                    options={partOptions}
+                                    value={form.watch(`parts.${idx}.partNo`) || ''}
+                                    onChange={(val) => {
+                                        form.setValue(`parts.${idx}.partNo`, val);
+                                        const spare = sparesList?.find((s: any) => (s.rbmNumber || s.oemPartNumber || s.name || s.description) === val);
+                                        if (spare) {
+                                            if (!form.getValues(`parts.${idx}.description`)) {
+                                                form.setValue(`parts.${idx}.description`, spare.name || spare.description || '');
+                                            }
+                                            form.setValue(`parts.${idx}.unit`, spare.unit || 'EA');
+                                            form.setValue(`parts.${idx}.suppliedBy`, 'Altek');
+                                        }
+                                        handleAutosave();
+                                    }}
+                                    creatable={true}
+                                    placeholder=""
+                                    triggerClassName="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1 shadow-none bg-transparent hover:bg-slate-50"
+                                />
+                              </div>
+                              <div className="hidden print:flex h-7 px-2 items-center text-[9px]">{form.watch(`parts.${idx}.partNo`) || ''}</div>
                             </TableCell>
-                            <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.description`)} onBlur={() => handleAutosave()} /></TableCell>
+                            <TableCell className="p-0 border-r border-black/10">
+                              <div className="print:hidden">
+                                <Combobox
+                                    options={descOptions}
+                                    value={form.watch(`parts.${idx}.description`) || ''}
+                                    onChange={(val) => {
+                                        form.setValue(`parts.${idx}.description`, val);
+                                        const spare = sparesList?.find((s: any) => (s.name || s.description) === val);
+                                        if (spare) {
+                                            if (!form.getValues(`parts.${idx}.partNo`)) {
+                                                form.setValue(`parts.${idx}.partNo`, spare.rbmNumber || spare.oemPartNumber || val);
+                                            }
+                                            form.setValue(`parts.${idx}.unit`, spare.unit || 'EA');
+                                            form.setValue(`parts.${idx}.suppliedBy`, 'Altek');
+                                        }
+                                        handleAutosave();
+                                    }}
+                                    creatable={true}
+                                    placeholder=""
+                                    triggerClassName="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1 shadow-none bg-transparent hover:bg-slate-50"
+                                />
+                              </div>
+                              <div className="hidden print:flex h-7 px-2 items-center text-[9px]">{form.watch(`parts.${idx}.description`) || ''}</div>
+                            </TableCell>
                             <TableCell className="p-0 border-r border-black/10"><Input type="number" className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1 text-center" {...form.register(`parts.${idx}.qty`)} onBlur={() => handleAutosave()} /></TableCell>
                             <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.unit`)} onBlur={() => handleAutosave()} /></TableCell>
                             <TableCell className="p-0 border-r border-black/10"><Input className="h-7 border-none text-[9px] rounded-none focus-visible:ring-0 px-1" {...form.register(`parts.${idx}.suppliedBy`)} onBlur={() => handleAutosave()} /></TableCell>
