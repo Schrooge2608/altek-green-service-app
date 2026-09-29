@@ -61,9 +61,7 @@ const calculateRowHours = (row: TimesheetEntry) => {
   let ot15 = 0;
   let ot20 = 0;
   
-  if (dayOfWeek === 0) { 
-    ot20 = netNormalShift + calloutDuration;
-  } else if (dayOfWeek === 6) { 
+  if (dayOfWeek === 0 || dayOfWeek === 6) { 
     ot15 = netNormalShift + calloutDuration;
   } else if (dayOfWeek === 5) { 
     nt = Math.min(netNormalShift, 6.0);
@@ -167,16 +165,30 @@ export default function OTSummaryPage() {
           const isBackup = shift.backupTech === u.name;
           if (isPrimary) return true;
           if (isBackup) {
+            let hasTrueCallout = false;
             const shiftStart = new Date(shift.startDate);
             const shiftEnd = new Date(shift.endDate);
-            return userTimesheet?.entries?.some(entry => {
+            userTimesheet?.entries?.forEach(entry => {
               const d = new Date(entry.date);
               if (d >= shiftStart && d <= shiftEnd) {
-                const { calculatedOT15, calculatedOT20 } = calculateRowHours(entry);
-                return calculatedOT15 > 0 || calculatedOT20 > 0;
+                const isHandoverStart = entry.date === shift.startDate;
+                const isHandoverEnd = entry.date === shift.endDate;
+                const isCoreDay = entry.date > shift.startDate && entry.date < shift.endDate;
+
+                if (entry.calloutIn && entry.calloutIn !== '--:--' && entry.calloutIn !== entry.normalOut) {
+                    if (isCoreDay) {
+                        hasTrueCallout = true;
+                    } else if (isHandoverStart) {
+                        const [h] = entry.calloutIn.split(':').map(Number);
+                        if (h >= 16) hasTrueCallout = true;
+                    } else if (isHandoverEnd) {
+                        const [h] = entry.calloutIn.split(':').map(Number);
+                        if (h < 9) hasTrueCallout = true;
+                    }
+                }
               }
-              return false;
             });
+            return hasTrueCallout;
           }
           return false;
         });
@@ -264,7 +276,7 @@ export default function OTSummaryPage() {
                 <TableHead className="font-bold text-slate-500 uppercase text-[10px]">Position</TableHead>
                 <TableHead className="text-center font-bold text-emerald-700 uppercase text-[10px] bg-emerald-50/30">N/T Hours</TableHead>
                 <TableHead className="text-center font-bold text-red-600 uppercase text-[10px] bg-red-50/30">OT 1.5</TableHead>
-                <TableHead className="text-center font-bold text-red-800 uppercase text-[10px] bg-red-100/30">OT 2.0</TableHead>
+
                 <TableHead className="text-center font-bold text-amber-700 uppercase text-[10px] bg-amber-50/30">STBA (12h)</TableHead>
                 <TableHead className="text-right pr-6 font-black text-slate-900 uppercase tracking-wider">Gross Total</TableHead>
               </TableRow>
@@ -279,13 +291,13 @@ export default function OTSummaryPage() {
                     <TableCell className="text-[11px] text-slate-500 font-medium italic">{row.role}</TableCell>
                     <TableCell className="text-center font-mono font-bold text-emerald-700">{row.totalNT}</TableCell>
                     <TableCell className="text-center font-mono font-bold text-red-600">{row.totalOT15}</TableCell>
-                    <TableCell className="text-center font-mono font-bold text-red-800">{row.totalOT20}</TableCell>
+
                     <TableCell className="text-center font-mono font-bold text-amber-700">{row.stba}</TableCell>
                     <TableCell className="text-right pr-6 font-black text-slate-900 text-base">{row.totalHours} <span className="text-[10px] font-normal text-slate-400">HRS</span></TableCell>
                   </TableRow>
                 ))
               ) : (
-                <TableRow><TableCell colSpan={7} className="h-48 text-center text-slate-400">No data found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="h-48 text-center text-slate-400">No data found.</TableCell></TableRow>
               )}
             </TableBody>
             {summaryData.length > 0 && (
@@ -294,7 +306,7 @@ export default function OTSummaryPage() {
                   <TableCell colSpan={2} className="pl-6 text-slate-900 font-black uppercase text-xs">Totals</TableCell>
                   <TableCell className="text-center text-emerald-800 font-black">{grandTotals.normal.toFixed(1)}</TableCell>
                   <TableCell className="text-center text-red-700 font-black">{grandTotals.ot15.toFixed(1)}</TableCell>
-                  <TableCell className="text-center text-red-900 font-black">{grandTotals.ot20.toFixed(1)}</TableCell>
+
                   <TableCell className="text-center text-amber-800 font-black">{grandTotals.stba.toFixed(1)}</TableCell>
                   <TableCell className="text-right pr-6 text-primary text-xl font-black">{grandTotals.total.toFixed(1)}</TableCell>
                 </TableRow>

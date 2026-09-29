@@ -115,9 +115,7 @@ const calculateRowHours = (row: TimesheetEntry) => {
   let netNormalShift = Math.max(0, grossShift - lunchBreak);
   let nt = 0, ot15 = 0, ot20 = 0;
   
-  if (dayOfWeek === 0) { 
-    ot20 = netNormalShift + calloutDuration; 
-  } else if (dayOfWeek === 6) { 
+  if (dayOfWeek === 0 || dayOfWeek === 6) { 
     ot15 = netNormalShift + calloutDuration; 
   } else if (dayOfWeek === 5) { 
     nt = Math.min(netNormalShift, 6.0); 
@@ -380,17 +378,32 @@ export default function TimesheetPage() {
       }
     }
 
+    if (field === 'overtimeReason' && typeof value === 'string') {
+      if (/\b(leave|sick leave|fatigue shift|public holiday|pub hol|ph)\b/i.test(value)) {
+        const entryDate = new Date(newEntries[index].date);
+        const day = entryDate.getDay();
+        if (day >= 1 && day <= 4) {
+          newEntries[index].normalIn = '07:00';
+          newEntries[index].normalOut = '16:00';
+        } else if (day === 5) {
+          newEntries[index].normalIn = '07:00';
+          newEntries[index].normalOut = '13:30';
+        }
+      }
+    }
+
     const updated = { ...timesheet, entries: newEntries.map(calculateRowHours) };
     setTimesheet(updated);
     
     try {
       const targetTsId = `${viewedUserId}_${selectedPeriod}`;
-      const tsRef = doc(firestore, 'timesheets', targetTsId);
-      setDoc(tsRef, updated, { merge: true }).catch(e => console.error("Timesheet persistence: FAILURE", e));
+      if ((window as any)._syncTsTimeout) clearTimeout((window as any)._syncTsTimeout);
+      (window as any)._syncTsTimeout = setTimeout(() => {
+        const tsRef = doc(firestore, 'timesheets', targetTsId);
+        setDoc(tsRef, updated, { merge: true }).catch(e => console.error("Timesheet persistence: FAILURE", e));
+      }, 1500);
     } catch (e: any) {
       console.error("Timesheet persistence: FAILURE", e);
-      alert("Database error: " + e.message);
-      throw e;
     }
   };
 
@@ -443,6 +456,68 @@ export default function TimesheetPage() {
     return evaluatedStandbyWeeks.filter(week => week.exactEnd >= cycleStart && week.exactStart <= cycleEnd);
   }, [evaluatedStandbyWeeks, dateRange]);
 
+  const calculatedStandbyData = useMemo(() => {
+    if (!standbyWeeksInCycle.length || !timesheet?.entries) return { rows: [], totalAllowance: 0 };
+    let totalAllowance = 0;
+    const rows = standbyWeeksInCycle.map((week) => {
+      const cycleEnd = dateRange.length > 0 ? endOfDay(new Date(dateRange[dateRange.length - 1])) : new Date();
+      const isNextCycle = week.exactEnd > cycleEnd;
+      
+      let hasTrueCallout = false;
+      const weekOT = timesheet.entries.reduce((acc, entry) => {
+        const entryDateStr = entry.date;
+        const isHandoverStart = entryDateStr === week.startDate;
+        const isHandoverEnd = entryDateStr === week.endDate;
+        const isCoreDay = entryDateStr > week.startDate && entryDateStr < week.endDate;
+
+        if (!isHandoverStart && !isHandoverEnd && !isCoreDay) return acc;
+
+        const calc = calculateRowHours(entry);
+        const dailyOT = (Number(calc.calculatedOT15 || 0) + Number(calc.calculatedOT20 || 0));
+
+        if (entry.calloutIn && entry.calloutIn !== '--:--' && entry.calloutIn !== entry.normalOut) {
+            if (isCoreDay) {
+                hasTrueCallout = true;
+            } else if (isHandoverStart) {
+                const [h] = entry.calloutIn.split(':').map(Number);
+                if (h >= 16) hasTrueCallout = true;
+            } else if (isHandoverEnd) {
+                const [h] = entry.calloutIn.split(':').map(Number);
+                if (h < 9) hasTrueCallout = true;
+            }
+        }
+
+        if (isCoreDay) return acc + dailyOT;
+        if (isHandoverStart) {
+          const outTime = entry.calloutOut || entry.normalOut;
+          if (outTime) {
+            const [h] = outTime.split(':').map(Number);
+            if (h >= 16) return acc + dailyOT;
+          }
+        }
+        if (isHandoverEnd) {
+          const inTime = entry.calloutIn || entry.normalIn;
+          if (inTime) {
+            const [h] = inTime.split(':').map(Number);
+            if (h < 9) return acc + dailyOT; 
+          }
+        }
+        return acc;
+      }, 0) || 0;
+
+      const overrideStatus = timesheet.adminOverrides?.[week.id];
+      const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && hasTrueCallout));
+      const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
+      
+      const allowance = qualifies ? 12 : 0;
+      totalAllowance += allowance;
+
+      return { week, isNextCycle, weekOT, overrideStatus, qualifies, allowance };
+    });
+
+    return { rows, totalAllowance };
+  }, [standbyWeeksInCycle, timesheet, dateRange]);
+
   const isViewingSelf = user?.uid === viewedUserId;
 
   return (
@@ -467,21 +542,18 @@ export default function TimesheetPage() {
 
           <div className="flex items-center gap-6 px-6 py-2 bg-slate-50 rounded-lg border border-slate-100 shadow-sm">
             <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Normal</p>
-              <p className="text-lg font-black text-slate-700">{(totals?.normal ?? 0).toFixed(1)}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Normal + STBA</p>
+              <p className="text-lg font-black text-slate-700">{((totals?.normal ?? 0) + calculatedStandbyData.totalAllowance).toFixed(1)}</p>
             </div>
             <div className="text-center">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OT 1.5</p>
               <p className="text-lg font-black text-red-600">{(totals?.ot15 ?? 0).toFixed(1)}</p>
             </div>
-            <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OT 2.0</p>
-              <p className="text-lg font-black text-red-800">{(totals?.ot20 ?? 0).toFixed(1)}</p>
-            </div>
+
             <div className="h-8 w-px bg-slate-200 mx-2" />
             <div className="text-center">
-              <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Grand Total</p>
-              <p className="text-lg font-black text-primary">{(totals?.total ?? 0).toFixed(1)} <span className="text-[10px] font-normal">hrs</span></p>
+              <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Payroll Grand Total</p>
+              <p className="text-lg font-black text-primary">{((totals?.total ?? 0) + calculatedStandbyData.totalAllowance).toFixed(1)} <span className="text-[10px] font-normal">hrs</span></p>
             </div>
           </div>
 
@@ -531,10 +603,10 @@ export default function TimesheetPage() {
             <p className="text-[8pt] font-bold text-blue-600 uppercase">Period: {selectedPeriod}</p>
           </div>
           <div className="flex gap-4 text-center print-header-totals">
-            <div><p className="text-[7pt] font-bold uppercase">NT</p><p className="text-sm font-bold">{(totals?.normal ?? 0).toFixed(1)}</p></div>
+            <div><p className="text-[7pt] font-bold uppercase">NT + STBA</p><p className="text-sm font-bold">{((totals?.normal ?? 0) + calculatedStandbyData.totalAllowance).toFixed(1)}</p></div>
             <div><p className="text-[7pt] font-bold uppercase">OT 1.5</p><p className="text-sm font-bold text-red-600">{(totals?.ot15 ?? 0).toFixed(1)}</p></div>
-            <div><p className="text-[7pt] font-bold uppercase">OT 2.0</p><p className="text-sm font-bold text-red-800">{(totals?.ot20 ?? 0).toFixed(1)}</p></div>
-            <div className="border-l border-black pl-4"><p className="text-[7pt] font-bold uppercase">Total</p><p className="text-sm font-black text-primary">{(totals?.total ?? 0).toFixed(1)}</p></div>
+
+            <div className="border-l border-black pl-4"><p className="text-[7pt] font-bold uppercase">Total</p><p className="text-sm font-black text-primary">{((totals?.total ?? 0) + calculatedStandbyData.totalAllowance).toFixed(1)}</p></div>
           </div>
         </div>
 
@@ -543,12 +615,11 @@ export default function TimesheetPage() {
             <TableHeader className="bg-slate-100 print:bg-slate-200">
               <TableRow className="hover:bg-transparent h-8 print:h-[20px]">
                 <TableHead className="w-[100px] font-bold text-slate-600">Date/Day</TableHead>
-                <TableHead className="w-[220px] font-bold text-slate-600 text-center">Normal Shift</TableHead>
-                <TableHead className="w-[100px] font-bold text-slate-600 text-center">Lunch</TableHead>
-                <TableHead className="w-[220px] font-bold text-red-700 text-center">Callout Shift</TableHead>
+                <TableHead className="w-[140px] font-bold text-slate-600 text-center">Normal Shift</TableHead>
+                <TableHead className="w-[140px] font-bold text-red-700 text-center border-l-2 border-r-2 border-t-2 border-black">Callout Shift</TableHead>
                 <TableHead className="w-[50px] font-bold text-emerald-700 text-center">N/T</TableHead>
                 <TableHead className="w-[50px] font-bold text-red-700 text-center">O/T</TableHead>
-                <TableHead className="w-[120px] font-bold text-slate-600">Job Ref</TableHead>
+                <TableHead className="font-bold text-slate-600">Job Ref</TableHead>
                 <TableHead className="w-[80px] font-bold text-slate-600 text-right">Sign-Off</TableHead>
               </TableRow>
             </TableHeader>
@@ -556,6 +627,8 @@ export default function TimesheetPage() {
               {timesheet?.entries.map((entry, index) => {
                 const dayDate = parseISO(entry.date);
                 const isWeekend = getDay(dayDate) === 0 || getDay(dayDate) === 6;
+                const isPublicHoliday = /\b(public holiday|pub hol|ph)\b/i.test(entry.overtimeReason || '');
+                const highlightRow = isWeekend || isPublicHoliday;
                 const now = new Date();
                 const todayStr = format(now, 'yyyy-MM-dd');
                 const yesterdayDate = new Date(now);
@@ -575,10 +648,10 @@ export default function TimesheetPage() {
                 const isBackupOnDay = dayShifts.some(s => s.isBackup);
 
                 return (
-                  <TableRow key={entry.date} className={cn(isWeekend && "bg-slate-50/50", "h-8 print:h-[20px]")}>
+                  <TableRow key={entry.date} className={cn(highlightRow && "bg-slate-200/80 hover:bg-slate-200", "h-8 print:h-[20px]")}>
                     <TableCell className="font-mono text-xs p-1">
                       <div className="font-bold">{entry.date}</div>
-                      <div className={cn("text-[10px] uppercase", isWeekend ? "text-red-500" : "text-slate-400")}>{format(dayDate, 'EEEE')}</div>
+                      <div className={cn("text-[10px] uppercase", highlightRow ? "text-red-600 font-bold" : "text-slate-400")}>{format(dayDate, 'EEEE')}</div>
                     </TableCell>
                     
                     <TableCell className={cn("p-1 relative", entry.isOutOfRange && "bg-red-50 print:bg-transparent")}>
@@ -614,17 +687,9 @@ export default function TimesheetPage() {
                       </div>
                     </TableCell>
 
-                    <TableCell className="p-1">
-                      <div className="flex gap-1 items-center justify-center">
-                        <input type="time" value={entry.lunchOut || ''} onChange={(e) => handleEntryChange(index, 'lunchOut', e.target.value)} className="h-8 text-[10px] p-1 text-center w-16 border rounded print:hidden" disabled={!isElevated || !!activeKioskUser}/>
-                        <span className="hidden print:block text-[10px] font-medium text-slate-600">{entry.lunchOut || '--:--'}</span>
-                        <span className="text-slate-300">-</span>
-                        <input type="time" value={entry.lunchIn || ''} onChange={(e) => handleEntryChange(index, 'lunchIn', e.target.value)} className="h-8 text-[10px] p-1 text-center w-16 border rounded print:hidden" disabled={!isElevated || !!activeKioskUser}/>
-                        <span className="hidden print:block text-[10px] font-medium text-slate-600">{entry.lunchIn || '--:--'}</span>
-                      </div>
-                    </TableCell>
 
-                    <TableCell className={cn("p-1 relative", entry.isOutOfRange && "bg-red-50 print:bg-transparent")}>
+
+                    <TableCell className={cn("p-1 relative border-l-2 border-r-2 border-black", entry.isOutOfRange && "bg-red-50 print:bg-transparent", index === timesheet.entries.length - 1 && "border-b-2")}>
                       {entry.isOutOfRange && (
                         <div className="absolute top-0 left-0 right-0 flex justify-center z-10 print:hidden">
                           <span className="bg-red-600 text-white text-[7px] font-black px-1 rounded-b flex items-center gap-0.5 shadow-sm animate-pulse">
@@ -723,105 +788,218 @@ export default function TimesheetPage() {
                   <TableRow className="hover:bg-transparent border-none h-14 print:h-8">
                     <TableHead className="pl-8 text-white font-black uppercase tracking-widest text-xs print:pl-2">SHIFT ROTATION PERIOD</TableHead>
                     <TableHead className="text-white font-black uppercase tracking-widest text-xs">DUTY DESIGNATION</TableHead>
-                    <TableHead className="text-center text-white font-black uppercase tracking-widest text-xs">OT ACTIVITY</TableHead>
+                    <TableHead className="text-center text-white font-black uppercase tracking-widest text-xs">ALLOWANCE (HRS)</TableHead>
                     <TableHead className="text-right pr-8 text-white font-black uppercase tracking-widest text-xs print:pr-2">PAYROLL QUALIFICATION</TableHead>
                     {isElevated && <TableHead className="w-[100px] text-right pr-8">ACTIONS</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {standbyWeeksInCycle.map((week) => {
-                    const cycleEnd = dateRange.length > 0 ? endOfDay(new Date(dateRange[dateRange.length - 1])) : new Date();
-                    const isNextCycle = week.exactEnd > cycleEnd;
-                    
-                    const weekOT = timesheet?.entries.reduce((acc, entry) => {
-                      const entryDateStr = entry.date;
-                      const isHandoverStart = entryDateStr === week.startDate;
-                      const isHandoverEnd = entryDateStr === week.endDate;
-                      const isCoreDay = entryDateStr > week.startDate && entryDateStr < week.endDate;
-
-                      if (!isHandoverStart && !isHandoverEnd && !isCoreDay) return acc;
-
-                      const calc = calculateRowHours(entry);
-                      const dailyOT = (Number(calc.calculatedOT15 || 0) + Number(calc.calculatedOT20 || 0));
-
-                      if (isCoreDay) return acc + dailyOT;
-
-                      if (isHandoverStart) {
-                        const outTime = entry.calloutOut || entry.normalOut;
-                        if (outTime) {
-                          const [h] = outTime.split(':').map(Number);
-                          if (h >= 16) return acc + dailyOT;
-                        }
-                      }
-
-                      if (isHandoverEnd) {
-                        const inTime = entry.calloutIn || entry.normalIn;
-                        if (inTime) {
-                          const [h] = inTime.split(':').map(Number);
-                          if (h < 9) return acc + dailyOT; 
-                        }
-                      }
-
-                      return acc;
-                    }, 0) || 0;
-
-                    // OVERRIDE LOGIC
-                    const overrideStatus = timesheet?.adminOverrides?.[week.id];
-                    const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && weekOT > 0));
-                    const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
-
+                  {(() => {
+                    let totalAllowance = 0;
                     return (
-                      <TableRow key={week.id} className="h-16 border-b border-slate-100 last:border-0 hover:bg-slate-50/30 transition-colors print:h-10">
-                        <TableCell className="pl-8 font-mono text-sm font-bold text-slate-700 print:pl-2 print:text-xs">
-                          <div className="flex items-center gap-3"><div className="h-2 w-2 rounded-full bg-emerald-500" />{week.startDate} — {week.endDate}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className={cn("inline-flex items-center px-4 py-1.5 rounded-full border-2 text-[10px] font-black uppercase tracking-widest", week.isPrimary ? "border-blue-700 text-blue-700" : "border-orange-600 text-orange-600")}>
-                            {week.isPrimary ? "PRIMARY RESPONDER" : "BACKUP SUPPORT"}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center font-mono font-bold text-slate-600 text-sm">{weekOT.toFixed(1)} hrs</TableCell>
-                        <TableCell className="text-right pr-8 print:pr-2">
-                          {isNextCycle ? (
-                            <span className="inline-flex items-center gap-2 font-black text-blue-700 uppercase tracking-tighter text-sm">Next Cycle <Timer className="h-4 w-4" /></span>
-                          ) : (
-                            <div className="flex flex-col items-end">
-                              <span className={cn(
-                                "inline-flex items-center gap-2 font-black uppercase tracking-tighter text-sm",
-                                qualifies ? "text-emerald-600" : "text-slate-400"
-                              )}>
-                                {qualifies ? 'QUALIFIED' : 'NO ACTIVITY'}
-                                {qualifies ? <CheckCircle2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                              </span>
-                              {overrideStatus && isElevated && (
-                                <span className="text-[9px] font-bold text-red-600 uppercase flex items-center gap-1 mt-1">
-                                  <ShieldCheck className="h-2 w-2" /> Admin Override Active
-                                </span>
+                      <>
+                        {standbyWeeksInCycle.map((week) => {
+                          const cycleEnd = dateRange.length > 0 ? endOfDay(new Date(dateRange[dateRange.length - 1])) : new Date();
+                          const isNextCycle = week.exactEnd > cycleEnd;
+                          
+                          let hasTrueCallout = false;
+                          const weekOT = timesheet?.entries.reduce((acc, entry) => {
+                            const entryDateStr = entry.date;
+                            const isHandoverStart = entryDateStr === week.startDate;
+                            const isHandoverEnd = entryDateStr === week.endDate;
+                            const isCoreDay = entryDateStr > week.startDate && entryDateStr < week.endDate;
+
+                            if (!isHandoverStart && !isHandoverEnd && !isCoreDay) return acc;
+
+                            const calc = calculateRowHours(entry);
+                            const dailyOT = (Number(calc.calculatedOT15 || 0) + Number(calc.calculatedOT20 || 0));
+
+                            // True Callout Logic (not contiguous with normal shift)
+                            if (entry.calloutIn && entry.calloutIn !== '--:--' && entry.calloutIn !== entry.normalOut) {
+                                if (isCoreDay) {
+                                    hasTrueCallout = true;
+                                } else if (isHandoverStart) {
+                                    const [h] = entry.calloutIn.split(':').map(Number);
+                                    if (h >= 16) hasTrueCallout = true;
+                                } else if (isHandoverEnd) {
+                                    const [h] = entry.calloutIn.split(':').map(Number);
+                                    if (h < 9) hasTrueCallout = true;
+                                }
+                            }
+
+                            if (isCoreDay) return acc + dailyOT;
+
+                            if (isHandoverStart) {
+                              const outTime = entry.calloutOut || entry.normalOut;
+                              if (outTime) {
+                                const [h] = outTime.split(':').map(Number);
+                                if (h >= 16) return acc + dailyOT;
+                              }
+                            }
+
+                            if (isHandoverEnd) {
+                              const inTime = entry.calloutIn || entry.normalIn;
+                              if (inTime) {
+                                const [h] = inTime.split(':').map(Number);
+                                if (h < 9) return acc + dailyOT; 
+                              }
+                            }
+
+                            return acc;
+                          }, 0) || 0;
+
+                          // OVERRIDE LOGIC
+                          const overrideStatus = timesheet?.adminOverrides?.[week.id];
+                          const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && hasTrueCallout));
+                          const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
+
+                          const allowanceHours = qualifies ? 12 : 0;
+                          totalAllowance += allowanceHours;
+
+                          return (
+                            <TableRow key={week.id} className="h-16 border-b border-slate-100 last:border-0 hover:bg-slate-50/30 transition-colors print:h-10">
+                              <TableCell className="pl-8 font-mono text-sm font-bold text-slate-700 print:pl-2 print:text-xs">
+                                <div className="flex items-center gap-3"><div className="h-2 w-2 rounded-full bg-emerald-500" />{week.startDate} — {week.endDate}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className={cn("inline-flex items-center px-4 py-1.5 rounded-full border-2 text-[10px] font-black uppercase tracking-widest", week.isPrimary ? "border-blue-700 text-blue-700" : "border-orange-600 text-orange-600")}>
+                                  {week.isPrimary ? "PRIMARY RESPONDER" : "BACKUP SUPPORT"}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center font-mono font-bold text-slate-600 text-sm">{allowanceHours.toFixed(1)} hrs</TableCell>
+                              <TableCell className="text-right pr-8 print:pr-2">
+                                {isNextCycle ? (
+                                  <span className="inline-flex items-center gap-2 font-black text-blue-700 uppercase tracking-tighter text-sm">Next Cycle <Timer className="h-4 w-4" /></span>
+                                ) : (
+                                  <div className="flex flex-col items-end">
+                                    <span className={cn(
+                                      "inline-flex items-center gap-2 font-black uppercase tracking-tighter text-sm",
+                                      qualifies ? "text-emerald-600" : "text-slate-400"
+                                    )}>
+                                      {qualifies ? 'QUALIFIED' : 'NO ACTIVITY'}
+                                      {qualifies ? <CheckCircle2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                                    </span>
+                                    {overrideStatus && isElevated && (
+                                      <span className="text-[9px] font-bold text-red-600 uppercase flex items-center gap-1 mt-1">
+                                        <ShieldCheck className="h-2 w-2" /> Admin Override Active
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </TableCell>
+                              {isElevated && (
+                                <TableCell className="text-right pr-8 print:hidden">
+                                  <Select 
+                                    value={overrideStatus || 'AUTO'} 
+                                    onValueChange={(val) => handleAdminOverride(week.id, val === 'AUTO' ? null : val as any)}
+                                  >
+                                    <SelectTrigger className="h-8 w-[120px] text-[10px] font-bold bg-slate-50 border-slate-200">
+                                      <SelectValue placeholder="Override" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="AUTO">Automatic</SelectItem>
+                                      <SelectItem value="QUALIFIED" className="text-emerald-600">Force Qualify</SelectItem>
+                                      <SelectItem value="DISQUALIFIED" className="text-red-600">Disqualify</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
                               )}
-                            </div>
-                          )}
-                        </TableCell>
-                        {isElevated && (
-                          <TableCell className="text-right pr-8 print:hidden">
-                            <Select 
-                              value={overrideStatus || 'AUTO'} 
-                              onValueChange={(val) => handleAdminOverride(week.id, val === 'AUTO' ? null : val as any)}
-                            >
-                              <SelectTrigger className="h-8 w-[120px] text-[10px] font-bold bg-slate-50 border-slate-200">
-                                <SelectValue placeholder="Override" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="AUTO">Automatic</SelectItem>
-                                <SelectItem value="QUALIFIED" className="text-emerald-600">Force Qualify</SelectItem>
-                                <SelectItem value="DISQUALIFIED" className="text-red-600">Disqualify</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        )}
-                      </TableRow>
+                            </TableRow>
+                          );
+                        })}
+                      </>
                     );
-                  })}
+                  })()}
                 </TableBody>
+                <TableFooter className="bg-emerald-50 print:bg-slate-200">
+                  {(() => {
+                    let totalAllowance = 0;
+                    standbyWeeksInCycle.forEach((week) => {
+                      const cycleEnd = dateRange.length > 0 ? endOfDay(new Date(dateRange[dateRange.length - 1])) : new Date();
+                      const isNextCycle = week.exactEnd > cycleEnd;
+                      let hasTrueCallout = false;
+                      const weekOT = timesheet?.entries.reduce((acc, entry) => {
+                        const entryDateStr = entry.date;
+                        const isHandoverStart = entryDateStr === week.startDate;
+                        const isHandoverEnd = entryDateStr === week.endDate;
+                        const isCoreDay = entryDateStr > week.startDate && entryDateStr < week.endDate;
+
+                        if (!isHandoverStart && !isHandoverEnd && !isCoreDay) return acc;
+
+                        const calc = calculateRowHours(entry);
+                        const dailyOT = (Number(calc.calculatedOT15 || 0) + Number(calc.calculatedOT20 || 0));
+
+                        if (entry.calloutIn && entry.calloutIn !== '--:--' && entry.calloutIn !== entry.normalOut) {
+                            if (isCoreDay) {
+                                hasTrueCallout = true;
+                            } else if (isHandoverStart) {
+                                const [h] = entry.calloutIn.split(':').map(Number);
+                                if (h >= 16) hasTrueCallout = true;
+                            } else if (isHandoverEnd) {
+                                const [h] = entry.calloutIn.split(':').map(Number);
+                                if (h < 9) hasTrueCallout = true;
+                            }
+                        }
+
+                        if (isCoreDay) return acc + dailyOT;
+
+                        if (isHandoverStart) {
+                          const outTime = entry.calloutOut || entry.normalOut;
+                          if (outTime) {
+                            const [h] = outTime.split(':').map(Number);
+                            if (h >= 16) return acc + dailyOT;
+                          }
+                        }
+
+                        if (isHandoverEnd) {
+                          const inTime = entry.calloutIn || entry.normalIn;
+                          if (inTime) {
+                            const [h] = inTime.split(':').map(Number);
+                            if (h < 9) return acc + dailyOT; 
+                          }
+                        }
+
+                        return acc;
+                      }, 0) || 0;
+                      const overrideStatus = timesheet?.adminOverrides?.[week.id];
+                      const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && hasTrueCallout));
+                      const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
+                      if (qualifies) totalAllowance += 12;
+                    });
+                      const normTot = (totals?.normal || 0);
+                      const ot15 = (totals?.ot15 || 0);
+                      const grandTot = normTot + ot15;
+
+                      return (
+                        <>
+                          <TableRow className="border-t-2 border-emerald-200 print:border-black">
+                            <TableCell colSpan={2} className="pl-8 text-emerald-900 font-black uppercase tracking-widest text-sm print:pl-2">TOTAL ALLOWANCE</TableCell>
+                            <TableCell className="text-center font-mono font-black text-emerald-700 text-lg">{totalAllowance.toFixed(1)} hrs</TableCell>
+                            <TableCell colSpan={isElevated ? 2 : 1}></TableCell>
+                          </TableRow>
+                          <TableRow className="bg-slate-100 print:bg-white border-t-4 border-slate-300 print:border-t-2 print:border-black">
+                            <TableCell colSpan={isElevated ? 5 : 4} className="p-0">
+                              <div className="flex justify-end items-center gap-8 py-4 pr-12 print:pr-4">
+                                <div className="text-center">
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Timesheet Normal</p>
+                                  <p className="text-xl font-black text-slate-800">{normTot.toFixed(1)}</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Timesheet OT 1.5</p>
+                                  <p className="text-xl font-black text-red-600">{ot15.toFixed(1)}</p>
+                                </div>
+                                <div className="h-10 w-px bg-slate-300 print:bg-black print:w-[2px]" />
+                                <div className="text-center">
+                                  <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Timesheet Total</p>
+                                  <p className="text-2xl font-black text-slate-700">{grandTot.toFixed(1)} <span className="text-[10px] font-normal text-slate-500">hrs</span></p>
+                                </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </>
+                    );
+                  })()}
+                </TableFooter>
               </Table>
             </div>
           </div>
