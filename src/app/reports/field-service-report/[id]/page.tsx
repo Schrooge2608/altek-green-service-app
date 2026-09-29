@@ -161,7 +161,7 @@ export default function FieldServiceReportDetailPage() {
   const { fields: partFields, append: appendPart, remove: removePart } = useFieldArray({ control: form.control, name: "parts" });
   const { fields: personFields, append: appendPerson, remove: removePerson } = useFieldArray({ control: form.control, name: "personnel" });
 
-  const sparesQuery = useMemoFirebase(() => query(collection(firestore, 'spare_parts'), orderBy('rbmCode')), [firestore]);
+  const sparesQuery = useMemoFirebase(() => query(collection(firestore, 'spare_parts'), orderBy('rbmNumber')), [firestore]);
   const { data: sparesList } = useCollection(sparesQuery);
   const watchedNT = useWatch({ control: form.control, name: 'ntHours' });
   const watchedArea = useWatch({ control: form.control, name: 'area' });
