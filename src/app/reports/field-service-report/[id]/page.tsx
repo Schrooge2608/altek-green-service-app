@@ -932,10 +932,10 @@ export default function FieldServiceReportDetailPage() {
                                     }}
                                     creatable={true}
                                     placeholder=""
-                                    triggerClassName="h-7 border-none text-[10px] rounded-none focus-visible:ring-0 px-1 shadow-none bg-transparent hover:bg-slate-50 w-full truncate text-ellipsis overflow-hidden whitespace-nowrap block"
+                                    triggerClassName="h-7 border-none text-xs rounded-none focus-visible:ring-0 px-1 shadow-none bg-transparent hover:bg-slate-50 w-full truncate text-ellipsis overflow-hidden whitespace-nowrap block"
                                 />
                               </div>
-                              <div className="hidden print:flex h-7 px-2 items-center text-[10px]">
+                              <div className="hidden print:flex h-7 px-2 items-center text-xs">
                                 {form.watch(`parts.${idx}.partNo`) ? `${form.watch(`parts.${idx}.partNo`)} - ${form.watch(`parts.${idx}.description`)}` : form.watch(`parts.${idx}.description`) || ''}
                               </div>
                             </TableCell>
