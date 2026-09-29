@@ -46,6 +46,8 @@ export default function MPCDredgeMCCPage() {
   );
   
   const { data: equipmentList, isLoading } = useCollection<Equipment>(equipmentQuery);
+  const vsdsQuery = useMemoFirebase(() => query(collection(firestore, 'vsds')), [firestore]);
+  const { data: vsdsList } = useCollection<any>(vsdsQuery);
 
   const handleSeedData = async () => {
     if (!firestore) return;
@@ -166,9 +168,9 @@ export default function MPCDredgeMCCPage() {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="font-bold uppercase text-xs tracking-wider text-slate-500">Equipment Name</TableHead>
                 <TableHead className="font-bold uppercase text-xs tracking-wider text-slate-500">Location</TableHead>
-                <TableHead className="font-bold uppercase text-xs tracking-wider text-slate-500">Assigned To</TableHead>
-                <TableHead className="font-bold uppercase text-xs tracking-wider text-slate-500">Status</TableHead>
-                {canDelete && <TableHead className="text-right font-bold uppercase text-xs tracking-wider text-slate-500">Actions</TableHead>}
+                <TableHead className="font-bold uppercase text-xs tracking-wider text-slate-500 w-40">Assigned To</TableHead>
+                <TableHead className="font-bold uppercase text-xs tracking-wider text-slate-500 w-32">Status</TableHead>
+                {canDelete && <TableHead className="text-right font-bold uppercase text-xs tracking-wider text-slate-500 w-24">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,8 +182,11 @@ export default function MPCDredgeMCCPage() {
                   [...equipmentList].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })).map(eq => (
                       <TableRow key={eq.id}>
                           <TableCell className="font-semibold text-slate-800">
-                            <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary">
-                              {eq.name}
+                            <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary flex items-center gap-2">
+                              <span>{eq.name}</span>
+                              {eq.vsdId && vsdsList?.find(v => v.id === eq.vsdId)?.model && (
+                                <span className="text-[9px] text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded font-medium border border-slate-200 truncate max-w-[120px]">{vsdsList.find(v => v.id === eq.vsdId)?.model}</span>
+                              )}
                             </Link>
                           </TableCell>
                           <TableCell>
@@ -227,3 +232,4 @@ export default function MPCDredgeMCCPage() {
     </div>
   );
 }
+
