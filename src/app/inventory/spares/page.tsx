@@ -496,40 +496,24 @@ export default function SparesInventoryPage() {
 
                     {(userData?.role === 'Admin' || userData?.role === 'Superadmin') && (
                         <Button variant="outline" className="gap-2" onClick={async () => {
-                            const confirmSeed = window.confirm("Seed ACS 607-2120-6 parts?");
+                            const confirmSeed = window.confirm("Seed ACS800-07-1500-7 parts?");
                             if (!confirmSeed) return;
                             try {
                                 const partsData = [
-                                    { rbm: "8433033", oem: "10001773", type: "630A 1000-1250V 170M6205 Din 1", name: "Eaton Bussmann Class aR semiconductor protection fuse", rtbs: "41481087" },
-                                    { rbm: "8433167", oem: "64015178", type: "NAMC-03 SP KIT AS1A", name: "Application and Motor Controller board", rtbs: "" },
-                                    { rbm: "8433154", oem: "61487883", type: "NXPP-03 MD KIT", name: "Matching / Control Distribution Board", rtbs: "41472879" },
-                                    { rbm: "8433131", oem: "10016771", type: "ES 500-9647 1000A+/-24V", name: "closed-loop current transducer.", rtbs: "41475174" },
-                                    { rbm: "8433135", oem: "10030820", type: "D4E225-CC01-ZX(30) 230 VAC+ /- 10 %", name: "EBM Papst D4E225-CC01-30 centrifugal blower — the main cabinet cooling fan", rtbs: "41479201" },
-                                    { rbm: "8433140", oem: "58920011", type: "NGDR-03 SP KIT", name: "Gate Circuit Card", rtbs: "41479203" },
-                                    { rbm: "8433147", oem: "61433601", type: "NGPS - 11 MD KIT", name: "Gate Driver Power Supply Board", rtbs: "40624299" },
-                                    { rbm: "8433217", oem: "61488049", type: "IGBT 180A MD R12 SP6 KIT", name: "IGBT Power Module Kit", rtbs: "" },
-                                    { rbm: "8433216", oem: "61487981", type: "IGBT 180A MD R12 SP5 KIT", name: "IGBT Power Module Kit", rtbs: "" },
-                                    { rbm: "8433155", oem: "61488006/64513605", type: "NINT-70 MD KIT/ NINT 73C MD KIT", name: "complete Phase Module Kit", rtbs: "41472886" },
-                                    { rbm: "8433218", oem: "61512900", type: "PHASE MODULE ACN 64410456 - MD - KIT SP5", name: "complete Phase Module Kit", rtbs: "41479212" },
-                                    { rbm: "8433219", oem: "61512918", type: "PHASE MODULE ACN 64410456 - MD - KIT SP6", name: "complete Phase Module Kit", rtbs: "41473250" },
-                                    { rbm: "8433283", oem: "64422375", type: "PHASE MODULE ACN 64410456 - MD - KIT SPL6", name: "complete Phase Module Kit", rtbs: "41479218" },
-                                    { rbm: "8433287", oem: "64422367", type: "PHASE MODULE ACN 64410456 - MD - KIT SPL5", name: "complete Phase Module Kit", rtbs: "41479219" },
-                                    { rbm: "8433142", oem: "58976601", type: "NPOW-62 sp kit", name: "Power Supply Board", rtbs: "40624302" },
-                                    { rbm: "8433146", oem: "61433503", type: "NPBU - 41 MD KIT", name: "PPCS (Parallel Control System) Branching Unit", rtbs: "41472819" },
-                                    { rbm: "8433169", oem: "58919128", type: "NIOC-01 SP KIT", name: "I/O (Input/Output)", rtbs: "41484221" },
-                                    { rbm: "8433141", oem: "58926451", type: "NRED-61 , 16328", name: "DC bus voltage divider resistor module", rtbs: "41484222" },
-                                    { rbm: "8433161", oem: "61513485", type: "5SDD 51L2800 MD KIT", name: "hockey-puck rectifier diode", rtbs: "41475183" },
-                                    { rbm: "8433149", oem: "61433635", type: "NDSC - 01 MD KIT", name: "DSU (Diode Supply Unit) Control Board", rtbs: "41472894" },
-                                    { rbm: "8433156", oem: "61510524", type: "GR31M 2DK 3F2R 525-690V", name: "cooling fan assembly", rtbs: "41475179" },
-                                    { rbm: "8433150", oem: "61434429", type: "AC POW -1 MD KIT", name: "Power Supply Board for the Diode Supply Unit (DSU", rtbs: "41472298" },
-                                    { rbm: "8433190", oem: "61066859", type: "p33ab 3asd566301b1", name: "Pressure Switch", rtbs: "41475190" },
-                                    { rbm: "8433136", oem: "10032636", type: "170M6149 1100A  1250V", name: "Eaton Bussmann Class aR semiconductor protection fuse", rtbs: "41472731" },
-                                    { rbm: "8433133", oem: "10012139", type: "KTY 10-6-M4", name: "KTY84/100 silicon PTC temperature sensor with an M4 threaded connector", rtbs: "41475176" },
-                                    { rbm: "8433162", oem: "61513515", type: "5STP 27L 1800 MD KIT", name: "Phase Control Thyristor (SCR)", rtbs: "41475184" },
-                                    { rbm: "8433191", oem: "58919217", type: "NDNA module", name: "DeviceNet Adapter Module", rtbs: "41475191" },
-                                    { rbm: "8433192", oem: "58919195", type: "NDIO module", name: "Digital I/O Extension Module", rtbs: "41472882" },
-                                    { rbm: "8433220", oem: "58975931", type: "CDP 312", name: "Control Panel (Keypad + Display)", rtbs: "41482472" },
-                                    { rbm: "8341596", oem: "", type: "ACS 600 - K-80 Relay Timer", name: "project-specific tag/label for a time-delay relay", rtbs: "41472462" }
+                                    { rbm: "991021005", rtbs: "41473249", oem: "68685192", name: "580Kva Complete Inverter module", type: "ACS800-104-580-7+E205+V991" },
+                                    { rbm: "991020973", rtbs: "20413938", oem: "64605666", name: "Power supply board", type: "APOW-01C" },
+                                    { rbm: "991029718", rtbs: "41483922", oem: "", name: "Main Interface board", type: "AINT-14C" },
+                                    { rbm: "", rtbs: "", oem: "68295459", name: "Output filter board", type: "AOFC-02C" },
+                                    { rbm: "991020967", rtbs: "40624321", oem: "64650424", name: "Inverter Fan", type: "D2D160-BE02-11" },
+                                    { rbm: "991029715", rtbs: "41485534", oem: "64669982", name: "Branching unit", type: "APBU-44C" },
+                                    { rbm: "", rtbs: "", oem: "68909058", name: "Measurement board", type: "ATMB-01C" },
+                                    { rbm: "", rtbs: "", oem: "68634377", name: "Inductor output filter", type: "AOFI-69" },
+                                    { rbm: "", rtbs: "20521990", oem: "68485282", name: "640Kva Complete supply module", type: "ACS800-704-0640-7+F250+0F253" },
+                                    { rbm: "991020974", rtbs: "41472560", oem: "64630199", name: "Assessory board", type: "DSAB-01C" },
+                                    { rbm: "991020964", rtbs: "41475689", oem: "64637029", name: "Plug connector board", type: "DSCB-01C" },
+                                    { rbm: "991020975", rtbs: "41472561", oem: "64691929", name: "Power supply board", type: "DSMB-01C" },
+                                    { rbm: "991020976", rtbs: "41472562", oem: "64666606", name: "Control board", type: "DSMB-02C" },
+                                    { rbm: "991020966", rtbs: "", oem: "64650114", name: "DSU Fan", type: "D2D146-AAO2-22" }
                                 ];
                                 
                                 let added = 0;
@@ -539,12 +523,13 @@ export default function SparesInventoryPage() {
                                 const existingSpares = snap.docs.map(d => ({ id: d.id, ...d.data() } as SparePart));
 
                                 for (const p of partsData) {
-                                    const existing = existingSpares.find(s => s.rbmNumber === p.rbm);
+                                    const existing = existingSpares.find(s => (p.rbm && s.rbmNumber === p.rbm) || (p.oem && s.oemPartNumber === p.oem));
                                     if (existing) {
-                                        if (!existing.compatibleModels?.includes("ACS 607-2120-6")) {
+                                        if (!existing.compatibleModels?.includes("ACS800-07-1500-7")) {
                                             await updateDoc(doc(firestore, 'spare_parts', existing.id), {
-                                                compatibleModels: [...(existing.compatibleModels || []), "ACS 607-2120-6"],
-                                                rtbsNumber: p.rtbs || existing.rtbsNumber // update RTBS if provided
+                                                compatibleModels: [...(existing.compatibleModels || []), "ACS800-07-1500-7"],
+                                                rtbsNumber: p.rtbs || existing.rtbsNumber,
+                                                oemPartNumber: p.oem || existing.oemPartNumber
                                             });
                                             updated++;
                                         }
@@ -557,7 +542,7 @@ export default function SparesInventoryPage() {
                                             type: p.type,
                                             manufacturer: "ABB",
                                             category: "Component",
-                                            compatibleModels: ["ACS 607-2120-6"],
+                                            compatibleModels: ["ACS800-07-1500-7"],
                                             stockLevel: 0,
                                             createdAt: serverTimestamp(),
                                             createdBy: user?.uid || "seed"
@@ -565,7 +550,7 @@ export default function SparesInventoryPage() {
                                         added++;
                                     }
                                 }
-                                toast({ title: "Seed Complete", description: `Added ${added} new parts, updated ${updated} existing parts for ACS 607-2120-6.` });
+                                toast({ title: "Seed Complete", description: `Added ${added} new parts, updated ${updated} existing parts for ACS800-07-1500-7.` });
                             } catch (e: any) {
                                 console.error(e);
                                 toast({ variant: 'destructive', title: 'Error', description: e.message });
