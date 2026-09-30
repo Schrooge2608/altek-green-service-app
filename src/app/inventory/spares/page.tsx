@@ -434,10 +434,12 @@ export default function SparesInventoryPage() {
                 struct['Other']['Uncategorized'].push(spare);
             } else {
                 spare.compatibleModels.forEach(model => {
-                    // Find the right category by looking at our hardcoded ones first
-                    let superCat = 'Other';
-                    if (acs600Subheadings.includes(model)) superCat = 'ACS 600';
+                    let superCat = getSuperCategory(model);
+                    if (superCat === 'ACS 600 spares') superCat = 'ACS 600';
+                    if (superCat === 'ACS 800 spares') superCat = 'ACS 800';
+                    if (superCat === 'Altistart spares') superCat = 'Altistart';
                     
+                    if (!struct[superCat]) struct[superCat] = {};
                     if (!struct[superCat][model]) struct[superCat][model] = [];
                     struct[superCat][model].push(spare);
                 });
