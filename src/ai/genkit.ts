@@ -5,7 +5,7 @@ export const ai = genkit({
   plugins: [
     googleAI({apiKey: process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY}),
   ],
-  model: 'googleai/gemini-3.8-flash',
+  model: 'googleai/gemini-2.5-flash',
 });
 
 // Flows are imported directly into Server Actions or components. 
