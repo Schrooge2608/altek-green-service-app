@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -75,7 +75,7 @@ export default function NewDailyDiaryV2Page() {
     const isClient = useMemo(() => userData?.role && ['Client', 'Client Manager'].includes(userData.role), [userData]);
     const isCreator = useMemo(() => !diaryId || (diaryData?.userId === user?.uid), [diaryId, diaryData, user]);
     const isSignedOff = diaryData?.isSignedOff || false;
-    const canEdit = !isSignedOff && (isCreator || isAdmin);
+    const canEdit = !isSignedOff && !isClient;
 
     const defaultValues: Partial<DailyDiary> = {
         contractTitle: 'VSD MAINTENANCE',
@@ -237,7 +237,7 @@ export default function NewDailyDiaryV2Page() {
                 contractorDate: contractorDate ? format(contractorDate, 'yyyy-MM-dd') : '',
                 clientSignature, clientName,
                 clientDate: clientDate ? format(clientDate, 'yyyy-MM-dd') : '',
-                isSignedOff: finalIsFinalised ? true : (diaryData?.isSignedOff || !!contractorSignature),
+                isSignedOff: finalIsFinalised ? true : !!contractorSignature,
                 isFinalised: finalIsFinalised,
                 locationTags,
                 equipmentNames: Array.from(new Set((data.works || []).map(w => w.area).filter(Boolean))),
@@ -375,14 +375,17 @@ export default function NewDailyDiaryV2Page() {
                 }
             });
 
-            const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
-            
-            // Restore inputs
-            replacements.forEach(({ original, wrapper }) => {
-                original.style.display = '';
-                wrapper.remove();
-            });
-            element.className = originalClass;
+            let canvas;
+            try {
+                canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+            } finally {
+                // Restore inputs
+                replacements.forEach(({ original, wrapper }) => {
+                    original.style.display = '';
+                    if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+                });
+                element.className = originalClass;
+            }
             
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
@@ -828,7 +831,7 @@ export default function NewDailyDiaryV2Page() {
                                 {contractorSignature ? (
                                     <div className="w-full h-full relative flex justify-center items-center pt-2">
                                         <img src={contractorSignature} alt="Sig" className="max-h-8 w-auto mix-blend-multiply" />
-                                        {canEdit && <Button type="button" variant="ghost" size="icon" onClick={() => setContractorSignature(null)} className="absolute top-0 right-0 h-6 w-6 print-hidden z-20 hover:bg-red-100"><X className="h-4 w-4 text-red-500"/></Button>}
+                                        {(!diaryData?.isFinalised && !isClient) && <Button type="button" variant="ghost" size="icon" onClick={() => setContractorSignature(null)} className="absolute top-0 right-0 h-6 w-6 print-hidden z-20 hover:bg-red-100"><X className="h-4 w-4 text-red-500"/></Button>}
                                     </div>
                                 ) : (
                                     <div className="mt-4 scale-[0.6] origin-top relative z-10"><SignaturePad onSave={(sig) => { setContractorSignature(sig); setContractorDate(new Date()); }} width={200} height={60} /></div>
