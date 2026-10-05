@@ -807,12 +807,13 @@ export default function EquipmentDetail() {
                                 <TableHead className="text-[10px] font-black uppercase">Date</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase">Description</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase">Status</TableHead>
+                                  <TableHead className="w-16"></TableHead><TableHead className="w-16"></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {(breakdownsLoading || fsrsLoading) ? (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24">
+                                    <TableCell colSpan={4} className="text-center h-24">
                                         <Loader2 className="animate-spin h-4 w-4 mx-auto" />
                                     </TableCell>
                                 </TableRow>
@@ -826,11 +827,18 @@ export default function EquipmentDetail() {
                                         <Badge variant={isFinished ? 'default' : 'destructive'} className="text-[9px] px-1.5 py-0">
                                             {isFinished ? 'Resolved' : 'Active'}
                                         </Badge>
-                                    </TableCell>
-                                </TableRow>
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                          {b.description.startsWith('[FSR]') && (
+                                              <Link href={`/reports/field-service-report/${b.id}`} passHref>
+                                                  <Button variant="ghost" size="sm" className="h-6 text-[10px] hover:underline">View</Button>
+                                              </Link>
+                                          )}
+                                      </TableCell>
+                                  </TableRow>
                             )}) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground italic text-xs">No incidents recorded.</TableCell>
+                                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground italic text-xs">No incidents recorded.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
