@@ -1,56 +1,23 @@
 'use client';
-import React, { useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { useFirestore } from '@/firebase';
 import { Badge } from '@/components/ui/badge';
+import { fetchAllStatsForYear, getStatsForEquipment } from './EquipmentStatsCache';
 
 export function BreakdownTally({ equipmentId, equipmentName }: { equipmentId: string, equipmentName: string }) {
     const db = useFirestore();
     const currentYear = new Date().getFullYear().toString();
-    const [total, setTotal] = React.useState<number | null>(null);
+    const [total, setTotal] = useState<number | null>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!equipmentId || !equipmentName) return;
-        
-        const fetchTally = async () => {
-            try {
-                let count = 0;
-                
-                // Fetch FSRs by ID
-                const fsrIdSnap = await getDocs(query(collection(db, 'field_service_reports'), where('equipmentId', '==', equipmentId)));
-                fsrIdSnap.forEach(doc => {
-                    const data = doc.data();
-                    if (data.date && data.date.startsWith(currentYear)) count++;
-                });
-
-                // Fetch FSRs by Name (fallback)
-                const fsrNameSnap = await getDocs(query(collection(db, 'field_service_reports'), where('assetName', '==', equipmentName)));
-                fsrNameSnap.forEach(doc => {
-                    const data = doc.data();
-                    if (data.date && data.date.startsWith(currentYear) && data.equipmentId !== equipmentId) count++;
-                });
-
-                // Fetch Breakdowns by ID
-                const bdIdSnap = await getDocs(query(collection(db, 'breakdown_reports'), where('equipmentId', '==', equipmentId)));
-                bdIdSnap.forEach(doc => {
-                    const data = doc.data();
-                    if (data.date && data.date.startsWith(currentYear)) count++;
-                });
-
-                // Fetch Breakdowns by Name (fallback)
-                const bdNameSnap = await getDocs(query(collection(db, 'breakdown_reports'), where('equipmentName', '==', equipmentName)));
-                bdNameSnap.forEach(doc => {
-                    const data = doc.data();
-                    if (data.date && data.date.startsWith(currentYear) && data.equipmentId !== equipmentId) count++;
-                });
-
-                setTotal(count);
-            } catch (e) {
-                console.error("Failed to fetch tally", e);
-                setTotal(0);
-            }
-        };
-        fetchTally();
+        fetchAllStatsForYear(db, currentYear).then(data => {
+            const stats = getStatsForEquipment(data, equipmentId, equipmentName);
+            setTotal(stats.breakdowns);
+        }).catch(err => {
+            console.error("Failed to fetch breakdown tally", err);
+            setTotal(0);
+        });
     }, [db, equipmentId, equipmentName, currentYear]);
 
     if (total === null) return <span className="text-muted-foreground text-xs font-mono opacity-50">...</span>;
@@ -58,6 +25,32 @@ export function BreakdownTally({ equipmentId, equipmentName }: { equipmentId: st
 
     return (
         <Badge variant={total > 2 ? "destructive" : "secondary"} className="font-mono px-2 py-0.5 shadow-sm text-[10px]">
+            {total}
+        </Badge>
+    );
+}
+
+export function MaintenanceTally({ equipmentId, equipmentName }: { equipmentId: string, equipmentName: string }) {
+    const db = useFirestore();
+    const currentYear = new Date().getFullYear().toString();
+    const [total, setTotal] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (!equipmentId || !equipmentName) return;
+        fetchAllStatsForYear(db, currentYear).then(data => {
+            const stats = getStatsForEquipment(data, equipmentId, equipmentName);
+            setTotal(stats.maintenance);
+        }).catch(err => {
+            console.error("Failed to fetch maintenance tally", err);
+            setTotal(0);
+        });
+    }, [db, equipmentId, equipmentName, currentYear]);
+
+    if (total === null) return <span className="text-muted-foreground text-xs font-mono opacity-50">...</span>;
+    if (total === 0) return <span className="text-muted-foreground text-xs font-mono">-</span>;
+
+    return (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-mono px-2 py-0.5 shadow-sm text-[10px]">
             {total}
         </Badge>
     );
