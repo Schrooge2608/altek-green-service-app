@@ -17,28 +17,28 @@ export function BreakdownTally({ equipmentId, equipmentName }: { equipmentId: st
                 let count = 0;
                 
                 // Fetch FSRs by ID
-                const fsrIdSnap = await getDocs(query(collection(db, 'fsrs'), where('equipmentId', '==', equipmentId)));
+                const fsrIdSnap = await getDocs(query(collection(db, 'field_service_reports'), where('equipmentId', '==', equipmentId)));
                 fsrIdSnap.forEach(doc => {
                     const data = doc.data();
                     if (data.date && data.date.startsWith(currentYear)) count++;
                 });
 
                 // Fetch FSRs by Name (fallback)
-                const fsrNameSnap = await getDocs(query(collection(db, 'fsrs'), where('assetName', '==', equipmentName)));
+                const fsrNameSnap = await getDocs(query(collection(db, 'field_service_reports'), where('assetName', '==', equipmentName)));
                 fsrNameSnap.forEach(doc => {
                     const data = doc.data();
                     if (data.date && data.date.startsWith(currentYear) && data.equipmentId !== equipmentId) count++;
                 });
 
                 // Fetch Breakdowns by ID
-                const bdIdSnap = await getDocs(query(collection(db, 'breakdowns'), where('equipmentId', '==', equipmentId)));
+                const bdIdSnap = await getDocs(query(collection(db, 'breakdown_reports'), where('equipmentId', '==', equipmentId)));
                 bdIdSnap.forEach(doc => {
                     const data = doc.data();
                     if (data.date && data.date.startsWith(currentYear)) count++;
                 });
 
                 // Fetch Breakdowns by Name (fallback)
-                const bdNameSnap = await getDocs(query(collection(db, 'breakdowns'), where('equipmentName', '==', equipmentName)));
+                const bdNameSnap = await getDocs(query(collection(db, 'breakdown_reports'), where('equipmentName', '==', equipmentName)));
                 bdNameSnap.forEach(doc => {
                     const data = doc.data();
                     if (data.date && data.date.startsWith(currentYear) && data.equipmentId !== equipmentId) count++;
