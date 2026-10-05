@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useFirestore } from '@/firebase';
 import { Badge } from '@/components/ui/badge';
-import { fetchAllStatsForYear, getStatsForEquipment } from './EquipmentStatsCache';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 export function BreakdownTally({ equipmentId, equipmentName }: { equipmentId: string, equipmentName: string }) {
     const db = useFirestore();
@@ -11,13 +11,56 @@ export function BreakdownTally({ equipmentId, equipmentName }: { equipmentId: st
 
     useEffect(() => {
         if (!equipmentId || !equipmentName) return;
-        fetchAllStatsForYear(db, currentYear).then(data => {
-            const stats = getStatsForEquipment(data, equipmentId, equipmentName);
-            setTotal(stats.breakdowns);
-        }).catch(err => {
-            console.error("Failed to fetch breakdown tally", err);
-            setTotal(0);
-        });
+        let isMounted = true;
+        
+        const fetchTally = async () => {
+            try {
+                // Run all 4 queries concurrently over the single Firestore multiplexed connection
+                const [fsrIdSnap, fsrNameSnap, bdIdSnap, bdNameSnap] = await Promise.all([
+                    getDocs(query(collection(db, 'field_service_reports'), where('equipmentId', '==', equipmentId))),
+                    getDocs(query(collection(db, 'field_service_reports'), where('assetName', '==', equipmentName))),
+                    getDocs(query(collection(db, 'breakdown_reports'), where('equipmentId', '==', equipmentId))),
+                    getDocs(query(collection(db, 'breakdown_reports'), where('equipmentName', '==', equipmentName)))
+                ]);
+
+                if (!isMounted) return;
+
+                let count = 0;
+                const uniqueIds = new Set<string>();
+
+                fsrIdSnap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.date && data.date.startsWith(currentYear) && !uniqueIds.has(doc.id)) {
+                        count++; uniqueIds.add(doc.id);
+                    }
+                });
+                fsrNameSnap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.date && data.date.startsWith(currentYear) && data.equipmentId !== equipmentId && !uniqueIds.has(doc.id)) {
+                        count++; uniqueIds.add(doc.id);
+                    }
+                });
+                bdIdSnap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.date && data.date.startsWith(currentYear) && !uniqueIds.has(doc.id)) {
+                        count++; uniqueIds.add(doc.id);
+                    }
+                });
+                bdNameSnap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.date && data.date.startsWith(currentYear) && data.equipmentId !== equipmentId && !uniqueIds.has(doc.id)) {
+                        count++; uniqueIds.add(doc.id);
+                    }
+                });
+
+                setTotal(count);
+            } catch (e) {
+                console.error("Failed to fetch breakdown tally", e);
+                if (isMounted) setTotal(0);
+            }
+        };
+        fetchTally();
+        return () => { isMounted = false; };
     }, [db, equipmentId, equipmentName, currentYear]);
 
     if (total === null) return <span className="text-muted-foreground text-xs font-mono opacity-50">...</span>;
@@ -37,13 +80,42 @@ export function MaintenanceTally({ equipmentId, equipmentName }: { equipmentId: 
 
     useEffect(() => {
         if (!equipmentId || !equipmentName) return;
-        fetchAllStatsForYear(db, currentYear).then(data => {
-            const stats = getStatsForEquipment(data, equipmentId, equipmentName);
-            setTotal(stats.maintenance);
-        }).catch(err => {
-            console.error("Failed to fetch maintenance tally", err);
-            setTotal(0);
-        });
+        let isMounted = true;
+        
+        const fetchTally = async () => {
+            try {
+                // Concurrently fetch scheduled maintenance for this equipment only
+                const [schedIdSnap, schedNameSnap] = await Promise.all([
+                    getDocs(query(collection(db, 'completed_schedules'), where('equipmentId', '==', equipmentId))),
+                    getDocs(query(collection(db, 'completed_schedules'), where('equipmentName', '==', equipmentName)))
+                ]);
+
+                if (!isMounted) return;
+
+                let count = 0;
+                const uniqueIds = new Set<string>();
+
+                schedIdSnap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.completionDate && data.completionDate.startsWith(currentYear) && !uniqueIds.has(doc.id)) {
+                        count++; uniqueIds.add(doc.id);
+                    }
+                });
+                schedNameSnap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.completionDate && data.completionDate.startsWith(currentYear) && data.equipmentId !== equipmentId && !uniqueIds.has(doc.id)) {
+                        count++; uniqueIds.add(doc.id);
+                    }
+                });
+
+                setTotal(count);
+            } catch (e) {
+                console.error("Failed to fetch maintenance tally", e);
+                if (isMounted) setTotal(0);
+            }
+        };
+        fetchTally();
+        return () => { isMounted = false; };
     }, [db, equipmentId, equipmentName, currentYear]);
 
     if (total === null) return <span className="text-muted-foreground text-xs font-mono opacity-50">...</span>;
