@@ -793,6 +793,7 @@ export default function FieldServiceReportDetailPage() {
                                 return label === val;
                             });
                             if (eq) {
+                                form.setValue('equipmentId', eq.id);
                                 let finalOem = eq.oem || eq.manufacturer;
                                 let finalModel = eq.model;
                                 let finalSerial = eq.serialNo;

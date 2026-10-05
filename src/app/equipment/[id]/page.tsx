@@ -104,10 +104,13 @@ export default function EquipmentDetail() {
   );
   const { data: eqBreakdownsRaw, isLoading: breakdownsLoading } = useCollection<Breakdown>(breakdownsQuery);
 
-  const fsrQuery = useMemoFirebase(() => 
-    (eq?.name ? query(collection(firestore, 'field_service_reports'), or(where('equipmentId', '==', id), where('assetName', '==', eq.name))) : null), 
-    [firestore, eq, id]
-  );
+  const fsrQuery = useMemoFirebase(() => {
+    if (!eq?.name) return null;
+    const prefix = eq.mcc || eq.location || eq.division || '';
+    const uniqueKey = prefix ? `${prefix} - ${eq.name}` : eq.name;
+    const searchKeys = Array.from(new Set([uniqueKey, eq.name]));
+    return query(collection(firestore, 'field_service_reports'), or(where('equipmentId', '==', id), where('assetName', 'in', searchKeys)));
+  }, [firestore, eq, id]);
   const { data: eqFsrsRaw, isLoading: fsrsLoading } = useCollection<FieldServiceReport>(fsrQuery);
 
   const sparesQuery = useMemoFirebase(() => 
