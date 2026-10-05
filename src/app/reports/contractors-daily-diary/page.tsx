@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Printer, Save, Loader2, Plus, Trash2, FileCheck, X, Share2 } from 'lucide-react';
+import { Printer, Save, Loader2, Plus, Trash2, FileCheck, X, Share2, Check } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -454,6 +454,12 @@ export default function NewDailyDiaryV2Page() {
                     .pdf-border { border-color: black !important; border-width: 1px !important; }
                     .pdf-text { color: black !important; }
                 }
+                .print-mode-for-canvas .print-hidden { display: none !important; }
+                .print-mode-for-canvas .print\\:block { display: block !important; }
+                .print-mode-for-canvas .print\\:hidden { display: none !important; }
+                .print-mode-for-canvas input, .print-mode-for-canvas textarea { border: none !important; background: transparent !important; resize: none !important; }
+                .print-mode-for-canvas .pdf-border { border-color: black !important; border-width: 1px !important; }
+                .print-mode-for-canvas .pdf-text { color: black !important; }
             `}</style>
 
             <div className="flex justify-end mb-4 gap-2 print-hidden">
@@ -499,7 +505,7 @@ export default function NewDailyDiaryV2Page() {
                     {/* Header Top Row */}
                     <div className="grid grid-cols-12 border-b-2 border-slate-900 pdf-border items-stretch">
                         <div className="col-span-5 border-r-2 border-slate-900 pdf-border flex flex-col justify-center px-4 py-2 bg-slate-200">
-                            <Image src="/Altek-Logo.jpeg" width={180} height={40} alt="Altek Logo" className="object-contain h-8 w-auto object-left mb-1" />
+                            <img src="/Altek-Logo.jpeg" width={180} height={40} alt="Altek Logo" className="object-contain h-8 w-auto object-left mb-1" />
                             <div className="flex justify-between text-[10px] font-bold text-slate-600">
                                 <span>Tel: 010 500 4654</span>
                                 <span>Email: info@altekgreen.com</span>
@@ -532,11 +538,11 @@ export default function NewDailyDiaryV2Page() {
                                 <Controller control={form.control} name="area" render={({ field }) => (
                                     <>
                                         <div className="flex items-center gap-2 font-bold text-xs cursor-pointer" onClick={() => field.onChange('Mining')}>
-                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Mining' && '✓'}</div>
+                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Mining' && <Check className="w-4 h-4 stroke-[3]" />}</div>
                                             MINING
                                         </div>
                                         <div className="flex items-center gap-2 font-bold text-xs cursor-pointer" onClick={() => field.onChange('Smelter')}>
-                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Smelter' && '✓'}</div>
+                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Smelter' && <Check className="w-4 h-4 stroke-[3]" />}</div>
                                             SMELTER
                                         </div>
                                     </>
@@ -545,11 +551,11 @@ export default function NewDailyDiaryV2Page() {
                                 <Controller control={form.control} name="maintenanceType" render={({ field }) => (
                                     <>
                                         <div className="flex items-center gap-2 font-bold text-xs cursor-pointer" onClick={() => field.onChange('Scheduled')}>
-                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Scheduled' && '✓'}</div>
+                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Scheduled' && <Check className="w-4 h-4 stroke-[3]" />}</div>
                                             SCHEDULED
                                         </div>
                                         <div className="flex items-center gap-2 font-bold text-xs cursor-pointer" onClick={() => field.onChange('Unscheduled')}>
-                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Unscheduled' && '✓'}</div>
+                                            <div className="w-6 h-4 border border-black flex items-center justify-center">{field.value === 'Unscheduled' && <Check className="w-4 h-4 stroke-[3]" />}</div>
                                             UNSCHEDULED
                                         </div>
                                     </>
@@ -679,10 +685,10 @@ export default function NewDailyDiaryV2Page() {
                                             <Controller control={form.control} name={`plant.${index}.inspectionDone`} render={({ field: radio }) => (
                                                 <>
                                                     <span className="flex items-center gap-1 cursor-pointer font-bold text-xs" onClick={() => radio.onChange('yes')}>
-                                                        <div className="w-4 h-4 border border-black flex items-center justify-center">{radio.value === 'yes' && '✓'}</div> Y
+                                                        <div className="w-4 h-4 border border-black flex items-center justify-center">{radio.value === 'yes' && <Check className="w-4 h-4 stroke-[3]" />}</div> Y
                                                     </span>
                                                     <span className="flex items-center gap-1 cursor-pointer font-bold text-xs" onClick={() => radio.onChange('no')}>
-                                                        <div className="w-4 h-4 border border-black flex items-center justify-center">{radio.value === 'no' && '✓'}</div> N
+                                                        <div className="w-4 h-4 border border-black flex items-center justify-center">{radio.value === 'no' && <Check className="w-4 h-4 stroke-[3]" />}</div> N
                                                     </span>
                                                 </>
                                             )} />
