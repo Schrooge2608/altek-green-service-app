@@ -69,7 +69,7 @@ export async function extractDailyDiaryData(input: DailyDiaryScanInput): Promise
 
 const prompt = ai.definePrompt({
   name: 'extractDailyDiaryPrompt',
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-3.8-flash',
   input: { schema: DailyDiaryScanInputSchema },
   output: { schema: DailyDiaryScanOutputSchema },
   config: {

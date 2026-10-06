@@ -34,7 +34,7 @@ export async function extractConsumablesData(input: DeliveryNoteInput): Promise<
 
 const prompt = ai.definePrompt({
   name: 'extractConsumablesPrompt',
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-3.8-flash',
   input: { schema: DeliveryNoteInputSchema },
   output: { schema: DeliveryNoteOutputSchema },
   config: {

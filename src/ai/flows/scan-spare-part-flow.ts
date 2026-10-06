@@ -38,7 +38,7 @@ const scanSparePartFlow = ai.defineFlow(
   async (input) => {
     try {
       const { output } = await ai.generate({
-        model: 'googleai/gemini-2.5-flash',
+        model: 'googleai/gemini-3.8-flash',
         config: { temperature: 0.1 },
         output: { schema: SparePartScanOutputSchema },
         system: `You are an industrial maintenance data specialist. 

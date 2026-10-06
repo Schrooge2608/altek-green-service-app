@@ -36,7 +36,7 @@ export async function scanNameplate(input: NameplateScanInput): Promise<Nameplat
 
 const prompt = ai.definePrompt({
   name: 'scanNameplatePrompt',
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-3.8-flash',
   input: { schema: NameplateScanInputSchema },
   output: { schema: NameplateScanOutputSchema },
   config: {

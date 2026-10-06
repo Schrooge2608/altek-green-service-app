@@ -45,7 +45,7 @@ export async function extractScheduleData(input: DocumentScanInput): Promise<Doc
 
 const prompt = ai.definePrompt({
   name: 'extractSchedulePrompt',
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-3.8-flash',
   input: { schema: DocumentScanInputSchema },
   output: { schema: DocumentScanOutputSchema },
   config: {

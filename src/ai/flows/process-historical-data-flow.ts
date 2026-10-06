@@ -117,7 +117,7 @@ export async function processHistoricalData(input: ProcessHistoricalDataInput): 
 
 const prompt = ai.definePrompt({
   name: 'processHistoricalDataPrompt',
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-3.8-flash',
   input: { schema: ProcessHistoricalDataInputSchema },
   output: { schema: ProcessHistoricalDataOutputSchema },
   config: {

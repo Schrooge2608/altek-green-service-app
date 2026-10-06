@@ -23,7 +23,7 @@ export async function scanOdometer(input: OdometerScanInput): Promise<OdometerSc
 
 const prompt = ai.definePrompt({
   name: 'scanOdometerPrompt',
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-3.8-flash',
   input: { schema: OdometerScanInputSchema },
   output: { schema: OdometerScanOutputSchema },
   config: {
