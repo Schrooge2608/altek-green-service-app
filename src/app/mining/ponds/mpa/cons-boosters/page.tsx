@@ -59,7 +59,7 @@ export default function MPAConsBoostersNodesPage() {
 
       <footer className="mt-12 pt-8 border-t border-dashed border-slate-200 text-center">
         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em]">
-          Altek Green (v2) Asset Register • MPA Cons Boosters Control Hierarchy
+          Altek Green Asset Register • MPA Cons Boosters Control Hierarchy
         </p>
       </footer>
     </div>

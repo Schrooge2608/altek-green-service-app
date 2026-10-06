@@ -64,7 +64,7 @@ export default function MPEDredge1NodesPage() {
 
       <footer className="mt-12 pt-8 border-t border-dashed border-slate-200 text-center">
         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em]">
-          Altek Green (v2) Asset Register • MPE Dredge 1 Control Hierarchy
+          Altek Green Asset Register • MPE Dredge 1 Control Hierarchy
         </p>
       </footer>
     </div>

@@ -59,7 +59,7 @@ export default function MiningPondsV2Page() {
             <LayoutGrid className="h-8 w-8 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Mining Ponds (v2)</h1>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Mining Ponds</h1>
             <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-[0.2em] mt-1 flex items-center gap-2">
               <ShieldCheck className="h-3 w-3 text-emerald-500" />
               Strategic Area Selection Dashboard
