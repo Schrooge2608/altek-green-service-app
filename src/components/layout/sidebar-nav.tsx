@@ -203,17 +203,20 @@ export function SidebarNav() {
                         </SidebarMenuSubItem>
                       </>
                     )}
-                    <SidebarMenuSubItem>
-                        <SidebarMenuSubButton asChild isActive={pathname === '/admin/vehicles'}>
-                            <Link href="/admin/vehicles" prefetch={true}>
-                                <Car className="mr-2 h-4 w-4" />
-                                <span>Vehicle Logbook</span>
-                            </Link>
-                        </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 </CollapsibleContent>
               </Collapsible>
+            </SidebarMenuItem>
+          )}
+
+          {!isClient && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === '/admin/vehicles'} tooltip="Vehicle Logbook">
+                <Link href="/admin/vehicles" prefetch={true}>
+                    <Car />
+                    <span>Vehicle Logbook</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           )}
 
