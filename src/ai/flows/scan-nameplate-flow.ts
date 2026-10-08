@@ -39,7 +39,6 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-3.8-flash',
   input: { schema: NameplateScanInputSchema },
   output: { schema: NameplateScanOutputSchema },
-  ,
   prompt: `You are an industrial maintenance data specialist. 
 Analyze the provided image of an equipment nameplate (motor, VSD, or pump).
 

@@ -26,7 +26,6 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-3.8-flash',
   input: { schema: OdometerScanInputSchema },
   output: { schema: OdometerScanOutputSchema },
-  ,
   prompt: `You are a fleet management data assistant.
 Analyze the provided image of a vehicle's dashboard or odometer.
 

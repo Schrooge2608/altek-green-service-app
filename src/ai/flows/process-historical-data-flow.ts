@@ -120,7 +120,6 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-3.8-flash',
   input: { schema: ProcessHistoricalDataInputSchema },
   output: { schema: ProcessHistoricalDataOutputSchema },
-  ,
   prompt: `You are an expert data entry specialist. Your task is to process a list of raw text rows (extracted from an Excel spreadsheet containing historical WhatsApp messages) and convert them into structured Field Service Reports (FSRs) and Daily Diaries.
 
 Guidelines:

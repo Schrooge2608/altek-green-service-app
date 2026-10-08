@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { Textarea } from '@/components/ui/textarea';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Image from 'next/image';
 
 interface AggregatedData {
     newBreakdowns: Breakdown[];
@@ -428,8 +429,8 @@ export default function GenerateReportPage() {
                             {generatedReport}
                         </ReactMarkdown>
 
-                        <div className="mt-16 pt-8 border-t border-slate-300 flex justify-start">
-                            <img src="/signature.png" alt="Signature" className="h-32 w-auto object-contain" />
+                        <div className="mt-16 pt-8 border-t border-slate-300 flex justify-start relative h-32 w-64">
+                            <Image src="/signature.png" alt="Signature" fill className="object-contain" />
                         </div>
                         </div>
                     </CardContent>

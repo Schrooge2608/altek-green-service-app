@@ -39,7 +39,6 @@ const scanSparePartFlow = ai.defineFlow(
     try {
       const { output } = await ai.generate({
         model: 'googleai/gemini-3.8-flash',
-        ,
         output: { schema: SparePartScanOutputSchema },
         system: `You are an industrial maintenance data specialist. 
 Analyze the provided image of a spare part or its label.

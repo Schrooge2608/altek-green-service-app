@@ -37,7 +37,6 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-3.8-flash',
   input: { schema: DeliveryNoteInputSchema },
   output: { schema: DeliveryNoteOutputSchema },
-  ,
   prompt: `You are an expert industrial inventory specialist. Analyze the provided procurement document.
 This document could be a Purchase Order (PO), a Delivery Note (DN), an Invoice, or a Warehouse Receipt.
 

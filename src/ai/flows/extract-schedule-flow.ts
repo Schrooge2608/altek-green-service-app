@@ -48,7 +48,6 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-3.8-flash',
   input: { schema: DocumentScanInputSchema },
   output: { schema: DocumentScanOutputSchema },
-  ,
   prompt: `You are an expert industrial document analyst. Analyze the provided document (which may be an image, a PDF scan, or a text file).
   
 If this is a Maintenance Schedule or Service Report:
