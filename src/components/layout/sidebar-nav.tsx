@@ -211,10 +211,10 @@ export function SidebarNav() {
 
           {!isClient && (
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/admin/vehicles'} tooltip="Vehicle Logbook">
+              <SidebarMenuButton asChild isActive={pathname === '/admin/vehicles'} tooltip="Logbook">
                 <Link href="/admin/vehicles" prefetch={true}>
                     <Car />
-                    <span>Vehicle Logbook</span>
+                    <span>Logbook</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

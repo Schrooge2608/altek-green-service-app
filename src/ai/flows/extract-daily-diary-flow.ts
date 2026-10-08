@@ -72,9 +72,7 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-3.8-flash',
   input: { schema: DailyDiaryScanInputSchema },
   output: { schema: DailyDiaryScanOutputSchema },
-  config: {
-    temperature: 0.1,
-  },
+  ,
   prompt: `You are an expert industrial data entry specialist. Analyze the provided PDF scan of a Daily Diary.
   
 CRITICAL QUALITY CHECK:

@@ -45,9 +45,7 @@ const formatTextFlow = ai.defineFlow(
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ 
         model: "gemini-3.8-flash",
-        generationConfig: {
-          temperature: 0.2,
-        }
+        generation
       });
 
       const promptText = `You are a professional maintenance planner. Rewrite the following rough notes into clear, structured, technical bullet points. If applicable, use headings like 'Issue', 'Cause', 'Action', and 'Result'. Keep it concise and professional.

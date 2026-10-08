@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -32,7 +32,7 @@ export async function extractFsrFromChat(input: ExtractFsrFromChatInput): Promis
     const model = genAI.getGenerativeModel({ 
       model: "gemini-3.8-flash",
       generationConfig: {
-        temperature: 0.1,
+        
         responseMimeType: "application/json",
       }
     });

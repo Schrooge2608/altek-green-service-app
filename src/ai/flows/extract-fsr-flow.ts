@@ -80,9 +80,7 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-3.8-flash',
   input: { schema: FsrScanInputSchema },
   output: { schema: FsrScanOutputSchema },
-  config: {
-    temperature: 0.1,
-  },
+  ,
   prompt: `You are an expert industrial data entry specialist. Analyze the provided PDF scan of an AG-FSR-001 Field Service Report.
   
 CRITICAL QUALITY CHECK:

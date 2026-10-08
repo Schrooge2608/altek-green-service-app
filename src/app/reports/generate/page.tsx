@@ -427,6 +427,10 @@ export default function GenerateReportPage() {
                         >
                             {generatedReport}
                         </ReactMarkdown>
+
+                        <div className="mt-16 pt-8 border-t border-slate-300 flex justify-start">
+                            <img src="/signature.png" alt="Signature" className="h-32 w-auto object-contain" />
+                        </div>
                         </div>
                     </CardContent>
                 </Card>
