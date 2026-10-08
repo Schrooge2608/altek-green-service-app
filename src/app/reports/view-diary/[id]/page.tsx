@@ -197,13 +197,10 @@ export default function ViewDiaryPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Designation</TableHead>
+                                    <TableHead>Name</TableHead>
                                     <TableHead>Forecast</TableHead>
-                                    <TableHead>Actual</TableHead>
-                                    <TableHead>Normal</TableHead>
-                                    <TableHead>1.5 OT</TableHead>
-                                    <TableHead>2.0 OT</TableHead>
-                                    <TableHead>Total</TableHead>
+                                    <TableHead>Actual/Normal Hrs</TableHead>
+                                    <TableHead>Total Man Hrs</TableHead>
                                     <TableHead>Comments</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -212,14 +209,11 @@ export default function ViewDiaryPage() {
                                     <TableRow key={index}>
                                         <TableCell>{item.designation}</TableCell>
                                         <TableCell>{item.forecast}</TableCell>
-                                        <TableCell>{item.actual}</TableCell>
-                                        <TableCell>{item.normalHrs}</TableCell>
-                                        <TableCell>{item.overtime1_5}</TableCell>
-                                        <TableCell>{item.overtime2_0}</TableCell>
+                                        <TableCell>{item.actual || item.normalHrs}</TableCell>
                                         <TableCell>{item.totalManHrs}</TableCell>
                                         <TableCell>{item.comments}</TableCell>
                                     </TableRow>
-                                )) : <TableRow><TableCell colSpan={8} className="text-center h-24">No manpower entries.</TableCell></TableRow>}
+                                )) : <TableRow><TableCell colSpan={5} className="text-center h-24">No manpower entries.</TableCell></TableRow>}
                             </TableBody>
                         </Table>
                         <Separator />

@@ -604,12 +604,9 @@ export default function NewDailyDiaryV2Page() {
                         <thead>
                             <tr className="bg-slate-200 border-b border-slate-900">
                                 <th className="border-r border-slate-900 font-semibold p-1 w-1/4">Name</th>
-                                <th className="border-r border-slate-900 font-semibold p-1 w-12">Forecast</th>
-                                <th className="border-r border-slate-900 font-semibold p-1 w-12">Actual</th>
-                                <th className="border-r border-slate-900 font-semibold p-1 w-12 text-[8px]">Normal Hrs</th>
-                                <th className="border-r border-slate-900 font-semibold p-1 w-12 text-[8px]">1.5 Overtime</th>
-                                <th className="border-r border-slate-900 font-semibold p-1 w-12 text-[8px]">2.0 Overtime</th>
-                                <th className="border-r border-slate-900 font-semibold p-1 w-14 text-[8px]">Total Man Hrs</th>
+                                <th className="border-r border-slate-900 font-semibold p-1 w-16">Forecast</th>
+                                <th className="border-r border-slate-900 font-semibold p-1 w-20 text-[10px]">Actual/Normal Hrs</th>
+                                <th className="border-r border-slate-900 font-semibold p-1 w-20 text-[10px]">Total Man Hrs</th>
                                 <th className="font-semibold p-1">Comments</th>
                                 <th className="w-6 print-hidden bg-white"></th>
                             </tr>
@@ -617,18 +614,18 @@ export default function NewDailyDiaryV2Page() {
                         <tbody>
                             {manpowerFields.map((field, index) => {
                                 const { onChange: actualOnChange, ...actualRest } = form.register(`manpower.${index}.actual`, { valueAsNumber: true });
-                                const { onChange: normalOnChange, ...normalRest } = form.register(`manpower.${index}.normalHrs`, { valueAsNumber: true });
-                                const { onChange: ot15OnChange, ...ot15Rest } = form.register(`manpower.${index}.overtime1_5`, { valueAsNumber: true });
-                                const { onChange: ot20OnChange, ...ot20Rest } = form.register(`manpower.${index}.overtime2_0`, { valueAsNumber: true });
 
                                 const calculateManpowerHours = (e: React.ChangeEvent<HTMLInputElement>, originalOnChange: (e: any) => void) => {
                                     originalOnChange(e);
                                     const actual = parseFloat(String(form.getValues(`manpower.${index}.actual`))) || 0;
-                                    const normal = parseFloat(String(form.getValues(`manpower.${index}.normalHrs`))) || 0;
-                                    const ot15 = parseFloat(String(form.getValues(`manpower.${index}.overtime1_5`))) || 0;
-                                    const ot20 = parseFloat(String(form.getValues(`manpower.${index}.overtime2_0`))) || 0;
-                                    const total = actual * (normal + ot15 + ot20);
-                                    form.setValue(`manpower.${index}.totalManHrs`, parseFloat(total.toFixed(2)));
+                                    
+                                    // Sync fields for backwards compatibility with existing records
+                                    form.setValue(`manpower.${index}.normalHrs`, actual);
+                                    form.setValue(`manpower.${index}.overtime1_5`, 0);
+                                    form.setValue(`manpower.${index}.overtime2_0`, 0);
+                                    
+                                    // Total is simply the actual/normal hours now
+                                    form.setValue(`manpower.${index}.totalManHrs`, actual);
                                 };
 
                                 return (
@@ -644,10 +641,7 @@ export default function NewDailyDiaryV2Page() {
                                         )} />
                                     </td>
                                     <td className="border-r border-slate-900"><Input type="number" {...form.register(`manpower.${index}.forecast`, { valueAsNumber: true })} className={cn(tableInputStyle, "text-center")} /></td>
-                                    <td className="border-r border-slate-900"><Input type="number" {...actualRest} onChange={(e) => calculateManpowerHours(e, actualOnChange)} className={cn(tableInputStyle, "text-center")} /></td>
-                                    <td className="border-r border-slate-900"><Input type="number" step="0.5" {...normalRest} onChange={(e) => calculateManpowerHours(e, normalOnChange)} className={cn(tableInputStyle, "text-center")} /></td>
-                                    <td className="border-r border-slate-900"><Input type="number" step="0.5" {...ot15Rest} onChange={(e) => calculateManpowerHours(e, ot15OnChange)} className={cn(tableInputStyle, "text-center")} /></td>
-                                    <td className="border-r border-slate-900"><Input type="number" step="0.5" {...ot20Rest} onChange={(e) => calculateManpowerHours(e, ot20OnChange)} className={cn(tableInputStyle, "text-center")} /></td>
+                                    <td className="border-r border-slate-900"><Input type="number" step="0.5" {...actualRest} onChange={(e) => calculateManpowerHours(e, actualOnChange)} className={cn(tableInputStyle, "text-center")} /></td>
                                     <td className="border-r border-slate-900 bg-slate-50 font-bold">{form.watch(`manpower.${index}.totalManHrs`) || ''}</td>
                                     <td><Input {...form.register(`manpower.${index}.comments`)} className={tableInputStyle} /></td>
                                     <td className="print-hidden bg-white"><Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => removeManpower(index)}><X className="h-3 w-3 text-red-500"/></Button></td>
@@ -655,14 +649,14 @@ export default function NewDailyDiaryV2Page() {
                             )})}
                             <tr className="bg-slate-200 border-b border-slate-900 font-bold">
                                 <td colSpan={2} className="text-right p-1 pr-2 border-r border-slate-900">Total Workforce on site</td>
-                                <td className="border-r border-slate-900 bg-white">
+                                <td className="border-r border-slate-900 bg-white text-center">
                                     {watchedManpower?.reduce((acc, m) => acc + (parseFloat(String(m?.actual||0))||0), 0)}
                                 </td>
-                                <td colSpan={3} className="text-right p-1 pr-2 border-r border-slate-900">Total Man Hrs</td>
-                                <td className="border-r border-slate-900 bg-white">
+                                <td className="text-right p-1 pr-2 border-r border-slate-900">Total Man Hrs</td>
+                                <td className="border-r border-slate-900 bg-white text-center">
                                     {watchedManpower?.reduce((acc, m) => acc + (parseFloat(String(m?.totalManHrs||0))||0), 0)}
                                 </td>
-                                <td></td><td className="print-hidden bg-white"></td>
+                                <td className="print-hidden bg-white"></td>
                             </tr>
                         </tbody>
                     </table>
