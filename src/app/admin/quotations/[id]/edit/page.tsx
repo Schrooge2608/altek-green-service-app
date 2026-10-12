@@ -281,8 +281,15 @@ export default function EditQuotePage() {
                         className="text-right border-0 p-0 h-auto text-sm focus-visible:ring-0"
                       />
                     </TableCell>
-                    <TableCell className="align-top py-2 text-right text-sm">
-                        {(Number.isNaN(item.rate) ? 0 : item.rate).toLocaleString('en-ZA', {minimumFractionDigits: 2})}
+                    <TableCell className="align-top py-2">
+                      <Input 
+                        type="number" 
+                        step="any"
+                        value={Number.isNaN(item.rate) ? "" : item.rate} 
+                        onChange={e => updateItem(item.id, 'rate', parseFloat(e.target.value))} 
+                        className="text-right border-0 p-0 h-auto text-sm focus-visible:ring-0"
+                        placeholder="0.00"
+                      />
                     </TableCell>
                     <TableCell className="align-top py-2 text-right text-sm font-bold pr-2">
                       {((Number.isNaN(item.qty) ? 0 : item.qty) * (Number.isNaN(item.rate) ? 0 : item.rate)).toLocaleString('en-ZA', {minimumFractionDigits: 2})}
