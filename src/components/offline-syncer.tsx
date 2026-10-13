@@ -25,9 +25,9 @@ export function OfflineSyncer() {
           return; // Already synced recently
         }
 
-        // Wait 10 seconds to let the main app finish loading completely 
+        // Wait 30 seconds to let the main app finish loading completely 
         // so we don't slow down the user's initial experience
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await new Promise(resolve => setTimeout(resolve, 30000));
         
         if (!('caches' in window)) return;
         
@@ -41,14 +41,16 @@ export function OfflineSyncer() {
 
         const urlsToCache = [...eqUrls];
         
-        // 2. Download and cache them in small batches
-        const BATCH_SIZE = 3;
+        // 2. Download and cache them gently with a delay between batches to protect bandwidth
+        const BATCH_SIZE = 2;
         for (let i = 0; i < urlsToCache.length; i += BATCH_SIZE) {
           const batch = urlsToCache.slice(i, i + BATCH_SIZE);
           // Use Promise.allSettled so one failure doesn't stop the whole sync
           await Promise.allSettled(
             batch.map(url => pagesCache.add(url).catch(e => console.warn('Failed to cache:', url, e)))
           );
+          // Yield to user traffic
+          await new Promise(resolve => setTimeout(resolve, 1500));
         }
 
         // Save the timestamp so we don't do this again for 24 hours

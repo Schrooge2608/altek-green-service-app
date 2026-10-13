@@ -6,14 +6,10 @@ import { useUser } from '@/firebase';
 import { LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { DivisionPerformanceDashboard } from '@/components/division-performance-dashboard';
-import { OfflineSync } from '@/components/offline-sync';
 
 function AuthenticatedDashboard() {
   return (
     <div className="grid grid-cols-1 gap-8">
-      {/* Aggressive Offline Caching Engine */}
-      <OfflineSync />
-      
       <DivisionPerformanceDashboard plantName="Mining" />
       <DivisionPerformanceDashboard plantName="Smelter" />
     </div>

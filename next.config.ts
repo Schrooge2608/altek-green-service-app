@@ -45,8 +45,8 @@ const nextConfig: NextConfig = {
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: "public",
   register: true,
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
   swMinify: true,
   disable: process.env.NODE_ENV === "development",
@@ -65,7 +65,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 64,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 10,
+          networkTimeoutSeconds: 3,
         },
       },
       {
@@ -77,6 +77,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 128,
             maxAgeSeconds: 86400,
           },
+          networkTimeoutSeconds: 3,
         },
       },
       {
@@ -91,7 +92,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 200,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 5,
+          networkTimeoutSeconds: 3,
         },
       },
       {
@@ -136,7 +137,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 100,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 5,
+          networkTimeoutSeconds: 3,
         },
       },
       {
@@ -148,7 +149,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 10,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 5,
+          networkTimeoutSeconds: 3,
         },
       },
       {
@@ -160,7 +161,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 50,
             maxAgeSeconds: 86400 * 7, // 1 week
           },
-          networkTimeoutSeconds: 5,
+          networkTimeoutSeconds: 3,
         },
       },
       {
@@ -183,7 +184,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 64,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 10,
+          networkTimeoutSeconds: 3,
         },
       },
     ],
