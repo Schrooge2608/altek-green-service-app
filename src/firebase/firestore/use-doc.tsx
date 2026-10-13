@@ -38,13 +38,22 @@ export interface UseDocResult<T> {
  * The Firestore DocumentReference. Waits if null/undefined.
  * @returns {UseDocResult<T>} Object with data, isLoading, error.
  */
+// Global in-memory document cache to eliminate loading states for previously fetched documents
+const docMemoryCache = new Map<string, any>();
+
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
-  const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const docPath = memoizedDocRef?.path || '';
+  const cachedData = docPath ? docMemoryCache.get(docPath) : undefined;
+
+  const [data, setData] = useState<StateDataType>(cachedData !== undefined ? cachedData : null);
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (!memoizedDocRef) return false;
+    return cachedData === undefined;
+  });
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
@@ -55,17 +64,26 @@ export function useDoc<T = any>(
       return;
     }
 
-    setIsLoading(true);
+    const currentCached = docPath ? docMemoryCache.get(docPath) : undefined;
+    if (currentCached !== undefined) {
+      setData(currentCached);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
     setError(null);
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
         if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
+          const result = { ...(snapshot.data() as T), id: snapshot.id };
+          setData(result);
+          if (docPath) docMemoryCache.set(docPath, result);
         } else {
           // Document does not exist
           setData(null);
+          if (docPath) docMemoryCache.set(docPath, null);
         }
         setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
         setIsLoading(false);
@@ -86,7 +104,7 @@ export function useDoc<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+  }, [memoizedDocRef, docPath]); // Re-run if the memoizedDocRef changes.
 
   if(memoizedDocRef && !memoizedDocRef.__memo) {
     throw new Error(memoizedDocRef + ' was not properly memoized using useMemoFirebase');

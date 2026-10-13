@@ -51,14 +51,41 @@ export interface InternalQuery extends Query<DocumentData> {
  * The Firestore CollectionReference or Query. Waits if null/undefined.
  * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
  */
+// Global in-memory collection cache across component navigations
+const collectionMemoryCache = new Map<string, any[]>();
+
+function getQueryCacheKey(queryOrRef: any): string {
+  if (!queryOrRef) return '';
+  try {
+    if (queryOrRef.type === 'collection') {
+      return (queryOrRef as CollectionReference).path;
+    }
+    const q = (queryOrRef as any)._query;
+    if (q) {
+      const path = q.path ? (typeof q.path.canonicalString === 'function' ? q.path.canonicalString() : String(q.path)) : '';
+      const filters = q.filters ? JSON.stringify(q.filters) : '';
+      const order = q.explicitOrderBy ? JSON.stringify(q.explicitOrderBy) : '';
+      const lim = q.limit !== undefined ? String(q.limit) : '';
+      return `${path}__${filters}__${order}__${lim}`;
+    }
+  } catch (e) {}
+  return '';
+}
+
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
 
-  const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const cacheKey = memoizedTargetRefOrQuery ? getQueryCacheKey(memoizedTargetRefOrQuery) : '';
+  const cachedData = cacheKey ? collectionMemoryCache.get(cacheKey) : undefined;
+
+  const [data, setData] = useState<StateDataType>(cachedData !== undefined ? cachedData : null);
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (!memoizedTargetRefOrQuery) return false;
+    return cachedData === undefined;
+  });
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
@@ -69,7 +96,13 @@ export function useCollection<T = any>(
       return;
     }
 
-    setIsLoading(true);
+    const currentCached = cacheKey ? collectionMemoryCache.get(cacheKey) : undefined;
+    if (currentCached !== undefined) {
+      setData(currentCached);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
     setError(null);
 
     // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
@@ -81,6 +114,7 @@ export function useCollection<T = any>(
           results.push({ ...(doc.data() as T), id: doc.id });
         }
         setData(results);
+        if (cacheKey) collectionMemoryCache.set(cacheKey, results);
         setError(null);
         setIsLoading(false);
       },
@@ -106,7 +140,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  }, [memoizedTargetRefOrQuery, cacheKey]); // Re-run if the target query/reference changes.
   if(memoizedTargetRefOrQuery && !(memoizedTargetRefOrQuery as any).__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
   }

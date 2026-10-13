@@ -57,7 +57,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
     runtimeCaching: [
       {
         // TARGET NAVIGATION: Ensure full HTML snapshots are served when offline
-        urlPattern: ({ request }: any) => request.mode === 'navigate',
+        urlPattern: ({ request, sameOrigin }: any) => sameOrigin && request.mode === 'navigate',
         handler: 'NetworkFirst',
         options: {
           cacheName: 'pages',
@@ -65,7 +65,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 64,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 3,
+          networkTimeoutSeconds: 2,
         },
       },
       {
@@ -77,13 +77,12 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 128,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 3,
+          networkTimeoutSeconds: 2,
         },
       },
       {
-        urlPattern: ({ url }: any) => {
-          const isRSC = url.search.includes('_rsc=');
-          return isRSC;
+        urlPattern: ({ url, sameOrigin }: any) => {
+          return sameOrigin && url.search.includes('_rsc=');
         },
         handler: 'NetworkFirst',
         options: {
@@ -92,7 +91,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 200,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 3,
+          networkTimeoutSeconds: 2,
         },
       },
       {
@@ -129,7 +128,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
         },
       },
       {
-        urlPattern: /\/equipment\/.*/i,
+        urlPattern: ({ url, sameOrigin }: any) => sameOrigin && url.pathname.startsWith('/equipment/'),
         handler: 'NetworkFirst',
         options: {
           cacheName: 'equipment-pages',
@@ -137,11 +136,11 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 100,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 3,
+          networkTimeoutSeconds: 2,
         },
       },
       {
-        urlPattern: /\/time-attendance.*/i,
+        urlPattern: ({ url, sameOrigin }: any) => sameOrigin && url.pathname.startsWith('/time-attendance'),
         handler: 'NetworkFirst',
         options: {
           cacheName: 'time-attendance-pages',
@@ -149,11 +148,11 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 10,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 3,
+          networkTimeoutSeconds: 2,
         },
       },
       {
-        urlPattern: /\/reports\/field-service-report.*/i,
+        urlPattern: ({ url, sameOrigin }: any) => sameOrigin && url.pathname.startsWith('/reports/field-service-report'),
         handler: 'NetworkFirst',
         options: {
           cacheName: 'fsr-pages',
@@ -161,7 +160,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 50,
             maxAgeSeconds: 86400 * 7, // 1 week
           },
-          networkTimeoutSeconds: 3,
+          networkTimeoutSeconds: 2,
         },
       },
       {
@@ -176,7 +175,12 @@ const withPWA = require('@ducanh2912/next-pwa').default({
         },
       },
       {
-        urlPattern: /.*/i,
+        urlPattern: ({ url, sameOrigin }: any) => {
+          // Never intercept cross-origin APIs (Firestore streams, Auth, Google APIs)
+          if (!sameOrigin) return false;
+          if (url.pathname.startsWith('/api/')) return false;
+          return true;
+        },
         handler: 'NetworkFirst',
         options: {
           cacheName: 'others',
@@ -184,7 +188,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
             maxEntries: 64,
             maxAgeSeconds: 86400,
           },
-          networkTimeoutSeconds: 3,
+          networkTimeoutSeconds: 2,
         },
       },
     ],
