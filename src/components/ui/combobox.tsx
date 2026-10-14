@@ -27,7 +27,10 @@ interface ComboboxProps {
     placeholder?: string;
     searchPlaceholder?: string;
     noResultsMessage?: string;
-    creatable?: boolean; triggerClassName?: string;
+    creatable?: boolean; 
+    triggerClassName?: string;
+    className?: string;
+    disabled?: boolean;
 }
 
 export function Combobox({ 
@@ -37,18 +40,23 @@ export function Combobox({
     placeholder = "Select option...",
     searchPlaceholder = "Search...",
     noResultsMessage = "No results found.",
-    creatable = false, triggerClassName
+    creatable = false, 
+    triggerClassName,
+    className,
+    disabled = false
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState("")
 
   const handleSelect = (currentValue: string) => {
+    if (disabled) return;
     const finalValue = currentValue === value ? "" : currentValue;
     onChange(finalValue);
     setOpen(false);
   };
 
   const handleCreate = () => {
+    if (disabled) return;
     if (inputValue) {
       onChange(inputValue);
       setOpen(false);
@@ -58,13 +66,14 @@ export function Combobox({
   const currentSelection = options.find((option) => option.value.toLowerCase() === value?.toLowerCase())?.label ?? value;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between h-auto min-h-9 py-2 text-left", triggerClassName)}
+          disabled={disabled}
+          className={cn("w-full justify-between h-auto min-h-9 py-2 text-left", triggerClassName, className)}
         >
           <span className="break-words">
             {value ? currentSelection : placeholder}
