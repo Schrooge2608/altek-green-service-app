@@ -82,6 +82,7 @@ export default function FieldServiceReportDetailPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isFinishing, setIsFinishing] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [isGeneratingRef, setIsGeneratingRef] = useState(false);
 
   const reportRef = useMemoFirebase(() => (reportId ? doc(firestore, 'field_service_reports', reportId) : null), [firestore, reportId]);
   const { data: report, isLoading: reportLoading } = useDoc<FieldServiceReport>(reportRef);
@@ -342,6 +343,83 @@ export default function FieldServiceReportDetailPage() {
     toast({ title: "Saved", description: "Report has been successfully saved." });
     router.push('/reports/field-service-report');
   }
+
+  const handleGenerateFsrNumber = async () => {
+    if (!firestore || isFinalized) return;
+
+    const currentRef = form.getValues('fsrReference');
+    if (currentRef && currentRef.trim() !== '') {
+      if (!window.confirm(`FSR Reference is currently set to "${currentRef}". Do you want to generate a new unique number to replace it?`)) {
+        return;
+      }
+    }
+
+    setIsGeneratingRef(true);
+    try {
+      const reportsSnap = await getDocs(collection(firestore, 'field_service_reports'));
+      const usedRefs = new Set<string>();
+      let maxNum = 0;
+
+      reportsSnap.docs.forEach((d) => {
+        const data = d.data();
+        const ref = String(data.fsrReference || '').trim();
+        const docId = String(d.id || '').trim();
+
+        if (ref) usedRefs.add(ref.toUpperCase());
+        if (docId) usedRefs.add(docId.toUpperCase());
+
+        const strToInspect: string[] = [];
+        if (ref) strToInspect.push(ref);
+        if (docId.toUpperCase().startsWith('FSR-') || docId.toUpperCase().startsWith('FSR')) {
+          strToInspect.push(docId);
+        }
+
+        strToInspect.forEach((str) => {
+          const yyyyMatch = str.match(/FSR[-_]?\d{4}[-_]?(\d+)/i);
+          if (yyyyMatch && yyyyMatch[1]) {
+            const val = parseInt(yyyyMatch[1], 10);
+            if (!isNaN(val) && val > maxNum && val < 100000) maxNum = val;
+            return;
+          }
+          const fsrMatch = str.match(/FSR[-_]?(\d+)/i);
+          if (fsrMatch && fsrMatch[1]) {
+            const val = parseInt(fsrMatch[1], 10);
+            if (!isNaN(val) && val > maxNum && val < 100000) maxNum = val;
+            return;
+          }
+          if (/^\d+$/.test(str.trim())) {
+            const val = parseInt(str.trim(), 10);
+            if (!isNaN(val) && val > maxNum && val < 100000) maxNum = val;
+          }
+        });
+      });
+
+      let nextNum = maxNum >= 1000 ? maxNum + 1 : (maxNum > 0 ? maxNum + 1 : 1001);
+      let candidate = `FSR-${String(nextNum).padStart(4, '0')}`;
+
+      while (usedRefs.has(candidate.toUpperCase()) || usedRefs.has(String(nextNum))) {
+        nextNum++;
+        candidate = `FSR-${String(nextNum).padStart(4, '0')}`;
+      }
+
+      form.setValue('fsrReference', candidate, { shouldDirty: true });
+      await handleAutosave({ fsrReference: candidate });
+
+      toast({ 
+        title: "New FSR Number Generated", 
+        description: `Assigned unique reference #${candidate}` 
+      });
+    } catch (err: any) {
+      console.error("Error generating FSR number:", err);
+      toast({ 
+        variant: 'destructive', 
+        title: "Number Generation Failed", 
+        description: err?.message || "Could not generate a unique number." 
+      });
+    } finally {
+      setIsGeneratingRef(false);
+    }
+  };
 
   const handleFinalize = async () => {
     if (!confirm("Finalizing will lock this report for audit. Proceed?")) return;
@@ -745,14 +823,30 @@ export default function FieldServiceReportDetailPage() {
                     )} />
                   </div>
                   <div className="col-span-3 p-2 flex flex-col justify-between bg-slate-50/50">
-                    <div className="space-y-1 text-right flex flex-col items-end">
+                    <div className="space-y-1 text-right flex flex-col items-end w-full">
                       <DenseLabel>FSR Reference</DenseLabel>
-                      <FormField control={form.control} name="fsrReference" render={({ field }) => (
-                         <div className="flex items-center text-xs font-black text-red-600 font-mono w-24 justify-end">
-                           <span className="mr-1">#</span>
-                           <Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-sm font-black text-red-600 font-mono border-none p-0 bg-transparent focus-visible:ring-0 text-right w-full" placeholder="FSR-XXXX" />
-                         </div>
-                      )} />
+                      <div className="flex items-center justify-end gap-1.5 w-full">
+                        <button
+                          type="button"
+                          onClick={handleGenerateFsrNumber}
+                          disabled={isGeneratingRef || isFinalized}
+                          title="Generate unique non-repeating FSR number"
+                          className="print:hidden inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-700 bg-white hover:bg-slate-100 hover:text-emerald-700 border border-slate-300 rounded shadow-xs active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                        >
+                          {isGeneratingRef ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />
+                          ) : (
+                            <Sparkles className="w-3 h-3 text-amber-500" />
+                          )}
+                          <span>Generate</span>
+                        </button>
+                        <FormField control={form.control} name="fsrReference" render={({ field }) => (
+                           <div className="flex items-center text-xs font-black text-red-600 font-mono justify-end">
+                             <span className="mr-1">#</span>
+                             <Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-sm font-black text-red-600 font-mono border-none p-0 bg-transparent focus-visible:ring-0 text-right w-24" placeholder="FSR-XXXX" />
+                           </div>
+                        )} />
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 gap-1 border-t border-black/10 pt-1">
                       <FormField control={form.control} name="date" render={({ field }) => (
