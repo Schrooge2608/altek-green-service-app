@@ -163,7 +163,6 @@ export default function FieldServiceReportDetailPage() {
 
   const sparesQuery = useMemoFirebase(() => query(collection(firestore, 'spare_parts'), orderBy('rbmNumber')), [firestore]);
   const { data: sparesList } = useCollection(sparesQuery);
-  const watchedNT = useWatch({ control: form.control, name: 'ntHours' });
   const watchedArea = useWatch({ control: form.control, name: 'area' });
 
   const equipmentOptions = useMemo(() => {
@@ -222,14 +221,15 @@ export default function FieldServiceReportDetailPage() {
   }, [sparesList, watchedModel]);
 
   const watchedOT = useWatch({ control: form.control, name: 'otHours' });
-  const watchedDT = useWatch({ control: form.control, name: 'dtHours' });
   const watchedKmTo = useWatch({ control: form.control, name: 'travelKmTo' });
   const watchedKmRet = useWatch({ control: form.control, name: 'travelKmReturn' });
+  const watchedTotalHours = useWatch({ control: form.control, name: 'totalHours' });
+  const watchedTotalKm = useWatch({ control: form.control, name: 'totalKm' });
 
   useEffect(() => {
-    const totalH = (Number(watchedNT) || 0) + (Number(watchedOT) || 0) + (Number(watchedDT) || 0);
+    const totalH = Number(watchedOT) || 0;
     form.setValue('totalHours', totalH);
-  }, [watchedNT, watchedOT, watchedDT, form]);
+  }, [watchedOT, form]);
 
   useEffect(() => {
     const totalK = (Number(watchedKmTo) || 0) + (Number(watchedKmRet) || 0);
@@ -238,14 +238,15 @@ export default function FieldServiceReportDetailPage() {
 
   useEffect(() => {
     if (report) {
+      const initialOT = report.otHours || report.ntHours || report.totalHours || 0;
       form.reset({
         ...report,
         ntHours: report.ntHours ?? 0,
-        otHours: report.otHours ?? 0,
+        otHours: initialOT,
         dtHours: report.dtHours ?? 0,
         travelKmTo: report.travelKmTo ?? 0,
         travelKmReturn: report.travelKmReturn ?? 0,
-        totalHours: report.totalHours ?? 0,
+        totalHours: report.totalHours ?? initialOT,
         totalKm: report.totalKm ?? 0,
         parts: report.parts ?? [],
         personnel: report.personnel ?? [],
@@ -844,17 +845,15 @@ export default function FieldServiceReportDetailPage() {
                     ))}
                     <div className="p-1 flex flex-col items-center bg-slate-200">
                       <DenseLabel className="text-[7px]">Total Duty</DenseLabel>
-                      <p className="text-[10px] font-black">{form.getValues('totalHours') ?? 0}H</p>
+                      <p className="text-[10px] font-black">{watchedTotalHours ?? form.getValues('totalHours') ?? 0}H</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-7 divide-x divide-black h-10">
-                    <FormField control={form.control} name="ntHours" render={({ field }) => (<div className="bg-emerald-50 p-1 flex flex-col items-center"><DenseLabel>NT Hrs</DenseLabel><Input type="number" {...field} value={field.value ?? 0} onChange={e => { field.onChange(parseFloat(e.target.value)); handleAutosave(); }} className="h-5 text-center border-none text-[10px] bg-transparent font-bold" /></div>)} />
-                    <FormField control={form.control} name="otHours" render={({ field }) => (<div className="bg-amber-50 p-1 flex flex-col items-center"><DenseLabel>OT (1.5x)</DenseLabel><Input type="number" {...field} value={field.value ?? 0} onChange={e => { field.onChange(parseFloat(e.target.value)); handleAutosave(); }} className="h-5 text-center border-none text-[10px] bg-transparent font-bold" /></div>)} />
-                    <FormField control={form.control} name="dtHours" render={({ field }) => (<div className="bg-red-50 p-1 flex flex-col items-center"><DenseLabel>DT (2x)</DenseLabel><Input type="number" {...field} value={field.value ?? 0} onChange={e => { field.onChange(parseFloat(e.target.value)); handleAutosave(); }} className="h-5 text-center border-none text-[10px] bg-transparent font-bold" /></div>)} />
-                    <div className="p-1 flex flex-col items-center border-r-2 border-black"><DenseLabel>Total Duty</DenseLabel><p className="text-[10px] font-black">{form.getValues('totalHours') ?? 0}</p></div>
+                  <div className="grid grid-cols-5 divide-x divide-black h-10">
+                    <FormField control={form.control} name="otHours" render={({ field }) => (<div className="bg-amber-50/50 p-1 flex flex-col items-center"><DenseLabel>OT Hrs</DenseLabel><Input type="number" {...field} value={field.value ?? 0} onChange={e => { field.onChange(parseFloat(e.target.value)); handleAutosave(); }} className="h-5 text-center border-none text-[10px] bg-transparent font-bold" /></div>)} />
+                    <div className="p-1 flex flex-col items-center border-r-2 border-black"><DenseLabel>Total Duty</DenseLabel><p className="text-[10px] font-black">{watchedTotalHours ?? form.getValues('totalHours') ?? 0}</p></div>
                     <FormField control={form.control} name="travelKmTo" render={({ field }) => (<div className="p-1 flex flex-col items-center"><DenseLabel>KM (To)</DenseLabel><Input type="number" {...field} value={field.value ?? 0} onChange={e => { field.onChange(parseFloat(e.target.value)); handleAutosave(); }} className="h-5 text-center border-none text-[10px]" /></div>)} />
                     <FormField control={form.control} name="travelKmReturn" render={({ field }) => (<div className="p-1 flex flex-col items-center"><DenseLabel>KM (Ret)</DenseLabel><Input type="number" {...field} value={field.value ?? 0} onChange={e => { field.onChange(parseFloat(e.target.value)); handleAutosave(); }} className="h-5 text-center border-none text-[10px]" /></div>)} />
-                    <div className="p-1 flex flex-col items-center bg-blue-50/50"><DenseLabel>Total KM</DenseLabel><p className="text-[10px] font-black">{form.getValues('totalKm') ?? 0}</p></div>
+                    <div className="p-1 flex flex-col items-center bg-blue-50/50"><DenseLabel>Total KM</DenseLabel><p className="text-[10px] font-black">{watchedTotalKm ?? form.getValues('totalKm') ?? 0}</p></div>
                   </div>
                 </div>
 
