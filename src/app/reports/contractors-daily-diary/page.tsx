@@ -348,6 +348,11 @@ export default function NewDailyDiaryV2Page() {
                         extracted = await extractDailyDiaryData({ documentDataUri: dataUri });
                     }
 
+                    if (!extracted) {
+                        toast({ variant: 'destructive', title: 'Scan Failed', description: 'No response received from the extraction service.' });
+                        return;
+                    }
+
                     if (extracted.error) {
                         toast({ variant: 'destructive', title: 'Scan Failed', description: extracted.error === 'DOCUMENT_UNCLEAR' ? 'The document is too blurry or illegible.' : extracted.error });
                         return;

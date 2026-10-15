@@ -306,6 +306,12 @@ export default function FieldServiceReportDetailPage() {
       const reader = new FileReader();
       reader.onload = async () => {
         try {
+          const dataUri = reader.result as string;
+          if (!dataUri) {
+            toast({ variant: 'destructive', title: 'File Error', description: 'Could not read the uploaded file data.' });
+            return;
+          }
+
           let result: any;
           try {
             const apiRes = await fetch('/api/fsr/extract', {
@@ -315,8 +321,12 @@ export default function FieldServiceReportDetailPage() {
             });
             result = await apiRes.json();
           } catch (fetchErr) {
-            // Fallback to direct flow invocation if fetch failed
             result = await extractFsrData({ documentDataUri: dataUri });
+          }
+
+          if (!result) {
+            toast({ variant: 'destructive', title: 'Extraction Failed', description: 'No response received from the extraction service.' });
+            return;
           }
           
           if (result.error === "DOCUMENT_UNCLEAR") {
