@@ -22,7 +22,7 @@ const FsrScanInputSchema = z.object({
 });
 export type FsrScanInput = z.infer<typeof FsrScanInputSchema>;
 
-export const FsrScanOutputSchema = z.object({
+const FsrScanOutputSchema = z.object({
   error: z.string().optional().describe('Error code if the document is illegible.'),
   date: z.string().optional().describe('Date in YYYY-MM-DD format'),
   customer: z.string().optional(),

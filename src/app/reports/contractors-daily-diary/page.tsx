@@ -336,7 +336,17 @@ export default function NewDailyDiaryV2Page() {
             reader.onload = async (event) => {
                 try {
                     const dataUri = event.target?.result as string;
-                    const extracted = await extractDailyDiaryData({ documentDataUri: dataUri });
+                    let extracted: any;
+                    try {
+                        const apiRes = await fetch('/api/daily-diary/extract', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ documentDataUri: dataUri }),
+                        });
+                        extracted = await apiRes.json();
+                    } catch (fetchErr) {
+                        extracted = await extractDailyDiaryData({ documentDataUri: dataUri });
+                    }
 
                     if (extracted.error) {
                         toast({ variant: 'destructive', title: 'Scan Failed', description: extracted.error === 'DOCUMENT_UNCLEAR' ? 'The document is too blurry or illegible.' : extracted.error });

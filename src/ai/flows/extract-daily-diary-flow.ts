@@ -20,7 +20,7 @@ const DailyDiaryScanInputSchema = z.object({
 });
 export type DailyDiaryScanInput = z.infer<typeof DailyDiaryScanInputSchema>;
 
-export const DailyDiaryScanOutputSchema = z.object({
+const DailyDiaryScanOutputSchema = z.object({
   error: z.string().optional().describe('Error code if the document is illegible.'),
   diaryReference: z.string().optional(),
   contractTitle: z.string().optional(),

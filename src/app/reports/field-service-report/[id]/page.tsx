@@ -306,8 +306,18 @@ export default function FieldServiceReportDetailPage() {
       const reader = new FileReader();
       reader.onload = async () => {
         try {
-          const dataUri = reader.result as string;
-          const result = await extractFsrData({ documentDataUri: dataUri });
+          let result: any;
+          try {
+            const apiRes = await fetch('/api/fsr/extract', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ documentDataUri: dataUri }),
+            });
+            result = await apiRes.json();
+          } catch (fetchErr) {
+            // Fallback to direct flow invocation if fetch failed
+            result = await extractFsrData({ documentDataUri: dataUri });
+          }
           
           if (result.error === "DOCUMENT_UNCLEAR") {
             toast({ 
