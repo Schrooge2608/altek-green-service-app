@@ -291,50 +291,77 @@ export default function FieldServiceReportDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 25 * 1024 * 1024) {
+      toast({
+        variant: 'destructive',
+        title: "File Too Large",
+        description: "The selected file exceeds 25MB. Please upload a smaller PDF or image scan."
+      });
+      e.target.value = '';
+      return;
+    }
+
     setIsScanning(true);
     try {
       const reader = new FileReader();
       reader.onload = async () => {
-        const dataUri = reader.result as string;
-        const result = await extractFsrData({ documentDataUri: dataUri });
-        
-        if (result.error === "DOCUMENT_UNCLEAR") {
-          toast({ 
-            variant: 'destructive', 
-            title: "Scan Unclear", 
-            description: "The document is illegible. Please ensure a high-quality scan and upload again." 
+        try {
+          const dataUri = reader.result as string;
+          const result = await extractFsrData({ documentDataUri: dataUri });
+          
+          if (result.error === "DOCUMENT_UNCLEAR") {
+            toast({ 
+              variant: 'destructive', 
+              title: "Scan Unclear", 
+              description: "The document is illegible or not a recognized FSR. Please ensure a clear scan and try again." 
+            });
+            return;
+          } else if (result.error) {
+            toast({ 
+              variant: 'destructive', 
+              title: "Extraction Failed", 
+              description: result.error 
+            });
+            return;
+          }
+
+          const cleanResult = Object.fromEntries(
+            Object.entries(result).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+          );
+
+          // Merge extracted data into current form
+          form.reset({
+            ...form.getValues(),
+            ...cleanResult,
+            parts: [...(form.getValues('parts') || []), ...(result.parts || [])],
+            personnel: [...(form.getValues('personnel') || []), ...(result.personnel || [])]
           });
-          return;
-        } else if (result.error) {
+
+          toast({ title: "Extraction Complete", description: "FSR fields have been auto-populated from the document scan." });
+          handleAutosave();
+        } catch (innerErr: any) {
           toast({ 
             variant: 'destructive', 
             title: "Extraction Failed", 
-            description: result.error 
+            description: innerErr.message || 'Error processing document scan.' 
           });
-          return;
+        } finally {
+          setIsScanning(false);
+          e.target.value = ''; // Reset input
         }
-
-        const cleanResult = Object.fromEntries(
-          Object.entries(result).filter(([_, v]) => v !== undefined && v !== null && v !== '')
-        );
-
-        // Merge extracted data into current form
-        form.reset({
-          ...form.getValues(),
-          ...cleanResult,
-          parts: [...(form.getValues('parts') || []), ...(result.parts || [])],
-          personnel: [...(form.getValues('personnel') || []), ...(result.personnel || [])]
-        });
-
-        toast({ title: "Extraction Complete", description: "FSR fields have been auto-populated from the PDF scan." });
-        handleAutosave();
       };
+
+      reader.onerror = () => {
+        setIsScanning(false);
+        e.target.value = '';
+        toast({ variant: 'destructive', title: "Read Failed", description: "Could not read the uploaded file." });
+      };
+
       reader.readAsDataURL(file);
     } catch (error: any) {
-      toast({ variant: 'destructive', title: "Scan Failed", description: error.message });
-    } finally {
       setIsScanning(false);
-      e.target.value = ''; // Reset input
+      e.target.value = '';
+      toast({ variant: 'destructive', title: "Scan Failed", description: error.message });
     }
   };
 
@@ -745,7 +772,7 @@ export default function FieldServiceReportDetailPage() {
               <input 
                 id="paper-fsr-upload" 
                 type="file" 
-                accept="application/pdf" 
+                accept="application/pdf,image/png,image/jpeg,image/webp" 
                 className="hidden" 
                 onChange={handlePaperScan} 
               />
