@@ -224,22 +224,54 @@ export default function FieldServiceReportDetailPage() {
   const watchedOT = useWatch({ control: form.control, name: 'otHours' });
   const watchedKmTo = useWatch({ control: form.control, name: 'travelKmTo' });
   const watchedKmRet = useWatch({ control: form.control, name: 'travelKmReturn' });
-  const watchedTotalHours = useWatch({ control: form.control, name: 'totalHours' });
-  const watchedTotalKm = useWatch({ control: form.control, name: 'totalKm' });
+  const watchedTimeCallOut = useWatch({ control: form.control, name: 'timeCallOut' });
+  const watchedTimeStart = useWatch({ control: form.control, name: 'timeStart' });
+  const watchedTimeEnd = useWatch({ control: form.control, name: 'timeEnd' });
+  const watchedTimeDeparture = useWatch({ control: form.control, name: 'timeDeparture' });
+
+  // Calculate time difference in decimal hours (e.g. 02:30 to 06:30 = 4.0h)
+  const calculateTimeDiff = useCallback((start?: string, end?: string): number => {
+    if (!start || !end) return 0;
+    const [h1, m1] = start.split(':').map(Number);
+    const [h2, m2] = end.split(':').map(Number);
+    if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) return 0;
+    let diffMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (diffMinutes < 0) diffMinutes += 24 * 60; // Cross-midnight shift
+    return Math.round((diffMinutes / 60) * 10) / 10;
+  }, []);
+
+  const timeDutyHours = useMemo(() => {
+    const onSite = calculateTimeDiff(watchedTimeStart, watchedTimeEnd);
+    if (onSite > 0) return onSite;
+    return calculateTimeDiff(watchedTimeCallOut, watchedTimeDeparture);
+  }, [watchedTimeStart, watchedTimeEnd, watchedTimeCallOut, watchedTimeDeparture, calculateTimeDiff]);
+
+  // Derived Total Duty Hours: prefer explicit otHours, or fallback to timeDutyHours
+  const computedTotalHours = useMemo(() => {
+    const ot = Number(watchedOT);
+    if (!isNaN(ot) && ot > 0) return ot;
+    if (timeDutyHours > 0) return timeDutyHours;
+    return 0;
+  }, [watchedOT, timeDutyHours]);
+
+  // Derived Total KM: sum KM (To) + KM (Ret)
+  const computedTotalKm = useMemo(() => {
+    return (Number(watchedKmTo) || 0) + (Number(watchedKmRet) || 0);
+  }, [watchedKmTo, watchedKmRet]);
+
+  // Keep react-hook-form values in sync
+  useEffect(() => {
+    form.setValue('totalHours', computedTotalHours);
+  }, [computedTotalHours, form]);
 
   useEffect(() => {
-    const totalH = Number(watchedOT) || 0;
-    form.setValue('totalHours', totalH);
-  }, [watchedOT, form]);
-
-  useEffect(() => {
-    const totalK = (Number(watchedKmTo) || 0) + (Number(watchedKmRet) || 0);
-    form.setValue('totalKm', totalK);
-  }, [watchedKmTo, watchedKmRet, form]);
+    form.setValue('totalKm', computedTotalKm);
+  }, [computedTotalKm, form]);
 
   useEffect(() => {
     if (report) {
       const initialOT = report.otHours || report.ntHours || report.totalHours || 0;
+      const initialKm = (Number(report.travelKmTo) || 0) + (Number(report.travelKmReturn) || 0);
       form.reset({
         ...report,
         ntHours: report.ntHours ?? 0,
@@ -247,8 +279,8 @@ export default function FieldServiceReportDetailPage() {
         dtHours: report.dtHours ?? 0,
         travelKmTo: report.travelKmTo ?? 0,
         travelKmReturn: report.travelKmReturn ?? 0,
-        totalHours: report.totalHours ?? initialOT,
-        totalKm: report.totalKm ?? 0,
+        totalHours: report.totalHours || initialOT,
+        totalKm: report.totalKm || initialKm,
         parts: report.parts ?? [],
         personnel: report.personnel ?? [],
         images: report.images ?? []
@@ -269,6 +301,8 @@ export default function FieldServiceReportDetailPage() {
       const data = form.getValues();
       const payload = {
         ...data,
+        totalHours: computedTotalHours,
+        totalKm: computedTotalKm,
         ...overrides,
         updatedAt: new Date()
       };
@@ -349,16 +383,32 @@ export default function FieldServiceReportDetailPage() {
             Object.entries(result).filter(([_, v]) => v !== undefined && v !== null && v !== '')
           );
 
-          // Merge extracted data into current form
-          form.reset({
+          const scanOT = Number(cleanResult.otHours) || 0;
+          const scanKmTo = Number(cleanResult.travelKmTo) || 0;
+          const scanKmRet = Number(cleanResult.travelKmReturn) || 0;
+          const scanTotalKm = scanKmTo + scanKmRet;
+          
+          let scanDuty = scanOT;
+          if (!scanDuty && cleanResult.timeStart && cleanResult.timeEnd) {
+            scanDuty = calculateTimeDiff(String(cleanResult.timeStart), String(cleanResult.timeEnd));
+          } else if (!scanDuty && cleanResult.timeCallOut && cleanResult.timeDeparture) {
+            scanDuty = calculateTimeDiff(String(cleanResult.timeCallOut), String(cleanResult.timeDeparture));
+          }
+
+          const merged = {
             ...form.getValues(),
             ...cleanResult,
+            totalHours: scanDuty > 0 ? scanDuty : (form.getValues('totalHours') || 0),
+            totalKm: scanTotalKm > 0 ? scanTotalKm : (form.getValues('totalKm') || 0),
             parts: [...(form.getValues('parts') || []), ...(result.parts || [])],
             personnel: [...(form.getValues('personnel') || []), ...(result.personnel || [])]
-          });
+          };
+
+          // Merge extracted data into current form
+          form.reset(merged);
 
           toast({ title: "Extraction Complete", description: "FSR fields have been auto-populated from the document scan." });
-          handleAutosave();
+          handleAutosave(merged);
         } catch (innerErr: any) {
           toast({ 
             variant: 'destructive', 
@@ -986,15 +1036,15 @@ export default function FieldServiceReportDetailPage() {
                     ))}
                     <div className="p-1 flex flex-col items-center bg-slate-200">
                       <DenseLabel className="text-[7px]">Total Duty</DenseLabel>
-                      <p className="text-[10px] font-black">{watchedTotalHours ?? form.getValues('totalHours') ?? 0}H</p>
+                      <p className="text-[10px] font-black">{computedTotalHours}H</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-5 divide-x divide-black h-10">
                     <FormField control={form.control} name="otHours" render={({ field }) => (<div className="bg-amber-50/50 p-1 flex flex-col items-center"><DenseLabel>OT Hrs</DenseLabel><Input type="number" {...field} value={field.value ?? 0} onChange={e => { field.onChange(parseFloat(e.target.value)); handleAutosave(); }} className="h-5 text-center border-none text-[10px] bg-transparent font-bold" /></div>)} />
-                    <div className="p-1 flex flex-col items-center border-r-2 border-black"><DenseLabel>Total Duty</DenseLabel><p className="text-[10px] font-black">{watchedTotalHours ?? form.getValues('totalHours') ?? 0}</p></div>
+                    <div className="p-1 flex flex-col items-center border-r-2 border-black"><DenseLabel>Total Duty</DenseLabel><p className="text-[10px] font-black">{computedTotalHours}</p></div>
                     <FormField control={form.control} name="travelKmTo" render={({ field }) => (<div className="p-1 flex flex-col items-center"><DenseLabel>KM (To)</DenseLabel><Input type="number" {...field} value={field.value ?? 0} onChange={e => { field.onChange(parseFloat(e.target.value)); handleAutosave(); }} className="h-5 text-center border-none text-[10px]" /></div>)} />
                     <FormField control={form.control} name="travelKmReturn" render={({ field }) => (<div className="p-1 flex flex-col items-center"><DenseLabel>KM (Ret)</DenseLabel><Input type="number" {...field} value={field.value ?? 0} onChange={e => { field.onChange(parseFloat(e.target.value)); handleAutosave(); }} className="h-5 text-center border-none text-[10px]" /></div>)} />
-                    <div className="p-1 flex flex-col items-center bg-blue-50/50"><DenseLabel>Total KM</DenseLabel><p className="text-[10px] font-black">{watchedTotalKm ?? form.getValues('totalKm') ?? 0}</p></div>
+                    <div className="p-1 flex flex-col items-center bg-blue-50/50"><DenseLabel>Total KM</DenseLabel><p className="text-[10px] font-black">{computedTotalKm}</p></div>
                   </div>
                 </div>
 
