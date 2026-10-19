@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
-import { CheckCircle2, RotateCcw } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 interface SignaturePadProps {
   onSave?: (signatureDataUrl: string) => void | Promise<void>;
@@ -14,7 +14,7 @@ interface SignaturePadProps {
   height?: number | string;
 }
 
-export function SignaturePad({ onSave, onSign, onClear, value, height }: SignaturePadProps) {
+export function SignaturePad({ onSave, onSign, onClear, value }: SignaturePadProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sigCanvas = useRef<SignatureCanvas>(null);
   const isDirty = useRef(false);
@@ -74,49 +74,25 @@ export function SignaturePad({ onSave, onSign, onClear, value, height }: Signatu
     };
   }, [handleSave]);
 
-  const containerHeight = height ? (typeof height === 'number' ? `${height}px` : height) : '120px';
-
   return (
     <div ref={containerRef} className="w-full relative group touch-none">
-      <div 
-        style={{ height: containerHeight }} 
-        className="w-full border border-slate-200 bg-white rounded-md overflow-hidden relative shadow-sm touch-none"
-      >
+      <div className="h-[120px] w-full border border-slate-200 bg-white rounded-md overflow-hidden relative shadow-sm touch-none">
         <SignatureCanvas
           ref={sigCanvas}
           penColor="black"
-          minWidth={1.5}
-          maxWidth={3}
-          velocityFilterWeight={0.2}
+          // 1px thin stroke for precision printing
+          minWidth={1}
+          maxWidth={1}
+          velocityFilterWeight={0.1}
           onBegin={() => { isDirty.current = true; }}
-          onEnd={() => { 
-            isDirty.current = true; 
-            handleSave(); 
-          }}
           canvasProps={{ 
             className: 'w-full h-full cursor-crosshair touch-none',
             style: { width: '100%', height: '100%', touchAction: 'none' }
           }}
         />
         
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            sigCanvas.current?.clear();
-            isDirty.current = false;
-            if (onClear) onClear();
-          }}
-          className="absolute top-1 right-1 text-slate-400 hover:text-red-500 bg-white/90 hover:bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-xs z-20 flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity"
-          title="Clear Signature"
-        >
-          <RotateCcw className="w-3 h-3" />
-          <span className="text-[9px] font-bold">Clear</span>
-        </button>
-
         {showSaved && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg animate-in fade-in zoom-in duration-300 pointer-events-none z-30">
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg animate-in fade-in zoom-in duration-300 pointer-events-none">
             <CheckCircle2 className="h-3 w-3" />
             SAVED
           </div>
