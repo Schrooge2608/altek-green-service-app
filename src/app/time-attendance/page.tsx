@@ -509,7 +509,7 @@ export default function TimesheetPage() {
       const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && hasTrueCallout));
       const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
       
-      const allowance = qualifies ? 12 : 0;
+      const allowance = qualifies ? 1 : 0;
       totalAllowance += allowance;
 
       return { week, isNextCycle, weekOT, overrideStatus, qualifies, allowance };
@@ -542,18 +542,18 @@ export default function TimesheetPage() {
 
           <div className="flex items-center gap-6 px-6 py-2 bg-slate-50 rounded-lg border border-slate-100 shadow-sm">
             <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Normal + STBA</p>
-              <p className="text-lg font-black text-slate-700">{((totals?.normal ?? 0) + calculatedStandbyData.totalAllowance).toFixed(1)}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Monthly Hours</p>
+              <p className="text-lg font-black text-slate-700">{(totals?.normal ?? 0).toFixed(1)}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OT 1.5</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Overtime Hours</p>
               <p className="text-lg font-black text-red-600">{(totals?.ot15 ?? 0).toFixed(1)}</p>
             </div>
 
             <div className="h-8 w-px bg-slate-200 mx-2" />
             <div className="text-center">
-              <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Payroll Grand Total</p>
-              <p className="text-lg font-black text-primary">{((totals?.total ?? 0) + calculatedStandbyData.totalAllowance).toFixed(1)} <span className="text-[10px] font-normal">hrs</span></p>
+              <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Total Monthly Hours</p>
+              <p className="text-lg font-black text-primary">{(totals?.total ?? 0).toFixed(1)} <span className="text-[10px] font-normal">hrs</span></p>
             </div>
           </div>
 
@@ -603,10 +603,10 @@ export default function TimesheetPage() {
             <p className="text-[8pt] font-bold text-blue-600 uppercase">Period: {selectedPeriod}</p>
           </div>
           <div className="flex gap-4 text-center print-header-totals">
-            <div><p className="text-[7pt] font-bold uppercase">NT + STBA</p><p className="text-sm font-bold">{((totals?.normal ?? 0) + calculatedStandbyData.totalAllowance).toFixed(1)}</p></div>
-            <div><p className="text-[7pt] font-bold uppercase">OT 1.5</p><p className="text-sm font-bold text-red-600">{(totals?.ot15 ?? 0).toFixed(1)}</p></div>
+            <div><p className="text-[7pt] font-bold uppercase">Monthly Hours</p><p className="text-sm font-bold">{(totals?.normal ?? 0).toFixed(1)}</p></div>
+            <div><p className="text-[7pt] font-bold uppercase">Total OT Hours</p><p className="text-sm font-bold text-red-600">{(totals?.ot15 ?? 0).toFixed(1)}</p></div>
 
-            <div className="border-l border-black pl-4"><p className="text-[7pt] font-bold uppercase">Total</p><p className="text-sm font-black text-primary">{((totals?.total ?? 0) + calculatedStandbyData.totalAllowance).toFixed(1)}</p></div>
+            <div className="border-l border-black pl-4"><p className="text-[7pt] font-bold uppercase">Total Monthly Hours</p><p className="text-sm font-black text-primary">{(totals?.total ?? 0).toFixed(1)}</p></div>
           </div>
         </div>
 
@@ -788,7 +788,7 @@ export default function TimesheetPage() {
                   <TableRow className="hover:bg-transparent border-none h-14 print:h-8">
                     <TableHead className="pl-8 text-white font-black uppercase tracking-widest text-xs print:pl-2">SHIFT ROTATION PERIOD</TableHead>
                     <TableHead className="text-white font-black uppercase tracking-widest text-xs">DUTY DESIGNATION</TableHead>
-                    <TableHead className="text-center text-white font-black uppercase tracking-widest text-xs">ALLOWANCE (HRS)</TableHead>
+                    <TableHead className="text-center text-white font-black uppercase tracking-widest text-xs">ALLOWANCE</TableHead>
                     <TableHead className="text-right pr-8 text-white font-black uppercase tracking-widest text-xs print:pr-2">PAYROLL QUALIFICATION</TableHead>
                     {isElevated && <TableHead className="w-[100px] text-right pr-8">ACTIONS</TableHead>}
                   </TableRow>
@@ -853,8 +853,8 @@ export default function TimesheetPage() {
                           const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && hasTrueCallout));
                           const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
 
-                          const allowanceHours = qualifies ? 12 : 0;
-                          totalAllowance += allowanceHours;
+                          const allowanceWeeks = qualifies ? 1 : 0;
+                          totalAllowance += allowanceWeeks;
 
                           return (
                             <TableRow key={week.id} className="h-16 border-b border-slate-100 last:border-0 hover:bg-slate-50/30 transition-colors print:h-10">
@@ -866,7 +866,9 @@ export default function TimesheetPage() {
                                   {week.isPrimary ? "PRIMARY RESPONDER" : "BACKUP SUPPORT"}
                                 </div>
                               </TableCell>
-                              <TableCell className="text-center font-mono font-bold text-slate-600 text-sm">{allowanceHours.toFixed(1)} hrs</TableCell>
+                              <TableCell className="text-center font-mono font-bold text-slate-600 text-sm">
+                                {allowanceWeeks} {allowanceWeeks === 1 ? 'Week' : 'Weeks'}
+                              </TableCell>
                               <TableCell className="text-right pr-8 print:pr-2">
                                 {isNextCycle ? (
                                   <span className="inline-flex items-center gap-2 font-black text-blue-700 uppercase tracking-tighter text-sm">Next Cycle <Timer className="h-4 w-4" /></span>
@@ -964,7 +966,7 @@ export default function TimesheetPage() {
                       const overrideStatus = timesheet?.adminOverrides?.[week.id];
                       const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && hasTrueCallout));
                       const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
-                      if (qualifies) totalAllowance += 12;
+                      if (qualifies) totalAllowance += 1;
                     });
                       const normTot = (totals?.normal || 0);
                       const ot15 = (totals?.ot15 || 0);
@@ -974,23 +976,25 @@ export default function TimesheetPage() {
                         <>
                           <TableRow className="border-t-2 border-emerald-200 print:border-black">
                             <TableCell colSpan={2} className="pl-8 text-emerald-900 font-black uppercase tracking-widest text-sm print:pl-2">TOTAL ALLOWANCE</TableCell>
-                            <TableCell className="text-center font-mono font-black text-emerald-700 text-lg">{totalAllowance.toFixed(1)} hrs</TableCell>
+                            <TableCell className="text-center font-mono font-black text-emerald-700 text-lg">
+                              {totalAllowance} {totalAllowance === 1 ? 'Week' : 'Weeks'}
+                            </TableCell>
                             <TableCell colSpan={isElevated ? 2 : 1}></TableCell>
                           </TableRow>
                           <TableRow className="bg-slate-100 print:bg-white border-t-4 border-slate-300 print:border-t-2 print:border-black">
                             <TableCell colSpan={isElevated ? 5 : 4} className="p-0">
                               <div className="flex justify-end items-center gap-8 py-4 pr-12 print:pr-4">
                                 <div className="text-center">
-                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Timesheet Normal</p>
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Monthly Hours</p>
                                   <p className="text-xl font-black text-slate-800">{normTot.toFixed(1)}</p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Timesheet OT 1.5</p>
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Overtime Hours</p>
                                   <p className="text-xl font-black text-red-600">{ot15.toFixed(1)}</p>
                                 </div>
                                 <div className="h-10 w-px bg-slate-300 print:bg-black print:w-[2px]" />
                                 <div className="text-center">
-                                  <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Timesheet Total</p>
+                                  <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Total Monthly Hours</p>
                                   <p className="text-2xl font-black text-slate-700">{grandTot.toFixed(1)} <span className="text-[10px] font-normal text-slate-500">hrs</span></p>
                                 </div>
                             </div>

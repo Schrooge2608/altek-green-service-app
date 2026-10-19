@@ -142,7 +142,7 @@ export default function OTSummaryPage() {
       let totalNT = 0;
       let totalOT15 = 0;
       let totalOT20 = 0;
-      let stbaHours = 0;
+      let stbaWeeks = 0;
 
       if (userTimesheet?.entries) {
         userTimesheet.entries.forEach(entry => {
@@ -163,6 +163,12 @@ export default function OTSummaryPage() {
         .filter(shift => {
           const isPrimary = shift.primaryTech === u.name;
           const isBackup = shift.backupTech === u.name;
+          if (!isPrimary && !isBackup) return false;
+
+          const overrideStatus = userTimesheet?.adminOverrides?.[shift.id];
+          if (overrideStatus === 'QUALIFIED') return true;
+          if (overrideStatus === 'DISQUALIFIED') return false;
+
           if (isPrimary) return true;
           if (isBackup) {
             let hasTrueCallout = false;
@@ -193,7 +199,7 @@ export default function OTSummaryPage() {
           return false;
         });
 
-      stbaHours = qualifiedStandbyWeeks.length * 12;
+      stbaWeeks = qualifiedStandbyWeeks.length;
 
       return {
         id: u.id,
@@ -202,7 +208,7 @@ export default function OTSummaryPage() {
         totalNT: Number(totalNT.toFixed(1)),
         totalOT15: Number(totalOT15.toFixed(1)),
         totalOT20: Number(totalOT20.toFixed(1)),
-        stba: stbaHours,
+        stba: stbaWeeks,
         totalHours: Number((totalNT + totalOT15 + totalOT20).toFixed(1)),
         hasData: !!userTimesheet
       };
@@ -274,11 +280,11 @@ export default function OTSummaryPage() {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-6 font-black text-slate-700 uppercase tracking-wider">Employee Name</TableHead>
                 <TableHead className="font-bold text-slate-500 uppercase text-[10px]">Position</TableHead>
-                <TableHead className="text-center font-bold text-emerald-700 uppercase text-[10px] bg-emerald-50/30">N/T Hours</TableHead>
-                <TableHead className="text-center font-bold text-red-600 uppercase text-[10px] bg-red-50/30">OT 1.5</TableHead>
+                <TableHead className="text-center font-bold text-emerald-700 uppercase text-[10px] bg-emerald-50/30">Monthly Hours</TableHead>
+                <TableHead className="text-center font-bold text-red-600 uppercase text-[10px] bg-red-50/30">Total Overtime Hours</TableHead>
 
-                <TableHead className="text-center font-bold text-amber-700 uppercase text-[10px] bg-amber-50/30">STBA (12h)</TableHead>
-                <TableHead className="text-right pr-6 font-black text-slate-900 uppercase tracking-wider">Gross Total</TableHead>
+                <TableHead className="text-center font-bold text-amber-700 uppercase text-[10px] bg-amber-50/30">Standby Allowance</TableHead>
+                <TableHead className="text-right pr-6 font-black text-slate-900 uppercase tracking-wider">Total Monthly Hours</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -292,7 +298,7 @@ export default function OTSummaryPage() {
                     <TableCell className="text-center font-mono font-bold text-emerald-700">{row.totalNT}</TableCell>
                     <TableCell className="text-center font-mono font-bold text-red-600">{row.totalOT15}</TableCell>
 
-                    <TableCell className="text-center font-mono font-bold text-amber-700">{row.stba}</TableCell>
+                    <TableCell className="text-center font-mono font-bold text-amber-700">{row.stba} {row.stba === 1 ? 'Week' : 'Weeks'}</TableCell>
                     <TableCell className="text-right pr-6 font-black text-slate-900 text-base">{row.totalHours} <span className="text-[10px] font-normal text-slate-400">HRS</span></TableCell>
                   </TableRow>
                 ))
@@ -307,7 +313,7 @@ export default function OTSummaryPage() {
                   <TableCell className="text-center text-emerald-800 font-black">{grandTotals.normal.toFixed(1)}</TableCell>
                   <TableCell className="text-center text-red-700 font-black">{grandTotals.ot15.toFixed(1)}</TableCell>
 
-                  <TableCell className="text-center text-amber-800 font-black">{grandTotals.stba.toFixed(1)}</TableCell>
+                  <TableCell className="text-center text-amber-800 font-black">{grandTotals.stba} {grandTotals.stba === 1 ? 'Week' : 'Weeks'}</TableCell>
                   <TableCell className="text-right pr-6 text-primary text-xl font-black">{grandTotals.total.toFixed(1)}</TableCell>
                 </TableRow>
               </TableFooter>
