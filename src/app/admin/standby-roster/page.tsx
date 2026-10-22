@@ -4,18 +4,19 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Phone, ShieldAlert, Users, Calendar, Clock, Loader2, Save, Plus, Trash2, X, History } from 'lucide-react';
+import { Phone, ShieldAlert, Users, Calendar, Clock, Loader2, Save, Plus, Trash2, X, History, CheckCircle2, FileSpreadsheet, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useCollection, useFirebase, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, setDoc, deleteDoc, updateDoc, orderBy, addDoc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isValid, parseISO, isAfter, isBefore, addDays } from 'date-fns';
-import type { User as AppUser, StandbyShift } from '@/lib/types';
+import type { User as AppUser, StandbyShift, Timesheet } from '@/lib/types';
 import { WhatsAppShare } from '@/components/ui/whatsapp-share';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 
 export default function StandbyRosterPage() {
   const { user } = useUser();
@@ -62,6 +63,11 @@ export default function StandbyRosterPage() {
   // FETCH SHIFTS (Explicit database records)
   const shiftsQuery = useMemoFirebase(() => query(collection(firestore, 'standby_shifts'), orderBy('startDate', 'asc')), [firestore]);
   const { data: shifts, isLoading: shiftsLoading } = useCollection<StandbyShift>(shiftsQuery);
+
+  // FETCH TIMESHEETS (For Backup Callout Qualification & Admin Overrides)
+  const timesheetsQuery = useMemoFirebase(() => query(collection(firestore, 'timesheets')), [firestore]);
+  const { data: allTimesheets } = useCollection<Timesheet>(timesheetsQuery);
+  const [selectedTechFilter, setSelectedTechFilter] = useState<string>('ALL');
 
   // --- ACTIVE SHIFT LOGIC (The "Source of Truth" for Banner AND Table Highlighting) ---
   const activeShift = useMemo(() => {
@@ -136,6 +142,230 @@ export default function StandbyRosterPage() {
       historyShifts: [...history].sort((a, b) => b.startDate.localeCompare(a.startDate)) 
     };
   }, [isMounted, shifts]);
+
+  // --- STANDBY ALLOWANCE & CLAIM REPORT LOGIC (Primary + Qualified Backup via Callouts/Overrides) ---
+  const standbyClaimReport = useMemo(() => {
+    const norm = (s?: string) => (s || '').replace(/\s+/g, ' ').trim();
+
+    // Build lookup per normalized technician name (and userId) for all timesheet entries & overrides
+    const userEntriesByNormName: Record<string, { entries: Record<string, any>; overrides: Record<string, string | null> }> = {};
+
+    if (allUsers && allTimesheets) {
+      const uidToNormName: Record<string, string> = {};
+      allUsers.forEach(u => {
+        const n = norm(u.name);
+        uidToNormName[u.id] = n;
+        if (!userEntriesByNormName[n]) {
+          userEntriesByNormName[n] = { entries: {}, overrides: {} };
+        }
+      });
+
+      allTimesheets.forEach(ts => {
+        const n = uidToNormName[ts.userId] || norm(ts.userName);
+        if (!userEntriesByNormName[n]) {
+          userEntriesByNormName[n] = { entries: {}, overrides: {} };
+        }
+        if (ts.adminOverrides) {
+          Object.entries(ts.adminOverrides).forEach(([shiftId, status]) => {
+            userEntriesByNormName[n].overrides[shiftId] = status as string | null;
+          });
+        }
+        if (ts.entries) {
+          ts.entries.forEach(entry => {
+            if (entry.date) {
+              userEntriesByNormName[n].entries[entry.date] = entry;
+            }
+          });
+        }
+      });
+    }
+
+    const evaluateCallout = (techName: string, startDate: string, endDate: string) => {
+      const n = norm(techName);
+      const data = userEntriesByNormName[n];
+      if (!data) return { hasTrueCallout: false, calloutDates: [] as string[] };
+
+      let hasTrueCallout = false;
+      const calloutDates: string[] = [];
+
+      Object.values(data.entries).forEach((entry: any) => {
+        const dt = entry.date;
+        const isHandoverStart = dt === startDate;
+        const isHandoverEnd = dt === endDate;
+        const isCoreDay = dt > startDate && dt < endDate;
+
+        if (!isHandoverStart && !isHandoverEnd && !isCoreDay) return;
+
+        if (entry.calloutIn && entry.calloutIn !== '--:--' && entry.calloutIn !== entry.normalOut) {
+          if (isCoreDay) {
+            hasTrueCallout = true;
+            calloutDates.push(`${dt} (${entry.calloutIn}-${entry.calloutOut})`);
+          } else if (isHandoverStart) {
+            const [h] = entry.calloutIn.split(':').map(Number);
+            if (h >= 16) {
+              hasTrueCallout = true;
+              calloutDates.push(`${dt} (${entry.calloutIn}-${entry.calloutOut})`);
+            }
+          } else if (isHandoverEnd) {
+            const [h] = entry.calloutIn.split(':').map(Number);
+            if (h < 9) {
+              hasTrueCallout = true;
+              calloutDates.push(`${dt} (${entry.calloutIn}-${entry.calloutOut})`);
+            }
+          }
+        }
+      });
+
+      return { hasTrueCallout, calloutDates };
+    };
+
+    const sortedHistory = [...historyShifts].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const techSummaryMap: Record<string, {
+      name: string;
+      primaryAssigned: number;
+      primaryQualified: number;
+      backupAssigned: number;
+      backupCalledOut: number;
+      backupQualified: number;
+      totalClaimableWeeks: number;
+    }> = {};
+
+    const ensureTech = (rawName?: string) => {
+      const n = norm(rawName);
+      if (!n || n === 'None' || n === 'Unassigned' || n === 'Mine Team') return null;
+      if (!techSummaryMap[n]) {
+        techSummaryMap[n] = {
+          name: n,
+          primaryAssigned: 0,
+          primaryQualified: 0,
+          backupAssigned: 0,
+          backupCalledOut: 0,
+          backupQualified: 0,
+          totalClaimableWeeks: 0,
+        };
+      }
+      return techSummaryMap[n];
+    };
+
+    const weeklyAudit = sortedHistory.map(shift => {
+      const priName = norm(shift.primaryTech);
+      const bkpName = norm(shift.backupTech);
+
+      const priOverride = userEntriesByNormName[priName]?.overrides?.[shift.id] || null;
+      const priCallout = evaluateCallout(priName, shift.startDate, shift.endDate);
+      const priQualifies = shift.isMineTeamWeek
+        ? false
+        : priOverride === 'DISQUALIFIED'
+          ? false
+          : true;
+
+      const bkpOverride = userEntriesByNormName[bkpName]?.overrides?.[shift.id] || null;
+      const bkpCallout = bkpName && bkpName !== 'None' && bkpName !== 'Unassigned'
+        ? evaluateCallout(bkpName, shift.startDate, shift.endDate)
+        : { hasTrueCallout: false, calloutDates: [] as string[] };
+
+      const bkpQualifies = (!bkpName || bkpName === 'None' || bkpName === 'Unassigned')
+        ? false
+        : bkpOverride === 'QUALIFIED'
+          ? true
+          : bkpOverride === 'DISQUALIFIED'
+            ? false
+            : bkpCallout.hasTrueCallout;
+
+      const priRec = ensureTech(priName);
+      if (priRec) {
+        priRec.primaryAssigned += 1;
+        if (priQualifies) {
+          priRec.primaryQualified += 1;
+          priRec.totalClaimableWeeks += 1;
+        }
+      }
+
+      const bkpRec = ensureTech(bkpName);
+      if (bkpRec) {
+        bkpRec.backupAssigned += 1;
+        if (bkpCallout.hasTrueCallout) bkpRec.backupCalledOut += 1;
+        if (bkpQualifies) {
+          bkpRec.backupQualified += 1;
+          bkpRec.totalClaimableWeeks += 1;
+        }
+      }
+
+      return {
+        shift,
+        priName,
+        bkpName: bkpName || 'None',
+        priQualifies,
+        priOverride,
+        priCalloutDates: priCallout.calloutDates,
+        bkpHasCallout: bkpCallout.hasTrueCallout,
+        bkpCalloutDates: bkpCallout.calloutDates,
+        bkpOverride,
+        bkpQualifies,
+        weekClaimableTotal: (priQualifies ? 1 : 0) + (bkpQualifies ? 1 : 0),
+      };
+    });
+
+    const techSummaries = Object.values(techSummaryMap).sort((a, b) => b.totalClaimableWeeks - a.totalClaimableWeeks);
+    const totals = techSummaries.reduce((acc, curr) => ({
+      primaryAssigned: acc.primaryAssigned + curr.primaryAssigned,
+      primaryQualified: acc.primaryQualified + curr.primaryQualified,
+      backupAssigned: acc.backupAssigned + curr.backupAssigned,
+      backupCalledOut: acc.backupCalledOut + curr.backupCalledOut,
+      backupQualified: acc.backupQualified + curr.backupQualified,
+      totalClaimableWeeks: acc.totalClaimableWeeks + curr.totalClaimableWeeks,
+    }), {
+      primaryAssigned: 0,
+      primaryQualified: 0,
+      backupAssigned: 0,
+      backupCalledOut: 0,
+      backupQualified: 0,
+      totalClaimableWeeks: 0,
+    });
+
+    return { techSummaries, weeklyAudit, totals };
+  }, [historyShifts, allUsers, allTimesheets]);
+
+  const handleExportClaimReport = () => {
+    const summaryRows = standbyClaimReport.techSummaries.map(t => ({
+      'Technician': t.name,
+      'Primary Shifts Done': t.primaryAssigned,
+      'Primary Qualified (Claimable)': t.primaryQualified,
+      'Backup Shifts Assigned': t.backupAssigned,
+      'Backup Shifts with Callout': t.backupCalledOut,
+      'Backup Qualified (Claimable)': t.backupQualified,
+      'Total Claimable Allowances (Weeks)': t.totalClaimableWeeks,
+    }));
+    summaryRows.push({
+      'Technician': 'TOTAL',
+      'Primary Shifts Done': standbyClaimReport.totals.primaryAssigned,
+      'Primary Qualified (Claimable)': standbyClaimReport.totals.primaryQualified,
+      'Backup Shifts Assigned': standbyClaimReport.totals.backupAssigned,
+      'Backup Shifts with Callout': standbyClaimReport.totals.backupCalledOut,
+      'Backup Qualified (Claimable)': standbyClaimReport.totals.backupQualified,
+      'Total Claimable Allowances (Weeks)': standbyClaimReport.totals.totalClaimableWeeks,
+    });
+
+    const detailRows = standbyClaimReport.weeklyAudit.map((w, idx) => ({
+      '#': idx + 1,
+      'Start Date': w.shift.startDate,
+      'End Date': w.shift.endDate,
+      'Primary Technician': w.priName,
+      'Primary Qualified': w.priQualifies ? 'YES (1 Week)' : 'NO (0)',
+      'Backup Technician': w.bkpName,
+      'Backup Callout Logged': w.bkpCalloutDates.length > 0 ? w.bkpCalloutDates.join('; ') : 'No Callout',
+      'Admin Override (Backup)': w.bkpOverride || 'Automatic',
+      'Backup Qualified': w.bkpQualifies ? 'YES (1 Week)' : 'NO (0)',
+      'Total Claimable (Weeks)': w.weekClaimableTotal,
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+    const wsDetail = XLSX.utils.json_to_sheet(detailRows);
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary Per Technician');
+    XLSX.utils.book_append_sheet(wb, wsDetail, 'Weekly Audit Log');
+    XLSX.writeFile(wb, `Standby_Allowance_Claim_Report_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
 
   // --- CRUD ACTIONS ---
   const handleAddShift = async () => {
@@ -457,14 +687,18 @@ ${activeShift.isMineTeamWeek ? 'Call-outs are handled internally by the Mine pri
 
       {/* SHIFT TRACKER TABS */}
       <Tabs defaultValue="active" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl mb-4 print:hidden">
           <TabsTrigger value="active" className="gap-2">
             <Calendar className="h-4 w-4" />
             Active & Upcoming
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="h-4 w-4" />
-            History
+            History ({historyShifts.length})
+          </TabsTrigger>
+          <TabsTrigger value="summary" className="gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            Allowance & Claim Summary
           </TabsTrigger>
         </TabsList>
 
@@ -500,6 +734,154 @@ ${activeShift.isMineTeamWeek ? 'Call-outs are handled internally by the Mine pri
                 emptyMessage='No historical shift records found.' 
                 isEditable={canEditHistory}
               />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="summary" className="space-y-6">
+          <Card className="shadow-sm border-slate-200">
+            <CardHeader className="bg-emerald-50/40 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  Standby Allowance & Client Claim Summary (Since Feb 2026)
+                </CardTitle>
+                <CardDescription>
+                  Primary responders qualify automatically (1 week). Backup responders qualify only when called out during their standby week (or via Admin Override).
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2 print:hidden">
+                <Button variant="outline" size="sm" onClick={handleExportClaimReport} className="gap-2 bg-white">
+                  <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                  Export Excel
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2 bg-white">
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="bg-slate-100">
+                  <TableRow>
+                    <TableHead className="font-bold text-slate-700">Technician</TableHead>
+                    <TableHead className="text-center font-bold text-blue-700">Primary Shifts Done</TableHead>
+                    <TableHead className="text-center font-bold text-blue-800 bg-blue-50/40">Primary Qualified</TableHead>
+                    <TableHead className="text-center font-bold text-orange-700">Backup Shifts Assigned</TableHead>
+                    <TableHead className="text-center font-bold text-orange-800">Backup w/ Callout</TableHead>
+                    <TableHead className="text-center font-bold text-emerald-700 bg-emerald-50/40">Backup Qualified</TableHead>
+                    <TableHead className="text-right pr-6 font-black text-slate-900">Total Claimable Allowances</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {standbyClaimReport.techSummaries.map((row) => (
+                    <TableRow key={row.name} className="hover:bg-slate-50/60">
+                      <TableCell className="font-bold text-slate-800">{row.name}</TableCell>
+                      <TableCell className="text-center font-mono">{row.primaryAssigned}</TableCell>
+                      <TableCell className="text-center font-mono font-bold text-blue-700 bg-blue-50/20">{row.primaryQualified} wks</TableCell>
+                      <TableCell className="text-center font-mono">{row.backupAssigned}</TableCell>
+                      <TableCell className="text-center font-mono text-orange-700">{row.backupCalledOut}</TableCell>
+                      <TableCell className="text-center font-mono font-bold text-emerald-700 bg-emerald-50/20">{row.backupQualified} wks</TableCell>
+                      <TableCell className="text-right pr-6 font-mono font-black text-base text-slate-900">
+                        {row.totalClaimableWeeks} {row.totalClaimableWeeks === 1 ? 'Week' : 'Weeks'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter className="bg-slate-100 font-black">
+                  <TableRow>
+                    <TableCell className="uppercase text-xs font-black text-slate-900">Total Claimable From Client</TableCell>
+                    <TableCell className="text-center font-mono">{standbyClaimReport.totals.primaryAssigned}</TableCell>
+                    <TableCell className="text-center font-mono text-blue-800">{standbyClaimReport.totals.primaryQualified} wks</TableCell>
+                    <TableCell className="text-center font-mono">{standbyClaimReport.totals.backupAssigned}</TableCell>
+                    <TableCell className="text-center font-mono text-orange-800">{standbyClaimReport.totals.backupCalledOut}</TableCell>
+                    <TableCell className="text-center font-mono text-emerald-800">{standbyClaimReport.totals.backupQualified} wks</TableCell>
+                    <TableCell className="text-right pr-6 font-mono text-lg text-emerald-700">
+                      {standbyClaimReport.totals.totalClaimableWeeks} Weeks
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm border-slate-200">
+            <CardHeader className="bg-slate-50/50 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-base font-bold text-slate-800">Week-by-Week Standby & Backup Callout Audit Log</CardTitle>
+                <CardDescription>Shows every completed standby week from Feb 2026, including backup callout dates and timesheet overrides.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 print:hidden">
+                <span className="text-xs font-bold uppercase text-slate-400">Filter Tech:</span>
+                <select
+                  value={selectedTechFilter}
+                  onChange={(e) => setSelectedTechFilter(e.target.value)}
+                  className="h-8 px-3 border rounded-md text-xs font-bold bg-white"
+                >
+                  <option value="ALL">All Technicians ({standbyClaimReport.weeklyAudit.length} weeks)</option>
+                  {standbyClaimReport.techSummaries.map(t => (
+                    <option key={t.name} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40px]">#</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Primary Responder (1 Wk)</TableHead>
+                    <TableHead>Backup Support</TableHead>
+                    <TableHead>Backup Callouts Logged (Timesheet)</TableHead>
+                    <TableHead className="text-center">Backup Status</TableHead>
+                    <TableHead className="text-right pr-6">Claimable</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {standbyClaimReport.weeklyAudit
+                    .filter(w => selectedTechFilter === 'ALL' || w.priName === selectedTechFilter || w.bkpName === selectedTechFilter)
+                    .map((w, idx) => (
+                      <TableRow key={w.shift.id} className={cn(w.bkpQualifies && "bg-emerald-50/30")}>
+                        <TableCell className="font-mono text-xs text-slate-400">{idx + 1}</TableCell>
+                        <TableCell className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                          {w.shift.startDate} — {w.shift.endDate}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-slate-800">{w.priName}</span>
+                            {w.priQualifies ? (
+                              <Badge variant="outline" className="text-[10px] border-blue-200 text-blue-700 bg-blue-50">1 Wk</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] border-red-200 text-red-600 bg-red-50">Disqualified</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-slate-700">{w.bkpName}</TableCell>
+                        <TableCell className="text-xs font-mono">
+                          {w.bkpCalloutDates.length > 0 ? (
+                            <span className="text-emerald-700 font-bold">{w.bkpCalloutDates.join(', ')}</span>
+                          ) : (
+                            <span className="text-slate-400 italic">No callout</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {w.bkpQualifies ? (
+                            <Badge className="bg-emerald-600 text-[10px]">QUALIFIED (+1 Wk)</Badge>
+                          ) : w.bkpOverride === 'DISQUALIFIED' ? (
+                            <Badge variant="outline" className="text-[10px] border-red-200 text-red-600">DISQUALIFIED (Override)</Badge>
+                          ) : (
+                            <span className="text-xs text-slate-400">0 Wks</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right pr-6 font-mono font-bold text-sm">
+                          {w.weekClaimableTotal} {w.weekClaimableTotal === 1 ? 'Wk' : 'Wks'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>

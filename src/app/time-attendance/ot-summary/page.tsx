@@ -81,7 +81,7 @@ const calculateRowHours = (row: TimesheetEntry) => {
 function generateMonthOptions() {
   const options = [];
   const today = new Date();
-  for (let i = -6; i <= 6; i++) {
+  for (let i = -10; i <= 6; i++) {
     const date = addMonths(today, i);
     options.push({
       value: format(date, 'yyyy-MM'),
@@ -161,8 +161,8 @@ export default function OTSummaryPage() {
           return shiftEnd >= periodStart && shiftEnd <= periodEnd && isFinished;
         })
         .filter(shift => {
-          const isPrimary = shift.primaryTech === u.name;
-          const isBackup = shift.backupTech === u.name;
+          const isPrimary = (shift.primaryTech || '').replace(/\s+/g, ' ').trim() === (u.name || '').replace(/\s+/g, ' ').trim();
+          const isBackup = (shift.backupTech || '').replace(/\s+/g, ' ').trim() === (u.name || '').replace(/\s+/g, ' ').trim();
           if (!isPrimary && !isBackup) return false;
 
           const overrideStatus = userTimesheet?.adminOverrides?.[shift.id];

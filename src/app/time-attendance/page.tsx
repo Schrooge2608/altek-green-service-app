@@ -159,7 +159,7 @@ const roundTimeAltekStyle = (date: Date = new Date()) => {
 function generateMonthOptions() {
   const options = [];
   const today = new Date();
-  for (let i = -6; i <= 6; i++) {
+  for (let i = -10; i <= 6; i++) {
     const date = addMonths(today, i);
     options.push({ value: format(date, 'yyyy-MM'), label: format(date, 'MMMM yyyy') });
   }
@@ -256,13 +256,13 @@ export default function TimesheetPage() {
   const evaluatedStandbyWeeks = useMemo(() => {
     if (!standbyShifts || !viewedUserId || !viewedUserName) return [];
     return standbyShifts
-      .filter(data => data.primaryTech === viewedUserName || data.backupTech === viewedUserName)
+      .filter(data => (data.primaryTech || '').replace(/\s+/g, ' ').trim() === (viewedUserName || '').replace(/\s+/g, ' ').trim() || (data.backupTech || '').replace(/\s+/g, ' ').trim() === (viewedUserName || '').replace(/\s+/g, ' ').trim())
       .map(data => {
         const start = new Date(data.startDate); start.setHours(16, 0, 0, 0); 
         const end = new Date(data.endDate); end.setHours(7, 0, 0, 0); 
         return { 
           id: data.id, startDate: data.startDate, endDate: data.endDate, exactStart: start, exactEnd: end, 
-          isPrimary: data.primaryTech === viewedUserName, isBackup: data.backupTech === viewedUserName
+          isPrimary: (data.primaryTech || '').replace(/\s+/g, ' ').trim() === (viewedUserName || '').replace(/\s+/g, ' ').trim(), isBackup: (data.backupTech || '').replace(/\s+/g, ' ').trim() === (viewedUserName || '').replace(/\s+/g, ' ').trim()
         };
       });
   }, [standbyShifts, viewedUserId, viewedUserName]);
