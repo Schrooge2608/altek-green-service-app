@@ -58,6 +58,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import backendConfig from '@/docs/backend.json';
 import { cn } from '@/lib/utils';
+import { SignaturePinCard } from '@/components/profile/signature-pin-card';
 
 // --- SCHEMAS ---
 
@@ -368,6 +369,9 @@ export default function UserProfilePage() {
           />
         </CardContent>
       </Card>
+
+      {/* SECTION 1B: DIGITAL SIGNATURE & 4-DIGIT SIGNING PIN */}
+      <SignaturePinCard targetUserId={id} userData={userData} canEdit={canEdit} />
 
       {/* SECTION 2: CONTACT & EMERGENCY INFORMATION */}
       <Card className="border-slate-200 shadow-sm">

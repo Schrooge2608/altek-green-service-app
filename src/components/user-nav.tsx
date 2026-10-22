@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth, useUser, useMemoFirebase } from '@/firebase';
-import { LogOut, User as UserIcon, LogIn, Settings } from 'lucide-react';
+import { LogOut, User as UserIcon, LogIn, Settings, PenTool } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -106,6 +106,12 @@ export function UserNav() {
               <Link href={`/profile/${user.uid}`}>
                 <UserIcon className="mr-2 h-4 w-4" />
                 <span>Profile</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/capture-signature">
+                <PenTool className="mr-2 h-4 w-4 text-emerald-600" />
+                <span>Signature &amp; PIN</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

@@ -41,6 +41,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Image from 'next/image';
+import { SignaturePinCard } from '@/components/profile/signature-pin-card';
 
 export default function ProfileSettingsPage() {
   const { user } = useUser();
@@ -348,6 +349,9 @@ export default function ProfileSettingsPage() {
 
         {/* Right Column: Forms */}
         <div className="lg:col-span-2 space-y-8">
+          {/* Digital Signature & 4-Digit Signing PIN */}
+          {user && <SignaturePinCard targetUserId={user.uid} userData={userData} canEdit={true} />}
+
           {/* General Information */}
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="bg-slate-50/50 border-b">

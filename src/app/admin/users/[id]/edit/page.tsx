@@ -32,6 +32,7 @@ import type { User, Client } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import backendConfig from '@/docs/backend.json';
+import { SignaturePinCard } from '@/components/profile/signature-pin-card';
 
 
 const formSchema = z.object({
@@ -207,7 +208,9 @@ export default function EditUserPage() {
             </CardContent>
           </Card>
           
-           <Card>
+          <SignaturePinCard targetUserId={id} userData={user} canEdit={true} />
+
+          <Card>
             <CardHeader>
               <CardTitle>Authentication &amp; Security</CardTitle>
               <CardDescription>Manage the user's secure PIN for signing documents.</CardDescription>

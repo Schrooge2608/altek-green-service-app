@@ -245,6 +245,7 @@ export default function ViewIPRPage() {
                 <PinSigner 
                   label="Technician Sign Receipt" 
                   users={allUsers || []} 
+                  targetUserId={ipr.userId}
                   onSigned={handleIssueAndSign}
                   disabled={isProcessing}
                 />
