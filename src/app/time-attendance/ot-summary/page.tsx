@@ -27,7 +27,7 @@ import {
 import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 import type { Timesheet, User, TimesheetEntry, StandbyShift } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { format, addMonths } from 'date-fns';
+import { format, addMonths, startOfDay, endOfDay } from 'date-fns';
 import { AltekLogo } from '@/components/altek-logo';
 import { Label } from '@/components/ui/label';
 import { getPayrollPeriod, getDefaultPayrollMonth } from '@/lib/payroll-utils';
@@ -158,7 +158,7 @@ export default function OTSummaryPage() {
           const shiftEnd = new Date(shift.endDate);
           shiftEnd.setHours(7, 0, 0, 0);
           const isFinished = now >= shiftEnd;
-          return shiftEnd >= periodStart && shiftEnd <= periodEnd && isFinished;
+          return shiftEnd >= startOfDay(periodStart) && shiftEnd <= endOfDay(periodEnd) && isFinished;
         })
         .filter(shift => {
           const isPrimary = (shift.primaryTech || '').replace(/\s+/g, ' ').trim() === (u.name || '').replace(/\s+/g, ' ').trim();
@@ -169,7 +169,7 @@ export default function OTSummaryPage() {
           if (overrideStatus === 'QUALIFIED') return true;
           if (overrideStatus === 'DISQUALIFIED') return false;
 
-          if (isPrimary) return true;
+          if (isPrimary) return !shift.isMineTeamWeek;
           if (isBackup) {
             let hasTrueCallout = false;
             const shiftStart = new Date(shift.startDate);
@@ -194,7 +194,7 @@ export default function OTSummaryPage() {
                 }
               }
             });
-            return hasTrueCallout;
+            return true;
           }
           return false;
         });

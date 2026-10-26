@@ -506,7 +506,7 @@ export default function TimesheetPage() {
       }, 0) || 0;
 
       const overrideStatus = timesheet.adminOverrides?.[week.id];
-      const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && hasTrueCallout));
+      const autoQualifies = !isNextCycle && (week.isPrimary || week.isBackup);
       const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
       
       const allowance = qualifies ? 1 : 0;
@@ -850,7 +850,7 @@ export default function TimesheetPage() {
 
                           // OVERRIDE LOGIC
                           const overrideStatus = timesheet?.adminOverrides?.[week.id];
-                          const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && hasTrueCallout));
+                          const autoQualifies = !isNextCycle && (week.isPrimary || week.isBackup);
                           const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
 
                           const allowanceWeeks = qualifies ? 1 : 0;
@@ -878,7 +878,7 @@ export default function TimesheetPage() {
                                       "inline-flex items-center gap-2 font-black uppercase tracking-tighter text-sm",
                                       qualifies ? "text-emerald-600" : "text-slate-400"
                                     )}>
-                                      {qualifies ? 'QUALIFIED' : 'NO ACTIVITY'}
+                                      {qualifies ? 'QUALIFIED' : 'DISQUALIFIED'}
                                       {qualifies ? <CheckCircle2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
                                     </span>
                                     {overrideStatus && isElevated && (
@@ -964,7 +964,7 @@ export default function TimesheetPage() {
                         return acc;
                       }, 0) || 0;
                       const overrideStatus = timesheet?.adminOverrides?.[week.id];
-                      const autoQualifies = !isNextCycle && (week.isPrimary || (week.isBackup && hasTrueCallout));
+                      const autoQualifies = !isNextCycle && (week.isPrimary || week.isBackup);
                       const qualifies = overrideStatus === 'QUALIFIED' ? true : (overrideStatus === 'DISQUALIFIED' ? false : autoQualifies);
                       if (qualifies) totalAllowance += 1;
                     });

@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
+import { getDefaultPayrollMonth } from '@/lib/payroll-utils';
 
 export default function StandbyRosterPage() {
   const { user } = useUser();
@@ -68,6 +69,7 @@ export default function StandbyRosterPage() {
   const timesheetsQuery = useMemoFirebase(() => query(collection(firestore, 'timesheets')), [firestore]);
   const { data: allTimesheets } = useCollection<Timesheet>(timesheetsQuery);
   const [selectedTechFilter, setSelectedTechFilter] = useState<string>('ALL');
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState<string>('ALL');
 
   // --- ACTIVE SHIFT LOGIC (The "Source of Truth" for Banner AND Table Highlighting) ---
   const activeShift = useMemo(() => {
@@ -247,9 +249,15 @@ export default function StandbyRosterPage() {
       return techSummaryMap[n];
     };
 
-    const weeklyAudit = sortedHistory.map(shift => {
+    const allWeeklyAudit = sortedHistory.map(shift => {
       const priName = norm(shift.primaryTech);
       const bkpName = norm(shift.backupTech);
+
+      // Determine the qualifying payroll month from the end of the standby week (if it flows over into the next month/cycle, it qualifies in the next month)
+      const endDt = shift.endDate ? parseISO(shift.endDate) : new Date();
+      const qualifyingMonth = isValid(endDt) ? getDefaultPayrollMonth(endDt) : (shift.endDate || '').slice(0, 7);
+      const qualifyingMonthLabel = isValid(endDt) ? format(parseISO(`${qualifyingMonth}-01`), 'MMM yyyy') : qualifyingMonth;
+      const isRolloverFromPrevMonth = Boolean(shift.startDate && qualifyingMonth && shift.startDate.slice(0, 7) !== qualifyingMonth);
 
       const priOverride = userEntriesByNormName[priName]?.overrides?.[shift.id] || null;
       const priCallout = evaluateCallout(priName, shift.startDate, shift.endDate);
@@ -264,35 +272,18 @@ export default function StandbyRosterPage() {
         ? evaluateCallout(bkpName, shift.startDate, shift.endDate)
         : { hasTrueCallout: false, calloutDates: [] as string[] };
 
+      // Updated philosophy: All technicians performing standby duties (both Primary and Backup) qualify for 1 week of standby allowance
       const bkpQualifies = (!bkpName || bkpName === 'None' || bkpName === 'Unassigned')
         ? false
-        : bkpOverride === 'QUALIFIED'
-          ? true
-          : bkpOverride === 'DISQUALIFIED'
-            ? false
-            : bkpCallout.hasTrueCallout;
-
-      const priRec = ensureTech(priName);
-      if (priRec) {
-        priRec.primaryAssigned += 1;
-        if (priQualifies) {
-          priRec.primaryQualified += 1;
-          priRec.totalClaimableWeeks += 1;
-        }
-      }
-
-      const bkpRec = ensureTech(bkpName);
-      if (bkpRec) {
-        bkpRec.backupAssigned += 1;
-        if (bkpCallout.hasTrueCallout) bkpRec.backupCalledOut += 1;
-        if (bkpQualifies) {
-          bkpRec.backupQualified += 1;
-          bkpRec.totalClaimableWeeks += 1;
-        }
-      }
+        : bkpOverride === 'DISQUALIFIED'
+          ? false
+          : true;
 
       return {
         shift,
+        qualifyingMonth,
+        qualifyingMonthLabel,
+        isRolloverFromPrevMonth,
         priName,
         bkpName: bkpName || 'None',
         priQualifies,
@@ -304,6 +295,32 @@ export default function StandbyRosterPage() {
         bkpQualifies,
         weekClaimableTotal: (priQualifies ? 1 : 0) + (bkpQualifies ? 1 : 0),
       };
+    });
+
+    const availableMonths = Array.from(new Set(allWeeklyAudit.map(w => w.qualifyingMonth).filter(Boolean))).sort();
+    const weeklyAudit = selectedMonthFilter === 'ALL'
+      ? allWeeklyAudit
+      : allWeeklyAudit.filter(w => w.qualifyingMonth === selectedMonthFilter);
+
+    weeklyAudit.forEach(w => {
+      const priRec = ensureTech(w.priName);
+      if (priRec) {
+        priRec.primaryAssigned += 1;
+        if (w.priQualifies) {
+          priRec.primaryQualified += 1;
+          priRec.totalClaimableWeeks += 1;
+        }
+      }
+
+      const bkpRec = ensureTech(w.bkpName);
+      if (bkpRec) {
+        bkpRec.backupAssigned += 1;
+        if (w.bkpHasCallout) bkpRec.backupCalledOut += 1;
+        if (w.bkpQualifies) {
+          bkpRec.backupQualified += 1;
+          bkpRec.totalClaimableWeeks += 1;
+        }
+      }
     });
 
     const techSummaries = Object.values(techSummaryMap).sort((a, b) => b.totalClaimableWeeks - a.totalClaimableWeeks);
@@ -323,8 +340,8 @@ export default function StandbyRosterPage() {
       totalClaimableWeeks: 0,
     });
 
-    return { techSummaries, weeklyAudit, totals };
-  }, [historyShifts, allUsers, allTimesheets]);
+    return { techSummaries, weeklyAudit, totals, availableMonths };
+  }, [historyShifts, allUsers, allTimesheets, selectedMonthFilter]);
 
   const handleExportClaimReport = () => {
     const summaryRows = standbyClaimReport.techSummaries.map(t => ({
@@ -350,6 +367,8 @@ export default function StandbyRosterPage() {
       '#': idx + 1,
       'Start Date': w.shift.startDate,
       'End Date': w.shift.endDate,
+      'Qualifying Payroll Month': w.qualifyingMonthLabel,
+      'Rollover From Prev Month': w.isRolloverFromPrevMonth ? 'Yes (Qualifies in Next Month)' : 'No',
       'Primary Technician': w.priName,
       'Primary Qualified': w.priQualifies ? 'YES (1 Week)' : 'NO (0)',
       'Backup Technician': w.bkpName,
@@ -747,10 +766,23 @@ ${activeShift.isMineTeamWeek ? 'Call-outs are handled internally by the Mine pri
                   Standby Allowance & Client Claim Summary (Since Feb 2026)
                 </CardTitle>
                 <CardDescription>
-                  Primary responders qualify automatically (1 week). Backup responders qualify only when called out during their standby week (or via Admin Override).
+                  All technicians who perform standby duties (both Primary and Backup) qualify for 1 week of standby allowance. When a standby week flows over into the next month/cycle, it qualifies in the following month.
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2 print:hidden">
+              <div className="flex flex-wrap items-center gap-2 print:hidden">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold uppercase text-slate-500">Payroll Month:</span>
+                  <select
+                    value={selectedMonthFilter}
+                    onChange={(e) => setSelectedMonthFilter(e.target.value)}
+                    className="h-8 px-2.5 border rounded-md text-xs font-bold bg-white"
+                  >
+                    <option value="ALL">All Months (Since Feb 2026)</option>
+                    {standbyClaimReport.availableMonths.map(m => (
+                      <option key={m} value={m}>{format(parseISO(`${m}-01`), 'MMMM yyyy')}</option>
+                    ))}
+                  </select>
+                </div>
                 <Button variant="outline" size="sm" onClick={handleExportClaimReport} className="gap-2 bg-white">
                   <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                   Export Excel
@@ -832,9 +864,10 @@ ${activeShift.isMineTeamWeek ? 'Call-outs are handled internally by the Mine pri
                   <TableRow>
                     <TableHead className="w-[40px]">#</TableHead>
                     <TableHead>Period</TableHead>
+                    <TableHead>Qualifying Month</TableHead>
                     <TableHead>Primary Responder (1 Wk)</TableHead>
-                    <TableHead>Backup Support</TableHead>
-                    <TableHead>Backup Callouts Logged (Timesheet)</TableHead>
+                    <TableHead>Backup Support (1 Wk)</TableHead>
+                    <TableHead>Backup Callouts Logged</TableHead>
                     <TableHead className="text-center">Backup Status</TableHead>
                     <TableHead className="text-right pr-6">Claimable</TableHead>
                   </TableRow>
@@ -847,6 +880,16 @@ ${activeShift.isMineTeamWeek ? 'Call-outs are handled internally by the Mine pri
                         <TableCell className="font-mono text-xs text-slate-400">{idx + 1}</TableCell>
                         <TableCell className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
                           {w.shift.startDate} — {w.shift.endDate}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <Badge variant="outline" className="w-fit text-[10px] font-bold border-slate-300 text-slate-700 bg-white">
+                              {w.qualifyingMonthLabel}
+                            </Badge>
+                            {w.isRolloverFromPrevMonth && (
+                              <span className="text-[9px] text-blue-600 font-semibold mt-0.5">Rollover → Next Month</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
