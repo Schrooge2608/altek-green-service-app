@@ -58,10 +58,13 @@ import { extractFsrData } from '@/ai/flows/extract-fsr-flow';
  * Optimized for A4 aspect ratio and high-density technical data entry.
  */
 
-const SectionHeader = ({ number, title }: { number: string; title: string }) => (
-  <div className="bg-[#1b5e20] text-white px-2 py-1 flex items-center gap-3 mb-0 border-x border-t border-black">
-    <span className="font-black text-sm">{number}</span>
-    <h2 className="font-bold text-[11px] uppercase tracking-tight">{title}</h2>
+const SectionHeader = ({ number, title, action }: { number: string; title: string; action?: React.ReactNode }) => (
+  <div className="bg-[#1b5e20] text-white px-2 py-1 flex items-center justify-between gap-3 mb-0 border-x border-t border-black">
+    <div className="flex items-center gap-3">
+      <span className="font-black text-sm">{number}</span>
+      <h2 className="font-bold text-[11px] uppercase tracking-tight">{title}</h2>
+    </div>
+    {action && <div className="print:hidden">{action}</div>}
   </div>
 );
 
@@ -144,6 +147,7 @@ export default function FieldServiceReportDetailPage() {
       clientDesignation: '',
       clientSignature: null,
       status: 'Draft',
+      additionalEquipment: [],
       parts: [],
       personnel: [],
       images: [],
@@ -159,6 +163,7 @@ export default function FieldServiceReportDetailPage() {
     }
   });
 
+  const { fields: additionalEquipmentFields, append: appendEquipment, remove: removeEquipment } = useFieldArray({ control: form.control, name: "additionalEquipment" });
   const { fields: partFields, append: appendPart, remove: removePart } = useFieldArray({ control: form.control, name: "parts" });
   const { fields: personFields, append: appendPerson, remove: removePerson } = useFieldArray({ control: form.control, name: "personnel" });
 
@@ -281,6 +286,7 @@ export default function FieldServiceReportDetailPage() {
         travelKmReturn: report.travelKmReturn ?? 0,
         totalHours: report.totalHours || initialOT,
         totalKm: report.totalKm || initialKm,
+        additionalEquipment: report.additionalEquipment ?? [],
         parts: report.parts ?? [],
         personnel: report.personnel ?? [],
         images: report.images ?? []
@@ -298,9 +304,40 @@ export default function FieldServiceReportDetailPage() {
     if (!reportId || !firestore || isFinalized) return;
     setSaveStatus('saving');
     try {
-      const data = form.getValues();
+      const data = { ...form.getValues(), ...overrides };
+
+      // Collect all equipment IDs and asset names (primary + additional) so Equipment Status / Breakdown History queries match every equipment worked on
+      const eqIdsSet = new Set<string>();
+      const assetNamesSet = new Set<string>();
+
+      const registerEquipmentRef = (eqId?: string | null, assetName?: string) => {
+        if (eqId) eqIdsSet.add(eqId);
+        if (assetName && assetName.trim()) {
+          const cleanName = assetName.trim();
+          assetNamesSet.add(cleanName);
+          const matchedEq = equipmentList?.find((e: any) => {
+            const prefix = e.mcc || e.location || e.division || '';
+            const label = prefix ? `${prefix} - ${e.name}` : e.name;
+            return label === cleanName || e.name === cleanName || e.id === eqId;
+          });
+          if (matchedEq) {
+            if (matchedEq.id) eqIdsSet.add(matchedEq.id);
+            if (matchedEq.name) assetNamesSet.add(matchedEq.name);
+            const prefix = matchedEq.mcc || matchedEq.location || matchedEq.division || '';
+            if (prefix && matchedEq.name) assetNamesSet.add(`${prefix} - ${matchedEq.name}`);
+          }
+        }
+      };
+
+      registerEquipmentRef(data.equipmentId, data.assetName);
+      (data.additionalEquipment || []).forEach((item: any) => {
+        if (item) registerEquipmentRef(item.equipmentId, item.assetName);
+      });
+
       const payload = {
         ...data,
+        equipmentIds: Array.from(eqIdsSet),
+        assetNames: Array.from(assetNamesSet),
         totalHours: computedTotalHours,
         totalKm: computedTotalKm,
         ...overrides,
@@ -319,7 +356,7 @@ export default function FieldServiceReportDetailPage() {
     } catch (e) {
       setSaveStatus('idle');
     }
-  }, [firestore, reportId, isFinalized, form]);
+  }, [firestore, reportId, isFinalized, form, equipmentList, computedTotalHours, computedTotalKm]);
 
   const handlePaperScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -968,57 +1005,151 @@ export default function FieldServiceReportDetailPage() {
                 </div>
 
                 {/* 02: EQUIPMENT DETAILS */}
-                <SectionHeader number="02" title="Equipment Details" />
-                <div className="border-2 border-black p-2 grid grid-cols-12 gap-x-2 gap-y-2 mb-0">
-                  <FormField control={form.control} name="assetName" render={({ field }) => (
-                    <div className="col-span-6 flex flex-col justify-end">
-                      <DenseLabel>Equipment / Asset Name</DenseLabel>
-                      <div className="print-hidden pt-1">
-                        <Combobox 
-                          options={equipmentOptions} 
-                          value={field.value || ''} 
-                          onChange={(val) => {
-                            field.onChange(val);
-                            const eq = equipmentList?.find(e => {
-                                const prefix = e.mcc || e.location || e.division || '';
-                                const label = prefix ? `${prefix} - ${e.name}` : e.name;
-                                return label === val;
-                            });
-                            if (eq) {
-                                form.setValue('equipmentId', eq.id);
-                                let finalOem = eq.oem || eq.manufacturer;
-                                let finalModel = eq.model;
-                                let finalSerial = eq.serialNo;
+                <SectionHeader
+                  number="02"
+                  title="Equipment Details"
+                  action={
+                    !isFinalized ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-5 px-2 text-[10px] font-bold bg-white text-[#1b5e20] border-white hover:bg-emerald-50 hover:text-[#1b5e20]"
+                        onClick={() => {
+                          appendEquipment({ equipmentId: null, assetName: '', oem: '', model: '', serialNo: '', rating: '' });
+                          setTimeout(() => handleAutosave(), 0);
+                        }}
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Add Equipment
+                      </Button>
+                    ) : null
+                  }
+                />
+                <div className="border-2 border-black p-2 mb-0 space-y-2">
+                  <div className="grid grid-cols-12 gap-x-2 gap-y-2">
+                    <FormField control={form.control} name="assetName" render={({ field }) => (
+                      <div className="col-span-6 flex flex-col justify-end">
+                        <DenseLabel>Equipment / Asset Name</DenseLabel>
+                        <div className="print-hidden pt-1">
+                          <Combobox 
+                            options={equipmentOptions} 
+                            value={field.value || ''} 
+                            onChange={(val) => {
+                              field.onChange(val);
+                              const eq = equipmentList?.find(e => {
+                                  const prefix = e.mcc || e.location || e.division || '';
+                                  const label = prefix ? `${prefix} - ${e.name}` : e.name;
+                                  return label === val || e.name === val;
+                              });
+                              if (eq) {
+                                  form.setValue('equipmentId', eq.id);
+                                  let finalOem = eq.oem || eq.manufacturer;
+                                  let finalModel = eq.model;
+                                  let finalSerial = eq.serialNo;
 
-                                if (eq.vsdId && vsdsList) {
-                                    const vsd = vsdsList.find((v: any) => v.id === eq.vsdId);
-                                    if (vsd) {
+                                  if (eq.vsdId && vsdsList) {
+                                      const vsd = vsdsList.find((v: any) => v.id === eq.vsdId);
+                                      if (vsd) {
+                                          if (!finalOem) finalOem = vsd.manufacturer || vsd.oem;
+                                          if (!finalModel) finalModel = vsd.model;
+                                          if (!finalSerial) finalSerial = vsd.serialNumber || vsd.serialNo;
+                                      }
+                                  }
+
+                                  if (finalOem) form.setValue('oem', finalOem);
+                                  if (finalModel) form.setValue('model', finalModel);
+                                  if (finalSerial && finalSerial !== 'Pending') form.setValue('serialNo', finalSerial);
+                                  if (eq.rating || eq.motorPower) form.setValue('rating', String(eq.rating || (eq.motorPower ? `${eq.motorPower}kW` : '')));
+                              }
+                              handleAutosave();
+                            }} 
+                            creatable={true} 
+                            placeholder="" 
+                            className="h-7 text-[10px] border-black/20" 
+                          />
+                        </div>
+                        <div className="hidden print:flex h-7 border border-black/20 text-[10px] px-3 items-center">{field.value}</div>
+                      </div>
+                    )} />
+                    <FormField control={form.control} name="oem" render={({ field }) => (<div className="col-span-3"><DenseLabel>Manufacturer / OEM</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                    <FormField control={form.control} name="model" render={({ field }) => (<div className="col-span-3"><DenseLabel>Model</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                    
+                    <FormField control={form.control} name="serialNo" render={({ field }) => (<div className="col-span-6"><DenseLabel>Serial No</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                    <FormField control={form.control} name="rating" render={({ field }) => (<div className="col-span-6"><DenseLabel>Rating / Capacity</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                  </div>
+
+                  {additionalEquipmentFields.map((eqField, idx) => (
+                    <div key={eqField.id} className="border-t border-black/20 pt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[8px] font-black uppercase text-[#1b5e20] tracking-wider">Additional Equipment #{idx + 2}</span>
+                        {!isFinalized && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-red-500 hover:text-red-700 hover:bg-red-50 print:hidden"
+                            onClick={() => {
+                              removeEquipment(idx);
+                              setTimeout(() => handleAutosave(), 0);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-12 gap-x-2 gap-y-2">
+                        <FormField control={form.control} name={`additionalEquipment.${idx}.assetName`} render={({ field }) => (
+                          <div className="col-span-6 flex flex-col justify-end">
+                            <DenseLabel>Equipment / Asset Name</DenseLabel>
+                            <div className="print-hidden pt-1">
+                              <Combobox
+                                options={equipmentOptions}
+                                value={field.value || ''}
+                                onChange={(val) => {
+                                  field.onChange(val);
+                                  const eq = equipmentList?.find(e => {
+                                    const prefix = e.mcc || e.location || e.division || '';
+                                    const label = prefix ? `${prefix} - ${e.name}` : e.name;
+                                    return label === val || e.name === val;
+                                  });
+                                  if (eq) {
+                                    form.setValue(`additionalEquipment.${idx}.equipmentId`, eq.id);
+                                    let finalOem = eq.oem || eq.manufacturer;
+                                    let finalModel = eq.model;
+                                    let finalSerial = eq.serialNo;
+
+                                    if (eq.vsdId && vsdsList) {
+                                      const vsd = vsdsList.find((v: any) => v.id === eq.vsdId);
+                                      if (vsd) {
                                         if (!finalOem) finalOem = vsd.manufacturer || vsd.oem;
                                         if (!finalModel) finalModel = vsd.model;
                                         if (!finalSerial) finalSerial = vsd.serialNumber || vsd.serialNo;
+                                      }
                                     }
-                                }
 
-                                if (finalOem) form.setValue('oem', finalOem);
-                                if (finalModel) form.setValue('model', finalModel);
-                                if (finalSerial && finalSerial !== 'Pending') form.setValue('serialNo', finalSerial);
-                                if (eq.rating || eq.motorPower) form.setValue('rating', String(eq.rating || (eq.motorPower ? `${eq.motorPower}kW` : '')));
-                            }
-                            handleAutosave();
-                          }} 
-                          creatable={true} 
-                          placeholder="" 
-                          className="h-7 text-[10px] border-black/20" 
-                        />
+                                    if (finalOem) form.setValue(`additionalEquipment.${idx}.oem`, finalOem);
+                                    if (finalModel) form.setValue(`additionalEquipment.${idx}.model`, finalModel);
+                                    if (finalSerial && finalSerial !== 'Pending') form.setValue(`additionalEquipment.${idx}.serialNo`, finalSerial);
+                                    if (eq.rating || eq.motorPower) form.setValue(`additionalEquipment.${idx}.rating`, String(eq.rating || (eq.motorPower ? `${eq.motorPower}kW` : '')));
+                                  }
+                                  handleAutosave();
+                                }}
+                                creatable={true}
+                                placeholder=""
+                                className="h-7 text-[10px] border-black/20"
+                              />
+                            </div>
+                            <div className="hidden print:flex h-7 border border-black/20 text-[10px] px-3 items-center">{field.value}</div>
+                          </div>
+                        )} />
+                        <FormField control={form.control} name={`additionalEquipment.${idx}.oem`} render={({ field }) => (<div className="col-span-3"><DenseLabel>Manufacturer / OEM</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                        <FormField control={form.control} name={`additionalEquipment.${idx}.model`} render={({ field }) => (<div className="col-span-3"><DenseLabel>Model</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                        
+                        <FormField control={form.control} name={`additionalEquipment.${idx}.serialNo`} render={({ field }) => (<div className="col-span-6"><DenseLabel>Serial No</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                        <FormField control={form.control} name={`additionalEquipment.${idx}.rating`} render={({ field }) => (<div className="col-span-6"><DenseLabel>Rating / Capacity</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
                       </div>
-                      <div className="hidden print:flex h-7 border border-black/20 text-[10px] px-3 items-center">{field.value}</div>
                     </div>
-                  )} />
-                  <FormField control={form.control} name="oem" render={({ field }) => (<div className="col-span-3"><DenseLabel>Manufacturer / OEM</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
-                  <FormField control={form.control} name="model" render={({ field }) => (<div className="col-span-3"><DenseLabel>Model</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
-                  
-                  <FormField control={form.control} name="serialNo" render={({ field }) => (<div className="col-span-6"><DenseLabel>Serial No</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
-                  <FormField control={form.control} name="rating" render={({ field }) => (<div className="col-span-6"><DenseLabel>Rating / Capacity</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-7 text-[10px] border-black/20" /></div>)} />
+                  ))}
                 </div>
 
                 {/* 03: CALL-OUT, TIME TRACKING & TRAVEL */}

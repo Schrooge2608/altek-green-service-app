@@ -119,12 +119,27 @@ export default function EquipmentDetail() {
   }, [firestore, id]);
   const { data: fsrsById, isLoading: fsrsIdLoading } = useCollection<FieldServiceReport>(fsrQueryId);
 
+  const fsrQueryMultiAsset = useMemoFirebase(() => {
+    if (!eq?.name) return null;
+    const prefix = eq.mcc || eq.location || eq.division || '';
+    const uniqueKey = prefix ? `${prefix} - ${eq.name}` : eq.name;
+    const searchKeys = Array.from(new Set([uniqueKey, eq.name]));
+    return query(collection(firestore, 'field_service_reports'), where('assetNames', 'array-contains-any', searchKeys));
+  }, [firestore, eq]);
+  const { data: fsrsByMultiAsset, isLoading: fsrsMultiAssetLoading } = useCollection<FieldServiceReport>(fsrQueryMultiAsset);
+
+  const fsrQueryMultiId = useMemoFirebase(() => {
+    if (!id) return null;
+    return query(collection(firestore, 'field_service_reports'), where('equipmentIds', 'array-contains', id));
+  }, [firestore, id]);
+  const { data: fsrsByMultiId, isLoading: fsrsMultiIdLoading } = useCollection<FieldServiceReport>(fsrQueryMultiId);
+
   const eqFsrsRaw = useMemo(() => {
-    const all = [...(fsrsByAsset || []), ...(fsrsById || [])];
+    const all = [...(fsrsByAsset || []), ...(fsrsById || []), ...(fsrsByMultiAsset || []), ...(fsrsByMultiId || [])];
     return Array.from(new Map(all.map(item => [item.id, item])).values());
-  }, [fsrsByAsset, fsrsById]);
+  }, [fsrsByAsset, fsrsById, fsrsByMultiAsset, fsrsByMultiId]);
   
-  const fsrsLoading = fsrsAssetLoading || fsrsIdLoading;
+  const fsrsLoading = fsrsAssetLoading || fsrsIdLoading || fsrsMultiAssetLoading || fsrsMultiIdLoading;
 
   const sparesQuery = useMemoFirebase(() => 
     (vsd?.model ? query(collection(firestore, 'spare_parts'), where('compatibleModels', 'array-contains', vsd.model)) : null), 

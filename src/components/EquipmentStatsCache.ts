@@ -51,7 +51,24 @@ export function getStatsForEquipment(cachedData: any, equipmentId: string, equip
 
     // Check FSRs
     cachedData.fsrs.forEach((f: any) => {
-        if (f.equipmentId === equipmentId || f.assetName === equipmentName) {
+        const matchesPrimary =
+            f.equipmentId === equipmentId ||
+            f.assetName === equipmentName ||
+            (typeof f.assetName === 'string' && equipmentName && f.assetName.endsWith(` - ${equipmentName}`));
+        const matchesIdsArray = Array.isArray(f.equipmentIds) && f.equipmentIds.includes(equipmentId);
+        const matchesNamesArray =
+            Array.isArray(f.assetNames) &&
+            f.assetNames.some((n: string) => n === equipmentName || (typeof n === 'string' && equipmentName && n.endsWith(` - ${equipmentName}`)));
+        const matchesAdditional =
+            Array.isArray(f.additionalEquipment) &&
+            f.additionalEquipment.some(
+                (item: any) =>
+                    item?.equipmentId === equipmentId ||
+                    item?.assetName === equipmentName ||
+                    (typeof item?.assetName === 'string' && equipmentName && item.assetName.endsWith(` - ${equipmentName}`))
+            );
+
+        if (matchesPrimary || matchesIdsArray || matchesNamesArray || matchesAdditional) {
             if (!uniqueBds.has(f.id)) {
                 uniqueBds.add(f.id);
                 bdCount++;

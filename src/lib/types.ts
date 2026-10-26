@@ -376,6 +376,9 @@ export interface FieldServiceReport {
   model: string;
   year: string;
   rating: string;
+  additionalEquipment?: FSREquipmentItem[];
+  equipmentIds?: string[];
+  assetNames?: string[];
   // 03 Time & Travel
   timeCallOut: string;
   timeArrival: string;
@@ -414,6 +417,15 @@ export interface FieldServiceReport {
   images?: string[];
   createdAt: any;
   updatedAt: any;
+}
+
+export interface FSREquipmentItem {
+  equipmentId?: string | null;
+  assetName: string;
+  oem?: string;
+  model?: string;
+  serialNo?: string;
+  rating?: string;
 }
 
 export interface FSRPart {

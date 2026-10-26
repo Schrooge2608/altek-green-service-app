@@ -55,7 +55,8 @@ export default function FSRTrackerPage() {
     return reports.filter(r => 
       r.fsrReference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.assetName?.toLowerCase().includes(searchTerm.toLowerCase())
+      r.assetName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.additionalEquipment?.some(eq => eq.assetName?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [reports, searchTerm]);
 
@@ -178,7 +179,18 @@ export default function FSRTrackerPage() {
                           <div className="text-[10px] text-slate-400 uppercase font-bold">{report.site || 'N/A'}</div>
                         </TableCell>
                         <TableCell className="text-sm font-medium text-slate-600">{report.poNumber || '---'}</TableCell>
-                        <TableCell className="text-sm font-medium">{report.assetName || '---'}</TableCell>
+                        <TableCell className="text-sm font-medium">
+                          <div>{report.assetName || '---'}</div>
+                          {report.additionalEquipment && report.additionalEquipment.filter(eq => eq.assetName).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {report.additionalEquipment.filter(eq => eq.assetName).map((eq, i) => (
+                                <span key={i} className="text-[10px] bg-slate-100 text-slate-700 border border-slate-200 rounded px-1.5 py-0.5 font-medium">
+                                  + {eq.assetName}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="text-xs text-slate-500 font-mono">{report.date}</TableCell>
                         <TableCell>
                           <Badge variant={report.status === 'Finalized' ? 'default' : 'secondary'} className={cn(

@@ -62,10 +62,12 @@ export function BreakdownTally({ equipmentId, equipmentName }: { equipmentId: st
                 const queries = [];
                 if (equipmentId) {
                     queries.push(getDocs(query(collection(db, 'field_service_reports'), where('equipmentId', '==', equipmentId))));
+                    queries.push(getDocs(query(collection(db, 'field_service_reports'), where('equipmentIds', 'array-contains', equipmentId))));
                     queries.push(getDocs(query(collection(db, 'breakdown_reports'), where('equipmentId', '==', equipmentId))));
                 }
                 if (equipmentName && equipmentName !== equipmentId) {
                     queries.push(getDocs(query(collection(db, 'field_service_reports'), where('assetName', '==', equipmentName))));
+                    queries.push(getDocs(query(collection(db, 'field_service_reports'), where('assetNames', 'array-contains', equipmentName))));
                     queries.push(getDocs(query(collection(db, 'breakdown_reports'), where('equipmentName', '==', equipmentName))));
                 }
 

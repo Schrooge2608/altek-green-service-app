@@ -45,6 +45,9 @@ export default function NewFSRPage() {
           customer: '',
           equipmentId: equipmentId || null,
           assetName: assetName,
+          equipmentIds: equipmentId ? [equipmentId] : [],
+          assetNames: assetName ? [assetName] : [],
+          additionalEquipment: [],
           parts: [],
           personnel: [],
           hse: {
