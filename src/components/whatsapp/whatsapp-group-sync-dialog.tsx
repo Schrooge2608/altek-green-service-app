@@ -112,6 +112,128 @@ interface EquipmentOption {
   serialNo: string;
   rating: string;
   location: string;
+  plant: 'Mining' | 'Smelter';
+  mineArea: string;
+  subsectionTags: string[];
+}
+
+const MINING_MINES = ['MPA', 'MPC', 'MPD', 'MPE', 'Pump Stations'] as const;
+const MINING_SUBSECTIONS = [
+  'Dredger',
+  'Concentrator',
+  'Boosters',
+  'Tails Boosters',
+  'Cons Boosters',
+  'Surge Bin',
+  'Dry Mining',
+  "UPS/BTU's",
+] as const;
+const PUMP_STATION_SUBSECTIONS = ['Nhlabane', 'Mposa', 'Monzi', 'Return Water Boosters'] as const;
+const SMELTER_SUBSECTIONS = [
+  'MSP',
+  'Roaster',
+  'Char Plant',
+  'Smelter',
+  'Iron Injection',
+  'Stripping Crane',
+  'Slag Plant',
+  'North Screen',
+  "UPS/BTU's",
+] as const;
+
+function classifyEquipmentRecord(eq: any): {
+  plant: 'Mining' | 'Smelter';
+  mineArea: string;
+  subsectionTags: string[];
+} {
+  const rawPlant = String(eq.plant || '').trim();
+  const rawLocation = String(eq.location || '').trim();
+  const rawDivision = String(eq.division || '').trim();
+  const rawMcc = String(eq.mcc || '').trim();
+  const rawName = String(eq.name || '').trim();
+  const combined = `${rawPlant} ${rawLocation} ${rawDivision} ${rawMcc} ${rawName}`.toUpperCase();
+
+  const isSmelter =
+    rawPlant.toLowerCase() === 'smelter' ||
+    (!rawPlant &&
+      /\b(MSP|ROASTER|CHAR PLANT|IRON INJECTION|STRIPPING CRANE|SLAG PLANT|NORTH SCREEN|SMELTER)\b/.test(combined));
+
+  const plant: 'Mining' | 'Smelter' = isSmelter ? 'Smelter' : 'Mining';
+
+  let mineArea = 'Other';
+  if (plant === 'Mining') {
+    if (/\bMPA\b/.test(combined)) mineArea = 'MPA';
+    else if (/\bMPB\b/.test(combined)) mineArea = 'MPB';
+    else if (/\bMPC\b/.test(combined)) mineArea = 'MPC';
+    else if (/\bMPD\b/.test(combined)) mineArea = 'MPD';
+    else if (/\bMPE\b/.test(combined)) mineArea = 'MPE';
+    else if (/\b(NHLABANE|MPOSA|MONZI|RETURN WATER|RWBS|PUMP STATION|PUMP STATIONS)\b/.test(combined)) {
+      mineArea = 'Pump Stations';
+    }
+  } else {
+    mineArea = 'Smelter';
+  }
+
+  const tags = new Set<string>();
+  const structureText = `${rawDivision} ${rawMcc} ${rawLocation}`.toUpperCase();
+
+  if (plant === 'Mining') {
+    if (structureText.includes('DREDG') || combined.includes('DREDG')) tags.add('Dredger');
+    if (
+      structureText.includes('CONCENTRATOR') ||
+      structureText.includes('CONS MCC') ||
+      rawDivision === 'Concentrator Plant'
+    ) {
+      tags.add('Concentrator');
+    }
+    if (structureText.includes('SURGE BIN') || structureText.includes('SURGE')) {
+      tags.add('Surge Bin');
+    }
+    if (structureText.includes('TAILS BOOSTER') || /\bTB\d+\b/.test(combined)) {
+      tags.add('Tails Boosters');
+      tags.add('Boosters');
+    }
+    if (structureText.includes('CONS BOOSTER') || /\bCB\d+\b/.test(combined)) {
+      tags.add('Cons Boosters');
+      tags.add('Boosters');
+    }
+    if (structureText.includes('BOOSTER') || combined.includes('BOOSTER')) {
+      tags.add('Boosters');
+    }
+    if (structureText.includes('DRY MINING') || combined.includes('DRY MINING')) {
+      tags.add('Dry Mining');
+    }
+    if (structureText.includes('UPS') || structureText.includes('BTU') || eq.equipmentProfile === 'UPS/BTU') {
+      tags.add("UPS/BTU's");
+    }
+    if (combined.includes('NHLABANE')) tags.add('Nhlabane');
+    if (combined.includes('MPOSA')) tags.add('Mposa');
+    if (combined.includes('MONZI')) tags.add('Monzi');
+    if (combined.includes('RETURN WATER') || combined.includes('RWBS')) {
+      tags.add('Return Water Boosters');
+      tags.add('Boosters');
+    }
+  } else {
+    if (combined.includes('MSP')) tags.add('MSP');
+    if (combined.includes('ROASTER')) tags.add('Roaster');
+    if (combined.includes('CHAR')) tags.add('Char Plant');
+    if (rawDivision.toLowerCase() === 'smelter' || combined.includes('FURNACE') || combined.includes('SMELTER')) {
+      tags.add('Smelter');
+    }
+    if (combined.includes('IRON INJECTION')) tags.add('Iron Injection');
+    if (combined.includes('STRIPPING CRANE')) tags.add('Stripping Crane');
+    if (combined.includes('SLAG')) tags.add('Slag Plant');
+    if (combined.includes('NORTH SCREEN')) tags.add('North Screen');
+    if (combined.includes('UPS') || combined.includes('BTU') || eq.equipmentProfile === 'UPS/BTU') {
+      tags.add("UPS/BTU's");
+    }
+  }
+
+  return {
+    plant,
+    mineArea,
+    subsectionTags: Array.from(tags),
+  };
 }
 
 interface FsrSummaryOption {
@@ -370,7 +492,10 @@ export function WhatsAppGroupSyncDialog({
   const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
   const [keywordFilter, setKeywordFilter] = useState('');
 
-  // Export Destination 1: Site Comms Chat + Equipment Link
+  // Export Destination 1: Site Comms Chat + Equipment Link + Cascading Tick-Box Filters
+  const [selectedPlantFilter, setSelectedPlantFilter] = useState<'' | 'Mining' | 'Smelter'>('');
+  const [selectedMinesFilter, setSelectedMinesFilter] = useState<string[]>([]);
+  const [selectedSubsectionsFilter, setSelectedSubsectionsFilter] = useState<string[]>([]);
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>('');
   const [equipmentSearch, setEquipmentSearch] = useState<string>('');
   const [targetChatName, setTargetChatName] = useState<string>('');
@@ -439,6 +564,7 @@ export function WhatsAppGroupSyncDialog({
           if (!finalSerial) finalSerial = vsd.serialNumber || vsd.serialNo || '';
         }
         const finalRating = eq.rating || (eq.motorPower ? `${eq.motorPower}kW` : '');
+        const classified = classifyEquipmentRecord(eq);
         eqList.push({
           id: d.id,
           name: eq.name || d.id,
@@ -448,6 +574,9 @@ export function WhatsAppGroupSyncDialog({
           serialNo: finalSerial,
           rating: String(finalRating || ''),
           location: prefix,
+          plant: classified.plant,
+          mineArea: classified.mineArea,
+          subsectionTags: classified.subsectionTags,
         });
       });
       eqList.sort((a, b) => a.fullLabel.localeCompare(b.fullLabel));
@@ -557,13 +686,91 @@ export function WhatsAppGroupSyncDialog({
     }
   };
 
+  const togglePlantTick = (plant: 'Mining' | 'Smelter') => {
+    setSelectedPlantFilter((prev) => {
+      const next = prev === plant ? '' : plant;
+      setSelectedMinesFilter([]);
+      setSelectedSubsectionsFilter([]);
+      setSelectedEquipmentId('');
+      return next;
+    });
+  };
+
+  const toggleMineTick = (mine: string) => {
+    setSelectedMinesFilter((prev) => {
+      const next = prev.includes(mine) ? prev.filter((m) => m !== mine) : [...prev, mine];
+      if (next.length === 0) {
+        setSelectedSubsectionsFilter([]);
+      }
+      setSelectedEquipmentId('');
+      return next;
+    });
+  };
+
+  const toggleSubsectionTick = (sub: string) => {
+    setSelectedSubsectionsFilter((prev) => {
+      const next = prev.includes(sub) ? prev.filter((s) => s !== sub) : [...prev, sub];
+      setSelectedEquipmentId('');
+      return next;
+    });
+  };
+
+  // Available Level 3 subsections based on currently ticked Plant + Mine(s)
+  const availableSubsectionsForSelection = useMemo(() => {
+    if (selectedPlantFilter === 'Smelter') {
+      return [...SMELTER_SUBSECTIONS];
+    }
+    if (selectedPlantFilter === 'Mining' && selectedMinesFilter.length > 0) {
+      const list: string[] = [];
+      const hasPond = selectedMinesFilter.some((m) => ['MPA', 'MPB', 'MPC', 'MPD', 'MPE'].includes(m));
+      const hasPumpStation = selectedMinesFilter.includes('Pump Stations');
+      if (hasPond) {
+        list.push(...MINING_SUBSECTIONS);
+      }
+      if (hasPumpStation) {
+        for (const ps of PUMP_STATION_SUBSECTIONS) {
+          if (!list.includes(ps)) list.push(ps);
+        }
+      }
+      return list;
+    }
+    return [];
+  }, [selectedPlantFilter, selectedMinesFilter]);
+
   const filteredEquipmentOptions = useMemo(() => {
-    if (!equipmentSearch.trim()) return equipmentOptions;
-    const q = equipmentSearch.toLowerCase();
-    return equipmentOptions.filter(
-      (e) => e.fullLabel.toLowerCase().includes(q) || e.name.toLowerCase().includes(q)
-    );
-  }, [equipmentOptions, equipmentSearch]);
+    return equipmentOptions.filter((e) => {
+      if (selectedPlantFilter && e.plant !== selectedPlantFilter) {
+        return false;
+      }
+      if (selectedPlantFilter === 'Mining' && selectedMinesFilter.length > 0) {
+        const matchesMine = selectedMinesFilter.some(
+          (m) => e.mineArea === m || e.fullLabel.toUpperCase().includes(m.toUpperCase())
+        );
+        if (!matchesMine) return false;
+      }
+      if (selectedSubsectionsFilter.length > 0) {
+        const matchesSub = selectedSubsectionsFilter.some(
+          (sub) =>
+            e.subsectionTags.includes(sub) ||
+            e.fullLabel.toUpperCase().includes(sub.toUpperCase())
+        );
+        if (!matchesSub) return false;
+      }
+      if (equipmentSearch.trim()) {
+        const q = equipmentSearch.toLowerCase();
+        if (!e.fullLabel.toLowerCase().includes(q) && !e.name.toLowerCase().includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [
+    equipmentOptions,
+    selectedPlantFilter,
+    selectedMinesFilter,
+    selectedSubsectionsFilter,
+    equipmentSearch,
+  ]);
 
   const parsedUploadPreview = useMemo(() => {
     if (!rawExportText.trim()) return [];
@@ -1695,21 +1902,133 @@ export function WhatsAppGroupSyncDialog({
                   <span className="text-[10px] font-bold text-slate-500">{selectedMsgIds.size} ticked</span>
                 </div>
 
+                {/* CASCADING EQUIPMENT FILTER TICK-BOXES */}
+                <div className="bg-slate-50 border border-slate-200 rounded-md p-2 space-y-1.5">
+                  {/* LEVEL 1: PLANT (MINING / SMELTER) */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[9px] font-black uppercase text-slate-500">1. Filter Plant:</span>
+                    {(['Mining', 'Smelter'] as const).map((plant) => {
+                      const checked = selectedPlantFilter === plant;
+                      return (
+                        <label
+                          key={plant}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            togglePlantTick(plant);
+                          }}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-bold cursor-pointer select-none transition-colors',
+                            checked
+                              ? 'bg-blue-600 text-white border-blue-700'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {}}
+                            className="h-3 w-3 accent-white pointer-events-none"
+                          />
+                          {plant}
+                        </label>
+                      );
+                    })}
+                    {(selectedPlantFilter || selectedMinesFilter.length > 0 || selectedSubsectionsFilter.length > 0) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedPlantFilter('');
+                          setSelectedMinesFilter([]);
+                          setSelectedSubsectionsFilter([]);
+                          setSelectedEquipmentId('');
+                        }}
+                        className="text-[9px] text-slate-500 hover:text-red-600 underline font-semibold ml-auto"
+                      >
+                        Reset Filters
+                      </button>
+                    )}
+                  </div>
+
+                  {/* LEVEL 2: MINE AREA (OPENS WHEN MINING IS TICKED) */}
+                  {selectedPlantFilter === 'Mining' && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/80">
+                      <span className="text-[9px] font-black uppercase text-blue-700">Mine:</span>
+                      {MINING_MINES.map((mine) => {
+                        const checked = selectedMinesFilter.includes(mine);
+                        return (
+                          <label
+                            key={mine}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleMineTick(mine);
+                            }}
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-bold cursor-pointer select-none transition-colors',
+                              checked
+                                ? 'bg-emerald-600 text-white border-emerald-700'
+                                : 'bg-white text-slate-700 border-slate-300 hover:bg-emerald-50'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {}}
+                              className="h-3 w-3 accent-white pointer-events-none"
+                            />
+                            {mine}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* LEVEL 3: SUBSECTION (OPENS WHEN A MINE IS TICKED OR SMELTER IS TICKED) */}
+                  {availableSubsectionsForSelection.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/80">
+                      <span className="text-[9px] font-black uppercase text-emerald-800">Section:</span>
+                      {availableSubsectionsForSelection.map((sub) => {
+                        const checked = selectedSubsectionsFilter.includes(sub);
+                        return (
+                          <label
+                            key={sub}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleSubsectionTick(sub);
+                            }}
+                            className={cn(
+                              'inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold cursor-pointer select-none transition-colors',
+                              checked
+                                ? 'bg-amber-600 text-white border-amber-700'
+                                : 'bg-white text-slate-700 border-slate-300 hover:bg-amber-50'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {}}
+                              className="h-3 w-3 accent-white pointer-events-none"
+                            />
+                            {sub}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   <div>
-                    <Label className="text-[9px] font-bold uppercase text-slate-500">1. Link Equipment (e.g. MPA Final Tails)</Label>
-                    <Input
-                      placeholder="Search equipment (e.g. MPA)..."
-                      value={equipmentSearch}
-                      onChange={(e) => setEquipmentSearch(e.target.value)}
-                      className="h-6 text-[11px] mb-1 px-2"
-                    />
+                    <Label className="text-[9px] font-bold uppercase text-slate-500">
+                      2. Select Filtered Equipment ({filteredEquipmentOptions.length} match{filteredEquipmentOptions.length === 1 ? '' : 'es'})
+                    </Label>
                     <select
                       value={selectedEquipmentId}
                       onChange={(e) => handleSelectEquipment(e.target.value)}
-                      className="w-full h-7 px-2 border border-slate-300 rounded text-[11px] font-semibold bg-white"
+                      className="w-full h-7 mt-0.5 px-2 border border-slate-300 rounded text-[11px] font-semibold bg-white"
                     >
-                      <option value="">-- Select Equipment --</option>
+                      <option value="">
+                        -- Select Equipment ({filteredEquipmentOptions.length} options) --
+                      </option>
                       {filteredEquipmentOptions.map((eq) => (
                         <option key={eq.id} value={eq.id}>
                           {eq.fullLabel}
@@ -1719,7 +2038,7 @@ export function WhatsAppGroupSyncDialog({
                   </div>
 
                   <div className="flex flex-col justify-end">
-                    <Label className="text-[9px] font-bold uppercase text-slate-500">2. Chat Name in Site Comms</Label>
+                    <Label className="text-[9px] font-bold uppercase text-slate-500">3. Chat Name in Site Comms</Label>
                     <Input
                       placeholder="e.g. Breakdown: MPA Final Tails Drive"
                       value={targetChatName}
