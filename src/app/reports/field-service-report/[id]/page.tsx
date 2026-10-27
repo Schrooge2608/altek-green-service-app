@@ -33,7 +33,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { useUser, useFirebase, useDoc, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, query, orderBy, getDocs, addDoc, where, limit } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, writeBatch, serverTimestamp, collection, query, orderBy, getDocs, addDoc, where, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { AltekLogo } from '@/components/altek-logo';
@@ -776,32 +776,120 @@ export default function FieldServiceReportDetailPage() {
   const handleOpenChat = async () => {
     if (!firestore || !authUser) return;
     const eqName = form.getValues('assetName') || 'Unknown Equipment';
+    const fsrDate = form.getValues('date') || '';
     const channelName = `Breakdown: ${eqName}`;
     try {
-      const q = query(collection(firestore, 'channels'), where('name', '==', channelName), limit(1));
-      const snaps = await getDocs(q);
+      const allChansSnap = await getDocs(collection(firestore, 'channels'));
+      const internalChans = allChansSnap.docs
+        .map((d) => ({ id: d.id, ...(d.data() as any) }))
+        .filter(
+          (c) =>
+            !c.id.startsWith('wa_store_') &&
+            !c.id.startsWith('wa_grp_') &&
+            !c.isPrivateWhatsAppStore &&
+            c.type !== 'whatsapp_store'
+        );
+
+      // 1. Look for existing Breakdown channel for this equipment (with or without date suffix)
+      const lowerEq = eqName.toLowerCase();
+      let breakdownChan = internalChans.find(
+        (c) =>
+          (c.name || '').toLowerCase() === channelName.toLowerCase() ||
+          (c.name || '').toLowerCase() === `${channelName} (${fsrDate})`.toLowerCase() ||
+          ((c.equipmentName || '').toLowerCase() === lowerEq && !c.isDeleted)
+      );
+
+      // 2. Also look for a generic "Callout Chat (YYYY-MM-DD)" for this FSR's date
+      const calloutChanForDate = fsrDate
+        ? internalChans.find(
+            (c) =>
+              !c.isDeleted &&
+              ((c.name || '').toLowerCase() === `callout chat (${fsrDate})`.toLowerCase() ||
+                (c.name || '').toLowerCase().includes(`(${fsrDate})`)) &&
+              c.id !== breakdownChan?.id
+          )
+        : undefined;
+
       let channelId = '';
-      if (snaps.empty) {
-         const newChannel = {
-           name: channelName,
-           type: 'breakdown',
-           participants: [authUser.uid],
-           lastMessage: 'Channel created for equipment breakdown',
-           lastMessageTime: serverTimestamp(),
-           createdAt: serverTimestamp(),
-           isArchived: false,
-           isDeleted: false
-         };
-         const ref = await addDoc(collection(firestore, 'channels'), newChannel);
-         channelId = ref.id;
+
+      if (!breakdownChan && calloutChanForDate) {
+        // Rename the Callout Chat for this date directly to Breakdown: <Equipment Name>
+        channelId = calloutChanForDate.id;
+        await setDoc(
+          doc(firestore, 'channels', channelId),
+          {
+            name: channelName,
+            type: 'breakdown',
+            equipmentName: eqName,
+            isDeleted: false,
+            isArchived: false,
+            lastMessageTime: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } else if (breakdownChan) {
+        channelId = breakdownChan.id;
+        // Check if breakdownChan is empty while calloutChanForDate has messages
+        if (calloutChanForDate) {
+          const bdMsgsSnap = await getDocs(collection(firestore, `channels/${channelId}/messages`));
+          const coMsgsSnap = await getDocs(
+            collection(firestore, `channels/${calloutChanForDate.id}/messages`)
+          );
+          if (bdMsgsSnap.empty && !coMsgsSnap.empty) {
+            const batch = writeBatch(firestore);
+            coMsgsSnap.forEach((mDoc) => {
+              batch.set(
+                doc(firestore, `channels/${channelId}/messages`, mDoc.id),
+                mDoc.data(),
+                { merge: true }
+              );
+            });
+            batch.update(doc(firestore, 'channels', calloutChanForDate.id), { isDeleted: true });
+            await batch.commit();
+            await setDoc(
+              doc(firestore, 'channels', channelId),
+              {
+                name: channelName,
+                type: 'breakdown',
+                equipmentName: eqName,
+                lastMessage: calloutChanForDate.lastMessage || 'Imported breakdown messages',
+                lastMessageTime: calloutChanForDate.lastMessageTime || serverTimestamp(),
+                isDeleted: false,
+                isArchived: false,
+                ...(calloutChanForDate.aiSummaryRca ? { aiSummaryRca: calloutChanForDate.aiSummaryRca } : {}),
+              },
+              { merge: true }
+            );
+          } else {
+            await setDoc(
+              doc(firestore, 'channels', channelId),
+              { isDeleted: false, isArchived: false, lastMessageTime: serverTimestamp() },
+              { merge: true }
+            );
+          }
+        } else {
+          await setDoc(
+            doc(firestore, 'channels', channelId),
+            { isDeleted: false, isArchived: false, lastMessageTime: serverTimestamp() },
+            { merge: true }
+          );
+        }
       } else {
-         channelId = snaps.docs[0].id;
-         await setDoc(
-           doc(firestore, 'channels', channelId),
-           { isDeleted: false, isArchived: false, lastMessageTime: serverTimestamp() },
-           { merge: true }
-         );
+        const newChannel = {
+          name: channelName,
+          type: 'breakdown',
+          equipmentName: eqName,
+          participants: [authUser.uid],
+          lastMessage: 'Channel created for equipment breakdown',
+          lastMessageTime: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          isArchived: false,
+          isDeleted: false,
+        };
+        const ref = await addDoc(collection(firestore, 'channels'), newChannel);
+        channelId = ref.id;
       }
+
       router.push(`/messages?channelId=${channelId}&fsrId=${reportId}`);
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Chat Error', description: e.message });

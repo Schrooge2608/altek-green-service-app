@@ -47,6 +47,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  writeBatch,
   deleteDoc
 } from 'firebase/firestore';
 import type { Channel, ChatMessage, User } from '@/lib/types';
@@ -173,6 +174,51 @@ export default function MessagingPage() {
       }).catch(() => {});
     }
   }, [activeChannelId, firestore, channels]);
+
+  // Auto-merge messages if the active Breakdown channel is empty and a generic Callout Chat has the messages
+  useEffect(() => {
+    if (!activeChannelId || !firestore || !channels || messagesLoading) return;
+    if (!messages || messages.length > 0) return;
+
+    const currentChan = channels.find((c) => c.id === activeChannelId) as any;
+    if (!currentChan || !(currentChan.name || '').toLowerCase().startsWith('breakdown:')) return;
+
+    const calloutChans = channels.filter(
+      (c: any) =>
+        !c.isDeleted &&
+        c.id !== activeChannelId &&
+        (c.name || '').toLowerCase().startsWith('callout chat')
+    );
+
+    if (calloutChans.length === 1) {
+      const donor = calloutChans[0] as any;
+      (async () => {
+        try {
+          const donorMsgsSnap = await getDocs(collection(firestore, `channels/${donor.id}/messages`));
+          if (donorMsgsSnap.empty) return;
+          const batch = writeBatch(firestore);
+          donorMsgsSnap.forEach((mDoc) => {
+            batch.set(
+              doc(firestore, `channels/${activeChannelId}/messages`, mDoc.id),
+              mDoc.data(),
+              { merge: true }
+            );
+          });
+          batch.update(doc(firestore, 'channels', donor.id), { isDeleted: true });
+          await batch.commit();
+          await updateDoc(doc(firestore, 'channels', activeChannelId), {
+            lastMessage: donor.lastMessage || 'Imported breakdown messages',
+            lastMessageTime: donor.lastMessageTime || Timestamp.now(),
+            isDeleted: false,
+            isArchived: false,
+            ...(donor.aiSummaryRca ? { aiSummaryRca: donor.aiSummaryRca } : {}),
+          });
+        } catch (err) {
+          console.error('Failed to auto-merge Callout Chat into Breakdown Chat:', err);
+        }
+      })();
+    }
+  }, [activeChannelId, firestore, channels, messages, messagesLoading]);
 
   useEffect(() => {
     if (activeChannelId && messages) {

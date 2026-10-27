@@ -1492,7 +1492,10 @@ export function WhatsAppGroupSyncDialog({
   /**
    * ACTION 1: EXPORT TICKED MESSAGES TO A SITE COMMS CHAT (LINKED TO EQUIPMENT OR CUSTOM NAME)
    */
-  const handleExportTickedToChat = async (keepDialogOpen = false): Promise<string | null> => {
+  const handleExportTickedToChat = async (
+    keepDialogOpen = false,
+    overrideEquipmentLabel?: string
+  ): Promise<string | null> => {
     if (!firestore) return null;
     const selectedMsgs = filteredMessages.filter((m) => selectedMsgIds.has(m.id));
     if (selectedMsgs.length === 0) {
@@ -1505,15 +1508,19 @@ export function WhatsAppGroupSyncDialog({
     }
 
     const chosenEq = equipmentOptions.find((e) => e.id === selectedEquipmentId);
+    const effectiveEqLabel = chosenEq?.fullLabel || overrideEquipmentLabel || '';
     const finalChatName =
       targetChatName.trim() ||
-      (chosenEq ? `Breakdown: ${chosenEq.fullLabel} (${fromDate})` : `Callout Chat (${fromDate})`);
+      (effectiveEqLabel ? `Breakdown: ${effectiveEqLabel}` : `Callout Chat (${fromDate})`);
 
     setIsExportingToChat(true);
     try {
-      // Find existing internal chat with this exact name, or create a new one
+      // Find existing internal chat with this exact name (or matching equipmentName), or create a new one
       const existingChan = appChannels.find(
-        (c) => (c.name || '').toLowerCase() === finalChatName.toLowerCase()
+        (c) =>
+          (c.name || '').toLowerCase() === finalChatName.toLowerCase() ||
+          (effectiveEqLabel &&
+            (c.name || '').toLowerCase() === `breakdown: ${effectiveEqLabel} (${fromDate})`.toLowerCase())
       );
       let channelId = existingChan?.id || '';
 
@@ -1522,9 +1529,9 @@ export function WhatsAppGroupSyncDialog({
       if (!channelId) {
         const newRef = await addDoc(collection(firestore, 'channels'), {
           name: finalChatName,
-          type: chosenEq ? 'breakdown' : 'general',
+          type: effectiveEqLabel ? 'breakdown' : 'general',
           relatedId: chosenEq ? chosenEq.id : null,
-          equipmentName: chosenEq ? chosenEq.fullLabel : null,
+          equipmentName: effectiveEqLabel || null,
           participants: user ? [user.uid] : [],
           isArchived: false,
           isDeleted: false,
@@ -1544,7 +1551,13 @@ export function WhatsAppGroupSyncDialog({
             isArchived: false,
             isDeleted: false,
             isPrivateWhatsAppStore: false,
-            ...(chosenEq ? { relatedId: chosenEq.id, equipmentName: chosenEq.fullLabel, type: 'breakdown' } : {}),
+            ...(effectiveEqLabel
+              ? {
+                  ...(chosenEq ? { relatedId: chosenEq.id } : {}),
+                  equipmentName: effectiveEqLabel,
+                  type: 'breakdown',
+                }
+              : {}),
           },
           { merge: true }
         );
@@ -1653,10 +1666,6 @@ export function WhatsAppGroupSyncDialog({
 
     setIsExtractingToFsr(true);
     try {
-      if (alsoExportToChat) {
-        await handleExportTickedToChat(true);
-      }
-
       const chosenEq = equipmentOptions.find((e) => e.id === selectedEquipmentId);
       const effectiveEqName = chosenEq?.fullLabel || equipmentName || undefined;
       const allEqNames =
@@ -1681,6 +1690,16 @@ export function WhatsAppGroupSyncDialog({
           description: res.error || 'Could not extract FSR details from ticked messages.',
         });
         return;
+      }
+
+      const firstDetectedEq =
+        Array.isArray(res.equipmentNames) && res.equipmentNames.length > 0
+          ? resolveEquipmentDetailsByName(res.equipmentNames[0]).assetName
+          : '';
+      const resolvedChatEqLabel = chosenEq?.fullLabel || equipmentName || firstDetectedEq || undefined;
+
+      if (alsoExportToChat) {
+        await handleExportTickedToChat(true, resolvedChatEqLabel);
       }
 
       // Case A: User is currently inside an FSR and chose "__current_fsr__"
