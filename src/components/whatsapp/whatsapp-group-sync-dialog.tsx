@@ -269,6 +269,30 @@ function isOfficeHoursTime(timeStr?: string): boolean {
   return totalMins >= 7 * 60 && totalMins <= 16 * 60;
 }
 
+/**
+ * Returns true ONLY if the message is standalone "<video omitted>" / "<image omitted>" / "<Media omitted>"
+ * (with optional "[Forwarded]" prefix) and has NO caption/text behind it.
+ * If there is text behind "<image omitted>" or "<video omitted>" (e.g. "<image omitted> We got a permit..."),
+ * returns false so that message stays ticked!
+ */
+function isStandaloneMediaOmittedMessage(text?: string): boolean {
+  if (!text) return false;
+  const cleaned = text.replace(/[\u200e\u200f\u202a-\u202e\ufeff]/g, '').trim();
+  const hasMediaOmittedTag =
+    /<\s*(image|video|media|audio|sticker|gif|document)\s+omitted\s*>/i.test(cleaned) ||
+    /\b(image|video|media|audio|sticker|gif|document)\s+omitted\b/i.test(cleaned);
+  if (!hasMediaOmittedTag) return false;
+
+  const remainder = cleaned
+    .replace(/\[\s*forwarded\s*\]/gi, '')
+    .replace(/^forwarded\s*:?/gi, '')
+    .replace(/<\s*(image|video|media|audio|sticker|gif|document)\s+omitted\s*>/gi, '')
+    .replace(/\b(image|video|media|audio|sticker|gif|document)\s+omitted\b/gi, '')
+    .trim();
+
+  return remainder.length === 0;
+}
+
 function simpleHash(str: string): string {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -521,6 +545,7 @@ export function WhatsAppGroupSyncDialog({
   const [excludedAreasFilter, setExcludedAreasFilter] = useState<string[]>([]);
   const [excludeKeyword, setExcludeKeyword] = useState('');
   const [hoursFilterMode, setHoursFilterMode] = useState<'all' | 'office_dd' | 'after_hours_fsr'>('all');
+  const [untickMediaOmittedOnly, setUntickMediaOmittedOnly] = useState<boolean>(false);
 
   // Export Destination 1: Site Comms Chat + Equipment Link + Cascading Tick-Box Filters
   const [selectedPlantFilter, setSelectedPlantFilter] = useState<'' | 'Mining' | 'Smelter'>('');
@@ -1404,9 +1429,45 @@ export function WhatsAppGroupSyncDialog({
     keywordFilter,
   ]);
 
-  useEffect(() => {
-    setSelectedMsgIds(new Set(filteredMessages.map((m) => m.id)));
+  const standaloneMediaMsgIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const m of filteredMessages) {
+      if (isStandaloneMediaOmittedMessage(m.text)) {
+        ids.add(m.id);
+      }
+    }
+    return ids;
   }, [filteredMessages]);
+
+  useEffect(() => {
+    if (untickMediaOmittedOnly) {
+      setSelectedMsgIds(
+        new Set(filteredMessages.filter((m) => !isStandaloneMediaOmittedMessage(m.text)).map((m) => m.id))
+      );
+    } else {
+      setSelectedMsgIds(new Set(filteredMessages.map((m) => m.id)));
+    }
+  }, [filteredMessages, untickMediaOmittedOnly]);
+
+  const toggleUntickMediaOmittedOnly = () => {
+    setUntickMediaOmittedOnly((prev) => {
+      const nextVal = !prev;
+      setSelectedMsgIds((currentSelected) => {
+        const nextSet = new Set(currentSelected);
+        for (const m of filteredMessages) {
+          if (isStandaloneMediaOmittedMessage(m.text)) {
+            if (nextVal) {
+              nextSet.delete(m.id);
+            } else {
+              nextSet.add(m.id);
+            }
+          }
+        }
+        return nextSet;
+      });
+      return nextVal;
+    });
+  };
 
   const toggleMessageSelection = (id: string) => {
     setSelectedMsgIds((prev) => {
@@ -1418,10 +1479,13 @@ export function WhatsAppGroupSyncDialog({
   };
 
   const toggleAllFiltered = () => {
-    if (selectedMsgIds.size === filteredMessages.length) {
+    const targetMessages = untickMediaOmittedOnly
+      ? filteredMessages.filter((m) => !isStandaloneMediaOmittedMessage(m.text))
+      : filteredMessages;
+    if (selectedMsgIds.size === targetMessages.length && targetMessages.length > 0) {
       setSelectedMsgIds(new Set());
     } else {
-      setSelectedMsgIds(new Set(filteredMessages.map((m) => m.id)));
+      setSelectedMsgIds(new Set(targetMessages.map((m) => m.id)));
     }
   };
 
@@ -2176,13 +2240,42 @@ export function WhatsAppGroupSyncDialog({
                     onClick={toggleAllFiltered}
                     className="h-6 px-2 text-[11px] font-bold text-slate-800"
                   >
-                    {selectedMsgIds.size === filteredMessages.length && filteredMessages.length > 0 ? (
+                    {selectedMsgIds.size > 0 &&
+                    selectedMsgIds.size >=
+                      (untickMediaOmittedOnly
+                        ? filteredMessages.length - standaloneMediaMsgIds.size
+                        : filteredMessages.length) ? (
                       <CheckSquare className="h-3.5 w-3.5 mr-1 text-emerald-600" />
                     ) : (
                       <Square className="h-3.5 w-3.5 mr-1 text-slate-400" />
                     )}
-                    Tick All ({selectedMsgIds.size}/{filteredMessages.length})
+                    Tick / Untick All ({selectedMsgIds.size} of {filteredMessages.length} selected)
                   </Button>
+
+                  <label
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleUntickMediaOmittedOnly();
+                    }}
+                    title="De-selects messages that ONLY say '<video omitted>' or '<image omitted>'. Messages with text behind '<image omitted>' stay ticked!"
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-0.5 rounded border text-[11px] font-bold cursor-pointer select-none transition-colors',
+                      untickMediaOmittedOnly
+                        ? 'bg-red-600 text-white border-red-700 shadow-sm'
+                        : 'bg-white text-slate-800 border-slate-300 hover:bg-red-50 hover:border-red-300'
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={untickMediaOmittedOnly}
+                      onChange={() => {}}
+                      className="h-3.5 w-3.5 accent-red-600 rounded cursor-pointer"
+                    />
+                    <span>
+                      Video / Image Omitted
+                      {standaloneMediaMsgIds.size > 0 ? ` (${standaloneMediaMsgIds.size})` : ''}
+                    </span>
+                  </label>
 
                   <div className="flex items-center gap-1 border-l border-slate-300 pl-2">
                     <button

@@ -278,6 +278,43 @@ export default function MessagingPage() {
     });
   };
 
+  const selectStandaloneMediaOmittedInChat = () => {
+    if (!messages) return;
+    const isStandaloneMedia = (text?: string) => {
+      if (!text) return false;
+      const cleaned = text.replace(/[\u200e\u200f\u202a-\u202e\ufeff]/g, '').trim();
+      const hasMediaOmittedTag =
+        /<\s*(image|video|media|audio|sticker|gif|document)\s+omitted\s*>/i.test(cleaned) ||
+        /\b(image|video|media|audio|sticker|gif|document)\s+omitted\b/i.test(cleaned);
+      if (!hasMediaOmittedTag) return false;
+      const remainder = cleaned
+        .replace(/\[\s*forwarded\s*\]/gi, '')
+        .replace(/^forwarded\s*:?/gi, '')
+        .replace(/<\s*(image|video|media|audio|sticker|gif|document)\s+omitted\s*>/gi, '')
+        .replace(/\b(image|video|media|audio|sticker|gif|document)\s+omitted\b/gi, '')
+        .trim();
+      return remainder.length === 0;
+    };
+    const matching = messages.filter((m) => isStandaloneMedia(m.text)).map((m) => m.id);
+    if (matching.length === 0) {
+      toast({
+        title: 'No Standalone Media Omitted Found',
+        description: 'No messages with only "<video omitted>" or "<image omitted>" were found.',
+      });
+      return;
+    }
+    setIsSelectingChatMsgs(true);
+    setTickedChatMsgIds((prev) => {
+      const next = new Set(prev);
+      matching.forEach((id) => next.add(id));
+      return next;
+    });
+    toast({
+      title: `Selected ${matching.length} Standalone Video/Image Message(s)`,
+      description: 'Messages with text behind "<image omitted>" were kept untouched.',
+    });
+  };
+
   const selectChatMsgsByKeyword = (word: string) => {
     if (!messages) return;
     const rx = new RegExp(`\\b${word}\\b`, 'i');
@@ -585,6 +622,14 @@ export default function MessagingPage() {
                   <span className="font-black uppercase text-[10px] text-amber-900">
                     Quick-Tick Unrelated Breakdown to Filter Out:
                   </span>
+                  <button
+                    type="button"
+                    onClick={selectStandaloneMediaOmittedInChat}
+                    className="px-2 py-0.5 rounded bg-white border border-red-300 text-red-700 hover:bg-red-50 font-bold text-[11px]"
+                    title="Ticks only messages that say '<video omitted>' or '<image omitted>' with no text behind them"
+                  >
+                    Tick Video / Image Omitted Only
+                  </button>
                   {(['MPE', 'MPD', 'MPC', 'MPA', 'Smelter'] as const).map((area) => (
                     <button
                       key={area}
