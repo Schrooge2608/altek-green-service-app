@@ -93,6 +93,7 @@ export default function MessagingPage() {
   const router = useRouter();
   const urlChannelId = searchParams.get('channelId');
   const returnFsrId = searchParams.get('fsrId');
+  const returnDdId = searchParams.get('ddId');
   
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
@@ -114,6 +115,9 @@ export default function MessagingPage() {
   const [selectedDdTarget, setSelectedDdTarget] = useState<string>('__new_dd__');
   const [diaryOptions, setDiaryOptions] = useState<
     { id: string; date: string; area: string; workSummary: string }[]
+  >([]);
+  const [fsrOptions, setFsrOptions] = useState<
+    { id: string; fsrReference: string; date: string; assetName: string }[]
   >([]);
   const [isExportingSummaryToDd, setIsExportingSummaryToDd] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -464,11 +468,14 @@ export default function MessagingPage() {
     }
   };
 
-  // Load existing Daily Diaries (DD-001, DD-002, etc.) for the Summary -> DD export dropdown
+  // Load existing Daily Diaries (DD-001, DD-002, etc.) and FSRs for Back to FSR / Back to DD navigation
   const loadDailyDiaryOptions = async () => {
     if (!firestore) return;
     try {
-      const ddSnap = await getDocs(collection(firestore, 'daily_diaries'));
+      const [ddSnap, fsrSnap] = await Promise.all([
+        getDocs(collection(firestore, 'daily_diaries')),
+        getDocs(collection(firestore, 'field_service_reports')),
+      ]);
       const diaries: { id: string; date: string; area: string; workSummary: string }[] = [];
       ddSnap.forEach((d) => {
         const data = d.data() as any;
@@ -490,8 +497,21 @@ export default function MessagingPage() {
         return (b.date || '').localeCompare(a.date || '');
       });
       setDiaryOptions(diaries);
+
+      const fsrs: { id: string; fsrReference: string; date: string; assetName: string }[] = [];
+      fsrSnap.forEach((d) => {
+        const data = d.data() as any;
+        fsrs.push({
+          id: d.id,
+          fsrReference: data.fsrReference || '',
+          date: data.date || '',
+          assetName: data.assetName || '',
+        });
+      });
+      fsrs.sort((a, b) => (b.fsrReference || '').localeCompare(a.fsrReference || ''));
+      setFsrOptions(fsrs);
     } catch (err) {
-      console.error('Failed to load Daily Diaries:', err);
+      console.error('Failed to load Daily Diaries / FSRs:', err);
     }
   };
 
@@ -728,6 +748,12 @@ export default function MessagingPage() {
 
       await setDoc(doc(firestore, 'daily_diaries', targetDdId), ddPayload, { merge: true });
 
+      if (activeChannelId) {
+        await updateDoc(doc(firestore, 'channels', activeChannelId), {
+          linkedDdId: targetDdId,
+        }).catch(() => {});
+      }
+
       toast({
         title: `Exported Summary & RCA to ${targetDdId}!`,
         description: `Populated ${summaryData.equipmentBreakdowns.length} equipment section(s) into ${targetDdId}. Opening Daily Diary...`,
@@ -958,14 +984,80 @@ export default function MessagingPage() {
                     Back to Main
                   </Button>
                 )}
-                {returnFsrId && (
-                  <Link href={`/reports/field-service-report/${returnFsrId}`}>
-                    <Button variant="outline" size="sm" className="text-blue-700 border-blue-200 hover:bg-blue-50 flex items-center gap-2 mr-2">
-                      <FileText className="h-4 w-4" />
-                      Back to FSR
-                    </Button>
-                  </Link>
-                )}
+                {(() => {
+                  const chanAny = activeChannel as any;
+                  const cleanChanEquip = (
+                    chanAny?.equipmentName ||
+                    (activeChannel?.name || '').replace(/^#?Breakdown:\s*/i, '')
+                  )
+                    .trim()
+                    .toLowerCase();
+                  const chatDate =
+                    summaryData?.date ||
+                    (messages && messages.length > 0 ? messages[0].messageDate || '' : '');
+
+                  const matchedFsr =
+                    (returnFsrId && fsrOptions.find((f) => f.id === returnFsrId)) ||
+                    (chanAny?.linkedFsrId && fsrOptions.find((f) => f.id === chanAny.linkedFsrId)) ||
+                    fsrOptions.find((f) => {
+                      const asset = (f.assetName || '').trim().toLowerCase();
+                      if (!asset || !cleanChanEquip) return false;
+                      return (
+                        asset === cleanChanEquip ||
+                        cleanChanEquip.includes(asset) ||
+                        asset.includes(cleanChanEquip)
+                      );
+                    }) ||
+                    (chatDate ? fsrOptions.find((f) => f.date === chatDate) : undefined);
+
+                  const fsrHref = returnFsrId
+                    ? `/reports/field-service-report/${returnFsrId}`
+                    : chanAny?.linkedFsrId
+                    ? `/reports/field-service-report/${chanAny.linkedFsrId}`
+                    : matchedFsr
+                    ? `/reports/field-service-report/${matchedFsr.id}`
+                    : '/reports/field-service-report';
+
+                  const matchedDd =
+                    (returnDdId && diaryOptions.find((d) => d.id === returnDdId)) ||
+                    (chanAny?.linkedDdId && diaryOptions.find((d) => d.id === chanAny.linkedDdId)) ||
+                    (chatDate ? diaryOptions.find((d) => d.date === chatDate) : undefined);
+
+                  const ddHref = returnDdId
+                    ? `/reports/contractors-daily-diary?id=${encodeURIComponent(returnDdId)}`
+                    : chanAny?.linkedDdId
+                    ? `/reports/contractors-daily-diary?id=${encodeURIComponent(chanAny.linkedDdId)}`
+                    : matchedDd
+                    ? `/reports/contractors-daily-diary?id=${encodeURIComponent(matchedDd.id)}`
+                    : '/reports/contractors-daily-diary';
+
+                  return (
+                    <>
+                      <Link href={fsrHref}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-700 border-blue-300 hover:bg-blue-50 font-bold text-xs flex items-center gap-1.5 mr-1.5"
+                          title="Go back to the linked Field Service Report (FSR)"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          Back to FSR{matchedFsr?.fsrReference ? ` (${matchedFsr.fsrReference})` : ''}
+                        </Button>
+                      </Link>
+                      <Link href={ddHref}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-amber-800 border-amber-300 hover:bg-amber-50 font-bold text-xs flex items-center gap-1.5 mr-1.5"
+                          title="Go back to the linked Contractors Daily Diary (DD)"
+                        >
+                          <FileText className="h-3.5 w-3.5 text-amber-600" />
+                          Back to Daily Diary{matchedDd?.id ? ` (${matchedDd.id})` : ''}
+                        </Button>
+                      </Link>
+                    </>
+                  );
+                })()}
                 {activeChannel?.type === 'breakdown' && activeChannel?.relatedId && (
                   <Link href={`/breakdowns/${activeChannel.relatedId}`}>
                     <Button variant="outline" size="sm" className="text-emerald-700 border-emerald-200 hover:bg-emerald-50 flex items-center gap-2 mr-2">

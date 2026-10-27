@@ -890,6 +890,9 @@ export default function FieldServiceReportDetailPage() {
         channelId = ref.id;
       }
 
+      if (channelId && reportId) {
+        await setDoc(doc(firestore, 'channels', channelId), { linkedFsrId: reportId }, { merge: true }).catch(() => {});
+      }
       router.push(`/messages?channelId=${channelId}&fsrId=${reportId}`);
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Chat Error', description: e.message });
