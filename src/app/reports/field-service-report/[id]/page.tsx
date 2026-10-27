@@ -52,6 +52,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { extractFsrData } from '@/ai/flows/extract-fsr-flow';
+import { WhatsAppGroupSyncDialog } from '@/components/whatsapp/whatsapp-group-sync-dialog';
 
 /**
  * @fileOverview High-fidelity digital replica of the AG-FSR-001 paper form.
@@ -86,6 +87,7 @@ export default function FieldServiceReportDetailPage() {
   const [isFinishing, setIsFinishing] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isGeneratingRef, setIsGeneratingRef] = useState(false);
+  const [isWhatsAppImportOpen, setIsWhatsAppImportOpen] = useState(false);
 
   const reportRef = useMemoFirebase(() => (reportId ? doc(firestore, 'field_service_reports', reportId) : null), [firestore, reportId]);
   const { data: report, isLoading: reportLoading } = useDoc<FieldServiceReport>(reportRef);
@@ -791,6 +793,124 @@ export default function FieldServiceReportDetailPage() {
   };
 
   const [isExtractingChat, setIsExtractingChat] = useState(false);
+
+  const resolveEquipmentDetails = useCallback((rawName: string) => {
+    const clean = rawName.trim().toLowerCase();
+    const eq = equipmentList?.find((e: any) => {
+      const prefix = e.mcc || e.location || e.division || '';
+      const label = prefix ? `${prefix} - ${e.name}` : e.name;
+      return (
+        label.toLowerCase() === clean ||
+        (e.name && e.name.toLowerCase() === clean) ||
+        label.toLowerCase().includes(clean) ||
+        clean.includes((e.name || '').toLowerCase())
+      );
+    });
+    if (!eq) {
+      return { equipmentId: null, assetName: rawName.trim(), oem: '', model: '', serialNo: '', rating: '' };
+    }
+    const prefix = eq.mcc || eq.location || eq.division || '';
+    const fullLabel = prefix ? `${prefix} - ${eq.name}` : eq.name;
+    let finalOem = eq.oem || eq.manufacturer || '';
+    let finalModel = eq.model || '';
+    let finalSerial = eq.serialNo && eq.serialNo !== 'Pending' ? eq.serialNo : '';
+    if (eq.vsdId && vsdsList) {
+      const vsd = vsdsList.find((v: any) => v.id === eq.vsdId);
+      if (vsd) {
+        if (!finalOem) finalOem = vsd.manufacturer || vsd.oem || '';
+        if (!finalModel) finalModel = vsd.model || '';
+        if (!finalSerial) finalSerial = vsd.serialNumber || vsd.serialNo || '';
+      }
+    }
+    const finalRating = eq.rating || (eq.motorPower ? `${eq.motorPower}kW` : '');
+    return {
+      equipmentId: eq.id,
+      assetName: fullLabel,
+      oem: finalOem,
+      model: finalModel,
+      serialNo: finalSerial,
+      rating: String(finalRating || ''),
+    };
+  }, [equipmentList, vsdsList]);
+
+  const handleExtractedFromWhatsApp = useCallback((res: any) => {
+    if (res.date && !form.getValues('date')) form.setValue('date', res.date, { shouldDirty: true });
+    if (res.area) form.setValue('area', res.area, { shouldDirty: true });
+    if (res.customer && !form.getValues('customer')) form.setValue('customer', res.customer, { shouldDirty: true });
+    if (res.site && !form.getValues('site')) form.setValue('site', res.site, { shouldDirty: true });
+
+    if (Array.isArray(res.equipmentNames) && res.equipmentNames.length > 0) {
+      const resolvedItems = res.equipmentNames.map((n: string) => resolveEquipmentDetails(n));
+      const currentPrimary = form.getValues('assetName');
+      if (!currentPrimary) {
+        const first = resolvedItems[0];
+        form.setValue('equipmentId', first.equipmentId);
+        form.setValue('assetName', first.assetName, { shouldDirty: true });
+        if (first.oem) form.setValue('oem', first.oem);
+        if (first.model) form.setValue('model', first.model);
+        if (first.serialNo) form.setValue('serialNo', first.serialNo);
+        if (first.rating) form.setValue('rating', first.rating);
+        if (resolvedItems.length > 1) {
+          const existingAdditional = form.getValues('additionalEquipment') || [];
+          form.setValue('additionalEquipment', [...existingAdditional, ...resolvedItems.slice(1)], { shouldDirty: true });
+        }
+      } else {
+        const existingAdditional = form.getValues('additionalEquipment') || [];
+        const newOnes = resolvedItems.filter((item: any) => item.assetName !== currentPrimary);
+        if (newOnes.length > 0) {
+          form.setValue('additionalEquipment', [...existingAdditional, ...newOnes], { shouldDirty: true });
+        }
+      }
+    }
+
+    if (res.timeCallOut && !form.getValues('timeCallOut')) form.setValue('timeCallOut', res.timeCallOut, { shouldDirty: true });
+    if (res.timeArrival && !form.getValues('timeArrival')) form.setValue('timeArrival', res.timeArrival, { shouldDirty: true });
+    if (res.timeStart && !form.getValues('timeStart')) form.setValue('timeStart', res.timeStart, { shouldDirty: true });
+    if (res.timeEnd && !form.getValues('timeEnd')) form.setValue('timeEnd', res.timeEnd, { shouldDirty: true });
+    if (res.timeDeparture && !form.getValues('timeDeparture')) form.setValue('timeDeparture', res.timeDeparture, { shouldDirty: true });
+
+    if (res.customerFault) form.setValue('customerFault', res.customerFault, { shouldDirty: true });
+    if (res.findings) form.setValue('techFindings', res.findings, { shouldDirty: true });
+    if (res.actions) form.setValue('correctiveActions', res.actions, { shouldDirty: true });
+    if (res.rca) form.setValue('rca', res.rca, { shouldDirty: true });
+    if (res.recommendations) form.setValue('recommendations', res.recommendations, { shouldDirty: true });
+
+    if (Array.isArray(res.parts) && res.parts.length > 0) {
+      const currentParts = form.getValues('parts') || [];
+      const mappedParts = res.parts.map((p: any) => ({
+        partNo: p.partNo || '',
+        description: p.description || '',
+        qty: Number(p.qty) || 1,
+        unit: p.unit || 'EA',
+        suppliedBy: 'Altek',
+        remarks: '',
+      }));
+      form.setValue('parts', [...currentParts, ...mappedParts], { shouldDirty: true });
+    }
+
+    if (Array.isArray(res.personnel) && res.personnel.length > 0) {
+      const currentPersonnel = form.getValues('personnel') || [];
+      const existingNames = new Set(currentPersonnel.map((p: any) => (p.name || '').toLowerCase()));
+      const newPersonnel = res.personnel
+        .filter((p: any) => p.name && !existingNames.has(p.name.toLowerCase()))
+        .map((p: any) => ({
+          name: p.name,
+          role: p.role || 'Technician',
+          hrs: Number(p.hrs) || 0,
+          ot: 0,
+        }));
+      if (newPersonnel.length > 0) {
+        form.setValue('personnel', [...currentPersonnel, ...newPersonnel], { shouldDirty: true });
+      }
+    }
+
+    setTimeout(() => handleAutosave(), 0);
+    toast({
+      title: 'Imported from Group Chat',
+      description: 'FSR fields have been populated from the selected group conversation.',
+    });
+  }, [form, resolveEquipmentDetails, handleAutosave, toast]);
+
   const handleExtractFromChat = async () => {
     if (!firestore) return;
     const eqName = form.getValues('assetName');
@@ -865,6 +985,16 @@ export default function FieldServiceReportDetailPage() {
             <MessageSquare className="h-4 w-4 text-blue-500" />
             Equipment Chat
           </Button>
+          {!isFinalized && (
+            <Button
+              variant="outline"
+              className="gap-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 font-semibold"
+              onClick={() => setIsWhatsAppImportOpen(true)}
+            >
+              <MessageSquare className="h-4 w-4 text-emerald-600" />
+              Import from WhatsApp
+            </Button>
+          )}
           {!isFinalized && (
             <div className="relative">
               <Button 
@@ -1421,6 +1551,15 @@ export default function FieldServiceReportDetailPage() {
           </Form>
         </div>
       </div>
+      <WhatsAppGroupSyncDialog
+        open={isWhatsAppImportOpen}
+        onOpenChange={setIsWhatsAppImportOpen}
+        defaultTab="import"
+        defaultDate={form.watch('date') || undefined}
+        equipmentName={form.watch('assetName') || undefined}
+        availableEquipmentNames={equipmentOptions.map((o) => o.value)}
+        onExtractedToFsr={(extracted) => handleExtractedFromWhatsApp(extracted)}
+      />
     </div>
   );
 }

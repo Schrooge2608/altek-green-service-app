@@ -528,6 +528,9 @@ export interface ChatMessage {
   senderName: string;
   createdAt: any; // serverTimestamp
   photoUrl?: string;
+  messageDate?: string; // YYYY-MM-DD (used for historical/WhatsApp date filtering)
+  timeStr?: string; // HH:mm
+  source?: 'whatsapp' | 'app';
 }
 
 export interface Consumable {

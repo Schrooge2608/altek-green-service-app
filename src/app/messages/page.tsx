@@ -59,6 +59,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { WhatsAppGroupSyncDialog } from '@/components/whatsapp/whatsapp-group-sync-dialog';
 
 export default function MessagingPage() {
   const { user } = useUser();
@@ -78,6 +79,7 @@ export default function MessagingPage() {
   const [newChannelName, setNewChannelName] = useState('');
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [isWhatsAppSyncOpen, setIsWhatsAppSyncOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 1. FETCH CHANNELS
@@ -266,6 +268,13 @@ export default function MessagingPage() {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       
+      <WhatsAppGroupSyncDialog
+        open={isWhatsAppSyncOpen}
+        onOpenChange={setIsWhatsAppSyncOpen}
+        defaultTab="sync"
+        defaultChannelId={activeChannelId}
+        onChannelSynced={(newChannelId) => setActiveChannelId(newChannelId)}
+      />
       {/* --- SIDEBAR: CHANNEL LIST --- */}
       <div className="w-[350px] border-r bg-white flex flex-col shadow-sm">
         <header className="p-4 border-b space-y-4">
@@ -273,7 +282,16 @@ export default function MessagingPage() {
             <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <MessageSquare className="text-primary h-5 w-5" /> Site Comms
             </h1>
-            <Dialog>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsWhatsAppSyncOpen(true)}
+                className="h-8 text-[11px] font-bold border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              >
+                Sync WhatsApp
+              </Button>
+              <Dialog>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-primary hover:bg-slate-100 rounded-full">
                   <Plus className="h-5 w-5" />
@@ -299,7 +317,8 @@ export default function MessagingPage() {
                   </Button>
                 </DialogFooter>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            </div>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -484,7 +503,7 @@ export default function MessagingPage() {
                           isMe ? "text-blue-100" : "text-slate-400"
                         )}>
                           <span className="text-[9px] font-medium">
-                            {msg.createdAt ? format(msg.createdAt.toDate(), 'HH:mm') : '...'}
+                            {msg.messageDate ? `${msg.messageDate} ${msg.timeStr || ''}` : msg.createdAt ? format(msg.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : '...'}
                           </span>
                           {isMe && <CheckCheck className="h-3 w-3" />}
                         </div>
