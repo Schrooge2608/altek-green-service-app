@@ -105,6 +105,7 @@ export default function MessagingPage() {
   const [isSelectingChatMsgs, setIsSelectingChatMsgs] = useState(false);
   const [tickedChatMsgIds, setTickedChatMsgIds] = useState<Set<string>>(new Set());
   const [isRemovingChatMsgs, setIsRemovingChatMsgs] = useState(false);
+  const [locallyDeletedChannelIds, setLocallyDeletedChannelIds] = useState<Set<string>>(new Set());
 
   // Summary & Root Cause Analysis (RCA) Right Panel State
   const [isSummaryPanelOpen, setIsSummaryPanelOpen] = useState(false);
@@ -156,24 +157,18 @@ export default function MessagingPage() {
     return 'BR';
   };
 
-  // Deep Link Selection & Auto-Restore to Active Sidebar if opened via URL
+  // Deep Link Selection (only once per urlChannelId, and never if deleted)
+  const appliedUrlChannelRef = useRef<string | null>(null);
   useEffect(() => {
-    if (urlChannelId && !activeChannelId) {
+    if (
+      urlChannelId &&
+      appliedUrlChannelRef.current !== urlChannelId &&
+      !locallyDeletedChannelIds.has(urlChannelId)
+    ) {
+      appliedUrlChannelRef.current = urlChannelId;
       setActiveChannelId(urlChannelId);
     }
-  }, [urlChannelId, activeChannelId]);
-
-  useEffect(() => {
-    if (!activeChannelId || !firestore || !channels) return;
-    const found = channels.find((c) => c.id === activeChannelId) as any;
-    if (found && (found.isDeleted || !found.lastMessageTime)) {
-      updateDoc(doc(firestore, 'channels', activeChannelId), {
-        isDeleted: false,
-        isArchived: false,
-        ...(found.lastMessageTime ? {} : { lastMessageTime: Timestamp.now() }),
-      }).catch(() => {});
-    }
-  }, [activeChannelId, firestore, channels]);
+  }, [urlChannelId, locallyDeletedChannelIds]);
 
   // Auto-merge messages if the active Breakdown channel is empty and a generic Callout Chat has the messages
   useEffect(() => {
@@ -289,20 +284,48 @@ export default function MessagingPage() {
     }
   };
 
-  const handleDeleteChannel = async (channelId: string) => {
-    if (!isAdmin) return;
+  const handleDeleteChannel = async (channelId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!isAdmin && !canManageWhatsApp) return;
     if (!window.confirm("Are you sure you want to permanently delete this chat? This cannot be undone.")) return;
+
+    // Immediately hide from UI and clear active selection BEFORE Firestore snapshot fires
+    setLocallyDeletedChannelIds((prev) => {
+      const next = new Set(prev);
+      next.add(channelId);
+      return next;
+    });
+    if (activeChannelId === channelId) {
+      setActiveChannelId(null);
+    }
+
     try {
-      // Soft-delete to bypass Firebase strict delete rules since users have update access
+      // 1. Mark soft-deleted first so all clients hide it immediately
       await updateDoc(doc(firestore, 'channels', channelId), {
-        isDeleted: true
-      });
-      toast({ title: "Chat Deleted", description: "The chat has been permanently removed." });
-      if (activeChannelId === channelId) {
-        setActiveChannelId(null);
+        isDeleted: true,
+      }).catch(() => {});
+
+      // 2. Delete subcollection messages in batches
+      try {
+        const msgsSnap = await getDocs(collection(firestore, `channels/${channelId}/messages`));
+        if (!msgsSnap.empty) {
+          const docs = msgsSnap.docs;
+          for (let i = 0; i < docs.length; i += 400) {
+            const batch = writeBatch(firestore);
+            docs.slice(i, i + 400).forEach((mDoc) => batch.delete(mDoc.ref));
+            await batch.commit();
+          }
+        }
+      } catch {
+        // ignore subcollection delete error
       }
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: "Delete Error", description: e.message });
+
+      // 3. Hard-delete the channel document itself
+      await deleteDoc(doc(firestore, 'channels', channelId)).catch(() => {});
+
+      toast({ title: "Chat Deleted", description: "The chat has been permanently removed." });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: "Delete Error", description: err.message });
     }
   };
 
@@ -727,11 +750,12 @@ export default function MessagingPage() {
    * Filters based on isArchived status matching the toggle, and ensures the active channel is always visible.
    */
   const filteredChannels = channels?.filter(c => {
+    if (locallyDeletedChannelIds.has(c.id)) return false;
+    if ((c as any).isDeleted) return false;
     if (c.id?.startsWith('wa_grp_') || c.id?.startsWith('wa_store_') || (c as any).isPrivateWhatsAppStore || (c as any).type === 'whatsapp_store') return false;
     if (c.id === activeChannelId && !showArchived) {
       return (c.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     }
-    if ((c as any).isDeleted) return false;
     const isArchived = c.isArchived || false;
     return isArchived === showArchived && (c.name || '').toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -853,11 +877,23 @@ export default function MessagingPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center justify-between mb-0.5 gap-1">
                     <h3 className="font-semibold text-slate-900 truncate">#{channel.name}</h3>
-                    <span className="text-[10px] text-slate-400 uppercase font-medium">
-                      {channel.lastMessageTime?.toDate ? format(channel.lastMessageTime.toDate(), 'HH:mm') : ''}
-                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] text-slate-400 uppercase font-medium">
+                        {channel.lastMessageTime?.toDate ? format(channel.lastMessageTime.toDate(), 'HH:mm') : ''}
+                      </span>
+                      {(isAdmin || canManageWhatsApp) && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteChannel(channel.id, e)}
+                          className="p-1 rounded text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete Chat Permanently"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {(channel as any)?.aiSummaryRca?.equipmentBreakdowns?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-0.5">
