@@ -5,7 +5,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -32,6 +31,8 @@ import {
   Upload,
   FileText,
   Database,
+  Wrench,
+  Send,
 } from 'lucide-react';
 import {
   collection,
@@ -40,13 +41,16 @@ import {
   getDocs,
   doc,
   setDoc,
+  addDoc,
+  getDoc,
   Timestamp,
   writeBatch,
 } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { extractFsrFromChat, type ExtractFsrFromChatOutput } from '@/ai/flows/extract-fsr-from-chat-flow';
-import type { Channel } from '@/lib/types';
+import type { Channel, FieldServiceReport } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -97,6 +101,26 @@ interface ParsedExportMessage {
   timestampMs: number;
   senderName: string;
   text: string;
+}
+
+interface EquipmentOption {
+  id: string;
+  name: string;
+  fullLabel: string;
+  oem: string;
+  model: string;
+  serialNo: string;
+  rating: string;
+  location: string;
+}
+
+interface FsrSummaryOption {
+  id: string;
+  fsrReference: string;
+  date: string;
+  assetName: string;
+  customer: string;
+  status: string;
 }
 
 function simpleHash(str: string): string {
@@ -295,6 +319,7 @@ interface WhatsAppGroupSyncDialogProps {
   defaultTab?: 'import' | 'sync' | 'qr';
   defaultDate?: string; // YYYY-MM-DD
   defaultChannelId?: string | null;
+  forceSourceId?: string | null;
   equipmentName?: string;
   availableEquipmentNames?: string[];
   onExtractedToFsr?: (extracted: ExtractFsrFromChatOutput, rawTranscript: string) => void;
@@ -307,19 +332,24 @@ export function WhatsAppGroupSyncDialog({
   defaultTab = 'import',
   defaultDate,
   defaultChannelId,
+  forceSourceId,
   equipmentName,
   availableEquipmentNames,
   onExtractedToFsr,
+  onChannelSynced,
 }: WhatsAppGroupSyncDialogProps) {
   const firestore = useFirestore();
+  const { user } = useUser();
+  const router = useRouter();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'import' | 'sync' | 'qr'>(defaultTab);
   const [storedGroups, setStoredGroups] = useState<StoredWhatsAppGroup[]>([]);
   const [appChannels, setAppChannels] = useState<Channel[]>([]);
+  const [equipmentOptions, setEquipmentOptions] = useState<EquipmentOption[]>([]);
+  const [fsrOptions, setFsrOptions] = useState<FsrSummaryOption[]>([]);
 
   // Tab 2: .txt / .zip Upload & Group Selector state
-  // Value can be `store:<docId>`, `wa:<jid>`, or `__custom__`
   const [targetGroupSelection, setTargetGroupSelection] = useState<string>('');
   const [customGroupName, setCustomGroupName] = useState<string>('');
   const [uploadedFileName, setUploadedFileName] = useState<string>('');
@@ -339,12 +369,29 @@ export function WhatsAppGroupSyncDialog({
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
   const [keywordFilter, setKeywordFilter] = useState('');
-  const [isExtracting, setIsExtracting] = useState(false);
 
-  const loadChannelsAndStores = useCallback(async () => {
+  // Export Destination 1: Site Comms Chat + Equipment Link
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>('');
+  const [equipmentSearch, setEquipmentSearch] = useState<string>('');
+  const [targetChatName, setTargetChatName] = useState<string>('');
+  const [isExportingToChat, setIsExportingToChat] = useState<boolean>(false);
+
+  // Export Destination 2: FSR Selection (Current Open FSR, Existing FSR by Reference, or Create New FSR)
+  const [selectedFsrTarget, setSelectedFsrTarget] = useState<string>(
+    onExtractedToFsr ? '__current_fsr__' : '__new_fsr__'
+  );
+  const [isExtractingToFsr, setIsExtractingToFsr] = useState<boolean>(false);
+
+  const loadChannelsStoresEquipmentAndFsrs = useCallback(async () => {
     if (!firestore) return [];
     try {
-      const allSnap = await getDocs(collection(firestore, 'channels'));
+      const [allSnap, eqSnap, vsdSnap, fsrSnap] = await Promise.all([
+        getDocs(collection(firestore, 'channels')),
+        getDocs(query(collection(firestore, 'equipment'), orderBy('name', 'asc'))),
+        getDocs(collection(firestore, 'vsds')),
+        getDocs(collection(firestore, 'field_service_reports')),
+      ]);
+
       const stores: StoredWhatsAppGroup[] = [];
       const internalChannels: Channel[] = [];
 
@@ -372,9 +419,63 @@ export function WhatsAppGroupSyncDialog({
 
       setStoredGroups(stores);
       setAppChannels(internalChannels);
+
+      // Build Equipment list with VSD details
+      const vsdMap = new Map<string, any>();
+      vsdSnap.forEach((v) => vsdMap.set(v.id, v.data()));
+
+      const eqList: EquipmentOption[] = [];
+      eqSnap.forEach((d) => {
+        const eq = d.data() as any;
+        const prefix = eq.mcc || eq.location || eq.division || '';
+        const fullLabel = prefix ? `${prefix} - ${eq.name}` : eq.name || d.id;
+        let finalOem = eq.oem || eq.manufacturer || '';
+        let finalModel = eq.model || '';
+        let finalSerial = eq.serialNo && eq.serialNo !== 'Pending' ? eq.serialNo : '';
+        if (eq.vsdId && vsdMap.has(eq.vsdId)) {
+          const vsd = vsdMap.get(eq.vsdId);
+          if (!finalOem) finalOem = vsd.manufacturer || vsd.oem || '';
+          if (!finalModel) finalModel = vsd.model || '';
+          if (!finalSerial) finalSerial = vsd.serialNumber || vsd.serialNo || '';
+        }
+        const finalRating = eq.rating || (eq.motorPower ? `${eq.motorPower}kW` : '');
+        eqList.push({
+          id: d.id,
+          name: eq.name || d.id,
+          fullLabel,
+          oem: finalOem,
+          model: finalModel,
+          serialNo: finalSerial,
+          rating: String(finalRating || ''),
+          location: prefix,
+        });
+      });
+      eqList.sort((a, b) => a.fullLabel.localeCompare(b.fullLabel));
+      setEquipmentOptions(eqList);
+
+      // Build FSR summary list sorted by FSR reference descending / date descending
+      const fsrs: FsrSummaryOption[] = [];
+      fsrSnap.forEach((d) => {
+        const data = d.data() as any;
+        fsrs.push({
+          id: d.id,
+          fsrReference: data.fsrReference || `Draft (${d.id.slice(0, 6)})`,
+          date: data.date || '',
+          assetName: data.assetName || 'Unassigned Equipment',
+          customer: data.customer || '',
+          status: data.status || 'Draft',
+        });
+      });
+      fsrs.sort((a, b) => {
+        const refCmp = (b.fsrReference || '').localeCompare(a.fsrReference || '');
+        if (refCmp !== 0) return refCmp;
+        return (b.date || '').localeCompare(a.date || '');
+      });
+      setFsrOptions(fsrs);
+
       return stores;
     } catch (e) {
-      console.error('Error loading stored WhatsApp groups:', e);
+      console.error('Error loading dialog data:', e);
       return [];
     }
   }, [firestore]);
@@ -393,26 +494,37 @@ export function WhatsAppGroupSyncDialog({
 
   useEffect(() => {
     if (open) {
-      if (defaultDate) {
+      if (forceSourceId) {
+        setSelectedSourceId(forceSourceId);
+        setFromDate('');
+        setToDate('');
+      } else if (defaultDate) {
         setFromDate(defaultDate);
         setToDate(defaultDate);
       }
-      Promise.all([loadChannelsAndStores(), fetchWaStatus()]).then(([stores, wa]) => {
-        if (!selectedSourceId) {
+      if (onExtractedToFsr) {
+        setSelectedFsrTarget('__current_fsr__');
+      }
+      if (equipmentName && !targetChatName) {
+        setTargetChatName(`Breakdown: ${equipmentName}`);
+      }
+      Promise.all([loadChannelsStoresEquipmentAndFsrs(), fetchWaStatus()]).then(([stores, wa]) => {
+        if (!selectedSourceId && !forceSourceId) {
           if (stores.length > 0) {
             setSelectedSourceId(`store:${stores[0].id}`);
+          } else if (defaultChannelId && !defaultChannelId.startsWith('wa_store_')) {
+            setSelectedSourceId(`app:${defaultChannelId}`);
           } else if (wa?.groups && wa.groups.length > 0) {
             setSelectedSourceId(`wa:${wa.groups[0].jid}`);
-          } else if (defaultChannelId) {
-            setSelectedSourceId(`app:${defaultChannelId}`);
           }
         }
         if (!targetGroupSelection) {
           if (stores.length > 0) {
             setTargetGroupSelection(`store:${stores[0].id}`);
           } else if (wa?.groups && wa.groups.length > 0) {
-            // Default to Altek Green/RBM Group if present, otherwise first live WhatsApp group
-            const rbm = wa.groups.find((g) => g.subject.toLowerCase().includes('altek') || g.subject.toLowerCase().includes('rbm'));
+            const rbm = wa.groups.find(
+              (g) => g.subject.toLowerCase().includes('altek') || g.subject.toLowerCase().includes('rbm')
+            );
             setTargetGroupSelection(`wa:${(rbm || wa.groups[0]).jid}`);
           } else {
             setTargetGroupSelection('__custom__');
@@ -421,7 +533,37 @@ export function WhatsAppGroupSyncDialog({
         }
       });
     }
-  }, [open, defaultDate, defaultChannelId, loadChannelsAndStores, fetchWaStatus, selectedSourceId, targetGroupSelection]);
+  }, [
+    open,
+    defaultDate,
+    defaultChannelId,
+    forceSourceId,
+    equipmentName,
+    targetChatName,
+    onExtractedToFsr,
+    loadChannelsStoresEquipmentAndFsrs,
+    fetchWaStatus,
+    selectedSourceId,
+    targetGroupSelection,
+  ]);
+
+  // When user selects an Equipment in the Export bar, auto-populate the Chat Name
+  const handleSelectEquipment = (eqId: string) => {
+    setSelectedEquipmentId(eqId);
+    if (!eqId) return;
+    const eq = equipmentOptions.find((e) => e.id === eqId);
+    if (eq) {
+      setTargetChatName(`Breakdown: ${eq.fullLabel} (${fromDate})`);
+    }
+  };
+
+  const filteredEquipmentOptions = useMemo(() => {
+    if (!equipmentSearch.trim()) return equipmentOptions;
+    const q = equipmentSearch.toLowerCase();
+    return equipmentOptions.filter(
+      (e) => e.fullLabel.toLowerCase().includes(q) || e.name.toLowerCase().includes(q)
+    );
+  }, [equipmentOptions, equipmentSearch]);
 
   const parsedUploadPreview = useMemo(() => {
     if (!rawExportText.trim()) return [];
@@ -438,15 +580,10 @@ export function WhatsAppGroupSyncDialog({
     };
   }, [parsedUploadPreview]);
 
-  /**
-   * Resolves the target store document ID, display name, and optional live WhatsApp JID
-   * from the user's selection in Tab 2.
-   */
   const resolveTargetGroupInfo = useCallback(() => {
     if (targetGroupSelection.startsWith('store:')) {
       const storeId = targetGroupSelection.slice(6);
       const found = storedGroups.find((g) => g.id === storeId);
-      // Also check if a live group has the same subject so we link its whatsappJid automatically
       const matchingLive = waSession?.groups?.find(
         (lg) => lg.jid === found?.whatsappJid || lg.subject.toLowerCase() === (found?.name || '').toLowerCase()
       );
@@ -461,7 +598,6 @@ export function WhatsAppGroupSyncDialog({
       const jid = targetGroupSelection.slice(3);
       const liveGrp = waSession?.groups?.find((g) => g.jid === jid);
       const groupName = liveGrp?.subject || customGroupName.trim() || 'WhatsApp Group';
-      // Check if we already have a store for this JID or group name
       const existingStore = storedGroups.find(
         (s) => s.whatsappJid === jid || s.name.toLowerCase() === groupName.toLowerCase()
       );
@@ -482,10 +618,6 @@ export function WhatsAppGroupSyncDialog({
     };
   }, [targetGroupSelection, storedGroups, waSession?.groups, customGroupName]);
 
-  /**
-   * Saves or incrementally updates a Stored WhatsApp Group in Firestore (`channels/wa_store_<slug>`)
-   * AND also merges any live messages from the matching WhatsApp group if connected!
-   */
   const saveParsedMessagesToStore = useCallback(
     async (messagesToSave: ParsedExportMessage[]) => {
       if (!firestore || messagesToSave.length === 0) return;
@@ -502,7 +634,6 @@ export function WhatsAppGroupSyncDialog({
 
       setIsSavingToStore(true);
       try {
-        // 1. Fetch existing message IDs in this group store so we only write NEW messages
         const existingSnap = await getDocs(collection(firestore, `channels/${storeDocId}/messages`));
         const existingIds = new Set<string>();
         const dates = messagesToSave.map((m) => m.dateStr).sort();
@@ -518,7 +649,6 @@ export function WhatsAppGroupSyncDialog({
           }
         });
 
-        // Also pull any live-buffered messages for this WhatsApp group if linked
         const combinedMessages = [...messagesToSave];
         if (whatsappJid) {
           try {
@@ -545,11 +675,10 @@ export function WhatsAppGroupSyncDialog({
               }
             }
           } catch {
-            // ignore live merge error
+            // ignore
           }
         }
 
-        // Deduplicate within combinedMessages and against existingIds
         const seenInBatch = new Set<string>();
         const newMessages: ParsedExportMessage[] = [];
         for (const m of combinedMessages) {
@@ -559,7 +688,6 @@ export function WhatsAppGroupSyncDialog({
           }
         }
 
-        // 2. Write new messages in chunks of 400
         const chunkSize = 400;
         for (let i = 0; i < newMessages.length; i += chunkSize) {
           const chunk = newMessages.slice(i, i + chunkSize);
@@ -582,7 +710,6 @@ export function WhatsAppGroupSyncDialog({
         const totalAfter = existingIds.size + newMessages.length;
         const latestMsg = combinedMessages[combinedMessages.length - 1];
 
-        // 3. Update parent store metadata document
         await setDoc(
           doc(firestore, 'channels', storeDocId),
           {
@@ -601,17 +728,16 @@ export function WhatsAppGroupSyncDialog({
           { merge: true }
         );
 
-        await loadChannelsAndStores();
+        await loadChannelsStoresEquipmentAndFsrs();
         setSelectedSourceId(`store:${storeDocId}`);
         setTargetGroupSelection(`store:${storeDocId}`);
         setRawExportText('');
         setUploadedFileName('');
-        // Automatically switch to Tab 1 so user immediately sees their messages filtered by their From/To Dates!
         setActiveTab('import');
 
         toast({
           title: `Synced "${groupName}" Store!`,
-          description: `Saved ${newMessages.length.toLocaleString()} new messages (${totalAfter.toLocaleString()} total stored from ${minDate} to ${maxDate}). Now filtering by your selected dates!`,
+          description: `Saved ${newMessages.length.toLocaleString()} new messages (${totalAfter.toLocaleString()} total stored from ${minDate} to ${maxDate}).`,
         });
       } catch (err: any) {
         console.error('Failed to save WhatsApp .txt store:', err);
@@ -624,7 +750,7 @@ export function WhatsAppGroupSyncDialog({
         setIsSavingToStore(false);
       }
     },
-    [firestore, resolveTargetGroupInfo, loadChannelsAndStores, toast]
+    [firestore, resolveTargetGroupInfo, loadChannelsStoresEquipmentAndFsrs, toast]
   );
 
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -645,7 +771,6 @@ export function WhatsAppGroupSyncDialog({
         return;
       }
 
-      // Immediately save into the selected WhatsApp Group Store and switch to Tab 1!
       await saveParsedMessagesToStore(parsed);
     } catch (err: any) {
       toast({
@@ -658,13 +783,9 @@ export function WhatsAppGroupSyncDialog({
     }
   };
 
-  /**
-   * Syncs any new messages from the Live QR session into the currently selected Stored Group!
-   */
   const handleSyncLiveIntoSelectedStore = useCallback(
     async (storeGroup: StoredWhatsAppGroup, silent = false) => {
       if (!firestore) return;
-      // Find matching live group by JID or by subject name
       const matchingLive = waSession?.groups?.find(
         (lg) =>
           (storeGroup.whatsappJid && lg.jid === storeGroup.whatsappJid) ||
@@ -693,10 +814,7 @@ export function WhatsAppGroupSyncDialog({
         const liveMsgs: WhatsAppBufferedMessage[] = Array.isArray(data.messages) ? data.messages : [];
         if (liveMsgs.length === 0) {
           if (!silent) {
-            toast({
-              title: 'Up to Date',
-              description: 'No new live messages waiting to be added.',
-            });
+            toast({ title: 'Up to Date', description: 'No new live messages waiting to be added.' });
           }
           return;
         }
@@ -761,13 +879,13 @@ export function WhatsAppGroupSyncDialog({
             { merge: true }
           );
 
-          await loadChannelsAndStores();
+          await loadChannelsStoresEquipmentAndFsrs();
         }
 
         if (!silent) {
           toast({
             title: toAdd.length > 0 ? `Added ${toAdd.length} New Live Message(s)!` : 'Store Already Up to Date',
-            description: `"${storeGroup.name}" store covers ${minDate} → ${maxDate} (${existingIds.size} total messages).`,
+            description: `"${storeGroup.name}" store covers ${minDate} → ${maxDate}.`,
           });
         }
       } catch (err: any) {
@@ -778,10 +896,9 @@ export function WhatsAppGroupSyncDialog({
         setIsSyncingLiveToStore(false);
       }
     },
-    [firestore, waSession?.groups, loadChannelsAndStores, toast]
+    [firestore, waSession?.groups, loadChannelsStoresEquipmentAndFsrs, toast]
   );
 
-  // Load messages for the selected source in Tab 1
   const loadMessagesForSelectedSource = useCallback(async () => {
     if (!selectedSourceId) {
       setLoadedMessages([]);
@@ -795,7 +912,6 @@ export function WhatsAppGroupSyncDialog({
           ? selectedSourceId.slice(6)
           : selectedSourceId.slice(4);
 
-        // If this is a Stored Group and Live QR is connected, silently top up any new live messages first!
         if (selectedSourceId.startsWith('store:') && waSession?.status === 'connected') {
           const stGrp = storedGroups.find((g) => g.id === channelId);
           if (stGrp) {
@@ -894,7 +1010,6 @@ export function WhatsAppGroupSyncDialog({
     }
   };
 
-  // Filter messages by From Date -> To Date and optional keyword
   const filteredMessages = useMemo(() => {
     return loadedMessages.filter((m) => {
       if (fromDate && m.dateStr && m.dateStr < fromDate) return false;
@@ -930,45 +1045,352 @@ export function WhatsAppGroupSyncDialog({
     }
   };
 
-  const handleExtractIntoFsr = async () => {
-    if (!onExtractedToFsr) return;
+  /**
+   * ACTION 1: EXPORT TICKED MESSAGES TO A SITE COMMS CHAT (LINKED TO EQUIPMENT OR CUSTOM NAME)
+   */
+  const handleExportTickedToChat = async (keepDialogOpen = false): Promise<string | null> => {
+    if (!firestore) return null;
     const selectedMsgs = filteredMessages.filter((m) => selectedMsgIds.has(m.id));
     if (selectedMsgs.length === 0) {
       toast({
         variant: 'destructive',
-        title: 'No Messages Selected',
-        description: 'Please tick at least one message to import into the FSR.',
+        title: 'No Messages Ticked',
+        description: 'Please tick at least one message to export to Site Comms Chat.',
+      });
+      return null;
+    }
+
+    const chosenEq = equipmentOptions.find((e) => e.id === selectedEquipmentId);
+    const finalChatName =
+      targetChatName.trim() ||
+      (chosenEq ? `Breakdown: ${chosenEq.fullLabel} (${fromDate})` : `Callout Chat (${fromDate})`);
+
+    setIsExportingToChat(true);
+    try {
+      // Find existing internal chat with this exact name, or create a new one
+      const existingChan = appChannels.find(
+        (c) => (c.name || '').toLowerCase() === finalChatName.toLowerCase()
+      );
+      let channelId = existingChan?.id || '';
+
+      const lastMsg = selectedMsgs[selectedMsgs.length - 1];
+
+      if (!channelId) {
+        const newRef = await addDoc(collection(firestore, 'channels'), {
+          name: finalChatName,
+          type: chosenEq ? 'breakdown' : 'general',
+          relatedId: chosenEq ? chosenEq.id : null,
+          equipmentName: chosenEq ? chosenEq.fullLabel : null,
+          participants: user ? [user.uid] : [],
+          isArchived: false,
+          lastMessage: `${lastMsg.senderName}: ${lastMsg.text.slice(0, 80)}`,
+          lastMessageTime: Timestamp.fromMillis(lastMsg.timestampMs),
+          createdAt: Timestamp.now(),
+        });
+        channelId = newRef.id;
+      } else {
+        await setDoc(
+          doc(firestore, 'channels', channelId),
+          {
+            lastMessage: `${lastMsg.senderName}: ${lastMsg.text.slice(0, 80)}`,
+            lastMessageTime: Timestamp.fromMillis(lastMsg.timestampMs),
+            isArchived: false,
+            ...(chosenEq ? { relatedId: chosenEq.id, equipmentName: chosenEq.fullLabel, type: 'breakdown' } : {}),
+          },
+          { merge: true }
+        );
+      }
+
+      // Write ticked messages into channels/{channelId}/messages
+      const chunkSize = 400;
+      for (let i = 0; i < selectedMsgs.length; i += chunkSize) {
+        const chunk = selectedMsgs.slice(i, i + chunkSize);
+        const batch = writeBatch(firestore);
+        for (const msg of chunk) {
+          const msgRef = doc(firestore, `channels/${channelId}/messages`, msg.id);
+          batch.set(
+            msgRef,
+            {
+              text: `[${msg.dateStr} ${msg.timeStr}] ${msg.text}`,
+              senderId: `wa_${msg.senderName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+              senderName: msg.senderName,
+              createdAt: Timestamp.fromMillis(msg.timestampMs),
+              messageDate: msg.dateStr,
+              timeStr: msg.timeStr,
+              source: 'whatsapp_export',
+            },
+            { merge: true }
+          );
+        }
+        await batch.commit();
+      }
+
+      await loadChannelsStoresEquipmentAndFsrs();
+
+      if (onChannelSynced) {
+        onChannelSynced(channelId);
+      }
+
+      toast({
+        title: 'Exported to Site Comms Chat!',
+        description: `Exported ${selectedMsgs.length} ticked messages into "${finalChatName}".`,
+      });
+
+      if (!keepDialogOpen) {
+        onOpenChange(false);
+      }
+      return channelId;
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Chat Export Error',
+        description: err?.message || 'Failed to export messages to chat.',
+      });
+      return null;
+    } finally {
+      setIsExportingToChat(false);
+    }
+  };
+
+  /**
+   * Resolves equipment metadata by name from our loaded equipmentOptions
+   */
+  const resolveEquipmentDetailsByName = useCallback(
+    (rawName: string) => {
+      const clean = rawName.trim().toLowerCase();
+      const eq = equipmentOptions.find(
+        (e) =>
+          e.fullLabel.toLowerCase() === clean ||
+          e.name.toLowerCase() === clean ||
+          e.fullLabel.toLowerCase().includes(clean) ||
+          clean.includes(e.name.toLowerCase())
+      );
+      if (!eq) {
+        return {
+          equipmentId: null,
+          assetName: rawName.trim(),
+          oem: '',
+          model: '',
+          serialNo: '',
+          rating: '',
+        };
+      }
+      return {
+        equipmentId: eq.id,
+        assetName: eq.fullLabel,
+        oem: eq.oem,
+        model: eq.model,
+        serialNo: eq.serialNo,
+        rating: eq.rating,
+      };
+    },
+    [equipmentOptions]
+  );
+
+  /**
+   * ACTION 2: EXPORT TICKED MESSAGES TO FSR (CURRENT OPEN FSR, SELECTED EXISTING FSR, OR NEW FSR)
+   */
+  const handleExportTickedToFsr = async (alsoExportToChat = false) => {
+    if (!firestore) return;
+    const selectedMsgs = filteredMessages.filter((m) => selectedMsgIds.has(m.id));
+    if (selectedMsgs.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No Messages Ticked',
+        description: 'Please tick at least one message to export to the FSR.',
       });
       return;
     }
 
-    setIsExtracting(true);
+    setIsExtractingToFsr(true);
     try {
+      if (alsoExportToChat) {
+        await handleExportTickedToChat(true);
+      }
+
+      const chosenEq = equipmentOptions.find((e) => e.id === selectedEquipmentId);
+      const effectiveEqName = chosenEq?.fullLabel || equipmentName || undefined;
+      const allEqNames =
+        availableEquipmentNames && availableEquipmentNames.length > 0
+          ? availableEquipmentNames
+          : equipmentOptions.map((e) => e.fullLabel);
+
       const transcript = selectedMsgs
         .map((m) => `[${m.dateStr} ${m.timeStr}] ${m.senderName}: ${m.text}`)
         .join('\n');
 
       const res = await extractFsrFromChat({
         chatHistory: transcript,
-        equipmentName,
-        availableEquipmentNames,
+        equipmentName: effectiveEqName,
+        availableEquipmentNames: allEqNames,
       });
 
       if (!res.success) {
         toast({
           variant: 'destructive',
           title: 'AI Extraction Error',
-          description: res.error || 'Could not extract FSR details from selected messages.',
+          description: res.error || 'Could not extract FSR details from ticked messages.',
         });
         return;
       }
 
-      onExtractedToFsr(res, transcript);
+      // Case A: User is currently inside an FSR and chose "__current_fsr__"
+      if (selectedFsrTarget === '__current_fsr__' && onExtractedToFsr) {
+        onExtractedToFsr(res, transcript);
+        onOpenChange(false);
+        return;
+      }
+
+      // Case B: Export to a Selected Existing FSR or Create New FSR in Firestore
+      let targetFsrId = selectedFsrTarget;
+      let existingFsrData: Partial<FieldServiceReport> = {};
+
+      if (targetFsrId === '__new_fsr__' || targetFsrId === '__current_fsr__') {
+        const newFsrPayload: Partial<FieldServiceReport> = {
+          userId: user?.uid || '',
+          fsrReference: '',
+          date: res.date || fromDate || new Date().toISOString().split('T')[0],
+          status: 'Draft',
+          createdAt: new Date().toISOString(),
+          customer: res.customer || 'Richards Bay Minerals',
+          site: res.site || 'RBM',
+          area: res.area || chosenEq?.location || '',
+          jobCategory: 'Call-Out',
+          equipmentId: chosenEq?.id || null,
+          assetName: chosenEq?.fullLabel || '',
+          equipmentIds: chosenEq ? [chosenEq.id] : [],
+          assetNames: chosenEq ? [chosenEq.fullLabel] : [],
+          additionalEquipment: [],
+          parts: [],
+          personnel: [],
+          hse: {
+            ppe: 'NA',
+            riskAssessment: 'NA',
+            permit: 'NA',
+            incidents: 'NA',
+            areaCleaned: 'NA',
+            environmentalImpact: 'NA',
+            observations: '',
+          },
+        };
+        const createdRef = await addDoc(collection(firestore, 'field_service_reports'), newFsrPayload);
+        targetFsrId = createdRef.id;
+        existingFsrData = newFsrPayload;
+      } else {
+        const fsrSnap = await getDoc(doc(firestore, 'field_service_reports', targetFsrId));
+        if (fsrSnap.exists()) {
+          existingFsrData = fsrSnap.data() as Partial<FieldServiceReport>;
+        }
+      }
+
+      // Build merged update payload for the target FSR document
+      const updatePayload: Record<string, any> = {};
+      if (!existingFsrData.date && (res.date || fromDate)) {
+        updatePayload.date = res.date || fromDate;
+      }
+      if (res.area && !existingFsrData.area) updatePayload.area = res.area;
+      if (res.customer && !existingFsrData.customer) updatePayload.customer = res.customer;
+      if (res.site && !existingFsrData.site) updatePayload.site = res.site;
+
+      // Equipment resolution: prioritize explicitly selected equipment in dropdown, then AI-detected equipment
+      const detectedEqItems = Array.isArray(res.equipmentNames)
+        ? res.equipmentNames.map((n) => resolveEquipmentDetailsByName(n))
+        : [];
+      if (chosenEq) {
+        detectedEqItems.unshift({
+          equipmentId: chosenEq.id,
+          assetName: chosenEq.fullLabel,
+          oem: chosenEq.oem,
+          model: chosenEq.model,
+          serialNo: chosenEq.serialNo,
+          rating: chosenEq.rating,
+        });
+      }
+
+      if (detectedEqItems.length > 0) {
+        const currentPrimary = existingFsrData.assetName || '';
+        if (!currentPrimary) {
+          const first = detectedEqItems[0];
+          updatePayload.equipmentId = first.equipmentId;
+          updatePayload.assetName = first.assetName;
+          if (first.oem) updatePayload.oem = first.oem;
+          if (first.model) updatePayload.model = first.model;
+          if (first.serialNo) updatePayload.serialNo = first.serialNo;
+          if (first.rating) updatePayload.rating = first.rating;
+          if (detectedEqItems.length > 1) {
+            const existingAdd = existingFsrData.additionalEquipment || [];
+            updatePayload.additionalEquipment = [...existingAdd, ...detectedEqItems.slice(1)];
+          }
+        } else {
+          const existingAdd = existingFsrData.additionalEquipment || [];
+          const newOnes = detectedEqItems.filter((item) => item.assetName !== currentPrimary);
+          if (newOnes.length > 0) {
+            updatePayload.additionalEquipment = [...existingAdd, ...newOnes];
+          }
+        }
+      }
+
+      if (res.timeCallOut && !existingFsrData.timeCallOut) updatePayload.timeCallOut = res.timeCallOut;
+      if (res.timeArrival && !existingFsrData.timeArrival) updatePayload.timeArrival = res.timeArrival;
+      if (res.timeStart && !existingFsrData.timeStart) updatePayload.timeStart = res.timeStart;
+      if (res.timeEnd && !existingFsrData.timeEnd) updatePayload.timeEnd = res.timeEnd;
+      if (res.timeDeparture && !existingFsrData.timeDeparture) updatePayload.timeDeparture = res.timeDeparture;
+
+      if (res.customerFault) updatePayload.customerFault = res.customerFault;
+      if (res.findings) updatePayload.techFindings = res.findings;
+      if (res.actions) updatePayload.correctiveActions = res.actions;
+      if (res.rca) updatePayload.rca = res.rca;
+      if (res.recommendations) updatePayload.recommendations = res.recommendations;
+
+      if (Array.isArray(res.parts) && res.parts.length > 0) {
+        const currentParts = existingFsrData.parts || [];
+        const mappedParts = res.parts.map((p: any) => ({
+          partNo: p.partNo || '',
+          description: p.description || '',
+          qty: Number(p.qty) || 1,
+          unit: p.unit || 'EA',
+          suppliedBy: 'Altek',
+          remarks: '',
+        }));
+        updatePayload.parts = [...currentParts, ...mappedParts];
+      }
+
+      if (Array.isArray(res.personnel) && res.personnel.length > 0) {
+        const currentPersonnel = existingFsrData.personnel || [];
+        const existingNames = new Set(currentPersonnel.map((p: any) => (p.name || '').toLowerCase()));
+        const newPersonnel = res.personnel
+          .filter((p: any) => p.name && !existingNames.has(p.name.toLowerCase()))
+          .map((p: any) => ({
+            name: p.name,
+            role: p.role || 'Technician',
+            hrs: Number(p.hrs) || 0,
+            ot: 0,
+          }));
+        if (newPersonnel.length > 0) {
+          updatePayload.personnel = [...currentPersonnel, ...newPersonnel];
+        }
+      }
+
+      await setDoc(doc(firestore, 'field_service_reports', targetFsrId), updatePayload, { merge: true });
+
+      const targetLabel =
+        fsrOptions.find((f) => f.id === targetFsrId)?.fsrReference || `FSR (${targetFsrId.slice(0, 6)})`;
+
+      toast({
+        title: 'Exported to Field Service Report!',
+        description: `Populated ${targetLabel} from ${selectedMsgs.length} ticked messages. Opening FSR now...`,
+      });
+
       onOpenChange(false);
+      router.push(`/reports/field-service-report/${targetFsrId}`);
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Extraction Error', description: err.message });
+      toast({
+        variant: 'destructive',
+        title: 'FSR Export Error',
+        description: err?.message || 'Failed to export messages to FSR.',
+      });
     } finally {
-      setIsExtracting(false);
+      setIsExtractingToFsr(false);
     }
   };
 
@@ -989,12 +1411,12 @@ export function WhatsAppGroupSyncDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col overflow-hidden p-5">
+        <DialogHeader className="pb-1">
           <div className="flex items-center justify-between pr-6">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
               <MessageSquare className="h-5 w-5 text-emerald-600" />
-              WhatsApp Group Store &amp; FSR Import (Admin / Manager)
+              WhatsApp Group Store → Export to Chat &amp; FSR (Admin / Manager)
             </DialogTitle>
             <div className="flex items-center gap-2">
               <Badge
@@ -1014,11 +1436,8 @@ export function WhatsAppGroupSyncDialog({
               )}
             </div>
           </div>
-          <DialogDescription className="flex items-center gap-1.5 text-xs text-emerald-800 bg-emerald-50/80 border border-emerald-200 rounded-md px-2.5 py-1.5 mt-1">
-            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>
-              <strong>How It Works:</strong> Upload your exported `.txt` file once in <strong>Tab 2</strong> and link it to your WhatsApp group name (e.g. <strong>Altek Green/RBM Group</strong>). It automatically saves the full Jan–Oct history into the store and switches you to <strong>Tab 1</strong> to filter by date!
-            </span>
+          <DialogDescription className="text-xs text-slate-600">
+            Filter your stored WhatsApp Group by date, tick the relevant call-out messages, and export them to an <strong>Equipment Chat</strong> and/or directly into a <strong>Field Service Report (FSR)</strong>.
           </DialogDescription>
         </DialogHeader>
 
@@ -1030,7 +1449,7 @@ export function WhatsAppGroupSyncDialog({
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="import" className="gap-1.5 font-bold text-xs">
               <Calendar className="h-3.5 w-3.5 text-emerald-600" />
-              1. Select Group &amp; Dates
+              1. Select Group, Dates &amp; Export
             </TabsTrigger>
             <TabsTrigger value="sync" className="gap-1.5 font-bold text-xs">
               <Upload className="h-3.5 w-3.5 text-blue-600" />
@@ -1042,32 +1461,13 @@ export function WhatsAppGroupSyncDialog({
             </TabsTrigger>
           </TabsList>
 
-          {/* TAB 1: SELECT STORED WHATSAPP GROUP + DATE RANGE + SPECIFIC MESSAGES */}
-          <TabsContent value="import" className="flex-1 flex flex-col gap-3 overflow-hidden mt-3">
-            {storedGroups.length === 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between gap-4">
-                <div className="text-xs text-blue-900">
-                  <p className="font-bold">Step 1: Upload your initial WhatsApp `.txt` history into the store.</p>
-                  <p className="text-blue-700">
-                    Click the button on the right, pick your WhatsApp group name (e.g. <strong>Altek Green/RBM Group</strong>), and select your `.txt` file. It will automatically save and bring you right back here!
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 gap-1.5 font-bold"
-                  onClick={() => setActiveTab('sync')}
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload .txt File Now
-                </Button>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-              <div className="md:col-span-5 space-y-1">
+          {/* TAB 1: SELECT STORED WHATSAPP GROUP + DATE RANGE + EXPORT TO CHAT / FSR */}
+          <TabsContent value="import" className="flex-1 flex flex-col gap-2.5 overflow-hidden mt-2">
+            {/* TOP FILTER BAR: GROUP + FROM DATE + TO DATE */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+              <div className="md:col-span-5 space-y-0.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black uppercase text-slate-500">Select Stored WhatsApp Group</Label>
+                  <Label className="text-[10px] font-black uppercase text-slate-500">Select WhatsApp Group</Label>
                   <button
                     type="button"
                     onClick={() => {
@@ -1078,13 +1478,13 @@ export function WhatsAppGroupSyncDialog({
                     }}
                     className="text-[10px] text-blue-700 hover:underline font-bold flex items-center gap-1"
                   >
-                    <Upload className="h-2.5 w-2.5" /> + Upload / Top-Up .txt
+                    <Upload className="h-2.5 w-2.5" /> + Update .txt File
                   </button>
                 </div>
                 <select
                   value={selectedSourceId}
                   onChange={(e) => setSelectedSourceId(e.target.value)}
-                  className="w-full h-9 px-2.5 border border-slate-300 rounded-md text-xs font-bold bg-white"
+                  className="w-full h-8 px-2 border border-slate-300 rounded-md text-xs font-bold bg-white"
                 >
                   <option value="">-- Choose a Stored Group --</option>
                   {storedGroups.length > 0 && (
@@ -1097,7 +1497,7 @@ export function WhatsAppGroupSyncDialog({
                     </optgroup>
                   )}
                   {(waSession?.groups?.length || 0) > 0 && (
-                    <optgroup label="Live QR Groups (Not Yet Linked to .txt Store)">
+                    <optgroup label="Live QR Groups">
                       {waSession!.groups.map((g) => (
                         <option key={`wa:${g.jid}`} value={`wa:${g.jid}`}>
                           🟢 {g.subject} ({g.messageCount} live msgs)
@@ -1117,7 +1517,7 @@ export function WhatsAppGroupSyncDialog({
                 </select>
                 {messageDateSpan && (
                   <p className="text-[10px] text-emerald-700 font-semibold">
-                    Stored Range: {messageDateSpan.count.toLocaleString()} msgs ({messageDateSpan.earliest} → {messageDateSpan.latest})
+                    Stored History: {messageDateSpan.count.toLocaleString()} msgs ({messageDateSpan.earliest} → {messageDateSpan.latest})
                   </p>
                 )}
               </div>
@@ -1128,7 +1528,7 @@ export function WhatsAppGroupSyncDialog({
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="h-9 mt-1 text-xs font-mono bg-white"
+                  className="h-8 mt-0.5 text-xs font-mono bg-white"
                 />
               </div>
 
@@ -1138,7 +1538,7 @@ export function WhatsAppGroupSyncDialog({
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="h-9 mt-1 text-xs font-mono bg-white"
+                  className="h-8 mt-0.5 text-xs font-mono bg-white"
                 />
               </div>
 
@@ -1157,13 +1557,14 @@ export function WhatsAppGroupSyncDialog({
                       setToDate('');
                     }
                   }}
-                  className="h-9 w-full text-[10px] font-bold px-1"
+                  className="h-8 w-full text-[10px] font-bold px-1"
                 >
                   All
                 </Button>
               </div>
             </div>
 
+            {/* TICK / UNTICK ALL + KEYWORD FILTER */}
             <div className="flex flex-wrap items-center justify-between gap-2 px-1">
               <div className="flex items-center gap-2">
                 <Button
@@ -1178,7 +1579,7 @@ export function WhatsAppGroupSyncDialog({
                   ) : (
                     <Square className="h-4 w-4 mr-1.5 text-slate-400" />
                   )}
-                  Tick / Untick All ({selectedMsgIds.size} of {filteredMessages.length} messages in date range)
+                  Tick / Untick All ({selectedMsgIds.size} of {filteredMessages.length} selected)
                 </Button>
 
                 {selectedStoreGroup && isWaConnected && (
@@ -1214,48 +1615,38 @@ export function WhatsAppGroupSyncDialog({
               </div>
             </div>
 
-            <div className="flex-1 min-h-[220px] max-h-[320px] overflow-y-auto border rounded-lg bg-slate-50/60 p-3 space-y-2">
+            {/* MESSAGE LIST WITH CHECKBOXES */}
+            <div className="flex-1 min-h-[160px] max-h-[240px] overflow-y-auto border rounded-lg bg-slate-50/60 p-2.5 space-y-1.5">
               {loadingMessages ? (
-                <div className="flex items-center justify-center h-40 text-slate-400 text-xs gap-2">
+                <div className="flex items-center justify-center h-36 text-slate-400 text-xs gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading group messages for selected dates...
                 </div>
               ) : !selectedSourceId ? (
-                <div className="flex flex-col items-center justify-center h-40 text-center text-slate-500 text-xs gap-2 p-4">
+                <div className="flex flex-col items-center justify-center h-36 text-center text-slate-500 text-xs gap-2 p-4">
                   <p className="font-semibold">
                     Select a Stored WhatsApp Group above, or click Tab 2 to upload your exported WhatsApp `.txt` file.
                   </p>
                 </div>
               ) : filteredMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 text-center text-slate-500 text-xs gap-3 p-4">
+                <div className="flex flex-col items-center justify-center h-36 text-center text-slate-500 text-xs gap-2 p-4">
                   <p>
                     No messages found in this group between <strong>{fromDate || 'start'}</strong> and{' '}
                     <strong>{toDate || 'end'}</strong>.
                   </p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {messageDateSpan && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setFromDate(messageDateSpan.earliest);
-                          setToDate(messageDateSpan.latest);
-                        }}
-                        className="text-xs h-8 font-bold"
-                      >
-                        Show Full Stored Range ({messageDateSpan.earliest} → {messageDateSpan.latest})
-                      </Button>
-                    )}
+                  {messageDateSpan && (
                     <Button
                       type="button"
+                      variant="outline"
                       size="sm"
-                      onClick={() => setActiveTab('sync')}
-                      className="text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold gap-1.5"
+                      onClick={() => {
+                        setFromDate(messageDateSpan.earliest);
+                        setToDate(messageDateSpan.latest);
+                      }}
+                      className="text-xs h-7 font-bold"
                     >
-                      <Upload className="h-3.5 w-3.5" />
-                      Upload .txt History File
+                      Show Full Stored Range ({messageDateSpan.earliest} → {messageDateSpan.latest})
                     </Button>
-                  </div>
+                  )}
                 </div>
               ) : (
                 filteredMessages.map((msg) => {
@@ -1265,7 +1656,7 @@ export function WhatsAppGroupSyncDialog({
                       key={msg.id}
                       onClick={() => toggleMessageSelection(msg.id)}
                       className={cn(
-                        'p-2.5 rounded-lg border text-xs cursor-pointer transition-colors flex items-start gap-2.5',
+                        'p-2 rounded-lg border text-xs cursor-pointer transition-colors flex items-start gap-2.5',
                         isChecked
                           ? 'bg-emerald-50/70 border-emerald-300'
                           : 'bg-white border-slate-200 opacity-60 hover:opacity-100'
@@ -1292,37 +1683,153 @@ export function WhatsAppGroupSyncDialog({
               )}
             </div>
 
-            {onExtractedToFsr && (
-              <DialogFooter className="pt-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
+            {/* BOTTOM EXPORT BAR: 1) EXPORT TO CHAT (WITH EQUIPMENT / NAME) AND 2) EXPORT TO FSR (WITH FSR DROPDOWN) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-100/90 border border-slate-300 rounded-xl p-3">
+              {/* LEFT CARD: EXPORT TO SITE COMMS CHAT */}
+              <div className="bg-white border border-slate-200 rounded-lg p-2.5 space-y-2 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase text-blue-800 flex items-center gap-1.5">
+                    <Wrench className="h-3.5 w-3.5 text-blue-600" />
+                    A. Export Ticked to Site Comms Chat
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500">{selectedMsgIds.size} ticked</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  <div>
+                    <Label className="text-[9px] font-bold uppercase text-slate-500">1. Link Equipment (e.g. MPA Final Tails)</Label>
+                    <Input
+                      placeholder="Search equipment (e.g. MPA)..."
+                      value={equipmentSearch}
+                      onChange={(e) => setEquipmentSearch(e.target.value)}
+                      className="h-6 text-[11px] mb-1 px-2"
+                    />
+                    <select
+                      value={selectedEquipmentId}
+                      onChange={(e) => handleSelectEquipment(e.target.value)}
+                      className="w-full h-7 px-2 border border-slate-300 rounded text-[11px] font-semibold bg-white"
+                    >
+                      <option value="">-- Select Equipment --</option>
+                      {filteredEquipmentOptions.map((eq) => (
+                        <option key={eq.id} value={eq.id}>
+                          {eq.fullLabel}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col justify-end">
+                    <Label className="text-[9px] font-bold uppercase text-slate-500">2. Chat Name in Site Comms</Label>
+                    <Input
+                      placeholder="e.g. Breakdown: MPA Final Tails Drive"
+                      value={targetChatName}
+                      onChange={(e) => setTargetChatName(e.target.value)}
+                      className="h-7 mt-0.5 text-[11px] font-semibold bg-white"
+                    />
+                  </div>
+                </div>
+
                 <Button
                   type="button"
-                  disabled={isExtracting || selectedMsgIds.size === 0}
-                  onClick={handleExtractIntoFsr}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                  size="sm"
+                  disabled={isExportingToChat || selectedMsgIds.size === 0}
+                  onClick={() => handleExportTickedToChat(false)}
+                  className="w-full h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold gap-1.5"
                 >
-                  {isExtracting ? (
+                  {isExportingToChat ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Importing {selectedMsgIds.size} Ticked Messages into FSR...
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Exporting to Chat...
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4" />
-                      Import {selectedMsgIds.size} Ticked Messages into FSR
+                      <Send className="h-3.5 w-3.5" />
+                      Export {selectedMsgIds.size} Ticked to Chat
                     </>
                   )}
                 </Button>
-              </DialogFooter>
-            )}
+              </div>
+
+              {/* RIGHT CARD: EXPORT TO FIELD SERVICE REPORT (FSR) */}
+              <div className="bg-white border border-emerald-200 rounded-lg p-2.5 space-y-2 shadow-sm flex flex-col justify-between">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase text-emerald-800 flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                      B. Export Ticked to FSR
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700">AI Auto-Fill</span>
+                  </div>
+
+                  <div>
+                    <Label className="text-[9px] font-bold uppercase text-slate-500">
+                      Select Target FSR (Current, by FSR Number, or New)
+                    </Label>
+                    <select
+                      value={selectedFsrTarget}
+                      onChange={(e) => setSelectedFsrTarget(e.target.value)}
+                      className="w-full h-8 mt-0.5 px-2 border border-emerald-300 rounded text-xs font-bold bg-white"
+                    >
+                      {onExtractedToFsr && (
+                        <option value="__current_fsr__">
+                          📌 Current Open FSR (Populate This Report)
+                        </option>
+                      )}
+                      <option value="__new_fsr__">
+                        ➕ Create New FSR from Ticked Messages
+                      </option>
+                      {fsrOptions.length > 0 && (
+                        <optgroup label="Select Existing FSR by Number">
+                          {fsrOptions.map((fsr) => (
+                            <option key={fsr.id} value={fsr.id}>
+                              📄 {fsr.fsrReference} • {fsr.date || 'No date'} • {fsr.assetName}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isExtractingToFsr || selectedMsgIds.size === 0}
+                    onClick={() => handleExportTickedToFsr(false)}
+                    className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold gap-1 px-2"
+                  >
+                    {isExtractingToFsr ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    Export to FSR
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isExtractingToFsr || isExportingToChat || selectedMsgIds.size === 0}
+                    onClick={() => handleExportTickedToFsr(true)}
+                    className="h-8 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold gap-1 px-2"
+                    title="Saves the ticked messages into the Equipment Chat AND populates the selected FSR at the same time"
+                  >
+                    {isExtractingToFsr ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    )}
+                    Export to Chat &amp; FSR
+                  </Button>
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           {/* TAB 2: UPLOAD / INCREMENTAL UPDATE WHATSAPP .TXT STORE */}
           <TabsContent value="sync" className="flex-1 flex flex-col gap-4 overflow-y-auto mt-3 pr-1">
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-5">
-              {/* STEP 1: PICK EXACT WHATSAPP GROUP NAME */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-700">
                   Step 1: Select Which WhatsApp Group This History Belongs To
@@ -1368,7 +1875,6 @@ export function WhatsAppGroupSyncDialog({
                 </div>
               </div>
 
-              {/* STEP 2: UPLOAD .TXT OR .ZIP FILE -> AUTO-SAVES & SWITCHES TO TAB 1 */}
               <div className="border-2 border-dashed border-emerald-400 bg-emerald-50/40 rounded-xl p-6 flex flex-col items-center text-center gap-3">
                 {isSavingToStore ? (
                   <>
@@ -1390,7 +1896,7 @@ export function WhatsAppGroupSyncDialog({
                         Step 2: Choose Your Exported WhatsApp `.txt` (or `.zip`) File
                       </p>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        As soon as you select the file (e.g. <strong>chat AG.txt</strong>), the system will <strong>automatically index all messages by date</strong>, save them into <strong>{resolveTargetGroupInfo().groupName}</strong>, and switch you straight to <strong>Tab 1 (Select Group &amp; Dates)</strong>!
+                        As soon as you select the file, the system will <strong>automatically index all messages by date</strong>, save them into <strong>{resolveTargetGroupInfo().groupName}</strong>, and switch you straight to <strong>Tab 1</strong>!
                       </p>
                     </div>
                     <label className="mt-1 inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shadow-md transition-colors">

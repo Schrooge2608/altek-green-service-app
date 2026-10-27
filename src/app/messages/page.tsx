@@ -90,6 +90,7 @@ export default function MessagingPage() {
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [isWhatsAppSyncOpen, setIsWhatsAppSyncOpen] = useState(false);
+  const [waForceSourceId, setWaForceSourceId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 1. FETCH CHANNELS
@@ -282,9 +283,13 @@ export default function MessagingPage() {
       {canManageWhatsApp && (
         <WhatsAppGroupSyncDialog
           open={isWhatsAppSyncOpen}
-          onOpenChange={setIsWhatsAppSyncOpen}
-          defaultTab="sync"
+          onOpenChange={(v) => {
+            setIsWhatsAppSyncOpen(v);
+            if (!v) setWaForceSourceId(null);
+          }}
+          defaultTab="import"
           defaultChannelId={activeChannelId}
+          forceSourceId={waForceSourceId}
           onChannelSynced={(newChannelId) => setActiveChannelId(newChannelId)}
         />
       )}
@@ -300,7 +305,10 @@ export default function MessagingPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsWhatsAppSyncOpen(true)}
+                  onClick={() => {
+                    setWaForceSourceId(null);
+                    setIsWhatsAppSyncOpen(true);
+                  }}
                   className="h-8 text-[11px] font-bold border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                 >
                   Sync WhatsApp
@@ -458,6 +466,21 @@ export default function MessagingPage() {
                       View Breakdown Log
                     </Button>
                   </Link>
+                )}
+                {canManageWhatsApp && activeChannel && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setWaForceSourceId(`app:${activeChannel.id}`);
+                      setIsWhatsAppSyncOpen(true);
+                    }}
+                    className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 font-bold flex items-center gap-1.5 mr-2"
+                    title="Tick messages from this chat and export them into a selected FSR"
+                  >
+                    <FileText className="h-4 w-4 text-emerald-600" />
+                    Export Chat to FSR
+                  </Button>
                 )}
                 {/* Archive/Restore Button */}
                 <Button 
