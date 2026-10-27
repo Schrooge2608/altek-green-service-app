@@ -220,7 +220,7 @@ export default function FPCPage() {
                   [...equipmentList].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })).map(eq => (
                       <TableRow key={eq.id}>
                           <TableCell className="font-semibold text-slate-800">
-                            <Link href={`/equipment/${eq.id}`} className="hover:underline text-primary flex items-center gap-2">
+                            <Link href={`/equipment/${encodeURIComponent(eq.id)}`} className="hover:underline text-primary flex items-center gap-2">
                               <span>{eq.name}</span>
                               {eq.vsdId && vsdsList?.find(v => v.id === eq.vsdId)?.model && (
                                 <span className="text-[9px] text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded font-medium border border-slate-200 truncate max-w-[120px]">{vsdsList.find(v => v.id === eq.vsdId)?.model}</span>

@@ -10,12 +10,12 @@ import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog,
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { doc, collection, query, where, orderBy, updateDoc, deleteDoc, or } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy, updateDoc, deleteDoc, getDocs, or } from 'firebase/firestore';
 import type { Equipment, Breakdown, VSD, User as AppUser, DailyDiary, FieldServiceReport, SparePart } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { EditGeneralInfoForm } from '@/components/equipment/edit-general-info-form';
 import { EditProtectionForm } from '@/components/equipment/edit-protection-form';
@@ -88,12 +88,71 @@ function EquipmentDetailSkeleton() {
 export default function EquipmentDetail() {
   const params = useParams();
   const router = useRouter();
-  const id = params.id as string;
+  const rawId = Array.isArray(params.id) ? params.id.join('/') : ((params.id as string) || '');
+  const decodedId = useMemo(() => {
+    try {
+      return decodeURIComponent(rawId);
+    } catch {
+      return rawId;
+    }
+  }, [rawId]);
+  const [resolvedDocId, setResolvedDocId] = useState<string | null>(null);
+  const [isFallbackChecking, setIsFallbackChecking] = useState<boolean>(true);
+  const id = resolvedDocId || decodedId;
   const firestore = useFirestore();
   const { user } = useUser();
   
   const eqRef = useMemoFirebase(() => (id ? doc(firestore, 'equipment', id) : null), [firestore, id]);
   const { data: eq, isLoading: eqLoading } = useDoc<Equipment>(eqRef);
+
+  useEffect(() => {
+    if (!firestore || !decodedId) {
+      setIsFallbackChecking(false);
+      return;
+    }
+    if (eqLoading) return;
+    if (eq) {
+      setIsFallbackChecking(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsFallbackChecking(true);
+    (async () => {
+      try {
+        const snap = await getDocs(collection(firestore, 'equipment'));
+        const target = decodedId.trim().toLowerCase();
+        const rawTarget = rawId.trim().toLowerCase();
+        const foundDoc = snap.docs.find((d) => {
+          const data = d.data() as any;
+          const docIdClean = d.id.trim().toLowerCase();
+          const fieldIdClean = String(data.id || '').trim().toLowerCase();
+          const nameClean = String(data.name || '').trim().toLowerCase();
+          return (
+            docIdClean === target ||
+            docIdClean === rawTarget ||
+            fieldIdClean === target ||
+            fieldIdClean === rawTarget ||
+            nameClean === target
+          );
+        });
+        if (!cancelled && foundDoc && foundDoc.id !== id) {
+          setResolvedDocId(foundDoc.id);
+          return;
+        }
+      } catch (e) {
+        console.error('Fallback equipment lookup failed:', e);
+      } finally {
+        if (!cancelled) {
+          setIsFallbackChecking(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [firestore, decodedId, rawId, eq, eqLoading, id]);
   
   const vsdRef = useMemoFirebase(() => (eq && eq.vsdId ? doc(firestore, 'vsds', eq.vsdId) : null), [firestore, eq]);
   const { data: vsd, isLoading: vsdLoading } = useDoc<VSD>(vsdRef);
@@ -438,12 +497,22 @@ export default function EquipmentDetail() {
       }
   };
 
-  if (eqLoading || vsdLoading || breakdownsLoading) {
+  if (eqLoading || vsdLoading || breakdownsLoading || (!eq && isFallbackChecking)) {
     return <EquipmentDetailSkeleton />;
   }
 
   if (!eq) {
-    notFound();
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center gap-4">
+        <h2 className="text-xl font-bold text-slate-800">Equipment Not Found</h2>
+        <p className="text-sm text-muted-foreground">
+          Could not locate equipment record &ldquo;{decodedId}&rdquo;.
+        </p>
+        <Button variant="outline" onClick={() => router.back()}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+        </Button>
+      </div>
+    );
     return null;
   }
   

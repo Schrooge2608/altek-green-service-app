@@ -238,14 +238,21 @@ function EquipmentFormContent() {
     const fanAssignedUser = users?.find(u => u.id === values.fanAssignedToId);
     const valveAssignedUser = users?.find(u => u.id === values.valveAssignedToId);
 
-    const equipmentRef = doc(firestore, 'equipment', values.equipmentId);
+    const sanitizedEquipmentId = values.equipmentId
+      .trim()
+      .replace(/[\/\\?#%]+/g, '-')
+      .replace(/\s+/g, '-');
+    const equipmentRef = doc(firestore, 'equipment', sanitizedEquipmentId);
     
     // Auto-generate a starter ID if they didn't provide one, but they want a starter
-    const finalVsdId = values.vsdId || `${values.equipmentId}-starter`;
+    const finalVsdId = (values.vsdId || `${sanitizedEquipmentId}-starter`)
+      .trim()
+      .replace(/[\/\\?#%]+/g, '-')
+      .replace(/\s+/g, '-');
     const vsdRef = doc(firestore, 'vsds', finalVsdId);
 
     const equipmentData: Partial<Equipment> = {
-      id: values.equipmentId,
+      id: sanitizedEquipmentId,
       name: values.equipmentName,
       plant: values.plant,
       vsdId: values.equipmentProfile === 'UPS/BTU' || values.starterType === 'None' ? undefined : finalVsdId,
@@ -348,7 +355,7 @@ function EquipmentFormContent() {
 
     const vsdData: VSD | null = values.equipmentProfile === 'Standard' && (values.starterType as string) !== 'None' ? {
         id: finalVsdId,
-        equipmentId: values.equipmentId,
+        equipmentId: sanitizedEquipmentId,
         model: values.model || '',
         driveType: values.starterType as any,
         serialNumber: values.serialNumber || '',
