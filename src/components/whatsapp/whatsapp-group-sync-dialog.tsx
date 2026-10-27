@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   MessageSquare,
@@ -29,7 +28,6 @@ import {
   Smartphone,
   Wifi,
   Unlink,
-  History,
   ShieldCheck,
   Upload,
   FileText,
@@ -85,6 +83,7 @@ interface WhatsAppSessionState {
 interface StoredWhatsAppGroup {
   id: string;
   name: string;
+  whatsappJid?: string;
   earliestDate?: string;
   latestDate?: string;
   totalMessagesCount?: number;
@@ -117,7 +116,6 @@ async function extractTextFromUploadedFile(file: File): Promise<string> {
     return await file.text();
   }
 
-  // Parse standard ZIP local file headers to extract the first .txt entry
   const buf = await file.arrayBuffer();
   const bytes = new Uint8Array(buf);
   const view = new DataView(buf);
@@ -125,7 +123,7 @@ async function extractTextFromUploadedFile(file: File): Promise<string> {
 
   while (offset + 30 <= bytes.length) {
     const sig = view.getUint32(offset, true);
-    if (sig !== 0x04034b50) break; // Local file header signature
+    if (sig !== 0x04034b50) break;
 
     const compression = view.getUint16(offset + 8, true);
     const compressedSize = view.getUint32(offset + 18, true);
@@ -158,21 +156,17 @@ async function extractTextFromUploadedFile(file: File): Promise<string> {
 
 /**
  * Comprehensive WhatsApp .txt parser supporting Jan–Dec history across iOS & Android formats:
+ * - "[1/12/26, 8:08:52 AM] You: Thank you..."
  * - "14/02/2026, 08:30 - Name: Message"
  * - "2026/02/14, 08:30 - Name: Message"
- * - "2026-02-14, 08:30 - Name: Message"
- * - "[14/02/2026, 08:30:15] Name: Message"
- * - "2/14/26, 8:30 AM - Name: Message"
  */
 function parseWhatsAppExportText(rawText: string): ParsedExportMessage[] {
   const cleanText = rawText.replace(/\r\n/g, '\n').replace(/\u200e|\u200f|\u202a|\u202c/g, '');
   const lines = cleanText.split('\n');
 
-  // Regex matching both bracketed [date, time] and unbracketed "date, time - " headers
   const headerRegex =
     /^\[?(\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4})[,\s]+(\d{1,2}:\d{2}(?::\d{2})?(?:[\s\u202f\u00a0]*[AaPp]\.?[Mm]\.?)?)\]?(?:\s*[\-–—]\s*|\s+)(.*)$/;
 
-  // First pass: auto-detect whether 2-part dates (A/B/YYYY) use DD/MM or MM/DD
   let preferMonthFirst = false;
   let foundDayOver12InFirst = false;
   let foundDayOver12InSecond = false;
@@ -200,13 +194,15 @@ function parseWhatsAppExportText(rawText: string): ParsedExportMessage[] {
       const rawTime = match[2];
       const rest = match[3] || '';
 
-      // Skip system encryption notices or empty system lines without a sender colon
       const colonIdx = rest.indexOf(':');
       if (colonIdx <= 0) continue;
 
       const senderName = rest.slice(0, colonIdx).trim();
-      const msgText = rest.slice(colonIdx + 1).trim();
-      if (!msgText || msgText === '<Media omitted>' || msgText === 'image omitted' || msgText === 'video omitted') {
+      let msgText = rest
+        .slice(colonIdx + 1)
+        .replace(/<(?:Media|document|image|video|audio|sticker|GIF)\s+omitted>/gi, '')
+        .trim();
+      if (!msgText || msgText === 'image omitted' || msgText === 'video omitted' || msgText === 'document omitted') {
         continue;
       }
 
@@ -218,7 +214,6 @@ function parseWhatsAppExportText(rawText: string): ParsedExportMessage[] {
       let day: number;
 
       if (dParts[0] > 1900) {
-        // YYYY/MM/DD or YYYY-MM-DD
         year = dParts[0];
         month = dParts[1];
         day = dParts[2];
@@ -231,7 +226,6 @@ function parseWhatsAppExportText(rawText: string): ParsedExportMessage[] {
           day = dParts[0];
           month = dParts[1];
         }
-        // Safety swap if month > 12
         if (month > 12 && day <= 12) {
           const tmp = month;
           month = day;
@@ -241,7 +235,6 @@ function parseWhatsAppExportText(rawText: string): ParsedExportMessage[] {
 
       if (month < 1 || month > 12 || day < 1 || day > 31) continue;
 
-      // Parse time (24h or 12h AM/PM)
       const normTime = rawTime.replace(/[\u202f\u00a0]/g, ' ').trim();
       const amPmMatch = normTime.match(/([AaPp])\.?[Mm]\.?$/);
       const timeCore = normTime.replace(/\s*[AaPp]\.?[Mm]\.?$/, '').trim();
@@ -275,10 +268,8 @@ function parseWhatsAppExportText(rawText: string): ParsedExportMessage[] {
         text: msgText,
       });
     } else if (parsed.length > 0 && line.trim()) {
-      // Continuation of a multi-line message
       const prev = parsed[parsed.length - 1];
       prev.text += `\n${line.trim()}`;
-      // Recompute deterministic ID so multi-line message hash is stable
       const baseSig = `${prev.dateStr}_${prev.timeStr}_${prev.senderName}_${prev.text}`;
       const baseHash = simpleHash(baseSig);
       prev.id = `wa_txt_${prev.dateStr.replace(/-/g, '')}_${prev.timeStr.replace(':', '')}_${baseHash}_1`;
@@ -327,18 +318,18 @@ export function WhatsAppGroupSyncDialog({
   const [storedGroups, setStoredGroups] = useState<StoredWhatsAppGroup[]>([]);
   const [appChannels, setAppChannels] = useState<Channel[]>([]);
 
-  // Tab 2: .txt / .zip Upload & Daily Top-Up Store state
-  const [targetStoreGroupId, setTargetStoreGroupId] = useState<string>('__new__');
-  const [newGroupName, setNewGroupName] = useState<string>('');
+  // Tab 2: .txt / .zip Upload & Group Selector state
+  // Value can be `store:<docId>`, `wa:<jid>`, or `__custom__`
+  const [targetGroupSelection, setTargetGroupSelection] = useState<string>('');
+  const [customGroupName, setCustomGroupName] = useState<string>('');
   const [uploadedFileName, setUploadedFileName] = useState<string>('');
   const [rawExportText, setRawExportText] = useState<string>('');
   const [isSavingToStore, setIsSavingToStore] = useState<boolean>(false);
+  const [isSyncingLiveToStore, setIsSyncingLiveToStore] = useState<boolean>(false);
 
-  // Tab 3: Optional Live QR Session state
+  // Tab 3: Live QR Session state
   const [waSession, setWaSession] = useState<WhatsAppSessionState | null>(null);
   const [isStartingSession, setIsStartingSession] = useState(false);
-  const [isRefreshingGroups, setIsRefreshingGroups] = useState(false);
-  const [isRequestingOlder, setIsRequestingOlder] = useState(false);
 
   // Tab 1: Selected source (`store:<id>`, `wa:<jid>`, or `app:<channelId>`)
   const [selectedSourceId, setSelectedSourceId] = useState<string>('');
@@ -351,7 +342,7 @@ export function WhatsAppGroupSyncDialog({
   const [isExtracting, setIsExtracting] = useState(false);
 
   const loadChannelsAndStores = useCallback(async () => {
-    if (!firestore) return;
+    if (!firestore) return [];
     try {
       const allSnap = await getDocs(collection(firestore, 'channels'));
       const stores: StoredWhatsAppGroup[] = [];
@@ -365,6 +356,7 @@ export function WhatsAppGroupSyncDialog({
           stores.push({
             id: d.id,
             name: (data.name || d.id).replace(/^WhatsApp Store:\s*/i, ''),
+            whatsappJid: data.whatsappJid || undefined,
             earliestDate: data.earliestDate,
             latestDate: data.latestDate,
             totalMessagesCount: data.totalMessagesCount || 0,
@@ -380,19 +372,12 @@ export function WhatsAppGroupSyncDialog({
 
       setStoredGroups(stores);
       setAppChannels(internalChannels);
-
-      if (!selectedSourceId) {
-        if (stores.length > 0) {
-          setSelectedSourceId(`store:${stores[0].id}`);
-          setTargetStoreGroupId(stores[0].id);
-        } else if (defaultChannelId) {
-          setSelectedSourceId(`app:${defaultChannelId}`);
-        }
-      }
+      return stores;
     } catch (e) {
       console.error('Error loading stored WhatsApp groups:', e);
+      return [];
     }
-  }, [firestore, defaultChannelId, selectedSourceId]);
+  }, [firestore]);
 
   const fetchWaStatus = useCallback(async () => {
     try {
@@ -412,12 +397,32 @@ export function WhatsAppGroupSyncDialog({
         setFromDate(defaultDate);
         setToDate(defaultDate);
       }
-      loadChannelsAndStores();
-      fetchWaStatus();
+      Promise.all([loadChannelsAndStores(), fetchWaStatus()]).then(([stores, wa]) => {
+        if (!selectedSourceId) {
+          if (stores.length > 0) {
+            setSelectedSourceId(`store:${stores[0].id}`);
+          } else if (wa?.groups && wa.groups.length > 0) {
+            setSelectedSourceId(`wa:${wa.groups[0].jid}`);
+          } else if (defaultChannelId) {
+            setSelectedSourceId(`app:${defaultChannelId}`);
+          }
+        }
+        if (!targetGroupSelection) {
+          if (stores.length > 0) {
+            setTargetGroupSelection(`store:${stores[0].id}`);
+          } else if (wa?.groups && wa.groups.length > 0) {
+            // Default to Altek Green/RBM Group if present, otherwise first live WhatsApp group
+            const rbm = wa.groups.find((g) => g.subject.toLowerCase().includes('altek') || g.subject.toLowerCase().includes('rbm'));
+            setTargetGroupSelection(`wa:${(rbm || wa.groups[0]).jid}`);
+          } else {
+            setTargetGroupSelection('__custom__');
+            setCustomGroupName('Altek Green/RBM Group');
+          }
+        }
+      });
     }
-  }, [open, defaultDate, loadChannelsAndStores, fetchWaStatus]);
+  }, [open, defaultDate, defaultChannelId, loadChannelsAndStores, fetchWaStatus, selectedSourceId, targetGroupSelection]);
 
-  // Parse preview for Tab 2 (.txt / .zip upload)
   const parsedUploadPreview = useMemo(() => {
     if (!rawExportText.trim()) return [];
     return parseWhatsAppExportText(rawExportText);
@@ -433,6 +438,195 @@ export function WhatsAppGroupSyncDialog({
     };
   }, [parsedUploadPreview]);
 
+  /**
+   * Resolves the target store document ID, display name, and optional live WhatsApp JID
+   * from the user's selection in Tab 2.
+   */
+  const resolveTargetGroupInfo = useCallback(() => {
+    if (targetGroupSelection.startsWith('store:')) {
+      const storeId = targetGroupSelection.slice(6);
+      const found = storedGroups.find((g) => g.id === storeId);
+      // Also check if a live group has the same subject so we link its whatsappJid automatically
+      const matchingLive = waSession?.groups?.find(
+        (lg) => lg.jid === found?.whatsappJid || lg.subject.toLowerCase() === (found?.name || '').toLowerCase()
+      );
+      return {
+        storeDocId: storeId,
+        groupName: found?.name || storeId,
+        whatsappJid: found?.whatsappJid || matchingLive?.jid,
+      };
+    }
+
+    if (targetGroupSelection.startsWith('wa:')) {
+      const jid = targetGroupSelection.slice(3);
+      const liveGrp = waSession?.groups?.find((g) => g.jid === jid);
+      const groupName = liveGrp?.subject || customGroupName.trim() || 'WhatsApp Group';
+      // Check if we already have a store for this JID or group name
+      const existingStore = storedGroups.find(
+        (s) => s.whatsappJid === jid || s.name.toLowerCase() === groupName.toLowerCase()
+      );
+      return {
+        storeDocId: existingStore ? existingStore.id : groupNameToStoreDocId(groupName),
+        groupName,
+        whatsappJid: jid,
+      };
+    }
+
+    const name = customGroupName.trim() || 'Altek Green/RBM Group';
+    const matchingLive = waSession?.groups?.find((lg) => lg.subject.toLowerCase() === name.toLowerCase());
+    const existingStore = storedGroups.find((s) => s.name.toLowerCase() === name.toLowerCase());
+    return {
+      storeDocId: existingStore ? existingStore.id : groupNameToStoreDocId(name),
+      groupName: name,
+      whatsappJid: existingStore?.whatsappJid || matchingLive?.jid,
+    };
+  }, [targetGroupSelection, storedGroups, waSession?.groups, customGroupName]);
+
+  /**
+   * Saves or incrementally updates a Stored WhatsApp Group in Firestore (`channels/wa_store_<slug>`)
+   * AND also merges any live messages from the matching WhatsApp group if connected!
+   */
+  const saveParsedMessagesToStore = useCallback(
+    async (messagesToSave: ParsedExportMessage[]) => {
+      if (!firestore || messagesToSave.length === 0) return;
+
+      const { storeDocId, groupName, whatsappJid } = resolveTargetGroupInfo();
+      if (!groupName) {
+        toast({
+          variant: 'destructive',
+          title: 'Group Name Required',
+          description: 'Please select or enter the WhatsApp Group name first.',
+        });
+        return;
+      }
+
+      setIsSavingToStore(true);
+      try {
+        // 1. Fetch existing message IDs in this group store so we only write NEW messages
+        const existingSnap = await getDocs(collection(firestore, `channels/${storeDocId}/messages`));
+        const existingIds = new Set<string>();
+        const dates = messagesToSave.map((m) => m.dateStr).sort();
+        let minDate = dates[0] || '';
+        let maxDate = dates[dates.length - 1] || '';
+
+        existingSnap.forEach((d) => {
+          existingIds.add(d.id);
+          const data = d.data() as any;
+          if (data.messageDate) {
+            if (!minDate || data.messageDate < minDate) minDate = data.messageDate;
+            if (!maxDate || data.messageDate > maxDate) maxDate = data.messageDate;
+          }
+        });
+
+        // Also pull any live-buffered messages for this WhatsApp group if linked
+        const combinedMessages = [...messagesToSave];
+        if (whatsappJid) {
+          try {
+            const liveRes = await fetch('/api/whatsapp/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'get_group_messages', groupJid: whatsappJid }),
+            });
+            const liveData = await liveRes.json();
+            if (Array.isArray(liveData.messages)) {
+              for (const lm of liveData.messages) {
+                const sig = `${lm.dateStr}_${lm.timeStr}_${lm.senderName}_${lm.text}`;
+                const id = `wa_txt_${lm.dateStr.replace(/-/g, '')}_${lm.timeStr.replace(':', '')}_${simpleHash(sig)}_1`;
+                combinedMessages.push({
+                  id,
+                  dateStr: lm.dateStr,
+                  timeStr: lm.timeStr,
+                  timestampMs: lm.timestampMs,
+                  senderName: lm.senderName,
+                  text: lm.text,
+                });
+                if (!minDate || lm.dateStr < minDate) minDate = lm.dateStr;
+                if (!maxDate || lm.dateStr > maxDate) maxDate = lm.dateStr;
+              }
+            }
+          } catch {
+            // ignore live merge error
+          }
+        }
+
+        // Deduplicate within combinedMessages and against existingIds
+        const seenInBatch = new Set<string>();
+        const newMessages: ParsedExportMessage[] = [];
+        for (const m of combinedMessages) {
+          if (!existingIds.has(m.id) && !seenInBatch.has(m.id)) {
+            seenInBatch.add(m.id);
+            newMessages.push(m);
+          }
+        }
+
+        // 2. Write new messages in chunks of 400
+        const chunkSize = 400;
+        for (let i = 0; i < newMessages.length; i += chunkSize) {
+          const chunk = newMessages.slice(i, i + chunkSize);
+          const batch = writeBatch(firestore);
+          for (const msg of chunk) {
+            const msgRef = doc(firestore, `channels/${storeDocId}/messages`, msg.id);
+            batch.set(msgRef, {
+              text: msg.text,
+              senderId: `wa_${msg.senderName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+              senderName: msg.senderName,
+              createdAt: Timestamp.fromMillis(msg.timestampMs),
+              messageDate: msg.dateStr,
+              timeStr: msg.timeStr,
+              source: 'whatsapp_txt_store',
+            });
+          }
+          await batch.commit();
+        }
+
+        const totalAfter = existingIds.size + newMessages.length;
+        const latestMsg = combinedMessages[combinedMessages.length - 1];
+
+        // 3. Update parent store metadata document
+        await setDoc(
+          doc(firestore, 'channels', storeDocId),
+          {
+            name: groupName,
+            ...(whatsappJid ? { whatsappJid } : {}),
+            type: 'whatsapp_store',
+            isPrivateWhatsAppStore: true,
+            isArchived: true,
+            earliestDate: minDate,
+            latestDate: maxDate,
+            totalMessagesCount: totalAfter,
+            lastMessage: latestMsg ? `${latestMsg.senderName}: ${latestMsg.text.slice(0, 80)}` : '',
+            lastMessageTime: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+          },
+          { merge: true }
+        );
+
+        await loadChannelsAndStores();
+        setSelectedSourceId(`store:${storeDocId}`);
+        setTargetGroupSelection(`store:${storeDocId}`);
+        setRawExportText('');
+        setUploadedFileName('');
+        // Automatically switch to Tab 1 so user immediately sees their messages filtered by their From/To Dates!
+        setActiveTab('import');
+
+        toast({
+          title: `Synced "${groupName}" Store!`,
+          description: `Saved ${newMessages.length.toLocaleString()} new messages (${totalAfter.toLocaleString()} total stored from ${minDate} to ${maxDate}). Now filtering by your selected dates!`,
+        });
+      } catch (err: any) {
+        console.error('Failed to save WhatsApp .txt store:', err);
+        toast({
+          variant: 'destructive',
+          title: 'Store Save Error',
+          description: err?.message || 'Failed to save messages to the store.',
+        });
+      } finally {
+        setIsSavingToStore(false);
+      }
+    },
+    [firestore, resolveTargetGroupInfo, loadChannelsAndStores, toast]
+  );
+
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -441,150 +635,151 @@ export function WhatsAppGroupSyncDialog({
       const text = await extractTextFromUploadedFile(file);
       setRawExportText(text);
 
-      // Auto-detect group name from file name e.g. "WhatsApp Chat with Altek Breakdowns.txt"
-      const cleanedName = file.name
-        .replace(/\.(txt|zip)$/i, '')
-        .replace(/^WhatsApp\s*Chat\s*with\s*/i, '')
-        .replace(/^_chat$/i, '')
-        .trim();
-
-      if (cleanedName) {
-        // Check if a stored group with this name already exists
-        const existing = storedGroups.find(
-          (g) => g.name.toLowerCase() === cleanedName.toLowerCase() || g.id === groupNameToStoreDocId(cleanedName)
-        );
-        if (existing) {
-          setTargetStoreGroupId(existing.id);
-        } else {
-          setTargetStoreGroupId('__new__');
-          setNewGroupName(cleanedName);
-        }
+      const parsed = parseWhatsAppExportText(text);
+      if (parsed.length === 0) {
+        toast({
+          variant: 'destructive',
+          title: 'No WhatsApp Timestamps Found',
+          description: 'Could not detect WhatsApp messages in this file.',
+        });
+        return;
       }
+
+      // Immediately save into the selected WhatsApp Group Store and switch to Tab 1!
+      await saveParsedMessagesToStore(parsed);
     } catch (err: any) {
       toast({
         variant: 'destructive',
         title: 'File Read Error',
         description: err?.message || 'Could not read the selected file.',
       });
+    } finally {
+      e.target.value = '';
     }
   };
 
   /**
-   * Saves or incrementally updates a Stored WhatsApp Group in Firestore (`channels/wa_store_<slug>`).
-   * Skips already-stored messages and only inserts new ones!
+   * Syncs any new messages from the Live QR session into the currently selected Stored Group!
    */
-  const handleSaveOrUpdateTxtStore = async () => {
-    if (!firestore) return;
-    if (parsedUploadPreview.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'No Valid WhatsApp Messages Found',
-        description: 'Please select a valid WhatsApp exported .txt (or .zip) file first.',
-      });
-      return;
-    }
-
-    const isCreatingNew = targetStoreGroupId === '__new__';
-    const resolvedName = isCreatingNew
-      ? newGroupName.trim()
-      : storedGroups.find((g) => g.id === targetStoreGroupId)?.name || newGroupName.trim();
-
-    if (!resolvedName) {
-      toast({
-        variant: 'destructive',
-        title: 'Group Name Required',
-        description: 'Please enter a name for this WhatsApp Group (e.g. "RBM Breakdown Group").',
-      });
-      return;
-    }
-
-    const storeDocId = isCreatingNew ? groupNameToStoreDocId(resolvedName) : targetStoreGroupId;
-
-    setIsSavingToStore(true);
-    try {
-      // 1. Fetch existing message IDs in this group store so we only write NEW messages
-      const existingSnap = await getDocs(collection(firestore, `channels/${storeDocId}/messages`));
-      const existingIds = new Set<string>();
-      let minDate = parsedUploadDateSpan?.earliest || '';
-      let maxDate = parsedUploadDateSpan?.latest || '';
-
-      existingSnap.forEach((d) => {
-        existingIds.add(d.id);
-        const data = d.data() as any;
-        if (data.messageDate) {
-          if (!minDate || data.messageDate < minDate) minDate = data.messageDate;
-          if (!maxDate || data.messageDate > maxDate) maxDate = data.messageDate;
-        }
-      });
-
-      const newMessages = parsedUploadPreview.filter((m) => !existingIds.has(m.id));
-
-      // 2. Write new messages in chunks of 400
-      const chunkSize = 400;
-      for (let i = 0; i < newMessages.length; i += chunkSize) {
-        const chunk = newMessages.slice(i, i + chunkSize);
-        const batch = writeBatch(firestore);
-        for (const msg of chunk) {
-          const msgRef = doc(firestore, `channels/${storeDocId}/messages`, msg.id);
-          batch.set(msgRef, {
-            text: msg.text,
-            senderId: `wa_${msg.senderName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
-            senderName: msg.senderName,
-            createdAt: Timestamp.fromMillis(msg.timestampMs),
-            messageDate: msg.dateStr,
-            timeStr: msg.timeStr,
-            source: 'whatsapp_txt_store',
+  const handleSyncLiveIntoSelectedStore = useCallback(
+    async (storeGroup: StoredWhatsAppGroup, silent = false) => {
+      if (!firestore) return;
+      // Find matching live group by JID or by subject name
+      const matchingLive = waSession?.groups?.find(
+        (lg) =>
+          (storeGroup.whatsappJid && lg.jid === storeGroup.whatsappJid) ||
+          lg.subject.toLowerCase() === storeGroup.name.toLowerCase()
+      );
+      const jidToSync = storeGroup.whatsappJid || matchingLive?.jid;
+      if (!jidToSync) {
+        if (!silent) {
+          toast({
+            variant: 'destructive',
+            title: 'Live WhatsApp Group Not Found',
+            description: `Make sure Live QR is connected in Tab 3 and your group name matches "${storeGroup.name}".`,
           });
         }
-        await batch.commit();
+        return;
       }
 
-      const totalAfter = existingIds.size + newMessages.length;
-      const latestMsg = parsedUploadPreview[parsedUploadPreview.length - 1];
+      setIsSyncingLiveToStore(true);
+      try {
+        const res = await fetch('/api/whatsapp/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_group_messages', groupJid: jidToSync }),
+        });
+        const data = await res.json();
+        const liveMsgs: WhatsAppBufferedMessage[] = Array.isArray(data.messages) ? data.messages : [];
+        if (liveMsgs.length === 0) {
+          if (!silent) {
+            toast({
+              title: 'Up to Date',
+              description: 'No new live messages waiting to be added.',
+            });
+          }
+          return;
+        }
 
-      // 3. Update parent store metadata document (marked private so it never shows in Site Comms)
-      await setDoc(
-        doc(firestore, 'channels', storeDocId),
-        {
-          name: resolvedName,
-          type: 'whatsapp_store',
-          isPrivateWhatsAppStore: true,
-          isArchived: true,
-          earliestDate: minDate,
-          latestDate: maxDate,
-          totalMessagesCount: totalAfter,
-          lastMessage: latestMsg ? `${latestMsg.senderName}: ${latestMsg.text.slice(0, 80)}` : '',
-          lastMessageTime: Timestamp.now(),
-          updatedAt: Timestamp.now(),
-        },
-        { merge: true }
-      );
+        const existingSnap = await getDocs(collection(firestore, `channels/${storeGroup.id}/messages`));
+        const existingIds = new Set<string>();
+        let minDate = storeGroup.earliestDate || '';
+        let maxDate = storeGroup.latestDate || '';
+        existingSnap.forEach((d) => {
+          existingIds.add(d.id);
+          const md = (d.data() as any).messageDate;
+          if (md) {
+            if (!minDate || md < minDate) minDate = md;
+            if (!maxDate || md > maxDate) maxDate = md;
+          }
+        });
 
-      await loadChannelsAndStores();
-      setSelectedSourceId(`store:${storeDocId}`);
-      setTargetStoreGroupId(storeDocId);
-      setRawExportText('');
-      setUploadedFileName('');
-      setActiveTab('import');
+        const toAdd: ParsedExportMessage[] = [];
+        for (const lm of liveMsgs) {
+          const sig = `${lm.dateStr}_${lm.timeStr}_${lm.senderName}_${lm.text}`;
+          const id = `wa_txt_${lm.dateStr.replace(/-/g, '')}_${lm.timeStr.replace(':', '')}_${simpleHash(sig)}_1`;
+          if (!existingIds.has(id)) {
+            existingIds.add(id);
+            toAdd.push({
+              id,
+              dateStr: lm.dateStr,
+              timeStr: lm.timeStr,
+              timestampMs: lm.timestampMs,
+              senderName: lm.senderName,
+              text: lm.text,
+            });
+            if (!minDate || lm.dateStr < minDate) minDate = lm.dateStr;
+            if (!maxDate || lm.dateStr > maxDate) maxDate = lm.dateStr;
+          }
+        }
 
-      toast({
-        title: existingIds.size > 0 ? 'WhatsApp Group Store Updated!' : 'WhatsApp Group History Stored!',
-        description:
-          existingIds.size > 0
-            ? `Added ${newMessages.length} new messages to "${resolvedName}" (${existingIds.size} older messages kept). Full range: ${minDate} → ${maxDate}.`
-            : `Saved ${newMessages.length} messages to "${resolvedName}" (${minDate} → ${maxDate}). You can now select any date range in Tab 1!`,
-      });
-    } catch (err: any) {
-      console.error('Failed to save WhatsApp .txt store:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Store Save Error',
-        description: err?.message || 'Failed to save messages to the store.',
-      });
-    } finally {
-      setIsSavingToStore(false);
-    }
-  };
+        if (toAdd.length > 0) {
+          const batch = writeBatch(firestore);
+          for (const msg of toAdd.slice(0, 400)) {
+            const msgRef = doc(firestore, `channels/${storeGroup.id}/messages`, msg.id);
+            batch.set(msgRef, {
+              text: msg.text,
+              senderId: `wa_${msg.senderName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+              senderName: msg.senderName,
+              createdAt: Timestamp.fromMillis(msg.timestampMs),
+              messageDate: msg.dateStr,
+              timeStr: msg.timeStr,
+              source: 'whatsapp_live_topup',
+            });
+          }
+          await batch.commit();
+
+          await setDoc(
+            doc(firestore, 'channels', storeGroup.id),
+            {
+              whatsappJid: jidToSync,
+              earliestDate: minDate,
+              latestDate: maxDate,
+              totalMessagesCount: existingIds.size,
+              updatedAt: Timestamp.now(),
+            },
+            { merge: true }
+          );
+
+          await loadChannelsAndStores();
+        }
+
+        if (!silent) {
+          toast({
+            title: toAdd.length > 0 ? `Added ${toAdd.length} New Live Message(s)!` : 'Store Already Up to Date',
+            description: `"${storeGroup.name}" store covers ${minDate} → ${maxDate} (${existingIds.size} total messages).`,
+          });
+        }
+      } catch (err: any) {
+        if (!silent) {
+          toast({ variant: 'destructive', title: 'Live Sync Error', description: err.message });
+        }
+      } finally {
+        setIsSyncingLiveToStore(false);
+      }
+    },
+    [firestore, waSession?.groups, loadChannelsAndStores, toast]
+  );
 
   // Load messages for the selected source in Tab 1
   const loadMessagesForSelectedSource = useCallback(async () => {
@@ -599,6 +794,14 @@ export function WhatsAppGroupSyncDialog({
         const channelId = selectedSourceId.startsWith('store:')
           ? selectedSourceId.slice(6)
           : selectedSourceId.slice(4);
+
+        // If this is a Stored Group and Live QR is connected, silently top up any new live messages first!
+        if (selectedSourceId.startsWith('store:') && waSession?.status === 'connected') {
+          const stGrp = storedGroups.find((g) => g.id === channelId);
+          if (stGrp) {
+            await handleSyncLiveIntoSelectedStore(stGrp, true);
+          }
+        }
 
         const msgsSnap = await getDocs(
           query(collection(firestore, `channels/${channelId}/messages`), orderBy('createdAt', 'asc'))
@@ -648,7 +851,7 @@ export function WhatsAppGroupSyncDialog({
     } finally {
       setLoadingMessages(false);
     }
-  }, [selectedSourceId, firestore]);
+  }, [selectedSourceId, firestore, waSession?.status, storedGroups, handleSyncLiveIntoSelectedStore]);
 
   useEffect(() => {
     if (open && selectedSourceId) {
@@ -673,23 +876,6 @@ export function WhatsAppGroupSyncDialog({
     }
   };
 
-  const handleRefreshLiveGroups = async () => {
-    setIsRefreshingGroups(true);
-    try {
-      const res = await fetch('/api/whatsapp/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'refresh_groups' }),
-      });
-      const data: WhatsAppSessionState = await res.json();
-      setWaSession(data);
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Refresh Error', description: err.message });
-    } finally {
-      setIsRefreshingGroups(false);
-    }
-  };
-
   const handleDisconnectWhatsApp = async () => {
     try {
       const res = await fetch('/api/whatsapp/session', {
@@ -705,37 +891,6 @@ export function WhatsAppGroupSyncDialog({
       });
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Error', description: err.message });
-    }
-  };
-
-  const handleRequestOlderHistoryFromPhone = async () => {
-    if (!selectedSourceId.startsWith('wa:')) return;
-    const groupJid = selectedSourceId.slice(3);
-
-    setIsRequestingOlder(true);
-    try {
-      const res = await fetch('/api/whatsapp/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'fetch_older', groupJid, count: 50, fromDate }),
-      });
-      const data = await res.json();
-      if (Array.isArray(data.messages)) {
-        setLoadedMessages(data.messages);
-      }
-      if (data?.historyRequest?.message) {
-        toast({
-          title: 'Phone History Sync Result',
-          description: data.historyRequest.message,
-        });
-      }
-      setTimeout(() => {
-        loadMessagesForSelectedSource();
-      }, 2000);
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'History Sync Error', description: err.message });
-    } finally {
-      setIsRequestingOlder(false);
     }
   };
 
@@ -824,6 +979,12 @@ export function WhatsAppGroupSyncDialog({
     return { earliest: dates[0], latest: dates[dates.length - 1], count: loadedMessages.length };
   }, [loadedMessages]);
 
+  const selectedStoreGroup = useMemo(() => {
+    if (!selectedSourceId.startsWith('store:')) return null;
+    const id = selectedSourceId.slice(6);
+    return storedGroups.find((g) => g.id === id) || null;
+  }, [selectedSourceId, storedGroups]);
+
   const isWaConnected = waSession?.status === 'connected';
 
   return (
@@ -835,18 +996,28 @@ export function WhatsAppGroupSyncDialog({
               <MessageSquare className="h-5 w-5 text-emerald-600" />
               WhatsApp Group Store &amp; FSR Import (Admin / Manager)
             </DialogTitle>
-            <Badge
-              variant="outline"
-              className="text-[10px] font-bold px-2.5 py-0.5 flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border-emerald-300"
-            >
-              <Database className="h-3 w-3 text-emerald-600" />
-              {storedGroups.length} Stored Group{storedGroups.length === 1 ? '' : 's'} Ready
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-[10px] font-bold px-2.5 py-0.5 flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border-emerald-300"
+              >
+                <Database className="h-3 w-3 text-emerald-600" />
+                {storedGroups.length} Stored Group{storedGroups.length === 1 ? '' : 's'}
+              </Badge>
+              {isWaConnected && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-700 border-blue-300"
+                >
+                  Live QR Active
+                </Badge>
+              )}
+            </div>
           </div>
           <DialogDescription className="flex items-center gap-1.5 text-xs text-emerald-800 bg-emerald-50/80 border border-emerald-200 rounded-md px-2.5 py-1.5 mt-1">
             <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
             <span>
-              <strong>Private Admin/Manager Store:</strong> Export your WhatsApp Group chat (`.txt` or `.zip`) from January/February onwards and upload it once in <strong>Tab 2</strong>. Whenever you upload an updated `.txt` file later, it automatically adds only the newest messages—and never requires your phone to stay connected!
+              <strong>How It Works:</strong> Upload your exported `.txt` file once in <strong>Tab 2</strong> and link it to your WhatsApp group name (e.g. <strong>Altek Green/RBM Group</strong>). It automatically saves the full Jan–Oct history into the store and switches you to <strong>Tab 1</strong> to filter by date!
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -867,7 +1038,7 @@ export function WhatsAppGroupSyncDialog({
             </TabsTrigger>
             <TabsTrigger value="qr" className="gap-1.5 font-bold text-xs">
               <QrCode className="h-3.5 w-3.5 text-slate-500" />
-              3. Live QR (Optional)
+              3. Live QR Top-Up
             </TabsTrigger>
           </TabsList>
 
@@ -876,9 +1047,9 @@ export function WhatsAppGroupSyncDialog({
             {storedGroups.length === 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between gap-4">
                 <div className="text-xs text-blue-900">
-                  <p className="font-bold">No WhatsApp Group .txt history stored yet.</p>
+                  <p className="font-bold">Step 1: Upload your initial WhatsApp `.txt` history into the store.</p>
                   <p className="text-blue-700">
-                    Export your WhatsApp group chat (&quot;Without Media&quot;) from January/February to today and upload it once in Tab 2—then you can pull any date range anytime without needing your phone connected!
+                    Click the button on the right, pick your WhatsApp group name (e.g. <strong>Altek Green/RBM Group</strong>), and select your `.txt` file. It will automatically save and bring you right back here!
                   </p>
                 </div>
                 <Button
@@ -888,7 +1059,7 @@ export function WhatsAppGroupSyncDialog({
                   onClick={() => setActiveTab('sync')}
                 >
                   <Upload className="h-4 w-4" />
-                  Upload .txt History
+                  Upload .txt File Now
                 </Button>
               </div>
             )}
@@ -896,18 +1067,18 @@ export function WhatsAppGroupSyncDialog({
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
               <div className="md:col-span-5 space-y-1">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black uppercase text-slate-500">Select WhatsApp Group</Label>
+                  <Label className="text-[10px] font-black uppercase text-slate-500">Select Stored WhatsApp Group</Label>
                   <button
                     type="button"
                     onClick={() => {
                       if (selectedSourceId.startsWith('store:')) {
-                        setTargetStoreGroupId(selectedSourceId.slice(6));
+                        setTargetGroupSelection(selectedSourceId);
                       }
                       setActiveTab('sync');
                     }}
                     className="text-[10px] text-blue-700 hover:underline font-bold flex items-center gap-1"
                   >
-                    <Upload className="h-2.5 w-2.5" /> + Update .txt File
+                    <Upload className="h-2.5 w-2.5" /> + Upload / Top-Up .txt
                   </button>
                 </div>
                 <select
@@ -917,7 +1088,7 @@ export function WhatsAppGroupSyncDialog({
                 >
                   <option value="">-- Choose a Stored Group --</option>
                   {storedGroups.length > 0 && (
-                    <optgroup label="Saved WhatsApp Group Stores (Permanent History)">
+                    <optgroup label="Stored WhatsApp Groups (Full History + Live Updates)">
                       {storedGroups.map((g) => (
                         <option key={`store:${g.id}`} value={`store:${g.id}`}>
                           📁 {g.name} ({g.totalMessagesCount || 0} msgs • {g.earliestDate || '?'} → {g.latestDate || '?'})
@@ -926,10 +1097,10 @@ export function WhatsAppGroupSyncDialog({
                     </optgroup>
                   )}
                   {(waSession?.groups?.length || 0) > 0 && (
-                    <optgroup label="Live QR WhatsApp Groups">
+                    <optgroup label="Live QR Groups (Not Yet Linked to .txt Store)">
                       {waSession!.groups.map((g) => (
                         <option key={`wa:${g.jid}`} value={`wa:${g.jid}`}>
-                          🟢 {g.subject} ({g.messageCount} msgs)
+                          🟢 {g.subject} ({g.messageCount} live msgs)
                         </option>
                       ))}
                     </optgroup>
@@ -946,7 +1117,7 @@ export function WhatsAppGroupSyncDialog({
                 </select>
                 {messageDateSpan && (
                   <p className="text-[10px] text-emerald-700 font-semibold">
-                    Stored History: {messageDateSpan.count} msgs ({messageDateSpan.earliest} → {messageDateSpan.latest})
+                    Stored Range: {messageDateSpan.count.toLocaleString()} msgs ({messageDateSpan.earliest} → {messageDateSpan.latest})
                   </p>
                 )}
               </div>
@@ -1007,20 +1178,27 @@ export function WhatsAppGroupSyncDialog({
                   ) : (
                     <Square className="h-4 w-4 mr-1.5 text-slate-400" />
                   )}
-                  Tick / Untick All ({selectedMsgIds.size} of {filteredMessages.length} selected)
+                  Tick / Untick All ({selectedMsgIds.size} of {filteredMessages.length} messages in date range)
                 </Button>
 
-                {selectedSourceId.startsWith('wa:') && (
+                {selectedStoreGroup && isWaConnected && (
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={isRequestingOlder}
-                    onClick={handleRequestOlderHistoryFromPhone}
-                    className="h-7 text-[11px] gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                    disabled={isSyncingLiveToStore}
+                    onClick={async () => {
+                      await handleSyncLiveIntoSelectedStore(selectedStoreGroup, false);
+                      await loadMessagesForSelectedSource();
+                    }}
+                    className="h-7 text-[11px] gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold"
                   >
-                    {isRequestingOlder ? <Loader2 className="h-3 w-3 animate-spin" /> : <History className="h-3 w-3" />}
-                    Pull Older Messages from Phone
+                    {isSyncingLiveToStore ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    Sync Newest Live Messages
                   </Button>
                 )}
               </div>
@@ -1039,7 +1217,7 @@ export function WhatsAppGroupSyncDialog({
             <div className="flex-1 min-h-[220px] max-h-[320px] overflow-y-auto border rounded-lg bg-slate-50/60 p-3 space-y-2">
               {loadingMessages ? (
                 <div className="flex items-center justify-center h-40 text-slate-400 text-xs gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading stored group messages...
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading group messages for selected dates...
                 </div>
               ) : !selectedSourceId ? (
                 <div className="flex flex-col items-center justify-center h-40 text-center text-slate-500 text-xs gap-2 p-4">
@@ -1075,7 +1253,7 @@ export function WhatsAppGroupSyncDialog({
                       className="text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold gap-1.5"
                     >
                       <Upload className="h-3.5 w-3.5" />
-                      Upload / Update .txt History
+                      Upload .txt History File
                     </Button>
                   </div>
                 </div>
@@ -1142,113 +1320,96 @@ export function WhatsAppGroupSyncDialog({
           </TabsContent>
 
           {/* TAB 2: UPLOAD / INCREMENTAL UPDATE WHATSAPP .TXT STORE */}
-          <TabsContent value="sync" className="flex-1 flex flex-col gap-3 overflow-y-auto mt-3 pr-1">
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-slate-600">
-                    1. Choose Stored Group to Update (or Create New)
-                  </Label>
+          <TabsContent value="sync" className="flex-1 flex flex-col gap-4 overflow-y-auto mt-3 pr-1">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-5">
+              {/* STEP 1: PICK EXACT WHATSAPP GROUP NAME */}
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-700">
+                  Step 1: Select Which WhatsApp Group This History Belongs To
+                </Label>
+                <p className="text-[11px] text-slate-500">
+                  Pick your existing Stored Group or select your live WhatsApp Group name so the uploaded `.txt` history and live updates stay linked under the exact same group.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <select
-                    value={targetStoreGroupId}
-                    onChange={(e) => setTargetStoreGroupId(e.target.value)}
-                    className="w-full h-9 px-2.5 border border-slate-300 rounded-md text-xs font-bold bg-white"
+                    value={targetGroupSelection}
+                    onChange={(e) => setTargetGroupSelection(e.target.value)}
+                    className="w-full h-10 px-3 border border-slate-300 rounded-md text-xs font-bold bg-white"
                   >
-                    <option value="__new__">➕ Create New Stored WhatsApp Group</option>
-                    {storedGroups.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        🔄 Update Existing: {g.name} ({g.totalMessagesCount || 0} msgs • up to {g.latestDate || '?'})
-                      </option>
-                    ))}
+                    {storedGroups.length > 0 && (
+                      <optgroup label="Existing Stored WhatsApp Groups">
+                        {storedGroups.map((g) => (
+                          <option key={`store:${g.id}`} value={`store:${g.id}`}>
+                            📁 {g.name} ({g.totalMessagesCount || 0} msgs stored)
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {(waSession?.groups?.length || 0) > 0 && (
+                      <optgroup label="Your WhatsApp Groups (Match Exact Group Name)">
+                        {waSession!.groups.map((g) => (
+                          <option key={`wa:${g.jid}`} value={`wa:${g.jid}`}>
+                            🟢 {g.subject}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <option value="__custom__">➕ Type / Confirm WhatsApp Group Name Manually</option>
                   </select>
-                </div>
 
-                {targetStoreGroupId === '__new__' && (
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-black uppercase text-slate-600">
-                      WhatsApp Group Name
-                    </Label>
+                  {targetGroupSelection === '__custom__' && (
                     <Input
-                      placeholder="e.g. RBM Breakdown Group"
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      className="h-9 text-xs bg-white font-semibold"
+                      placeholder="e.g. Altek Green/RBM Group"
+                      value={customGroupName}
+                      onChange={(e) => setCustomGroupName(e.target.value)}
+                      className="h-10 text-xs bg-white font-bold"
                     />
-                  </div>
+                  )}
+                </div>
+              </div>
+
+              {/* STEP 2: UPLOAD .TXT OR .ZIP FILE -> AUTO-SAVES & SWITCHES TO TAB 1 */}
+              <div className="border-2 border-dashed border-emerald-400 bg-emerald-50/40 rounded-xl p-6 flex flex-col items-center text-center gap-3">
+                {isSavingToStore ? (
+                  <>
+                    <Loader2 className="h-10 w-10 text-emerald-600 animate-spin" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-slate-900">
+                        Indexing &amp; Saving {parsedUploadDateSpan?.count.toLocaleString() || ''} Messages by Date...
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        Linking to <strong>{resolveTargetGroupInfo().groupName}</strong> ({parsedUploadDateSpan?.earliest} → {parsedUploadDateSpan?.latest}). You will be taken to Tab 1 automatically!
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-9 w-9 text-emerald-600" />
+                    <div className="space-y-1 max-w-lg">
+                      <p className="text-sm font-black text-slate-900">
+                        Step 2: Choose Your Exported WhatsApp `.txt` (or `.zip`) File
+                      </p>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        As soon as you select the file (e.g. <strong>chat AG.txt</strong>), the system will <strong>automatically index all messages by date</strong>, save them into <strong>{resolveTargetGroupInfo().groupName}</strong>, and switch you straight to <strong>Tab 1 (Select Group &amp; Dates)</strong>!
+                      </p>
+                    </div>
+                    <label className="mt-1 inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shadow-md transition-colors">
+                      <Upload className="h-4 w-4" />
+                      {uploadedFileName ? `Uploaded: ${uploadedFileName}` : 'Select WhatsApp .txt or .zip File & Sync Now'}
+                      <input
+                        type="file"
+                        accept=".txt,.zip,text/plain,application/zip"
+                        onChange={handleFileSelected}
+                        className="hidden"
+                      />
+                    </label>
+                  </>
                 )}
               </div>
-
-              <div className="border-2 border-dashed border-blue-300 bg-blue-50/40 rounded-xl p-4 flex flex-col items-center text-center gap-2">
-                <FileText className="h-7 w-7 text-blue-600" />
-                <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-slate-900">
-                    2. Select Exported WhatsApp Chat File (`.txt` or `.zip`)
-                  </p>
-                  <p className="text-[11px] text-slate-600">
-                    In WhatsApp, open the group → <strong>More (⋮) → Export chat → Without media</strong>. Upload the full history from Jan/Feb once; whenever you upload a newer export later, only the newest messages are added!
-                  </p>
-                </div>
-                <label className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer shadow-sm">
-                  <Upload className="h-3.5 w-3.5" />
-                  {uploadedFileName ? `Selected: ${uploadedFileName}` : 'Choose WhatsApp .txt or .zip File'}
-                  <input
-                    type="file"
-                    accept=".txt,.zip,text/plain,application/zip"
-                    onChange={handleFileSelected}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-500">
-                  Or Paste Copied WhatsApp Messages Directly
-                </Label>
-                <Textarea
-                  placeholder="Paste exported WhatsApp lines here (e.g. 2026/02/14, 08:30 - Technician: Arrived on site...)"
-                  value={rawExportText}
-                  onChange={(e) => setRawExportText(e.target.value)}
-                  rows={4}
-                  className="text-xs font-mono bg-white"
-                />
-              </div>
-
-              {parsedUploadDateSpan && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center justify-between">
-                  <div className="text-xs text-emerald-900">
-                    <p className="font-bold flex items-center gap-1.5">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      Ready to Store: {parsedUploadDateSpan.count.toLocaleString()} messages detected
-                    </p>
-                    <p className="text-emerald-700 text-[11px]">
-                      Date Range Covered: <strong>{parsedUploadDateSpan.earliest}</strong> to{' '}
-                      <strong>{parsedUploadDateSpan.latest}</strong> (duplicates are skipped automatically)
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    disabled={isSavingToStore}
-                    onClick={handleSaveOrUpdateTxtStore}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
-                  >
-                    {isSavingToStore ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving to Store...
-                      </>
-                    ) : (
-                      <>
-                        <Database className="h-4 w-4" />
-                        Save / Update Group Store
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
             </div>
           </TabsContent>
 
-          {/* TAB 3: OPTIONAL LIVE WHATSAPP QR LINK / UNLINK */}
+          {/* TAB 3: LIVE WHATSAPP QR LINK FOR CONTINUOUS UPDATES */}
           <TabsContent value="qr" className="flex-1 flex flex-col gap-4 overflow-y-auto mt-3 pr-1">
             <div className="border-2 border-slate-200 bg-slate-50/50 rounded-xl p-6 flex flex-col items-center text-center space-y-4">
               {isWaConnected ? (
@@ -1258,10 +1419,10 @@ export function WhatsAppGroupSyncDialog({
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-sm font-black text-slate-900">
-                      Live Companion Session Active ({waSession?.connectedName || waSession?.connectedPhone})
+                      Live QR Connected ({waSession?.connectedName || waSession?.connectedPhone})
                     </h3>
                     <p className="text-xs text-slate-600 max-w-md">
-                      Note: WhatsApp Linked Devices disconnects when your phone sleeps and uses 1 of your 4 device slots. If you prefer using the permanent <strong>Tab 2 (.txt Store)</strong>, click <strong>Unlink Device</strong> below to free your phone&apos;s device slot.
+                      Your initial history is stored via Tab 2, and this live connection automatically tops up your stored group with the latest incoming messages!
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-3">
@@ -1312,10 +1473,10 @@ export function WhatsAppGroupSyncDialog({
                   <Smartphone className="h-8 w-8 text-slate-400" />
                   <div className="space-y-1 max-w-md">
                     <h3 className="text-sm font-bold text-slate-900">
-                      Optional Live QR Link
+                      Live QR Continuous Top-Up
                     </h3>
                     <p className="text-xs text-slate-600">
-                      For 9–10 months of historical messages (back to Jan/Feb) without phone sleep disconnects or using up your 4 Linked Device slots, we recommend using <strong>Tab 2 (Upload / Update .txt Store)</strong>.
+                      Once your full history is uploaded in Tab 2, you can connect Live QR here anytime to automatically top up your stored group with the latest messages.
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -1328,17 +1489,7 @@ export function WhatsAppGroupSyncDialog({
                       className="text-xs gap-1.5"
                     >
                       {isStartingSession ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
-                      Generate Live QR Code
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDisconnectWhatsApp}
-                      className="text-xs text-red-600 border-red-200 gap-1"
-                    >
-                      <Unlink className="h-3.5 w-3.5" />
-                      Clear Any Linked Session
+                      Connect Live QR
                     </Button>
                   </div>
                 </>
