@@ -717,15 +717,21 @@ export function WhatsAppGroupSyncDialog({
       const res = await fetch('/api/whatsapp/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'fetch_older', groupJid, count: 150 }),
+        body: JSON.stringify({ action: 'fetch_older', groupJid, count: 50, fromDate }),
       });
       const data = await res.json();
       if (Array.isArray(data.messages)) {
         setLoadedMessages(data.messages);
       }
+      if (data?.historyRequest?.message) {
+        toast({
+          title: 'Phone History Sync Result',
+          description: data.historyRequest.message,
+        });
+      }
       setTimeout(() => {
         loadMessagesForSelectedSource();
-      }, 2500);
+      }, 2000);
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'History Sync Error', description: err.message });
     } finally {
@@ -1003,6 +1009,20 @@ export function WhatsAppGroupSyncDialog({
                   )}
                   Tick / Untick All ({selectedMsgIds.size} of {filteredMessages.length} selected)
                 </Button>
+
+                {selectedSourceId.startsWith('wa:') && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isRequestingOlder}
+                    onClick={handleRequestOlderHistoryFromPhone}
+                    className="h-7 text-[11px] gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                  >
+                    {isRequestingOlder ? <Loader2 className="h-3 w-3 animate-spin" /> : <History className="h-3 w-3" />}
+                    Pull Older Messages from Phone
+                  </Button>
+                )}
               </div>
 
               <div className="relative w-56">

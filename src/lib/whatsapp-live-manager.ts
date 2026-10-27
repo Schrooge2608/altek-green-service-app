@@ -21,6 +21,12 @@ export interface WhatsAppBufferedMessage {
   timestampMs: number;
   dateStr: string; // YYYY-MM-DD
   timeStr: string; // HH:mm
+  rawKey?: {
+    remoteJid: string;
+    id: string;
+    fromMe: boolean;
+    participant?: string;
+  };
 }
 
 export interface WhatsAppSessionState {
@@ -44,6 +50,7 @@ interface GlobalWhatsAppStore {
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   reconnectAttempts: number;
   waiters: Array<() => void>;
+  historyWaiters: Array<(groupJids: Set<string>) => void>;
   cacheLoaded: boolean;
 }
 
@@ -75,8 +82,7 @@ function saveCacheToDisk(store: GlobalWhatsAppStore) {
     }
     const messages: Record<string, WhatsAppBufferedMessage[]> = {};
     for (const [jid, mMap] of store.groupMessagesMap.entries()) {
-      // Keep up to 1000 most recent messages per group in cache
-      const arr = Array.from(mMap.values()).sort((a, b) => a.timestampMs - b.timestampMs).slice(-1000);
+      const arr = Array.from(mMap.values()).sort((a, b) => a.timestampMs - b.timestampMs).slice(-3000);
       messages[jid] = arr;
     }
     fs.writeFileSync(
@@ -151,9 +157,13 @@ function getStore(): GlobalWhatsAppStore {
       reconnectTimer: null,
       reconnectAttempts: 0,
       waiters: [],
+      historyWaiters: [],
       cacheLoaded: false,
     };
     loadCacheFromDisk(globalForWa.__altekWaPrivateStore);
+  }
+  if (!globalForWa.__altekWaPrivateStore.historyWaiters) {
+    globalForWa.__altekWaPrivateStore.historyWaiters = [];
   }
   return globalForWa.__altekWaPrivateStore;
 }
@@ -171,6 +181,18 @@ function notifyWaiters(store: GlobalWhatsAppStore) {
   }
 }
 
+function notifyHistoryWaiters(store: GlobalWhatsAppStore, updatedGroupJids: Set<string>) {
+  if (!store.historyWaiters || store.historyWaiters.length === 0) return;
+  const current = [...store.historyWaiters];
+  for (const fn of current) {
+    try {
+      fn(updatedGroupJids);
+    } catch {
+      // ignore
+    }
+  }
+}
+
 function extractMessageText(message: any): string {
   if (!message) return '';
   const inner =
@@ -178,6 +200,7 @@ function extractMessageText(message: any): string {
     message.viewOnceMessage?.message ||
     message.viewOnceMessageV2?.message ||
     message.documentWithCaptionMessage?.message ||
+    message.editedMessage?.message?.protocolMessage?.editedMessage ||
     message;
 
   return (
@@ -190,13 +213,31 @@ function extractMessageText(message: any): string {
   ).trim();
 }
 
+/**
+ * Accurately extracts timestamp in milliseconds from numbers, strings, bigints,
+ * protobuf Long instances (.toNumber()), and serialized Long objects ({ low, high }).
+ */
 function extractTimestampMs(rawTs: any): number {
-  if (!rawTs) return Date.now();
-  const num =
-    typeof rawTs === 'object' && typeof rawTs.toNumber === 'function'
-      ? rawTs.toNumber()
-      : Number(rawTs);
-  if (isNaN(num) || num <= 0) return Date.now();
+  if (rawTs == null) return 0;
+  let num = NaN;
+  if (typeof rawTs === 'number') {
+    num = rawTs;
+  } else if (typeof rawTs === 'bigint') {
+    num = Number(rawTs);
+  } else if (typeof rawTs === 'string') {
+    num = Number(rawTs.trim());
+  } else if (typeof rawTs === 'object') {
+    if (typeof rawTs.toNumber === 'function') {
+      num = rawTs.toNumber();
+    } else if (typeof rawTs.low === 'number') {
+      const low = rawTs.low >>> 0;
+      const high = typeof rawTs.high === 'number' ? rawTs.high : 0;
+      num = high * 4294967296 + low;
+    } else if (typeof rawTs.toString === 'function' && rawTs.toString() !== '[object Object]') {
+      num = Number(rawTs.toString());
+    }
+  }
+  if (isNaN(num) || num <= 0) return 0;
   return num < 10000000000 ? num * 1000 : num;
 }
 
@@ -218,9 +259,24 @@ function rebuildGroupsList(store: GlobalWhatsAppStore) {
 
     let earliestDate: string | null = null;
     let latestDate: string | null = null;
+    let oldestMsg: WhatsAppBufferedMessage | null = null;
+
     for (const m of msgs) {
       if (!earliestDate || m.dateStr < earliestDate) earliestDate = m.dateStr;
       if (!latestDate || m.dateStr > latestDate) latestDate = m.dateStr;
+      if (m.rawKey?.id && (!oldestMsg || m.timestampMs < oldestMsg.timestampMs)) {
+        oldestMsg = m;
+      }
+    }
+
+    if (oldestMsg && oldestMsg.rawKey) {
+      const existingOldest = store.oldestMsgMap.get(jid);
+      if (!existingOldest || oldestMsg.timestampMs <= existingOldest.timestampMs) {
+        store.oldestMsgMap.set(jid, {
+          key: oldestMsg.rawKey,
+          timestampMs: oldestMsg.timestampMs,
+        });
+      }
     }
 
     list.push({
@@ -245,18 +301,38 @@ function rebuildGroupsList(store: GlobalWhatsAppStore) {
  */
 function bufferGroupMessagesInMemory(rawMessages: any[]) {
   const store = getStore();
-  let addedAny = false;
+  const updatedGroupJids = new Set<string>();
 
   for (const m of rawMessages) {
     const jid: string = m?.key?.remoteJid || '';
     if (!jid.endsWith('@g.us')) continue;
 
-    const text = extractMessageText(m.message);
-    if (!text) continue;
+    const rawTs = m.messageTimestamp ?? m.message?.messageTimestamp ?? m.timestamp;
+    const tsMs = extractTimestampMs(rawTs);
+    if (!tsMs) continue;
 
-    const tsMs = extractTimestampMs(m.messageTimestamp);
     const dt = new Date(tsMs);
     if (isNaN(dt.getTime())) continue;
+
+    const cleanKey = m.key?.id
+      ? {
+          remoteJid: jid,
+          id: String(m.key.id),
+          fromMe: Boolean(m.key.fromMe),
+          ...(m.key.participant ? { participant: String(m.key.participant) } : {}),
+        }
+      : undefined;
+
+    // Even if a message is media/system without text, still track its timestamp/key if it's the oldest in the group
+    if (cleanKey) {
+      const existingOldest = store.oldestMsgMap.get(jid);
+      if (!existingOldest || tsMs < existingOldest.timestampMs) {
+        store.oldestMsgMap.set(jid, { key: cleanKey, timestampMs: tsMs });
+      }
+    }
+
+    const text = extractMessageText(m.message);
+    if (!text) continue;
 
     const participant = m.key?.participant || m.participant || '';
     const phoneShort = participant ? participant.split('@')[0] : 'Member';
@@ -277,18 +353,15 @@ function bufferGroupMessagesInMemory(rawMessages: any[]) {
       timestampMs: tsMs,
       dateStr: format(dt, 'yyyy-MM-dd'),
       timeStr: format(dt, 'HH:mm'),
+      rawKey: cleanKey,
     });
-    addedAny = true;
-
-    const existingOldest = store.oldestMsgMap.get(jid);
-    if (!existingOldest || tsMs < existingOldest.timestampMs) {
-      store.oldestMsgMap.set(jid, { key: m.key, timestampMs: tsMs });
-    }
+    updatedGroupJids.add(jid);
   }
 
-  if (addedAny) {
+  if (updatedGroupJids.size > 0) {
     rebuildGroupsList(store);
     saveCacheToDisk(store);
+    notifyHistoryWaiters(store, updatedGroupJids);
   }
 }
 
@@ -336,13 +409,17 @@ export function getPrivateGroupMessages(
   });
 }
 
+/**
+ * Requests older message batches from the linked phone for a specific group,
+ * walking backwards up to `maxBatches` times until reaching `targetFromDate` (if provided).
+ */
 export async function requestOlderGroupHistory(
   groupJid: string,
-  count = 150
-): Promise<{ requested: boolean; message: string }> {
+  count = 50,
+  targetFromDate?: string
+): Promise<{ requested: boolean; message: string; earliestDate: string | null }> {
   const store = getStore();
   if (!store.sock) {
-    // Wake socket if linked
     const saved = hasSavedLinkedCreds();
     if (saved.linked) {
       await startWhatsAppSession(false);
@@ -350,28 +427,101 @@ export async function requestOlderGroupHistory(
   }
 
   if (!store.sock) {
-    return { requested: false, message: 'WhatsApp is reconnecting—please try again in a moment.' };
-  }
-
-  const oldest = store.oldestMsgMap.get(groupJid);
-  if (!oldest || !oldest.key) {
     return {
       requested: false,
-      message: 'Waiting for initial messages from this group before pulling older history.',
+      message: 'WhatsApp is not connected. Tip: Use Tab 2 (Upload .txt Store) to load 10 months of history instantly without needing your phone connected!',
+      earliestDate: null,
+    };
+  }
+
+  // Ensure oldestMsgMap is up to date from buffered messages
+  rebuildGroupsList(store);
+
+  const initialOldest = store.oldestMsgMap.get(groupJid);
+  if (!initialOldest || !initialOldest.key) {
+    return {
+      requested: false,
+      message: 'No anchor message found for this group yet. Use Tab 2 (Upload .txt Store) for full February–October history.',
+      earliestDate: null,
     };
   }
 
   try {
-    if (typeof store.sock.fetchMessageHistory === 'function') {
-      await store.sock.fetchMessageHistory(count, oldest.key, oldest.timestampMs);
+    if (typeof store.sock.fetchMessageHistory !== 'function') {
+      return { requested: false, message: 'On-demand history fetch not supported by socket.', earliestDate: null };
+    }
+
+    const maxBatches = 4;
+    let batchesReceived = 0;
+
+    for (let i = 0; i < maxBatches; i++) {
+      const currentOldest = store.oldestMsgMap.get(groupJid);
+      if (!currentOldest?.key) break;
+
+      const currentEarliestDate = format(new Date(currentOldest.timestampMs), 'yyyy-MM-dd');
+      if (targetFromDate && currentEarliestDate <= targetFromDate && i > 0) {
+        break;
+      }
+
+      const prevOldestTs = currentOldest.timestampMs;
+
+      const waitPromise = new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => {
+          store.historyWaiters = store.historyWaiters.filter((w) => w !== waiter);
+          resolve(false);
+        }, 4500);
+
+        const waiter = (jids: Set<string>) => {
+          if (jids.has(groupJid)) {
+            clearTimeout(timer);
+            store.historyWaiters = store.historyWaiters.filter((w) => w !== waiter);
+            resolve(true);
+          }
+        };
+        store.historyWaiters.push(waiter);
+      });
+
+      await store.sock.fetchMessageHistory(
+        Math.min(count, 50),
+        currentOldest.key,
+        currentOldest.timestampMs
+      );
+
+      const gotBatch = await waitPromise;
+      if (!gotBatch) break;
+      batchesReceived += 1;
+
+      const updatedOldest = store.oldestMsgMap.get(groupJid);
+      if (!updatedOldest || updatedOldest.timestampMs >= prevOldestTs) {
+        break;
+      }
+    }
+
+    const groupMeta = store.state.groups.find((g) => g.jid === groupJid);
+    const earliest = groupMeta?.earliestDate || null;
+
+    if (batchesReceived > 0) {
       return {
         requested: true,
-        message: 'Requested older messages for this group from your phone.',
+        message: `Fetched ${batchesReceived} older batch(es) from your phone (now back to ${earliest || 'earliest available'}).`,
+        earliestDate: earliest,
       };
     }
-    return { requested: false, message: 'On-demand history fetch not supported by socket.' };
+
+    return {
+      requested: true,
+      message:
+        'Your phone did not send older messages beyond ' +
+        (earliest || 'current date') +
+        ' (WhatsApp limits how far back live companion devices can pull). To load full history back to January/February, use Tab 2 (Upload .txt Store).',
+      earliestDate: earliest,
+    };
   } catch (err: any) {
-    return { requested: false, message: err?.message || 'Failed to request older history.' };
+    return {
+      requested: false,
+      message: err?.message || 'Failed to request older history.',
+      earliestDate: null,
+    };
   }
 }
 
@@ -379,7 +529,6 @@ export async function getWhatsAppStatus(): Promise<WhatsAppSessionState> {
   const store = getStore();
   const saved = hasSavedLinkedCreds();
 
-  // If credentials are linked on disk, keep status 'connected' and silently ensure socket is alive
   if (saved.linked) {
     store.state.status = 'connected';
     store.state.qrDataUrl = null;
@@ -474,7 +623,6 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
 
   store.isInitializing = true;
   const savedBefore = hasSavedLinkedCreds();
-  // Only set status to 'connecting' if not already linked—if already linked, keep 'connected' so UI never flickers!
   if (!savedBefore.linked) {
     store.state.status = 'connecting';
   } else {
@@ -507,13 +655,13 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
       child: () => silentLogger,
     };
 
-    // Keep syncFullHistory: false so initial pairing doesn't flood Cloud Run memory/socket with all personal chats.
-    // Recent group history still arrives automatically, and older group history is fetched per-group on demand.
+    // Pass syncFullHistory: true AND shouldSyncHistoryMessage: () => true so Baileys processes FULL and ON_DEMAND history
     const sock = makeWASocket({
       auth: authState,
       printQRInTerminal: false,
       logger: silentLogger as any,
-      syncFullHistory: false,
+      syncFullHistory: true,
+      shouldSyncHistoryMessage: () => true,
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
       keepAliveIntervalMs: 15000,
@@ -579,7 +727,6 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
         if (isLoggedOut) {
           await disconnectWhatsAppSession(true);
         } else if (savedAfter.linked || isRestartRequired || store.state.status === 'connected') {
-          // Keep status 'connected' if we have linked credentials so the UI never flickers or loses connection!
           if (savedAfter.linked) {
             store.state.status = 'connected';
             store.state.qrDataUrl = null;

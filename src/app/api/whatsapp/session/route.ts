@@ -49,8 +49,9 @@ export async function POST(req: NextRequest) {
 
     if (action === 'fetch_older') {
       const groupJid = String(body.groupJid || '');
-      const count = Number(body.count) || 150;
-      const res = await requestOlderGroupHistory(groupJid, count);
+      const count = Number(body.count) || 50;
+      const targetFromDate = body.fromDate ? String(body.fromDate) : undefined;
+      const res = await requestOlderGroupHistory(groupJid, count, targetFromDate);
       const messages = getPrivateGroupMessages(groupJid);
       const state = await getWhatsAppStatus();
       return NextResponse.json({ ...state, historyRequest: res, messages });
