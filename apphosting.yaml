@@ -2,6 +2,8 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
+  # Keep a warm stateful instance with 1GB RAM so live WhatsApp Web socket stays connected
+  minInstances: 1
   maxInstances: 1
+  memoryMiB: 1024
+  cpu: 1

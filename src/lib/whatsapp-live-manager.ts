@@ -41,20 +41,104 @@ interface GlobalWhatsAppStore {
   groupMessagesMap: Map<string, Map<string, WhatsAppBufferedMessage>>;
   oldestMsgMap: Map<string, { key: any; timestampMs: number }>;
   isInitializing: boolean;
+  reconnectTimer: ReturnType<typeof setTimeout> | null;
+  reconnectAttempts: number;
   waiters: Array<() => void>;
+  cacheLoaded: boolean;
 }
+
+const AUTH_DIR = path.join(os.tmpdir(), 'altek-wa-auth');
+const CACHE_FILE = path.join(os.tmpdir(), 'altek-wa-private-cache.json');
 
 const globalForWa = globalThis as unknown as { __altekWaPrivateStore?: GlobalWhatsAppStore };
 
+function hasSavedLinkedCreds(): { linked: boolean; phone: string | null; name: string | null } {
+  try {
+    const credsPath = path.join(AUTH_DIR, 'creds.json');
+    if (!fs.existsSync(credsPath)) return { linked: false, phone: null, name: null };
+    const raw = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+    const meId: string = raw?.me?.id || '';
+    if (!meId) return { linked: false, phone: null, name: null };
+    const phone = meId.split(':')[0].split('@')[0] || null;
+    const name = raw?.me?.name || phone;
+    return { linked: true, phone, name };
+  } catch {
+    return { linked: false, phone: null, name: null };
+  }
+}
+
+function saveCacheToDisk(store: GlobalWhatsAppStore) {
+  try {
+    const subjects: Record<string, { subject: string; participantsCount: number }> = {};
+    for (const [k, v] of store.groupSubjectMap.entries()) {
+      subjects[k] = v;
+    }
+    const messages: Record<string, WhatsAppBufferedMessage[]> = {};
+    for (const [jid, mMap] of store.groupMessagesMap.entries()) {
+      // Keep up to 1000 most recent messages per group in cache
+      const arr = Array.from(mMap.values()).sort((a, b) => a.timestampMs - b.timestampMs).slice(-1000);
+      messages[jid] = arr;
+    }
+    fs.writeFileSync(
+      CACHE_FILE,
+      JSON.stringify({
+        connectedPhone: store.state.connectedPhone,
+        connectedName: store.state.connectedName,
+        subjects,
+        messages,
+      }),
+      'utf8'
+    );
+  } catch {
+    // ignore disk cache write errors
+  }
+}
+
+function loadCacheFromDisk(store: GlobalWhatsAppStore) {
+  if (store.cacheLoaded) return;
+  store.cacheLoaded = true;
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const raw = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+      if (raw?.subjects && typeof raw.subjects === 'object') {
+        for (const [jid, meta] of Object.entries(raw.subjects)) {
+          store.groupSubjectMap.set(jid, meta as any);
+        }
+      }
+      if (raw?.messages && typeof raw.messages === 'object') {
+        for (const [jid, arr] of Object.entries(raw.messages)) {
+          if (Array.isArray(arr)) {
+            const mMap = new Map<string, WhatsAppBufferedMessage>();
+            for (const m of arr) {
+              if (m?.id) mMap.set(m.id, m);
+            }
+            store.groupMessagesMap.set(jid, mMap);
+          }
+        }
+      }
+      if (raw?.connectedPhone && !store.state.connectedPhone) {
+        store.state.connectedPhone = raw.connectedPhone;
+      }
+      if (raw?.connectedName && !store.state.connectedName) {
+        store.state.connectedName = raw.connectedName;
+      }
+      rebuildGroupsList(store);
+    }
+  } catch {
+    // ignore disk cache read errors
+  }
+}
+
 function getStore(): GlobalWhatsAppStore {
   if (!globalForWa.__altekWaPrivateStore) {
+    const saved = hasSavedLinkedCreds();
     globalForWa.__altekWaPrivateStore = {
       sock: null,
       state: {
-        status: 'disconnected',
+        status: saved.linked ? 'connected' : 'disconnected',
         qrDataUrl: null,
-        connectedPhone: null,
-        connectedName: null,
+        connectedPhone: saved.phone,
+        connectedName: saved.name,
         groupsCount: 0,
         syncedMessagesCount: 0,
         lastError: null,
@@ -64,8 +148,12 @@ function getStore(): GlobalWhatsAppStore {
       groupMessagesMap: new Map(),
       oldestMsgMap: new Map(),
       isInitializing: false,
+      reconnectTimer: null,
+      reconnectAttempts: 0,
       waiters: [],
+      cacheLoaded: false,
     };
+    loadCacheFromDisk(globalForWa.__altekWaPrivateStore);
   }
   return globalForWa.__altekWaPrivateStore;
 }
@@ -152,7 +240,7 @@ function rebuildGroupsList(store: GlobalWhatsAppStore) {
 }
 
 /**
- * Buffers group messages ONLY in private server memory.
+ * Buffers group messages ONLY in private server memory + private temp cache.
  * Never writes personal or unapproved WhatsApp groups/messages to the shared Firestore database.
  */
 function bufferGroupMessagesInMemory(rawMessages: any[]) {
@@ -161,7 +249,6 @@ function bufferGroupMessagesInMemory(rawMessages: any[]) {
 
   for (const m of rawMessages) {
     const jid: string = m?.key?.remoteJid || '';
-    // Strictly ignore all 1-on-1 personal chats and status broadcasts
     if (!jid.endsWith('@g.us')) continue;
 
     const text = extractMessageText(m.message);
@@ -201,12 +288,13 @@ function bufferGroupMessagesInMemory(rawMessages: any[]) {
 
   if (addedAny) {
     rebuildGroupsList(store);
+    saveCacheToDisk(store);
   }
 }
 
 export async function refreshParticipatingGroups(): Promise<WhatsAppLiveGroup[]> {
   const store = getStore();
-  if (!store.sock || store.state.status !== 'connected') {
+  if (!store.sock) {
     return store.state.groups;
   }
 
@@ -224,9 +312,9 @@ export async function refreshParticipatingGroups(): Promise<WhatsAppLiveGroup[]>
     }
 
     rebuildGroupsList(store);
+    saveCacheToDisk(store);
     return store.state.groups;
-  } catch (err: any) {
-    console.error('Error fetching WhatsApp groups:', err);
+  } catch {
     return store.state.groups;
   }
 }
@@ -253,15 +341,23 @@ export async function requestOlderGroupHistory(
   count = 150
 ): Promise<{ requested: boolean; message: string }> {
   const store = getStore();
-  if (!store.sock || store.state.status !== 'connected') {
-    return { requested: false, message: 'WhatsApp is not connected.' };
+  if (!store.sock) {
+    // Wake socket if linked
+    const saved = hasSavedLinkedCreds();
+    if (saved.linked) {
+      await startWhatsAppSession(false);
+    }
+  }
+
+  if (!store.sock) {
+    return { requested: false, message: 'WhatsApp is reconnecting—please try again in a moment.' };
   }
 
   const oldest = store.oldestMsgMap.get(groupJid);
   if (!oldest || !oldest.key) {
     return {
       requested: false,
-      message: 'Initial history sync is still in progress for this group.',
+      message: 'Waiting for initial messages from this group before pulling older history.',
     };
   }
 
@@ -270,7 +366,7 @@ export async function requestOlderGroupHistory(
       await store.sock.fetchMessageHistory(count, oldest.key, oldest.timestampMs);
       return {
         requested: true,
-        message: 'Requested older messages for this specific group from your phone.',
+        message: 'Requested older messages for this group from your phone.',
       };
     }
     return { requested: false, message: 'On-demand history fetch not supported by socket.' };
@@ -280,25 +376,47 @@ export async function requestOlderGroupHistory(
 }
 
 export async function getWhatsAppStatus(): Promise<WhatsAppSessionState> {
-  return getStore().state;
+  const store = getStore();
+  const saved = hasSavedLinkedCreds();
+
+  // If credentials are linked on disk, keep status 'connected' and silently ensure socket is alive
+  if (saved.linked) {
+    store.state.status = 'connected';
+    store.state.qrDataUrl = null;
+    if (!store.state.connectedPhone) store.state.connectedPhone = saved.phone;
+    if (!store.state.connectedName) store.state.connectedName = saved.name;
+
+    if (!store.sock && !store.isInitializing && !store.reconnectTimer) {
+      startWhatsAppSession(false).catch(() => {});
+    }
+  }
+
+  return store.state;
 }
 
 export async function disconnectWhatsAppSession(clearAuth = false): Promise<WhatsAppSessionState> {
   const store = getStore();
+  if (store.reconnectTimer) {
+    clearTimeout(store.reconnectTimer);
+    store.reconnectTimer = null;
+  }
   try {
     if (store.sock) {
-      if (clearAuth && typeof store.sock.logout === 'function') {
-        await store.sock.logout().catch(() => {});
-      }
-      if (typeof store.sock.end === 'function') {
-        store.sock.end(undefined);
-      }
+      const sockToClose = store.sock;
       store.sock = null;
+      if (clearAuth && typeof sockToClose.logout === 'function') {
+        await sockToClose.logout().catch(() => {});
+      }
+      if (typeof sockToClose.end === 'function') {
+        sockToClose.end(undefined);
+      }
     }
     if (clearAuth) {
-      const authDir = path.join(os.tmpdir(), 'altek-wa-auth');
-      if (fs.existsSync(authDir)) {
-        fs.rmSync(authDir, { recursive: true, force: true });
+      if (fs.existsSync(AUTH_DIR)) {
+        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+      }
+      if (fs.existsSync(CACHE_FILE)) {
+        fs.rmSync(CACHE_FILE, { force: true });
       }
       store.groupSubjectMap.clear();
       store.groupMessagesMap.clear();
@@ -308,6 +426,7 @@ export async function disconnectWhatsAppSession(clearAuth = false): Promise<What
     // ignore
   }
   store.isInitializing = false;
+  store.reconnectAttempts = 0;
   store.state = {
     status: 'disconnected',
     qrDataUrl: null,
@@ -329,16 +448,15 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
     await disconnectWhatsAppSession(true);
   }
 
-  if (store.state.status === 'connected' && store.sock) {
+  if (store.sock && store.state.status === 'connected') {
     return store.state;
   }
 
-  if (store.state.status === 'qr_ready' && store.state.qrDataUrl && store.sock && !forceNewQr) {
+  if (store.sock && store.state.status === 'qr_ready' && store.state.qrDataUrl && !forceNewQr) {
     return store.state;
   }
 
   if (store.isInitializing) {
-    // Wait up to 4s for current initialization to produce a QR code or connection
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, 4000);
       store.waiters.push(() => {
@@ -349,8 +467,21 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
     return store.state;
   }
 
+  if (store.reconnectTimer) {
+    clearTimeout(store.reconnectTimer);
+    store.reconnectTimer = null;
+  }
+
   store.isInitializing = true;
-  store.state.status = 'connecting';
+  const savedBefore = hasSavedLinkedCreds();
+  // Only set status to 'connecting' if not already linked—if already linked, keep 'connected' so UI never flickers!
+  if (!savedBefore.linked) {
+    store.state.status = 'connecting';
+  } else {
+    store.state.status = 'connected';
+    store.state.connectedPhone = store.state.connectedPhone || savedBefore.phone;
+    store.state.connectedName = store.state.connectedName || savedBefore.name;
+  }
   store.state.lastError = null;
 
   try {
@@ -359,12 +490,11 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
     const useMultiFileAuthState = baileys.useMultiFileAuthState;
     const DisconnectReason = baileys.DisconnectReason;
 
-    const authDir = path.join(os.tmpdir(), 'altek-wa-auth');
-    if (!fs.existsSync(authDir)) {
-      fs.mkdirSync(authDir, { recursive: true });
+    if (!fs.existsSync(AUTH_DIR)) {
+      fs.mkdirSync(AUTH_DIR, { recursive: true });
     }
 
-    const { state: authState, saveCreds } = await useMultiFileAuthState(authDir);
+    const { state: authState, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
     const silentLogger = {
       level: 'silent',
@@ -377,20 +507,34 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
       child: () => silentLogger,
     };
 
-    // Use Baileys' built-in default browser and version so WhatsApp Web handshakes in ~1.5s without 428 rejection
+    // Keep syncFullHistory: false so initial pairing doesn't flood Cloud Run memory/socket with all personal chats.
+    // Recent group history still arrives automatically, and older group history is fetched per-group on demand.
     const sock = makeWASocket({
       auth: authState,
       printQRInTerminal: false,
       logger: silentLogger as any,
-      syncFullHistory: true,
+      syncFullHistory: false,
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
+      keepAliveIntervalMs: 15000,
+      connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: 60000,
+      retryRequestDelayMs: 500,
     });
 
     store.sock = sock;
     store.isInitializing = false;
 
-    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('creds.update', async () => {
+      await saveCreds();
+      const nowSaved = hasSavedLinkedCreds();
+      if (nowSaved.linked) {
+        store.state.status = 'connected';
+        store.state.qrDataUrl = null;
+        store.state.connectedPhone = nowSaved.phone;
+        store.state.connectedName = nowSaved.name;
+      }
+    });
 
     sock.ev.on('connection.update', async (update: any) => {
       const { connection, lastDisconnect, qr } = update;
@@ -409,12 +553,13 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
       }
 
       if (connection === 'open') {
+        store.reconnectAttempts = 0;
         const meId: string = sock.user?.id || '';
         const phone = meId ? meId.split(':')[0].split('@')[0] : null;
         store.state.status = 'connected';
         store.state.qrDataUrl = null;
-        store.state.connectedPhone = phone;
-        store.state.connectedName = sock.user?.name || phone;
+        store.state.connectedPhone = phone || store.state.connectedPhone;
+        store.state.connectedName = sock.user?.name || phone || store.state.connectedName;
         store.state.lastError = null;
         notifyWaiters(store);
 
@@ -425,27 +570,38 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
         const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
         const isLoggedOut = statusCode === DisconnectReason?.loggedOut || statusCode === 401;
         const isRestartRequired = statusCode === DisconnectReason?.restartRequired || statusCode === 515;
+        const savedAfter = hasSavedLinkedCreds();
 
-        store.sock = null;
+        if (store.sock === sock) {
+          store.sock = null;
+        }
+
         if (isLoggedOut) {
           await disconnectWhatsAppSession(true);
-        } else if (isRestartRequired || store.state.status === 'connected') {
-          // Reconnect after QR scan pairing (515 restartRequired) or transient drop
-          store.state.status = 'connecting';
-          setTimeout(() => {
+        } else if (savedAfter.linked || isRestartRequired || store.state.status === 'connected') {
+          // Keep status 'connected' if we have linked credentials so the UI never flickers or loses connection!
+          if (savedAfter.linked) {
+            store.state.status = 'connected';
+            store.state.qrDataUrl = null;
+            store.state.connectedPhone = store.state.connectedPhone || savedAfter.phone;
+            store.state.connectedName = store.state.connectedName || savedAfter.name;
+          }
+          const delayMs = isRestartRequired ? 500 : Math.min(1000 * Math.pow(1.5, store.reconnectAttempts), 8000);
+          store.reconnectAttempts += 1;
+          if (store.reconnectTimer) clearTimeout(store.reconnectTimer);
+          store.reconnectTimer = setTimeout(() => {
+            store.reconnectTimer = null;
             startWhatsAppSession(false).catch(() => {});
-          }, 1000);
+          }, delayMs);
         } else {
-          // If closed before pairing (e.g. QR timeout), reset cleanly so user can click Generate Fresh QR
           store.state.status = 'disconnected';
           store.state.qrDataUrl = null;
-          store.state.lastError = 'QR code expired or connection closed. Click Generate WhatsApp QR Code to try again.';
+          store.state.lastError = 'QR code expired. Click Generate WhatsApp QR Code to scan again.';
           notifyWaiters(store);
         }
       }
     });
 
-    // Listen to initial history sync from phone — keep ONLY in private memory, never write to Firestore
     sock.ev.on('messaging-history.set', async (historyData: any) => {
       try {
         const { chats, messages } = historyData || {};
@@ -464,13 +620,13 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
           bufferGroupMessagesInMemory(messages);
         } else {
           rebuildGroupsList(store);
+          saveCacheToDisk(store);
         }
       } catch (e) {
         console.error('Error processing messaging-history.set:', e);
       }
     });
 
-    // Listen to live messages and on-demand history batches — keep ONLY in private memory
     sock.ev.on('messages.upsert', async (upsertData: any) => {
       try {
         const { messages } = upsertData || {};
@@ -482,20 +638,23 @@ export async function startWhatsAppSession(forceNewQr = false): Promise<WhatsApp
       }
     });
 
-    // Wait up to 5 seconds for QR code or open connection so the very first HTTP call returns the QR code directly
-    await new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, 5000);
-      store.waiters.push(() => {
-        clearTimeout(timer);
-        resolve();
+    if (!savedBefore.linked) {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 5000);
+        store.waiters.push(() => {
+          clearTimeout(timer);
+          resolve();
+        });
       });
-    });
+    }
 
     return store.state;
   } catch (err: any) {
     store.isInitializing = false;
-    store.state.status = 'error';
-    store.state.lastError = err?.message || 'Failed to initialize WhatsApp connection';
+    if (!savedBefore.linked) {
+      store.state.status = 'error';
+      store.state.lastError = err?.message || 'Failed to initialize WhatsApp connection';
+    }
     notifyWaiters(store);
     return store.state;
   }

@@ -499,7 +499,7 @@ export function WhatsAppGroupSyncDialog({
                   className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 gap-1.5 font-bold"
                   onClick={() => {
                     setActiveTab('sync');
-                    handleStartLiveWhatsApp(true);
+                    handleStartLiveWhatsApp(false);
                   }}
                 >
                   <QrCode className="h-4 w-4" />
@@ -860,7 +860,7 @@ export function WhatsAppGroupSyncDialog({
                   </div>
                   <Button
                     type="button"
-                    onClick={() => handleStartLiveWhatsApp(true)}
+                    onClick={() => handleStartLiveWhatsApp(false)}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 px-6"
                   >
                     <QrCode className="h-4 w-4" />
