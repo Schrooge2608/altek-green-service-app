@@ -789,12 +789,18 @@ export default function FieldServiceReportDetailPage() {
            lastMessage: 'Channel created for equipment breakdown',
            lastMessageTime: serverTimestamp(),
            createdAt: serverTimestamp(),
-           isArchived: false
+           isArchived: false,
+           isDeleted: false
          };
          const ref = await addDoc(collection(firestore, 'channels'), newChannel);
          channelId = ref.id;
       } else {
          channelId = snaps.docs[0].id;
+         await setDoc(
+           doc(firestore, 'channels', channelId),
+           { isDeleted: false, isArchived: false, lastMessageTime: serverTimestamp() },
+           { merge: true }
+         );
       }
       router.push(`/messages?channelId=${channelId}&fsrId=${reportId}`);
     } catch (e: any) {

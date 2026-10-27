@@ -116,12 +116,20 @@ export default function MessagingPage() {
   const [isExportingSummaryToDd, setIsExportingSummaryToDd] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1. FETCH CHANNELS
+  // 1. FETCH CHANNELS (Fetch all channels without orderBy so documents missing lastMessageTime are never dropped, then sort in-memory)
   const channelsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'channels'), orderBy('lastMessageTime', 'desc')),
+    () => collection(firestore, 'channels'),
     [firestore]
   );
-  const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
+  const { data: rawChannels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
+  const channels = React.useMemo(() => {
+    if (!rawChannels) return null;
+    return [...rawChannels].sort((a, b) => {
+      const tA = a.lastMessageTime?.toMillis?.() || a.createdAt?.toMillis?.() || 0;
+      const tB = b.lastMessageTime?.toMillis?.() || b.createdAt?.toMillis?.() || 0;
+      return tB - tA;
+    });
+  }, [rawChannels]);
 
   // 2. FETCH MESSAGES FOR ACTIVE CHANNEL
   const messagesQuery = useMemoFirebase(
@@ -147,12 +155,24 @@ export default function MessagingPage() {
     return 'BR';
   };
 
-  // Deep Link Selection
+  // Deep Link Selection & Auto-Restore to Active Sidebar if opened via URL
   useEffect(() => {
     if (urlChannelId && !activeChannelId) {
       setActiveChannelId(urlChannelId);
     }
   }, [urlChannelId, activeChannelId]);
+
+  useEffect(() => {
+    if (!activeChannelId || !firestore || !channels) return;
+    const found = channels.find((c) => c.id === activeChannelId) as any;
+    if (found && (found.isDeleted || !found.lastMessageTime)) {
+      updateDoc(doc(firestore, 'channels', activeChannelId), {
+        isDeleted: false,
+        isArchived: false,
+        ...(found.lastMessageTime ? {} : { lastMessageTime: Timestamp.now() }),
+      }).catch(() => {});
+    }
+  }, [activeChannelId, firestore, channels]);
 
   useEffect(() => {
     if (activeChannelId && messages) {
@@ -468,10 +488,26 @@ export default function MessagingPage() {
 
       setSummaryData(res);
 
-      // Persist Summary & RCA on the channel document in Firestore
+      // Persist Summary & RCA on the channel document in Firestore (sanitize undefined fields & ensure channel is active in sidebar)
       if (activeChannelId && firestore) {
+        const sanitizedRes = JSON.parse(JSON.stringify(res));
+        const primaryEquipName = res.equipmentBreakdowns[0]?.equipmentName || '';
+        const currentChanName = activeChannel?.name || '';
+        const shouldUpdateChanName =
+          primaryEquipName &&
+          (!currentChanName ||
+            currentChanName.toLowerCase().startsWith('callout chat') ||
+            currentChanName.toLowerCase().includes('unknown equipment'));
+
         await updateDoc(doc(firestore, 'channels', activeChannelId), {
-          aiSummaryRca: res,
+          aiSummaryRca: sanitizedRes,
+          isDeleted: false,
+          isArchived: false,
+          lastMessageTime: activeChannel?.lastMessageTime || Timestamp.now(),
+          ...(primaryEquipName ? { equipmentName: primaryEquipName, type: 'breakdown' } : {}),
+          ...(shouldUpdateChanName
+            ? { name: `Breakdown: ${primaryEquipName}${res.date ? ` (${res.date})` : ''}` }
+            : {}),
         }).catch(() => {});
       }
 
@@ -642,13 +678,16 @@ export default function MessagingPage() {
 
   /**
    * SIDEBAR FILTER FIX
-   * Filters based on isArchived status matching the toggle.
+   * Filters based on isArchived status matching the toggle, and ensures the active channel is always visible.
    */
   const filteredChannels = channels?.filter(c => {
+    if (c.id?.startsWith('wa_grp_') || c.id?.startsWith('wa_store_') || (c as any).isPrivateWhatsAppStore || (c as any).type === 'whatsapp_store') return false;
+    if (c.id === activeChannelId && !showArchived) {
+      return (c.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    }
     if ((c as any).isDeleted) return false;
-    if (c.id?.startsWith('wa_grp_') || c.id?.startsWith('wa_store_') || (c as any).isPrivateWhatsAppStore) return false;
     const isArchived = c.isArchived || false;
-    return isArchived === showArchived && c.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return isArchived === showArchived && (c.name || '').toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   return (
@@ -771,9 +810,21 @@ export default function MessagingPage() {
                   <div className="flex items-center justify-between mb-0.5">
                     <h3 className="font-semibold text-slate-900 truncate">#{channel.name}</h3>
                     <span className="text-[10px] text-slate-400 uppercase font-medium">
-                      {channel.lastMessageTime ? format(channel.lastMessageTime.toDate(), 'HH:mm') : ''}
+                      {channel.lastMessageTime?.toDate ? format(channel.lastMessageTime.toDate(), 'HH:mm') : ''}
                     </span>
                   </div>
+                  {(channel as any)?.aiSummaryRca?.equipmentBreakdowns?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-0.5">
+                      {(channel as any).aiSummaryRca.equipmentBreakdowns.map((eb: any, idx: number) => (
+                        <span
+                          key={idx}
+                          className="inline-block px-1.5 py-0.2 rounded bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold truncate max-w-full"
+                        >
+                          🔧 {eb.equipmentName}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-sm text-slate-500 truncate italic">
                     {channel.lastMessage || 'No messages yet'}
                   </p>
@@ -1101,14 +1152,40 @@ export default function MessagingPage() {
                           className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm space-y-2.5"
                         >
                           <div className="border-b border-slate-100 pb-1.5 flex items-center justify-between gap-2">
-                            <span className="text-xs font-black text-slate-900">
-                              {summaryData.equipmentBreakdowns.length > 1 ? `${eqIdx + 1}. ` : ''}
-                              {eqItem.equipmentName}
-                            </span>
-                            <span className="text-[10px] font-mono text-slate-500 shrink-0">
-                              {eqItem.date || summaryData.date || ''}{' '}
-                              {eqItem.timeStart ? `${eqItem.timeStart}–${eqItem.timeEnd || ''}` : ''}
-                            </span>
+                            <div className="min-w-0">
+                              <span className="text-xs font-black text-slate-900 block truncate">
+                                {summaryData.equipmentBreakdowns.length > 1 ? `${eqIdx + 1}. ` : ''}
+                                {eqItem.equipmentName}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-500">
+                                {eqItem.date || summaryData.date || ''}{' '}
+                                {eqItem.timeStart ? `${eqItem.timeStart}–${eqItem.timeEnd || ''}` : ''}
+                              </span>
+                            </div>
+                            {activeChannelId && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!firestore || !activeChannelId) return;
+                                  const newTitle = `Breakdown: ${eqItem.equipmentName}`;
+                                  await updateDoc(doc(firestore, 'channels', activeChannelId), {
+                                    name: newTitle,
+                                    equipmentName: eqItem.equipmentName,
+                                    type: 'breakdown',
+                                    isDeleted: false,
+                                    isArchived: false,
+                                  });
+                                  toast({
+                                    title: 'Updated Chat Name',
+                                    description: `Chat renamed to "#${newTitle}" in the sidebar.`,
+                                  });
+                                }}
+                                className="px-2 py-0.5 rounded border border-slate-200 hover:border-red-300 hover:bg-red-50 text-[10px] font-bold text-slate-600 hover:text-red-700 shrink-0"
+                                title="Set this equipment name as the chat name on the sidebar"
+                              >
+                                Set as Chat Name
+                              </button>
+                            )}
                           </div>
 
                           {/* SUMMARY BULLETS */}

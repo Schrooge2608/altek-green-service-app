@@ -1527,6 +1527,8 @@ export function WhatsAppGroupSyncDialog({
           equipmentName: chosenEq ? chosenEq.fullLabel : null,
           participants: user ? [user.uid] : [],
           isArchived: false,
+          isDeleted: false,
+          isPrivateWhatsAppStore: false,
           lastMessage: `${lastMsg.senderName}: ${lastMsg.text.slice(0, 80)}`,
           lastMessageTime: Timestamp.fromMillis(lastMsg.timestampMs),
           createdAt: Timestamp.now(),
@@ -1536,9 +1538,12 @@ export function WhatsAppGroupSyncDialog({
         await setDoc(
           doc(firestore, 'channels', channelId),
           {
+            name: finalChatName,
             lastMessage: `${lastMsg.senderName}: ${lastMsg.text.slice(0, 80)}`,
             lastMessageTime: Timestamp.fromMillis(lastMsg.timestampMs),
             isArchived: false,
+            isDeleted: false,
+            isPrivateWhatsAppStore: false,
             ...(chosenEq ? { relatedId: chosenEq.id, equipmentName: chosenEq.fullLabel, type: 'breakdown' } : {}),
           },
           { merge: true }
