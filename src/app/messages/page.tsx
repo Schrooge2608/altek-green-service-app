@@ -69,6 +69,16 @@ export default function MessagingPage() {
   const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userData } = useDoc<User>(userRef);
   const isAdmin = userData?.role === 'Admin' || userData?.role === 'Superadmin';
+  const canManageWhatsApp = (() => {
+    const r = (userData?.role || '').toLowerCase();
+    return (
+      r.includes('admin') ||
+      r.includes('manager') ||
+      r.includes('corporate') ||
+      r.includes('supervisor') ||
+      r.includes('client')
+    );
+  })();
   const searchParams = useSearchParams();
   const urlChannelId = searchParams.get('channelId');
   const returnFsrId = searchParams.get('fsrId');
@@ -261,6 +271,7 @@ export default function MessagingPage() {
    */
   const filteredChannels = channels?.filter(c => {
     if ((c as any).isDeleted) return false;
+    if (c.id?.startsWith('wa_grp_')) return false;
     const isArchived = c.isArchived || false;
     return isArchived === showArchived && c.name.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -268,13 +279,15 @@ export default function MessagingPage() {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       
-      <WhatsAppGroupSyncDialog
-        open={isWhatsAppSyncOpen}
-        onOpenChange={setIsWhatsAppSyncOpen}
-        defaultTab="sync"
-        defaultChannelId={activeChannelId}
-        onChannelSynced={(newChannelId) => setActiveChannelId(newChannelId)}
-      />
+      {canManageWhatsApp && (
+        <WhatsAppGroupSyncDialog
+          open={isWhatsAppSyncOpen}
+          onOpenChange={setIsWhatsAppSyncOpen}
+          defaultTab="sync"
+          defaultChannelId={activeChannelId}
+          onChannelSynced={(newChannelId) => setActiveChannelId(newChannelId)}
+        />
+      )}
       {/* --- SIDEBAR: CHANNEL LIST --- */}
       <div className="w-[350px] border-r bg-white flex flex-col shadow-sm">
         <header className="p-4 border-b space-y-4">
@@ -283,14 +296,16 @@ export default function MessagingPage() {
               <MessageSquare className="text-primary h-5 w-5" /> Site Comms
             </h1>
             <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsWhatsAppSyncOpen(true)}
-                className="h-8 text-[11px] font-bold border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-              >
-                Sync WhatsApp
-              </Button>
+              {canManageWhatsApp && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsWhatsAppSyncOpen(true)}
+                  className="h-8 text-[11px] font-bold border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                >
+                  Sync WhatsApp
+                </Button>
+              )}
               <Dialog>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-primary hover:bg-slate-100 rounded-full">

@@ -29,6 +29,7 @@ import {
   Wifi,
   Unlink,
   History,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   collection,
@@ -39,9 +40,28 @@ import {
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { extractFsrFromChat, type ExtractFsrFromChatOutput } from '@/ai/flows/extract-fsr-from-chat-flow';
-import type { Channel, ChatMessage } from '@/lib/types';
+import type { Channel } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+
+interface WhatsAppLiveGroup {
+  jid: string;
+  subject: string;
+  participantsCount: number;
+  messageCount: number;
+  earliestDate: string | null;
+  latestDate: string | null;
+}
+
+interface WhatsAppBufferedMessage {
+  id: string;
+  groupJid: string;
+  senderName: string;
+  text: string;
+  timestampMs: number;
+  dateStr: string;
+  timeStr: string;
+}
 
 interface WhatsAppSessionState {
   status: 'disconnected' | 'connecting' | 'qr_ready' | 'connected' | 'error';
@@ -51,7 +71,7 @@ interface WhatsAppSessionState {
   groupsCount: number;
   syncedMessagesCount: number;
   lastError: string | null;
-  groups: { jid: string; channelId: string; subject: string; participantsCount: number }[];
+  groups: WhatsAppLiveGroup[];
 }
 
 interface WhatsAppGroupSyncDialogProps {
@@ -75,78 +95,47 @@ export function WhatsAppGroupSyncDialog({
   equipmentName,
   availableEquipmentNames,
   onExtractedToFsr,
-  onChannelSynced,
 }: WhatsAppGroupSyncDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'import' | 'sync'>(defaultTab);
-  const [channels, setChannels] = useState<(Channel & { whatsappJid?: string })[]>([]);
-  const [loadingChannels, setLoadingChannels] = useState(false);
+  const [appChannels, setAppChannels] = useState<Channel[]>([]);
 
-  // Live WhatsApp QR Session state
+  // Live WhatsApp QR Session state (private in-memory session)
   const [waSession, setWaSession] = useState<WhatsAppSessionState | null>(null);
   const [isStartingSession, setIsStartingSession] = useState(false);
   const [isRefreshingGroups, setIsRefreshingGroups] = useState(false);
   const [isRequestingOlder, setIsRequestingOlder] = useState(false);
 
-  // Import by Date Range state
-  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+  // Selected source: either `wa:<jid>` (private WhatsApp group) or `app:<channelId>` (internal app channel)
+  const [selectedSourceId, setSelectedSourceId] = useState<string>('');
+  const [groupSearchFilter, setGroupSearchFilter] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>(defaultDate || format(new Date(), 'yyyy-MM-dd'));
   const [toDate, setToDate] = useState<string>(defaultDate || format(new Date(), 'yyyy-MM-dd'));
-  const [channelMessages, setChannelMessages] = useState<(ChatMessage & { resolvedDateStr: string; resolvedTimeStr: string })[]>([]);
+  const [loadedMessages, setLoadedMessages] = useState<WhatsAppBufferedMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
   const [keywordFilter, setKeywordFilter] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
 
-  const loadChannels = useCallback(async () => {
+  const loadAppChannels = useCallback(async () => {
     if (!firestore) return;
-    setLoadingChannels(true);
     try {
       const snap = await getDocs(query(collection(firestore, 'channels'), orderBy('lastMessageTime', 'desc')));
-      const list: (Channel & { whatsappJid?: string })[] = [];
+      const list: Channel[] = [];
       snap.forEach((d) => {
         const data = d.data() as any;
-        if (!data.isDeleted) {
+        // Exclude any old auto-synced wa_grp_ documents so personal groups never appear in shared channels
+        if (!data.isDeleted && !d.id.startsWith('wa_grp_')) {
           list.push({ id: d.id, ...data });
         }
       });
-
-      // Also include any WhatsApp channels that don't have a lastMessageTime yet
-      const allSnap = await getDocs(collection(firestore, 'channels'));
-      const existingIds = new Set(list.map((c) => c.id));
-      allSnap.forEach((d) => {
-        if (!existingIds.has(d.id)) {
-          const data = d.data() as any;
-          if (!data.isDeleted) {
-            list.push({ id: d.id, ...data });
-          }
-        }
-      });
-
-      // Sort WhatsApp groups to top, then alphabetically
-      list.sort((a, b) => {
-        const aIsWa = a.type === 'whatsapp' || a.name?.startsWith('WhatsApp:') ? 0 : 1;
-        const bIsWa = b.type === 'whatsapp' || b.name?.startsWith('WhatsApp:') ? 0 : 1;
-        if (aIsWa !== bIsWa) return aIsWa - bIsWa;
-        return (a.name || '').localeCompare(b.name || '');
-      });
-
-      setChannels(list);
-
-      if (defaultChannelId && list.some((c) => c.id === defaultChannelId)) {
-        setSelectedChannelId(defaultChannelId);
-      } else if (!selectedChannelId && list.length > 0) {
-        const waChan = list.find((c) => c.type === 'whatsapp' || c.name?.toLowerCase().includes('whatsapp'));
-        setSelectedChannelId(waChan ? waChan.id : list[0].id);
-      }
-    } catch (e: any) {
-      console.error('Error loading channels:', e);
-    } finally {
-      setLoadingChannels(false);
+      setAppChannels(list);
+    } catch (e) {
+      console.error('Error loading app channels:', e);
     }
-  }, [firestore, defaultChannelId, selectedChannelId]);
+  }, [firestore]);
 
   const fetchWaStatus = useCallback(async () => {
     try {
@@ -166,40 +155,38 @@ export function WhatsAppGroupSyncDialog({
         setFromDate(defaultDate);
         setToDate(defaultDate);
       }
-      loadChannels();
+      loadAppChannels();
       fetchWaStatus().then((st) => {
-        if (st && st.status !== 'connected' && defaultTab === 'sync') {
-          setActiveTab('sync');
+        if (st?.status === 'connected' && st.groups.length > 0 && !selectedSourceId) {
+          setSelectedSourceId(`wa:${st.groups[0].jid}`);
+        } else if (defaultChannelId && !selectedSourceId) {
+          setSelectedSourceId(`app:${defaultChannelId}`);
         }
       });
     }
-  }, [open, defaultDate, defaultTab, loadChannels, fetchWaStatus]);
+  }, [open, defaultDate, defaultChannelId, loadAppChannels, fetchWaStatus, selectedSourceId]);
 
-  // Poll WhatsApp session status while dialog is open and connecting / waiting for QR scan / syncing
+  // Poll WhatsApp status while dialog is open
   useEffect(() => {
     if (!open) return;
     const interval = setInterval(async () => {
       const prevStatus = waSession?.status;
-      const prevGroupsCount = waSession?.groupsCount || 0;
       const st = await fetchWaStatus();
       if (st) {
-        if (
-          (prevStatus !== 'connected' && st.status === 'connected') ||
-          (st.groupsCount > prevGroupsCount)
-        ) {
-          await loadChannels();
-          if (prevStatus !== 'connected' && st.status === 'connected') {
-            toast({
-              title: 'WhatsApp Connected!',
-              description: `Linked to ${st.connectedName || st.connectedPhone}. Found ${st.groupsCount} WhatsApp groups.`,
-            });
+        if (prevStatus !== 'connected' && st.status === 'connected') {
+          if (st.groups.length > 0 && (!selectedSourceId || selectedSourceId.startsWith('app:'))) {
+            setSelectedSourceId(`wa:${st.groups[0].jid}`);
           }
+          toast({
+            title: 'WhatsApp Linked Privately!',
+            description: `Connected as ${st.connectedName || st.connectedPhone}. Your groups are ready to select (nothing is saved to the app until you import).`,
+          });
         }
       }
     }, 2500);
 
     return () => clearInterval(interval);
-  }, [open, waSession?.status, waSession?.groupsCount, fetchWaStatus, loadChannels, toast]);
+  }, [open, waSession?.status, fetchWaStatus, selectedSourceId, toast]);
 
   const handleStartLiveWhatsApp = async (forceNewQr = false) => {
     setIsStartingSession(true);
@@ -226,12 +213,14 @@ export function WhatsAppGroupSyncDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'refresh_groups' }),
       });
-      const data = await res.json();
+      const data: WhatsAppSessionState = await res.json();
       setWaSession(data);
-      await loadChannels();
+      if (data.groups?.length > 0 && !selectedSourceId.startsWith('wa:')) {
+        setSelectedSourceId(`wa:${data.groups[0].jid}`);
+      }
       toast({
         title: 'WhatsApp Groups Refreshed',
-        description: `Synced ${data.groupsCount || 0} WhatsApp groups from your phone.`,
+        description: `Found ${data.groupsCount || 0} WhatsApp groups on your phone.`,
       });
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Refresh Error', description: err.message });
@@ -249,75 +238,88 @@ export function WhatsAppGroupSyncDialog({
       });
       const data = await res.json();
       setWaSession(data);
-      toast({ title: 'WhatsApp Disconnected', description: 'You can link a new device anytime.' });
+      setLoadedMessages([]);
+      toast({ title: 'WhatsApp Unlinked', description: 'Private session cleared from server memory.' });
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Error', description: err.message });
     }
   };
 
-  const loadSelectedChannelMessages = useCallback(async () => {
-    if (!selectedChannelId || !firestore) return;
+  // Load messages ONLY for the selected group
+  const loadMessagesForSelectedSource = useCallback(async () => {
+    if (!selectedSourceId) {
+      setLoadedMessages([]);
+      return;
+    }
+
     setLoadingMessages(true);
     try {
-      const msgsSnap = await getDocs(
-        query(collection(firestore, `channels/${selectedChannelId}/messages`), orderBy('createdAt', 'asc'))
-      );
-
-      const loaded: (ChatMessage & { resolvedDateStr: string; resolvedTimeStr: string })[] = [];
-      msgsSnap.forEach((d) => {
-        const data = d.data() as ChatMessage;
-        let resolvedDateStr = data.messageDate || '';
-        let resolvedTimeStr = data.timeStr || '';
-
-        if ((!resolvedDateStr || !resolvedTimeStr) && data.createdAt) {
-          try {
-            const dt = typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate() : new Date(data.createdAt);
-            if (!isNaN(dt.getTime())) {
-              if (!resolvedDateStr) resolvedDateStr = format(dt, 'yyyy-MM-dd');
-              if (!resolvedTimeStr) resolvedTimeStr = format(dt, 'HH:mm');
-            }
-          } catch {
-            // ignore
-          }
-        }
-
-        loaded.push({
-          ...data,
-          id: d.id,
-          resolvedDateStr,
-          resolvedTimeStr,
+      if (selectedSourceId.startsWith('wa:')) {
+        const groupJid = selectedSourceId.slice(3);
+        const res = await fetch('/api/whatsapp/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_group_messages', groupJid }),
         });
-      });
-
-      setChannelMessages(loaded);
+        const data = await res.json();
+        setLoadedMessages(Array.isArray(data.messages) ? data.messages : []);
+      } else if (selectedSourceId.startsWith('app:') && firestore) {
+        const channelId = selectedSourceId.slice(4);
+        const msgsSnap = await getDocs(
+          query(collection(firestore, `channels/${channelId}/messages`), orderBy('createdAt', 'asc'))
+        );
+        const list: WhatsAppBufferedMessage[] = [];
+        msgsSnap.forEach((d) => {
+          const data = d.data() as any;
+          let dateStr = data.messageDate || '';
+          let timeStr = data.timeStr || '';
+          let tsMs = Date.now();
+          if (data.createdAt) {
+            try {
+              const dt = typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate() : new Date(data.createdAt);
+              if (!isNaN(dt.getTime())) {
+                tsMs = dt.getTime();
+                if (!dateStr) dateStr = format(dt, 'yyyy-MM-dd');
+                if (!timeStr) timeStr = format(dt, 'HH:mm');
+              }
+            } catch {
+              // ignore
+            }
+          }
+          list.push({
+            id: d.id,
+            groupJid: channelId,
+            senderName: data.senderName || 'Technician',
+            text: data.text || '',
+            timestampMs: tsMs,
+            dateStr,
+            timeStr,
+          });
+        });
+        setLoadedMessages(list);
+      }
     } catch (e) {
-      console.error('Failed to load channel messages:', e);
+      console.error('Failed to load group messages:', e);
     } finally {
       setLoadingMessages(false);
     }
-  }, [selectedChannelId, firestore]);
+  }, [selectedSourceId, firestore]);
 
   useEffect(() => {
-    if (open && selectedChannelId) {
-      loadSelectedChannelMessages();
+    if (open && selectedSourceId) {
+      loadMessagesForSelectedSource();
     }
-  }, [open, selectedChannelId, loadSelectedChannelMessages]);
+  }, [open, selectedSourceId, loadMessagesForSelectedSource]);
 
-  const selectedChannelObj = useMemo(
-    () => channels.find((c) => c.id === selectedChannelId),
-    [channels, selectedChannelId]
-  );
+  const selectedWaGroup = useMemo(() => {
+    if (!selectedSourceId.startsWith('wa:')) return null;
+    const jid = selectedSourceId.slice(3);
+    return waSession?.groups?.find((g) => g.jid === jid) || null;
+  }, [selectedSourceId, waSession?.groups]);
 
   const handleRequestOlderHistoryFromPhone = async () => {
-    const groupJid = selectedChannelObj?.whatsappJid;
-    if (!groupJid) {
-      toast({
-        variant: 'destructive',
-        title: 'Not a Live Linked Group',
-        description: 'Please connect WhatsApp in Tab 2 and select a WhatsApp group first.',
-      });
-      return;
-    }
+    if (!selectedSourceId.startsWith('wa:')) return;
+    const groupJid = selectedSourceId.slice(3);
 
     setIsRequestingOlder(true);
     try {
@@ -327,13 +329,16 @@ export function WhatsAppGroupSyncDialog({
         body: JSON.stringify({ action: 'fetch_older', groupJid, count: 150 }),
       });
       const data = await res.json();
+      if (Array.isArray(data.messages)) {
+        setLoadedMessages(data.messages);
+      }
       toast({
-        title: 'Syncing Older Messages from Phone...',
-        description: data?.historyRequest?.message || 'Fetching older group history from your phone.',
+        title: 'Fetching Older Messages from Phone...',
+        description: data?.historyRequest?.message || 'Pulling older messages for this group only.',
       });
       setTimeout(() => {
-        loadSelectedChannelMessages();
-      }, 3000);
+        loadMessagesForSelectedSource();
+      }, 2500);
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'History Sync Error', description: err.message });
     } finally {
@@ -341,11 +346,19 @@ export function WhatsAppGroupSyncDialog({
     }
   };
 
+  // Filter group dropdown options by optional search box so personal groups can be easily skipped
+  const filteredWaGroups = useMemo(() => {
+    const groups = waSession?.groups || [];
+    if (!groupSearchFilter.trim()) return groups;
+    const q = groupSearchFilter.toLowerCase();
+    return groups.filter((g) => g.subject.toLowerCase().includes(q));
+  }, [waSession?.groups, groupSearchFilter]);
+
   // Filter messages by From Date -> To Date and optional keyword
   const filteredMessages = useMemo(() => {
-    return channelMessages.filter((m) => {
-      if (fromDate && m.resolvedDateStr && m.resolvedDateStr < fromDate) return false;
-      if (toDate && m.resolvedDateStr && m.resolvedDateStr > toDate) return false;
+    return loadedMessages.filter((m) => {
+      if (fromDate && m.dateStr && m.dateStr < fromDate) return false;
+      if (toDate && m.dateStr && m.dateStr > toDate) return false;
       if (keywordFilter.trim()) {
         const kw = keywordFilter.toLowerCase();
         const matchText = m.text?.toLowerCase().includes(kw);
@@ -354,7 +367,7 @@ export function WhatsAppGroupSyncDialog({
       }
       return true;
     });
-  }, [channelMessages, fromDate, toDate, keywordFilter]);
+  }, [loadedMessages, fromDate, toDate, keywordFilter]);
 
   useEffect(() => {
     setSelectedMsgIds(new Set(filteredMessages.map((m) => m.id)));
@@ -384,7 +397,7 @@ export function WhatsAppGroupSyncDialog({
       toast({
         variant: 'destructive',
         title: 'No Messages Selected',
-        description: 'Please select at least one message in the date range to import into the FSR.',
+        description: 'Please tick at least one message to import into the FSR.',
       });
       return;
     }
@@ -392,7 +405,7 @@ export function WhatsAppGroupSyncDialog({
     setIsExtracting(true);
     try {
       const transcript = selectedMsgs
-        .map((m) => `[${m.resolvedDateStr} ${m.resolvedTimeStr}] ${m.senderName}: ${m.text}`)
+        .map((m) => `[${m.dateStr} ${m.timeStr}] ${m.senderName}: ${m.text}`)
         .join('\n');
 
       const res = await extractFsrFromChat({
@@ -419,12 +432,12 @@ export function WhatsAppGroupSyncDialog({
     }
   };
 
-  const channelDateSpan = useMemo(() => {
-    if (channelMessages.length === 0) return null;
-    const dates = channelMessages.map((m) => m.resolvedDateStr).filter(Boolean).sort();
+  const messageDateSpan = useMemo(() => {
+    if (loadedMessages.length === 0) return null;
+    const dates = loadedMessages.map((m) => m.dateStr).filter(Boolean).sort();
     if (dates.length === 0) return null;
-    return { earliest: dates[0], latest: dates[dates.length - 1], count: channelMessages.length };
-  }, [channelMessages]);
+    return { earliest: dates[0], latest: dates[dates.length - 1], count: loadedMessages.length };
+  }, [loadedMessages]);
 
   const isWaConnected = waSession?.status === 'connected';
 
@@ -435,7 +448,7 @@ export function WhatsAppGroupSyncDialog({
           <div className="flex items-center justify-between pr-6">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
               <MessageSquare className="h-5 w-5 text-emerald-600" />
-              Live WhatsApp Group Integration
+              Selective WhatsApp Group Import (Admin / Manager Only)
             </DialogTitle>
             <Badge
               variant="outline"
@@ -448,12 +461,15 @@ export function WhatsAppGroupSyncDialog({
             >
               <span className={cn('h-2 w-2 rounded-full', isWaConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500')} />
               {isWaConnected
-                ? `WhatsApp Live (${waSession?.connectedName || waSession?.connectedPhone}) • ${waSession?.groupsCount || 0} Groups`
+                ? `WhatsApp Linked (${waSession?.connectedName || waSession?.connectedPhone})`
                 : 'WhatsApp Not Linked Yet'}
             </Badge>
           </div>
-          <DialogDescription>
-            Link your WhatsApp once via QR code (just like WhatsApp Web), then select any WhatsApp Group and Date Range to import directly into your Field Service Report.
+          <DialogDescription className="flex items-center gap-1.5 text-xs text-emerald-800 bg-emerald-50/80 border border-emerald-200 rounded-md px-2.5 py-1.5 mt-1">
+            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>
+              <strong>Privacy Protected:</strong> Your WhatsApp groups and personal messages are <strong>never</strong> downloaded into the app&apos;s shared chat or visible to other users. Only the specific group &amp; ticked messages you select below are imported into this FSR.
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -461,7 +477,7 @@ export function WhatsAppGroupSyncDialog({
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="import" className="gap-2 font-bold">
               <Calendar className="h-4 w-4 text-emerald-600" />
-              1. Select WhatsApp Group & Date Range
+              1. Select Group, Dates &amp; Messages
             </TabsTrigger>
             <TabsTrigger value="sync" className="gap-2 font-bold">
               <QrCode className="h-4 w-4 text-blue-600" />
@@ -469,13 +485,13 @@ export function WhatsAppGroupSyncDialog({
             </TabsTrigger>
           </TabsList>
 
-          {/* TAB 1: SELECT WHATSAPP GROUP + DATE RANGE -> IMPORT INTO FSR */}
+          {/* TAB 1: SELECT GROUP + DATE RANGE + SPECIFIC MESSAGES */}
           <TabsContent value="import" className="flex-1 flex flex-col gap-3 overflow-hidden mt-3">
-            {!isWaConnected && channels.filter((c) => c.type === 'whatsapp' || c.name?.startsWith('WhatsApp:')).length === 0 && (
+            {!isWaConnected && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between gap-4">
                 <div className="text-xs text-amber-900">
-                  <p className="font-bold">Your WhatsApp account is not linked yet.</p>
-                  <p className="text-amber-700">Click the button on the right to scan a WhatsApp QR code once and load all your WhatsApp groups automatically.</p>
+                  <p className="font-bold">Link your WhatsApp to select a WhatsApp group directly.</p>
+                  <p className="text-amber-700">Click the button on the right to scan a quick QR code (takes ~2 seconds to generate).</p>
                 </div>
                 <Button
                   type="button"
@@ -483,47 +499,63 @@ export function WhatsAppGroupSyncDialog({
                   className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 gap-1.5 font-bold"
                   onClick={() => {
                     setActiveTab('sync');
-                    handleStartLiveWhatsApp(false);
+                    handleStartLiveWhatsApp(true);
                   }}
                 >
                   <QrCode className="h-4 w-4" />
-                  Link WhatsApp Now
+                  Link WhatsApp QR
                 </Button>
               </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-              <div className="md:col-span-5">
+              <div className="md:col-span-5 space-y-1">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black uppercase text-slate-500">Select WhatsApp Group</Label>
+                  <Label className="text-[10px] font-black uppercase text-slate-500">Select Specific Group</Label>
                   <button
                     type="button"
-                    onClick={() => loadSelectedChannelMessages()}
+                    onClick={() => loadMessagesForSelectedSource()}
                     className="text-[10px] text-emerald-700 hover:underline font-bold flex items-center gap-1"
                   >
-                    <RefreshCw className="h-2.5 w-2.5" /> Refresh
+                    <RefreshCw className="h-2.5 w-2.5" /> Reload
                   </button>
                 </div>
+                {isWaConnected && (waSession?.groups?.length || 0) > 5 && (
+                  <Input
+                    placeholder="Type to filter group name..."
+                    value={groupSearchFilter}
+                    onChange={(e) => setGroupSearchFilter(e.target.value)}
+                    className="h-7 text-xs bg-white mb-1"
+                  />
+                )}
                 <select
-                  value={selectedChannelId}
-                  onChange={(e) => setSelectedChannelId(e.target.value)}
-                  className="w-full h-9 mt-1 px-2.5 border border-slate-300 rounded-md text-xs font-bold bg-white"
+                  value={selectedSourceId}
+                  onChange={(e) => setSelectedSourceId(e.target.value)}
+                  className="w-full h-9 px-2.5 border border-slate-300 rounded-md text-xs font-bold bg-white"
                 >
-                  {loadingChannels ? (
-                    <option value="">Loading WhatsApp groups...</option>
-                  ) : channels.length === 0 ? (
-                    <option value="">No WhatsApp groups linked yet — click Tab 2</option>
-                  ) : (
-                    channels.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))
+                  <option value="">-- Choose a Group to Inspect --</option>
+                  {filteredWaGroups.length > 0 && (
+                    <optgroup label="Your Live WhatsApp Groups (Private — Only Visible Here)">
+                      {filteredWaGroups.map((g) => (
+                        <option key={`wa:${g.jid}`} value={`wa:${g.jid}`}>
+                          🟢 {g.subject} ({g.messageCount} msgs)
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {appChannels.length > 0 && (
+                    <optgroup label="Internal App Site Comms Channels">
+                      {appChannels.map((c) => (
+                        <option key={`app:${c.id}`} value={`app:${c.id}`}>
+                          💬 {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   )}
                 </select>
-                {channelDateSpan && (
-                  <p className="text-[10px] text-emerald-700 font-semibold mt-1">
-                    Synced: {channelDateSpan.count} msgs ({channelDateSpan.earliest} → {channelDateSpan.latest})
+                {messageDateSpan && (
+                  <p className="text-[10px] text-emerald-700 font-semibold">
+                    Available in this group: {messageDateSpan.count} msgs ({messageDateSpan.earliest} → {messageDateSpan.latest})
                   </p>
                 )}
               </div>
@@ -553,11 +585,11 @@ export function WhatsAppGroupSyncDialog({
                   type="button"
                   variant="outline"
                   size="sm"
-                  title="Show all dates in this group"
+                  title="Show all dates in this selected group"
                   onClick={() => {
-                    if (channelDateSpan) {
-                      setFromDate(channelDateSpan.earliest);
-                      setToDate(channelDateSpan.latest);
+                    if (messageDateSpan) {
+                      setFromDate(messageDateSpan.earliest);
+                      setToDate(messageDateSpan.latest);
                     } else {
                       setFromDate('');
                       setToDate('');
@@ -584,10 +616,10 @@ export function WhatsAppGroupSyncDialog({
                   ) : (
                     <Square className="h-4 w-4 mr-1.5 text-slate-400" />
                   )}
-                  Select All ({selectedMsgIds.size} of {filteredMessages.length} messages)
+                  Tick / Untick All ({selectedMsgIds.size} of {filteredMessages.length} selected)
                 </Button>
 
-                {isWaConnected && selectedChannelObj?.whatsappJid && (
+                {isWaConnected && selectedWaGroup && (
                   <Button
                     type="button"
                     variant="outline"
@@ -597,7 +629,7 @@ export function WhatsAppGroupSyncDialog({
                     className="h-7 text-[11px] gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
                   >
                     {isRequestingOlder ? <Loader2 className="h-3 w-3 animate-spin" /> : <History className="h-3 w-3" />}
-                    Fetch Older History from Phone
+                    Pull Older Messages for This Group
                   </Button>
                 )}
               </div>
@@ -605,7 +637,7 @@ export function WhatsAppGroupSyncDialog({
               <div className="relative w-56">
                 <Filter className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <Input
-                  placeholder="Filter by equipment or tech..."
+                  placeholder="Filter messages by keyword..."
                   value={keywordFilter}
                   onChange={(e) => setKeywordFilter(e.target.value)}
                   className="h-7 pl-8 text-xs"
@@ -616,30 +648,34 @@ export function WhatsAppGroupSyncDialog({
             <div className="flex-1 min-h-[220px] max-h-[320px] overflow-y-auto border rounded-lg bg-slate-50/60 p-3 space-y-2">
               {loadingMessages ? (
                 <div className="flex items-center justify-center h-40 text-slate-400 text-xs gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading WhatsApp group messages...
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading messages for selected group...
+                </div>
+              ) : !selectedSourceId ? (
+                <div className="flex flex-col items-center justify-center h-40 text-center text-slate-500 text-xs gap-2 p-4">
+                  <p className="font-semibold">Select a specific WhatsApp Group from the dropdown above to view and tick the messages you want to import.</p>
                 </div>
               ) : filteredMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-40 text-center text-slate-500 text-xs gap-3 p-4">
                   <p>
-                    No messages found in <strong>{selectedChannelObj?.name || 'this group'}</strong> between{' '}
-                    <strong>{fromDate || 'start'}</strong> and <strong>{toDate || 'end'}</strong>.
+                    No messages found in this group between <strong>{fromDate || 'start'}</strong> and{' '}
+                    <strong>{toDate || 'end'}</strong>.
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center">
-                    {channelDateSpan && (
+                    {messageDateSpan && (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setFromDate(channelDateSpan.earliest);
-                          setToDate(channelDateSpan.latest);
+                          setFromDate(messageDateSpan.earliest);
+                          setToDate(messageDateSpan.latest);
                         }}
                         className="text-xs h-8 font-bold"
                       >
-                        Show All Synced Dates ({channelDateSpan.earliest} → {channelDateSpan.latest})
+                        Show All Dates in Group ({messageDateSpan.earliest} → {messageDateSpan.latest})
                       </Button>
                     )}
-                    {isWaConnected && selectedChannelObj?.whatsappJid && (
+                    {isWaConnected && selectedWaGroup && (
                       <Button
                         type="button"
                         variant="outline"
@@ -649,21 +685,7 @@ export function WhatsAppGroupSyncDialog({
                         className="text-xs h-8 border-blue-300 text-blue-700 font-bold gap-1.5"
                       >
                         <History className="h-3.5 w-3.5" />
-                        Pull Older Messages from Phone
-                      </Button>
-                    )}
-                    {!isWaConnected && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => {
-                          setActiveTab('sync');
-                          handleStartLiveWhatsApp(false);
-                        }}
-                        className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5"
-                      >
-                        <QrCode className="h-3.5 w-3.5" />
-                        Connect WhatsApp via QR Code
+                        Pull Older History for This Group
                       </Button>
                     )}
                   </div>
@@ -692,7 +714,7 @@ export function WhatsAppGroupSyncDialog({
                         <div className="flex items-center justify-between gap-2 mb-0.5">
                           <span className="font-bold text-slate-900">{msg.senderName}</span>
                           <span className="font-mono text-[10px] text-slate-500">
-                            {msg.resolvedDateStr} {msg.resolvedTimeStr}
+                            {msg.dateStr} {msg.timeStr}
                           </span>
                         </div>
                         <p className="text-slate-700 whitespace-pre-wrap break-words leading-relaxed">{msg.text}</p>
@@ -717,12 +739,12 @@ export function WhatsAppGroupSyncDialog({
                   {isExtracting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Extracting {selectedMsgIds.size} Messages into FSR...
+                      Importing {selectedMsgIds.size} Ticked Messages into FSR...
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-4 w-4" />
-                      Import {selectedMsgIds.size} Selected Messages into FSR
+                      Import {selectedMsgIds.size} Ticked Messages into FSR
                     </>
                   )}
                 </Button>
@@ -741,12 +763,11 @@ export function WhatsAppGroupSyncDialog({
                   <div className="space-y-1">
                     <h3 className="text-base font-black text-slate-900 flex items-center justify-center gap-2">
                       <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                      WhatsApp Connected in Real Time
+                      WhatsApp Connected (Private Admin Session)
                     </h3>
                     <p className="text-xs text-slate-600">
                       Linked Account: <strong>{waSession?.connectedName || waSession?.connectedPhone}</strong> •{' '}
-                      <strong>{waSession?.groupsCount || 0} WhatsApp Groups</strong> discovered •{' '}
-                      <strong>{waSession?.syncedMessagesCount || 0} messages</strong> synced in session
+                      <strong>{waSession?.groupsCount || 0} WhatsApp Groups</strong> available in your selector
                     </p>
                   </div>
 
@@ -761,7 +782,7 @@ export function WhatsAppGroupSyncDialog({
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
                     >
                       {isRefreshingGroups ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                      Refresh Groups & Go to Selector
+                      Refresh Groups &amp; Go to Selector
                     </Button>
 
                     <Button
@@ -771,7 +792,7 @@ export function WhatsAppGroupSyncDialog({
                       className="text-red-600 border-red-200 hover:bg-red-50 gap-1.5 text-xs"
                     >
                       <Unlink className="h-3.5 w-3.5" />
-                      Disconnect WhatsApp
+                      Unlink &amp; Clear Session
                     </Button>
                   </div>
                 </>
@@ -791,7 +812,7 @@ export function WhatsAppGroupSyncDialog({
                     <p className="text-xs text-slate-600 leading-relaxed">
                       1. Open <strong>WhatsApp</strong> on your phone<br />
                       2. Tap <strong>Menu (⋮) or Settings → Linked Devices → Link a Device</strong><br />
-                      3. Point your phone camera at this QR code. Your WhatsApp groups will load automatically!
+                      3. Point your phone camera at this QR code.
                     </p>
                   </div>
                   <Button
@@ -806,10 +827,20 @@ export function WhatsAppGroupSyncDialog({
                   </Button>
                 </>
               ) : waSession?.status === 'connecting' || isStartingSession ? (
-                <div className="py-10 flex flex-col items-center gap-3">
+                <div className="py-8 flex flex-col items-center gap-3">
                   <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
-                  <p className="text-sm font-bold text-slate-700">Connecting to WhatsApp Server & Generating QR Code...</p>
-                  <p className="text-xs text-slate-500">This takes about 3–5 seconds.</p>
+                  <p className="text-sm font-bold text-slate-700">Generating WhatsApp QR Code...</p>
+                  <p className="text-xs text-slate-500">Connecting to WhatsApp Web...</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleStartLiveWhatsApp(true)}
+                    className="mt-2 text-xs gap-1.5"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Reset &amp; Force New QR Code
+                  </Button>
                 </div>
               ) : (
                 <>
@@ -818,13 +849,13 @@ export function WhatsAppGroupSyncDialog({
                   </div>
                   <div className="space-y-1 max-w-md">
                     <h3 className="text-base font-bold text-slate-900">
-                      Link Your WhatsApp Groups Directly to the App
+                      Link Your WhatsApp Privately (Admin / Manager Only)
                     </h3>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Click the button below to display a live WhatsApp QR code. Once you scan it with your phone (just like WhatsApp Web), all of your WhatsApp groups and their conversations will sync automatically—no file exports or uploads needed.
+                      Scan a live QR code with your phone. Your personal chats and groups are <strong>never</strong> uploaded to the app database—you simply pick which work group and which specific messages to pull into your FSR.
                     </p>
                     {waSession?.lastError && (
-                      <p className="text-xs text-red-600 font-semibold mt-2">Error: {waSession.lastError}</p>
+                      <p className="text-xs text-red-600 font-semibold mt-2">{waSession.lastError}</p>
                     )}
                   </div>
                   <Button

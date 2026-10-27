@@ -97,6 +97,16 @@ export default function FieldServiceReportDetailPage() {
   const { data: userData } = useDoc<User>(
     useMemoFirebase(() => authUser ? doc(db, 'users', authUser.uid) : null, [db, authUser])
   );
+  const canUseWhatsAppImport = useMemo(() => {
+    const r = (userData?.role || '').toLowerCase();
+    return (
+      r.includes('admin') ||
+      r.includes('manager') ||
+      r.includes('corporate') ||
+      r.includes('supervisor') ||
+      r.includes('client')
+    );
+  }, [userData?.role]);
   
   const equipmentQuery = useMemoFirebase(() => query(collection(db, 'equipment'), orderBy('name', 'asc')), [db]);
   const { data: equipmentList } = useCollection<any>(equipmentQuery);
@@ -985,7 +995,7 @@ export default function FieldServiceReportDetailPage() {
             <MessageSquare className="h-4 w-4 text-blue-500" />
             Equipment Chat
           </Button>
-          {!isFinalized && (
+          {!isFinalized && canUseWhatsAppImport && (
             <Button
               variant="outline"
               className="gap-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 font-semibold"
