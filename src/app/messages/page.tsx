@@ -91,6 +91,9 @@ export default function MessagingPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [isWhatsAppSyncOpen, setIsWhatsAppSyncOpen] = useState(false);
   const [waForceSourceId, setWaForceSourceId] = useState<string | null>(null);
+  const [isSelectingChatMsgs, setIsSelectingChatMsgs] = useState(false);
+  const [tickedChatMsgIds, setTickedChatMsgIds] = useState<Set<string>>(new Set());
+  const [isRemovingChatMsgs, setIsRemovingChatMsgs] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 1. FETCH CHANNELS
@@ -265,6 +268,55 @@ export default function MessagingPage() {
   };
 
   const activeChannel = channels?.find(c => c.id === activeChannelId);
+
+  const toggleChatMsgTick = (msgId: string) => {
+    setTickedChatMsgIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId);
+      else next.add(msgId);
+      return next;
+    });
+  };
+
+  const selectChatMsgsByKeyword = (word: string) => {
+    if (!messages) return;
+    const rx = new RegExp(`\\b${word}\\b`, 'i');
+    const matching = messages.filter((m) => rx.test(m.text || '')).map((m) => m.id);
+    if (matching.length === 0) {
+      toast({ title: `No "${word}" Messages Found`, description: `No messages in this chat mention "${word}".` });
+      return;
+    }
+    setIsSelectingChatMsgs(true);
+    setTickedChatMsgIds((prev) => {
+      const next = new Set(prev);
+      matching.forEach((id) => next.add(id));
+      return next;
+    });
+    toast({
+      title: `Selected ${matching.length} "${word}" Message(s)`,
+      description: `Click "Remove Ticked from Chat" to filter them out of this chat.`,
+    });
+  };
+
+  const handleRemoveTickedFromChat = async () => {
+    if (!activeChannelId || tickedChatMsgIds.size === 0) return;
+    setIsRemovingChatMsgs(true);
+    try {
+      const ids = Array.from(tickedChatMsgIds);
+      await Promise.all(
+        ids.map((id) => deleteDoc(doc(firestore, `channels/${activeChannelId}/messages`, id)))
+      );
+      setTickedChatMsgIds(new Set());
+      toast({
+        title: 'Filtered Out of Chat',
+        description: `Removed ${ids.length} ticked message(s) from this chat.`,
+      });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error Removing Messages', description: e.message });
+    } finally {
+      setIsRemovingChatMsgs(false);
+    }
+  };
 
   /**
    * SIDEBAR FILTER FIX
@@ -468,19 +520,38 @@ export default function MessagingPage() {
                   </Link>
                 )}
                 {canManageWhatsApp && activeChannel && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setWaForceSourceId(`app:${activeChannel.id}`);
-                      setIsWhatsAppSyncOpen(true);
-                    }}
-                    className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 font-bold flex items-center gap-1.5 mr-2"
-                    title="Tick messages from this chat and export them into a selected FSR"
-                  >
-                    <FileText className="h-4 w-4 text-emerald-600" />
-                    Export Chat to FSR
-                  </Button>
+                  <>
+                    <Button
+                      variant={isSelectingChatMsgs ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setIsSelectingChatMsgs((prev) => !prev);
+                        setTickedChatMsgIds(new Set());
+                      }}
+                      className={cn(
+                        'font-bold text-xs mr-1.5',
+                        isSelectingChatMsgs
+                          ? 'bg-slate-800 text-white hover:bg-slate-900'
+                          : 'text-slate-700 border-slate-300 hover:bg-slate-100'
+                      )}
+                      title="Tick messages in this chat to filter out unrelated breakdowns (e.g. MPE)"
+                    >
+                      {isSelectingChatMsgs ? 'Done Filtering Chat' : 'Tick / Filter Out Messages'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setWaForceSourceId(`app:${activeChannel.id}`);
+                        setIsWhatsAppSyncOpen(true);
+                      }}
+                      className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 font-bold flex items-center gap-1.5 mr-2"
+                      title="Tick messages from this chat and export them into a selected FSR or Daily Diary (DD)"
+                    >
+                      <FileText className="h-4 w-4 text-emerald-600" />
+                      Export Chat to FSR / DD
+                    </Button>
+                  </>
                 )}
                 {/* Archive/Restore Button */}
                 <Button 
@@ -507,6 +578,47 @@ export default function MessagingPage() {
               </div>
             </header>
 
+            {/* IN-CHAT FILTER OUT / CLEANUP BAR */}
+            {canManageWhatsApp && isSelectingChatMsgs && (
+              <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-black uppercase text-[10px] text-amber-900">
+                    Quick-Tick Unrelated Breakdown to Filter Out:
+                  </span>
+                  {(['MPE', 'MPD', 'MPC', 'MPA', 'Smelter'] as const).map((area) => (
+                    <button
+                      key={area}
+                      type="button"
+                      onClick={() => selectChatMsgsByKeyword(area)}
+                      className="px-2 py-0.5 rounded bg-white border border-amber-300 text-amber-900 hover:bg-red-50 hover:border-red-300 hover:text-red-700 font-bold text-[11px]"
+                    >
+                      Tick {area} Messages
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-700">
+                    {tickedChatMsgIds.size} message(s) ticked
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={tickedChatMsgIds.size === 0 || isRemovingChatMsgs}
+                    onClick={handleRemoveTickedFromChat}
+                    className="h-7 text-xs font-bold gap-1"
+                  >
+                    {isRemovingChatMsgs ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Filter Out / Remove {tickedChatMsgIds.size} Ticked from Chat
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Messages Area */}
             <ScrollArea className="flex-1 p-4 md:p-8" ref={scrollRef}>
               <div className="space-y-4 max-w-4xl mx-auto">
@@ -514,12 +626,17 @@ export default function MessagingPage() {
                   <div className="flex justify-center"><Loader2 className="animate-spin text-muted-foreground" /></div>
                 ) : messages?.map((msg, idx) => {
                   const isMe = msg.senderId === user?.uid;
+                  const isTicked = tickedChatMsgIds.has(msg.id);
                   return (
                     <div 
                       key={msg.id}
+                      onClick={() => {
+                        if (isSelectingChatMsgs) toggleChatMsgTick(msg.id);
+                      }}
                       className={cn(
                         "flex flex-col max-w-[80%] md:max-w-[70%]",
-                        isMe ? "ml-auto items-end" : "mr-auto items-start"
+                        isMe ? "ml-auto items-end" : "mr-auto items-start",
+                        isSelectingChatMsgs && "cursor-pointer"
                       )}
                     >
                       {!isMe && (
@@ -529,21 +646,32 @@ export default function MessagingPage() {
                       )}
                       <div 
                         className={cn(
-                          "px-4 py-2 rounded-2xl shadow-sm relative group",
+                          "px-4 py-2 rounded-2xl shadow-sm relative group flex items-start gap-2.5",
                           isMe 
                             ? "bg-primary text-white rounded-tr-none" 
-                            : "bg-white text-slate-800 rounded-tl-none border"
+                            : "bg-white text-slate-800 rounded-tl-none border",
+                          isTicked && "ring-2 ring-red-500 bg-red-50 text-slate-900"
                         )}
                       >
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                        <div className={cn(
-                          "flex items-center gap-1 mt-1 justify-end",
-                          isMe ? "text-blue-100" : "text-slate-400"
-                        )}>
-                          <span className="text-[9px] font-medium">
-                            {msg.messageDate ? `${msg.messageDate} ${msg.timeStr || ''}` : msg.createdAt ? format(msg.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : '...'}
-                          </span>
-                          {isMe && <CheckCheck className="h-3 w-3" />}
+                        {isSelectingChatMsgs && (
+                          <input
+                            type="checkbox"
+                            checked={isTicked}
+                            onChange={() => {}}
+                            className="mt-1 h-4 w-4 accent-red-600 rounded cursor-pointer"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                          <div className={cn(
+                            "flex items-center gap-1 mt-1 justify-end",
+                            isMe && !isTicked ? "text-blue-100" : "text-slate-400"
+                          )}>
+                            <span className="text-[9px] font-medium">
+                              {msg.messageDate ? `${msg.messageDate} ${msg.timeStr || ''}` : msg.createdAt ? format(msg.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : '...'}
+                            </span>
+                            {isMe && <CheckCheck className="h-3 w-3" />}
+                          </div>
                         </div>
                       </div>
                     </div>

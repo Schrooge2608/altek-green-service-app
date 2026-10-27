@@ -138,3 +138,136 @@ Return ONLY valid JSON matching those exact keys.
 
   return { success: false, error: lastError };
 }
+
+export interface ExtractDailyDiaryFromChatOutput {
+  date?: string;
+  area?: 'Mining' | 'Smelter';
+  workType?: 'Normal' | 'Callout';
+  maintenanceType?: 'Scheduled' | 'Unscheduled' | 'Both';
+  shiftStart?: string;
+  shiftEnd?: string;
+  hrs?: number;
+  incidents?: string;
+  toolboxTalk?: string;
+  manpower?: {
+    designation: string;
+    forecast: number;
+    actual: number;
+    normalHrs: number;
+    overtime1_5: number;
+    overtime2_0: number;
+    totalManHrs: number;
+    comments: string;
+  }[];
+  works?: {
+    area: string;
+    scope: string;
+    timeStart: string;
+    timeEnd: string;
+    hrs: number;
+  }[];
+  delays?: string[];
+  comments?: string[];
+  locationTags?: string[];
+  equipmentNames?: string[];
+  error?: string;
+  success: boolean;
+}
+
+export async function extractDailyDiaryFromChat(
+  input: ExtractFsrFromChatInput
+): Promise<ExtractDailyDiaryFromChatOutput> {
+  if (!input.chatHistory || input.chatHistory.trim().length < 5) {
+    return { success: false, error: 'Chat history too short to process.' };
+  }
+
+  const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    return { success: false, error: 'AI API Key is missing from environment variables.' };
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const equipmentCatalogHint =
+    input.availableEquipmentNames && input.availableEquipmentNames.length > 0
+      ? `\nKnown Plant Equipment Names:\n${input.availableEquipmentNames.slice(0, 150).join(', ')}\n`
+      : '';
+
+  const prompt = `
+You are an expert Industrial Maintenance Assistant for Altek Green.
+Read the group chat transcript below (especially day-shift / office-hours 07:00–16:00 maintenance and inspection updates, or call-out work) and extract structured Contractors Daily Diary (DD) details.
+
+Target / Primary Equipment (if already selected): ${input.equipmentName || 'Auto-detect from chat'}
+${equipmentCatalogHint}
+
+Group Chat Transcript:
+${input.chatHistory}
+
+INSTRUCTIONS:
+1. "date": Primary date in YYYY-MM-DD format.
+2. "area": Either "Mining" or "Smelter" (MPA, MPB, MPC, MPD, MPE, Nhlabane, Mposa, Monzi = "Mining"; MSP, Roaster, Char Plant, Smelter, Slag Plant, North Screen = "Smelter").
+3. "workType": "Normal" (if during 07:00-16:00 office hours / routine maintenance) or "Callout" (if after-hours breakdown).
+4. "maintenanceType": "Scheduled", "Unscheduled", or "Both".
+5. "shiftStart": 24h HH:mm (default "07:00" for normal shift or earliest timestamp).
+6. "shiftEnd": 24h HH:mm (default "16:00" for normal shift or latest timestamp).
+7. "hrs": Total shift hours (e.g. 9 for 07:00-16:00, or calculated duration).
+8. "incidents": Any safety incidents mentioned, or "None reported".
+9. "toolboxTalk": Brief safety topic relevant to the work (e.g. "LOTOTO, VSD Isolation & Safe Working Procedures").
+10. "manpower": Array of technicians who reported or worked in the chat:
+    [{ "designation": "Technician Name", "forecast": 1, "actual": 1, "normalHrs": 8, "overtime1_5": 0, "overtime2_0": 0, "totalManHrs": 8, "comments": "Maintenance / Inspection" }]
+11. "works": Array of distinct maintenance tasks / scopes of work performed (each row has "area" set to the Equipment/Plant name like "MPA - Final Tails" or "MPA Concentrator", "scope" set to a clear description of maintenance/work done, "timeStart", "timeEnd", and "hrs").
+12. "delays": Array of any plant/permit/standby delays mentioned (or empty strings).
+13. "comments": Array of key technical observations, follow-ups, or handovers mentioned.
+
+Return ONLY valid JSON matching those exact keys.
+`;
+
+  const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-3.8-flash'];
+  let lastError = 'Failed to process chat history for Daily Diary.';
+
+  for (const modelName of candidateModels) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const result = await model.generateContent(prompt);
+      let text = result.response.text().trim();
+      if (!text) continue;
+
+      if (text.startsWith('```json')) {
+        text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (text.startsWith('```')) {
+        text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      const data = JSON.parse(text);
+      return {
+        date: data.date || undefined,
+        area: data.area === 'Smelter' ? 'Smelter' : 'Mining',
+        workType: data.workType === 'Callout' ? 'Callout' : 'Normal',
+        maintenanceType:
+          data.maintenanceType === 'Scheduled' || data.maintenanceType === 'Both'
+            ? data.maintenanceType
+            : 'Unscheduled',
+        shiftStart: data.shiftStart || '07:00',
+        shiftEnd: data.shiftEnd || '16:00',
+        hrs: typeof data.hrs === 'number' ? data.hrs : 9,
+        incidents: data.incidents || 'None reported',
+        toolboxTalk: data.toolboxTalk || 'Safe Working Procedures & Isolation',
+        manpower: Array.isArray(data.manpower) ? data.manpower : [],
+        works: Array.isArray(data.works) ? data.works : [],
+        delays: Array.isArray(data.delays) ? data.delays : [],
+        comments: Array.isArray(data.comments) ? data.comments : [],
+        success: true,
+      };
+    } catch (err: any) {
+      lastError = err?.message || lastError;
+    }
+  }
+
+  return { success: false, error: lastError };
+}

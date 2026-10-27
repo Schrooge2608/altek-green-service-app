@@ -2,7 +2,7 @@
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Printer, Save, Loader2, Plus, Trash2, FileCheck, X, Share2, Check, PenTool, RotateCcw } from 'lucide-react';
+import { Printer, Save, Loader2, Plus, Trash2, FileCheck, X, Share2, Check, PenTool, RotateCcw, MessageSquare } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -24,6 +24,7 @@ import Image from 'next/image';
 import { extractDailyDiaryData } from '@/ai/flows/extract-daily-diary-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import SignatureCanvas from 'react-signature-canvas';
+import { WhatsAppGroupSyncDialog } from '@/components/whatsapp/whatsapp-group-sync-dialog';
 
 export default function NewDailyDiaryV2Page() {
     const searchParams = useSearchParams();
@@ -38,6 +39,7 @@ export default function NewDailyDiaryV2Page() {
     const [isIdLoading, setIsIdLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
+    const [isWhatsAppImportOpen, setIsWhatsAppImportOpen] = useState(false);
 
     const [contractorSignature, setContractorSignature] = useState<string | null>(null);
     const [contractorName, setContractorName] = useState('');
@@ -564,6 +566,32 @@ export default function NewDailyDiaryV2Page() {
                             Scan PDF
                         </Button>
 
+                        <Button type="button" variant="outline" className="border-emerald-300 hover:bg-emerald-50 text-emerald-700 bg-white shadow-sm font-medium" onClick={() => setIsWhatsAppImportOpen(true)}>
+                            <MessageSquare className="mr-2 h-4 w-4 text-emerald-600" />
+                            Import from WhatsApp Group
+                        </Button>
+                        <WhatsAppGroupSyncDialog
+                            open={isWhatsAppImportOpen}
+                            onOpenChange={setIsWhatsAppImportOpen}
+                            currentDdId={uniqueId}
+                            onPopulateDailyDiary={(extracted) => {
+                                if (extracted.area) form.setValue('area', extracted.area as any);
+                                if (extracted.workType) form.setValue('workType', extracted.workType as any);
+                                if (extracted.maintenanceType) form.setValue('maintenanceType', extracted.maintenanceType as any);
+                                if (extracted.shiftStart) form.setValue('shiftStart', extracted.shiftStart);
+                                if (extracted.shiftEnd) form.setValue('shiftEnd', extracted.shiftEnd);
+                                if (extracted.hrs !== undefined) form.setValue('hrs', extracted.hrs);
+                                if (extracted.incidents) form.setValue('incidents', extracted.incidents);
+                                if (extracted.toolboxTalk) form.setValue('toolboxTalk', extracted.toolboxTalk);
+                                if (extracted.manpower?.length) form.setValue('manpower', extracted.manpower);
+                                if (extracted.works?.length) form.setValue('works', extracted.works);
+                                if (extracted.delays?.length) form.setValue('delays', extracted.delays);
+                                if (extracted.comments) {
+                                    const existing = form.getValues('comments') || '';
+                                    form.setValue('comments', existing ? `${existing}\n\n${extracted.comments}` : extracted.comments);
+                                }
+                            }}
+                        />
                         {/* Save Progress Button - available whenever canEdit is true */}
                         {canEdit && (
                             <Button 

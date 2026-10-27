@@ -49,8 +49,13 @@ import {
 import { useFirestore, useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { extractFsrFromChat, type ExtractFsrFromChatOutput } from '@/ai/flows/extract-fsr-from-chat-flow';
-import type { Channel, FieldServiceReport } from '@/lib/types';
+import {
+  extractFsrFromChat,
+  extractDailyDiaryFromChat,
+  type ExtractFsrFromChatOutput,
+  type ExtractDailyDiaryFromChatOutput,
+} from '@/ai/flows/extract-fsr-from-chat-flow';
+import type { Channel, FieldServiceReport, DailyDiary } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -66,6 +71,7 @@ interface WhatsAppLiveGroup {
 interface WhatsAppBufferedMessage {
   id: string;
   groupJid: string;
+  groupName?: string;
   senderName: string;
   text: string;
   timestampMs: number;
@@ -243,6 +249,24 @@ interface FsrSummaryOption {
   assetName: string;
   customer: string;
   status: string;
+}
+
+interface DailyDiarySummaryOption {
+  id: string;
+  date: string;
+  area: string;
+  workSummary: string;
+}
+
+function isOfficeHoursTime(timeStr?: string): boolean {
+  if (!timeStr) return false;
+  const parts = timeStr.split(':');
+  const h = parseInt(parts[0] || '', 10);
+  const m = parseInt(parts[1] || '0', 10);
+  if (isNaN(h)) return false;
+  const totalMins = h * 60 + (isNaN(m) ? 0 : m);
+  // 07:00 (420) to 16:00 (960) inclusive
+  return totalMins >= 7 * 60 && totalMins <= 16 * 60;
 }
 
 function simpleHash(str: string): string {
@@ -445,6 +469,7 @@ interface WhatsAppGroupSyncDialogProps {
   equipmentName?: string;
   availableEquipmentNames?: string[];
   onExtractedToFsr?: (extracted: ExtractFsrFromChatOutput, rawTranscript: string) => void;
+  onExtractedToDiary?: (extracted: ExtractDailyDiaryFromChatOutput, rawTranscript: string) => void;
   onChannelSynced?: (channelId: string) => void;
 }
 
@@ -458,6 +483,7 @@ export function WhatsAppGroupSyncDialog({
   equipmentName,
   availableEquipmentNames,
   onExtractedToFsr,
+  onExtractedToDiary,
   onChannelSynced,
 }: WhatsAppGroupSyncDialogProps) {
   const firestore = useFirestore();
@@ -470,6 +496,7 @@ export function WhatsAppGroupSyncDialog({
   const [appChannels, setAppChannels] = useState<Channel[]>([]);
   const [equipmentOptions, setEquipmentOptions] = useState<EquipmentOption[]>([]);
   const [fsrOptions, setFsrOptions] = useState<FsrSummaryOption[]>([]);
+  const [diaryOptions, setDiaryOptions] = useState<DailyDiarySummaryOption[]>([]);
 
   // Tab 2: .txt / .zip Upload & Group Selector state
   const [targetGroupSelection, setTargetGroupSelection] = useState<string>('');
@@ -483,7 +510,7 @@ export function WhatsAppGroupSyncDialog({
   const [waSession, setWaSession] = useState<WhatsAppSessionState | null>(null);
   const [isStartingSession, setIsStartingSession] = useState(false);
 
-  // Tab 1: Selected source (`store:<id>`, `wa:<jid>`, or `app:<channelId>`)
+  // Tab 1: Selected source (`store:__all__`, `store:<id>`, `wa:<jid>`, or `app:<channelId>`)
   const [selectedSourceId, setSelectedSourceId] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>(defaultDate || format(new Date(), 'yyyy-MM-dd'));
   const [toDate, setToDate] = useState<string>(defaultDate || format(new Date(), 'yyyy-MM-dd'));
@@ -491,6 +518,9 @@ export function WhatsAppGroupSyncDialog({
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
   const [keywordFilter, setKeywordFilter] = useState('');
+  const [excludedAreasFilter, setExcludedAreasFilter] = useState<string[]>([]);
+  const [excludeKeyword, setExcludeKeyword] = useState('');
+  const [hoursFilterMode, setHoursFilterMode] = useState<'all' | 'office_dd' | 'after_hours_fsr'>('all');
 
   // Export Destination 1: Site Comms Chat + Equipment Link + Cascading Tick-Box Filters
   const [selectedPlantFilter, setSelectedPlantFilter] = useState<'' | 'Mining' | 'Smelter'>('');
@@ -501,20 +531,25 @@ export function WhatsAppGroupSyncDialog({
   const [targetChatName, setTargetChatName] = useState<string>('');
   const [isExportingToChat, setIsExportingToChat] = useState<boolean>(false);
 
-  // Export Destination 2: FSR Selection (Current Open FSR, Existing FSR by Reference, or Create New FSR)
+  // Export Destination 2: FSR & Daily Diary (DD) Selection
   const [selectedFsrTarget, setSelectedFsrTarget] = useState<string>(
     onExtractedToFsr ? '__current_fsr__' : '__new_fsr__'
   );
+  const [selectedDiaryTarget, setSelectedDiaryTarget] = useState<string>(
+    onExtractedToDiary ? '__current_dd__' : '__new_dd__'
+  );
   const [isExtractingToFsr, setIsExtractingToFsr] = useState<boolean>(false);
+  const [isExtractingToDiary, setIsExtractingToDiary] = useState<boolean>(false);
 
   const loadChannelsStoresEquipmentAndFsrs = useCallback(async () => {
     if (!firestore) return [];
     try {
-      const [allSnap, eqSnap, vsdSnap, fsrSnap] = await Promise.all([
+      const [allSnap, eqSnap, vsdSnap, fsrSnap, ddSnap] = await Promise.all([
         getDocs(collection(firestore, 'channels')),
         getDocs(query(collection(firestore, 'equipment'), orderBy('name', 'asc'))),
         getDocs(collection(firestore, 'vsds')),
         getDocs(collection(firestore, 'field_service_reports')),
+        getDocs(collection(firestore, 'daily_diaries')),
       ]);
 
       const stores: StoredWhatsAppGroup[] = [];
@@ -602,6 +637,29 @@ export function WhatsAppGroupSyncDialog({
       });
       setFsrOptions(fsrs);
 
+      // Build Daily Diary summary list sorted by DD number / date descending
+      const diaries: DailyDiarySummaryOption[] = [];
+      ddSnap.forEach((d) => {
+        const data = d.data() as any;
+        const firstWork = Array.isArray(data.works) && data.works.length > 0 ? data.works[0] : null;
+        const summary =
+          firstWork?.area || firstWork?.scope
+            ? `${firstWork.area || ''} ${firstWork.scope ? `(${String(firstWork.scope).slice(0, 30)})` : ''}`.trim()
+            : data.area || 'Daily Diary';
+        diaries.push({
+          id: d.id,
+          date: typeof data.date === 'string' ? data.date : '',
+          area: data.area || 'Mining',
+          workSummary: summary,
+        });
+      });
+      diaries.sort((a, b) => {
+        const idCmp = (b.id || '').localeCompare(a.id || '');
+        if (idCmp !== 0) return idCmp;
+        return (b.date || '').localeCompare(a.date || '');
+      });
+      setDiaryOptions(diaries);
+
       return stores;
     } catch (e) {
       console.error('Error loading dialog data:', e);
@@ -634,12 +692,17 @@ export function WhatsAppGroupSyncDialog({
       if (onExtractedToFsr) {
         setSelectedFsrTarget('__current_fsr__');
       }
+      if (onExtractedToDiary) {
+        setSelectedDiaryTarget('__current_dd__');
+      }
       if (equipmentName && !targetChatName) {
         setTargetChatName(`Breakdown: ${equipmentName}`);
       }
       Promise.all([loadChannelsStoresEquipmentAndFsrs(), fetchWaStatus()]).then(([stores, wa]) => {
         if (!selectedSourceId && !forceSourceId) {
-          if (stores.length > 0) {
+          if (stores.length > 1) {
+            setSelectedSourceId('store:__all__');
+          } else if (stores.length === 1) {
             setSelectedSourceId(`store:${stores[0].id}`);
           } else if (defaultChannelId && !defaultChannelId.startsWith('wa_store_')) {
             setSelectedSourceId(`app:${defaultChannelId}`);
@@ -670,6 +733,7 @@ export function WhatsAppGroupSyncDialog({
     equipmentName,
     targetChatName,
     onExtractedToFsr,
+    onExtractedToDiary,
     loadChannelsStoresEquipmentAndFsrs,
     fetchWaStatus,
     selectedSourceId,
@@ -1114,16 +1178,76 @@ export function WhatsAppGroupSyncDialog({
 
     setLoadingMessages(true);
     try {
-      if ((selectedSourceId.startsWith('store:') || selectedSourceId.startsWith('app:')) && firestore) {
+      if (selectedSourceId === 'store:__all__' && firestore) {
+        if (waSession?.status === 'connected') {
+          for (const stGrp of storedGroups) {
+            await handleSyncLiveIntoSelectedStore(stGrp, true);
+          }
+        }
+
+        const allSnaps = await Promise.all(
+          storedGroups.map(async (stGrp) => {
+            const snap = await getDocs(
+              query(collection(firestore, `channels/${stGrp.id}/messages`), orderBy('createdAt', 'asc'))
+            );
+            return { stGrp, snap };
+          })
+        );
+
+        const combinedList: WhatsAppBufferedMessage[] = [];
+        const seenSigs = new Set<string>();
+
+        for (const { stGrp, snap } of allSnaps) {
+          snap.forEach((d) => {
+            const data = d.data() as any;
+            let dateStr = data.messageDate || '';
+            let timeStr = data.timeStr || '';
+            let tsMs = Date.now();
+            if (data.createdAt) {
+              try {
+                const dt =
+                  typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate() : new Date(data.createdAt);
+                if (!isNaN(dt.getTime())) {
+                  tsMs = dt.getTime();
+                  if (!dateStr) dateStr = format(dt, 'yyyy-MM-dd');
+                  if (!timeStr) timeStr = format(dt, 'HH:mm');
+                }
+              } catch {
+                // ignore
+              }
+            }
+            const text = data.text || '';
+            const senderName = data.senderName || 'Technician';
+            const dedupKey = `${dateStr}_${timeStr}_${senderName}_${text}`;
+            if (seenSigs.has(dedupKey)) return;
+            seenSigs.add(dedupKey);
+
+            combinedList.push({
+              id: `${stGrp.id}__${d.id}`,
+              groupJid: stGrp.id,
+              groupName: stGrp.name,
+              senderName,
+              text,
+              timestampMs: tsMs,
+              dateStr,
+              timeStr,
+            });
+          });
+        }
+
+        combinedList.sort((a, b) => a.timestampMs - b.timestampMs);
+        setLoadedMessages(combinedList);
+      } else if ((selectedSourceId.startsWith('store:') || selectedSourceId.startsWith('app:')) && firestore) {
         const channelId = selectedSourceId.startsWith('store:')
           ? selectedSourceId.slice(6)
           : selectedSourceId.slice(4);
 
-        if (selectedSourceId.startsWith('store:') && waSession?.status === 'connected') {
-          const stGrp = storedGroups.find((g) => g.id === channelId);
-          if (stGrp) {
-            await handleSyncLiveIntoSelectedStore(stGrp, true);
-          }
+        const stGrp = storedGroups.find((g) => g.id === channelId);
+        const appCh = appChannels.find((c) => c.id === channelId);
+        const resolvedGroupName = stGrp?.name || appCh?.name || channelId;
+
+        if (selectedSourceId.startsWith('store:') && waSession?.status === 'connected' && stGrp) {
+          await handleSyncLiveIntoSelectedStore(stGrp, true);
         }
 
         const msgsSnap = await getDocs(
@@ -1151,6 +1275,7 @@ export function WhatsAppGroupSyncDialog({
           list.push({
             id: d.id,
             groupJid: channelId,
+            groupName: resolvedGroupName,
             senderName: data.senderName || 'Technician',
             text: data.text || '',
             timestampMs: tsMs,
@@ -1174,7 +1299,7 @@ export function WhatsAppGroupSyncDialog({
     } finally {
       setLoadingMessages(false);
     }
-  }, [selectedSourceId, firestore, waSession?.status, storedGroups, handleSyncLiveIntoSelectedStore]);
+  }, [selectedSourceId, firestore, waSession?.status, storedGroups, appChannels, handleSyncLiveIntoSelectedStore]);
 
   useEffect(() => {
     if (open && selectedSourceId) {
@@ -1217,10 +1342,50 @@ export function WhatsAppGroupSyncDialog({
     }
   };
 
+  const toggleExcludeArea = (areaCode: string) => {
+    setExcludedAreasFilter((prev) =>
+      prev.includes(areaCode) ? prev.filter((a) => a !== areaCode) : [...prev, areaCode]
+    );
+  };
+
   const filteredMessages = useMemo(() => {
     return loadedMessages.filter((m) => {
       if (fromDate && m.dateStr && m.dateStr < fromDate) return false;
       if (toDate && m.dateStr && m.dateStr > toDate) return false;
+
+      const upperText = (m.text || '').toUpperCase();
+
+      // Exclude specific Mine / Area breakdowns (e.g. Filter out MPE)
+      if (excludedAreasFilter.length > 0) {
+        const hasExcludedArea = excludedAreasFilter.some((code) => {
+          const rx = new RegExp(`\\b${code.toUpperCase()}\\b`, 'i');
+          return rx.test(upperText);
+        });
+        if (hasExcludedArea) return false;
+      }
+
+      // Custom exclude keyword
+      if (excludeKeyword.trim()) {
+        const exParts = excludeKeyword
+          .split(',')
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+        if (exParts.some((ex) => (m.text || '').toLowerCase().includes(ex))) {
+          return false;
+        }
+      }
+
+      // Office Hours (07:00 - 16:00) / Maintenance vs After-Hours Callout filter
+      if (hoursFilterMode === 'office_dd') {
+        const inOffice = isOfficeHoursTime(m.timeStr);
+        const mentionsMaint = /\b(MAINT|INSPECT|SERVICE|PM|CLEAN|CHECK|SCHEDULE|DAILY)\b/i.test(m.text || '');
+        if (!inOffice && !mentionsMaint) return false;
+      } else if (hoursFilterMode === 'after_hours_fsr') {
+        const inOffice = isOfficeHoursTime(m.timeStr);
+        const mentionsBreakdown = /\b(CALL\s*OUT|CALLOUT|TRIP|FAULT|BREAKDOWN|ALARM|DOWN)\b/i.test(m.text || '');
+        if (inOffice && !mentionsBreakdown) return false;
+      }
+
       if (keywordFilter.trim()) {
         const kw = keywordFilter.toLowerCase();
         const matchText = m.text?.toLowerCase().includes(kw);
@@ -1229,7 +1394,15 @@ export function WhatsAppGroupSyncDialog({
       }
       return true;
     });
-  }, [loadedMessages, fromDate, toDate, keywordFilter]);
+  }, [
+    loadedMessages,
+    fromDate,
+    toDate,
+    excludedAreasFilter,
+    excludeKeyword,
+    hoursFilterMode,
+    keywordFilter,
+  ]);
 
   useEffect(() => {
     setSelectedMsgIds(new Set(filteredMessages.map((m) => m.id)));
@@ -1601,6 +1774,220 @@ export function WhatsAppGroupSyncDialog({
     }
   };
 
+  /**
+   * ACTION 3: EXPORT TICKED MESSAGES TO CONTRACTORS DAILY DIARY (DD)
+   */
+  const handleExportTickedToDailyDiary = async (alsoExportToChat = false) => {
+    if (!firestore) return;
+    const selectedMsgs = filteredMessages.filter((m) => selectedMsgIds.has(m.id));
+    if (selectedMsgs.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No Messages Ticked',
+        description: 'Please tick at least one message to export to the Daily Diary (DD).',
+      });
+      return;
+    }
+
+    setIsExtractingToDiary(true);
+    try {
+      if (alsoExportToChat) {
+        await handleExportTickedToChat(true);
+      }
+
+      const chosenEq = equipmentOptions.find((e) => e.id === selectedEquipmentId);
+      const effectiveEqName = chosenEq?.fullLabel || equipmentName || undefined;
+      const allEqNames =
+        availableEquipmentNames && availableEquipmentNames.length > 0
+          ? availableEquipmentNames
+          : equipmentOptions.map((e) => e.fullLabel);
+
+      const transcript = selectedMsgs
+        .map((m) => `[${m.dateStr} ${m.timeStr}] ${m.senderName}: ${m.text}`)
+        .join('\n');
+
+      const res = await extractDailyDiaryFromChat({
+        chatHistory: transcript,
+        equipmentName: effectiveEqName,
+        availableEquipmentNames: allEqNames,
+      });
+
+      if (!res.success) {
+        toast({
+          variant: 'destructive',
+          title: 'Daily Diary Extraction Error',
+          description: res.error || 'Could not extract Daily Diary details from ticked messages.',
+        });
+        return;
+      }
+
+      if (selectedDiaryTarget === '__current_dd__' && onExtractedToDiary) {
+        onExtractedToDiary(res, transcript);
+        onOpenChange(false);
+        return;
+      }
+
+      let targetDdId = selectedDiaryTarget;
+      let existingDdData: Partial<DailyDiary> = {};
+
+      if (targetDdId === '__new_dd__' || targetDdId === '__current_dd__') {
+        let nextNum = 1;
+        const nums = diaryOptions
+          .map((d) => parseInt(String(d.id || '').replace(/^DD-/i, ''), 10))
+          .filter((n) => !isNaN(n));
+        if (nums.length > 0) {
+          nextNum = Math.max(...nums) + 1;
+        }
+        targetDdId = `DD-${String(nextNum).padStart(3, '0')}`;
+      } else {
+        const ddSnap = await getDoc(doc(firestore, 'daily_diaries', targetDdId));
+        if (ddSnap.exists()) {
+          existingDdData = ddSnap.data() as Partial<DailyDiary>;
+        }
+      }
+
+      const extractedWorks = Array.isArray(res.works) && res.works.length > 0
+        ? res.works.map((w) => ({
+            area: w.area || chosenEq?.fullLabel || selectedMinesFilter[0] || 'Mining',
+            scope: w.scope || 'Maintenance & inspection completed',
+            timeStart: w.timeStart || res.shiftStart || '07:00',
+            timeEnd: w.timeEnd || res.shiftEnd || '16:00',
+            hrs: Number(w.hrs) || 8,
+          }))
+        : [
+            {
+              area: chosenEq?.fullLabel || selectedMinesFilter[0] || 'Mining',
+              scope: selectedMsgs.map((m) => `${m.senderName}: ${m.text}`).join(' | ').slice(0, 300),
+              timeStart: res.shiftStart || '07:00',
+              timeEnd: res.shiftEnd || '16:00',
+              hrs: Number(res.hrs) || 8,
+            },
+          ];
+
+      const mergedWorks = [
+        ...(Array.isArray(existingDdData.works)
+          ? existingDdData.works.filter((w) => w.area || w.scope)
+          : []),
+        ...extractedWorks,
+      ];
+
+      const extractedManpower = Array.isArray(res.manpower) && res.manpower.length > 0
+        ? res.manpower.map((m) => ({
+            designation: m.designation || 'Technician',
+            forecast: Number(m.forecast) || 1,
+            actual: Number(m.actual) || 1,
+            normalHrs: Number(m.normalHrs) || 8,
+            overtime1_5: Number(m.overtime1_5) || 0,
+            overtime2_0: Number(m.overtime2_0) || 0,
+            totalManHrs: Number(m.totalManHrs) || Number(m.normalHrs) || 8,
+            comments: m.comments || 'Maintenance',
+          }))
+        : [];
+
+      const existingManpower = Array.isArray(existingDdData.manpower)
+        ? existingDdData.manpower.filter((m) => m.designation)
+        : [];
+      const mergedManpower = [...existingManpower, ...extractedManpower];
+      if (mergedManpower.length === 0) {
+        mergedManpower.push({
+          designation: selectedMsgs[0]?.senderName || 'Technician',
+          forecast: 1,
+          actual: 1,
+          normalHrs: 8,
+          overtime1_5: 0,
+          overtime2_0: 0,
+          totalManHrs: 8,
+          comments: 'Maintenance',
+        });
+      }
+
+      const safeDelays = [
+        ...(Array.isArray(existingDdData.delays) ? existingDdData.delays.filter(Boolean) : []),
+        ...(Array.isArray(res.delays) ? res.delays.filter(Boolean) : []),
+      ];
+      while (safeDelays.length < 5) safeDelays.push('');
+
+      const safeComments = [
+        ...(Array.isArray(existingDdData.comments) ? existingDdData.comments.filter(Boolean) : []),
+        ...(Array.isArray(res.comments) ? res.comments.filter(Boolean) : []),
+      ];
+      while (safeComments.length < 5) safeComments.push('');
+
+      const locationTags = Array.from(
+        new Set(
+          mergedWorks
+            .map((w) => {
+              const s = `${w.area || ''} ${w.scope || ''}`.toLowerCase();
+              const tags: string[] = [];
+              if (s.includes('mpa')) tags.push('MPA');
+              if (s.includes('mpb')) tags.push('MPB');
+              if (s.includes('mpc')) tags.push('MPC');
+              if (s.includes('mpd')) tags.push('MPD');
+              if (s.includes('mpe')) tags.push('MPE');
+              if (s.includes('nhlabane')) tags.push('Nhlabane');
+              if (s.includes('mposa')) tags.push('Mposa');
+              if (s.includes('monzi')) tags.push('Monzi');
+              if (s.includes('return water')) tags.push('Return Water Boosters');
+              if (s.includes('msp') || s.includes('roaster')) tags.push('MSP Roaster');
+              if (s.includes('char')) tags.push('Char Plant');
+              if (s.includes('smelter')) tags.push('Smelter');
+              if (s.includes('iron')) tags.push('Iron Injection');
+              if (s.includes('crane')) tags.push('Stripping Cranes');
+              if (s.includes('slag')) tags.push('Slag Plant');
+              if (s.includes('north screen')) tags.push('North Screen');
+              return tags;
+            })
+            .flat()
+        )
+      );
+
+      const ddPayload: Record<string, any> = {
+        id: targetDdId,
+        version: 'v2',
+        userId: existingDdData.userId || user?.uid || '',
+        contractTitle: existingDdData.contractTitle || 'VSD MAINTENANCE',
+        contractNumber: existingDdData.contractNumber || 'CW 22038313',
+        area: existingDdData.area || chosenEq?.plant || res.area || 'Mining',
+        workType: existingDdData.workType || res.workType || 'Normal',
+        maintenanceType: existingDdData.maintenanceType || res.maintenanceType || 'Scheduled',
+        date: existingDdData.date || res.date || fromDate || format(new Date(), 'yyyy-MM-dd'),
+        shiftStart: existingDdData.shiftStart || res.shiftStart || '07:00',
+        shiftEnd: existingDdData.shiftEnd || res.shiftEnd || '16:00',
+        hrs: existingDdData.hrs || res.hrs || 9,
+        incidents: existingDdData.incidents || res.incidents || 'None reported',
+        toolboxTalk: existingDdData.toolboxTalk || res.toolboxTalk || 'LOTOTO & Safe Working Procedures',
+        manpower: mergedManpower,
+        plant: existingDdData.plant || [{ description: 'Service Vehicle', qty: 1, inspectionDone: 'yes', comments: '' }],
+        works: mergedWorks,
+        delays: safeDelays,
+        comments: safeComments,
+        locationTags,
+        equipmentNames: Array.from(new Set(mergedWorks.map((w) => w.area).filter(Boolean))),
+        isSignedOff: existingDdData.isSignedOff || false,
+        isFinalised: existingDdData.isFinalised || false,
+        createdAt: existingDdData.createdAt || Timestamp.now(),
+      };
+
+      await setDoc(doc(firestore, 'daily_diaries', targetDdId), ddPayload, { merge: true });
+
+      toast({
+        title: 'Exported to Contractors Daily Diary (DD)!',
+        description: `Populated ${targetDdId} from ${selectedMsgs.length} ticked messages. Opening Daily Diary now...`,
+      });
+
+      onOpenChange(false);
+      router.push(`/reports/contractors-daily-diary?id=${encodeURIComponent(targetDdId)}`);
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Daily Diary Export Error',
+        description: err?.message || 'Failed to export messages to Daily Diary.',
+      });
+    } finally {
+      setIsExtractingToDiary(false);
+    }
+  };
+
   const messageDateSpan = useMemo(() => {
     if (loadedMessages.length === 0) return null;
     const dates = loadedMessages.map((m) => m.dateStr).filter(Boolean).sort();
@@ -1623,7 +2010,7 @@ export function WhatsAppGroupSyncDialog({
           <div className="flex items-center justify-between pr-6">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
               <MessageSquare className="h-5 w-5 text-emerald-600" />
-              WhatsApp Group Store → Export to Chat &amp; FSR (Admin / Manager)
+              WhatsApp Group Store → Export to Chat, FSR &amp; Daily Diary (DD)
             </DialogTitle>
             <div className="flex items-center gap-2">
               <Badge
@@ -1644,7 +2031,7 @@ export function WhatsAppGroupSyncDialog({
             </div>
           </div>
           <DialogDescription className="text-xs text-slate-600">
-            Filter your stored WhatsApp Group by date, tick the relevant call-out messages, and export them to an <strong>Equipment Chat</strong> and/or directly into a <strong>Field Service Report (FSR)</strong>.
+            Searches across <strong>both stored WhatsApp folders</strong> (Altek Green + Industrial Elect) by date, lets you filter out unrelated breakdowns (e.g. MPE) or filter 07:00–16:00 maintenance, and exports to <strong>Site Comms Chat</strong>, <strong>FSR</strong>, and <strong>Daily Diary (DD)</strong>.
           </DialogDescription>
         </DialogHeader>
 
@@ -1668,17 +2055,17 @@ export function WhatsAppGroupSyncDialog({
             </TabsTrigger>
           </TabsList>
 
-          {/* TAB 1: SELECT STORED WHATSAPP GROUP + DATE RANGE + EXPORT TO CHAT / FSR */}
-          <TabsContent value="import" className="flex-1 flex flex-col gap-2.5 overflow-hidden mt-2">
+          {/* TAB 1: SELECT STORED WHATSAPP GROUP + DATE RANGE + EXPORT TO CHAT / FSR / DD */}
+          <TabsContent value="import" className="flex-1 flex flex-col gap-2 overflow-hidden mt-2">
             {/* TOP FILTER BAR: GROUP + FROM DATE + TO DATE */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
               <div className="md:col-span-5 space-y-0.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black uppercase text-slate-500">Select WhatsApp Group</Label>
+                  <Label className="text-[10px] font-black uppercase text-slate-500">Select WhatsApp Group Folder(s)</Label>
                   <button
                     type="button"
                     onClick={() => {
-                      if (selectedSourceId.startsWith('store:')) {
+                      if (selectedSourceId.startsWith('store:') && selectedSourceId !== 'store:__all__') {
                         setTargetGroupSelection(selectedSourceId);
                       }
                       setActiveTab('sync');
@@ -1696,6 +2083,11 @@ export function WhatsAppGroupSyncDialog({
                   <option value="">-- Choose a Stored Group --</option>
                   {storedGroups.length > 0 && (
                     <optgroup label="Stored WhatsApp Groups (Full History + Live Updates)">
+                      {storedGroups.length > 1 && (
+                        <option value="store:__all__">
+                          📚 All Stored Folders Combined ({storedGroups.map((g) => g.name).join(' + ')})
+                        </option>
+                      )}
                       {storedGroups.map((g) => (
                         <option key={`store:${g.id}`} value={`store:${g.id}`}>
                           📁 {g.name} ({g.totalMessagesCount || 0} msgs • {g.earliestDate || '?'} → {g.latestDate || '?'})
@@ -1724,7 +2116,9 @@ export function WhatsAppGroupSyncDialog({
                 </select>
                 {messageDateSpan && (
                   <p className="text-[10px] text-emerald-700 font-semibold">
-                    Stored History: {messageDateSpan.count.toLocaleString()} msgs ({messageDateSpan.earliest} → {messageDateSpan.latest})
+                    {selectedSourceId === 'store:__all__'
+                      ? `Combined Across Both Folders: ${messageDateSpan.count.toLocaleString()} msgs (${messageDateSpan.earliest} → ${messageDateSpan.latest})`
+                      : `Stored History: ${messageDateSpan.count.toLocaleString()} msgs (${messageDateSpan.earliest} → ${messageDateSpan.latest})`}
                   </p>
                 )}
               </div>
@@ -1771,74 +2165,130 @@ export function WhatsAppGroupSyncDialog({
               </div>
             </div>
 
-            {/* TICK / UNTICK ALL + KEYWORD FILTER */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleAllFiltered}
-                  className="h-7 px-2 text-xs font-bold text-slate-700"
-                >
-                  {selectedMsgIds.size === filteredMessages.length && filteredMessages.length > 0 ? (
-                    <CheckSquare className="h-4 w-4 mr-1.5 text-emerald-600" />
-                  ) : (
-                    <Square className="h-4 w-4 mr-1.5 text-slate-400" />
-                  )}
-                  Tick / Untick All ({selectedMsgIds.size} of {filteredMessages.length} selected)
-                </Button>
-
-                {selectedStoreGroup && isWaConnected && (
+            {/* TICK / UNTICK ALL + SHIFT HOURS FILTER + EXCLUDE OTHER MINE BREAKDOWNS */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    disabled={isSyncingLiveToStore}
-                    onClick={async () => {
-                      await handleSyncLiveIntoSelectedStore(selectedStoreGroup, false);
-                      await loadMessagesForSelectedSource();
-                    }}
-                    className="h-7 text-[11px] gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold"
+                    onClick={toggleAllFiltered}
+                    className="h-6 px-2 text-[11px] font-bold text-slate-800"
                   >
-                    {isSyncingLiveToStore ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                    {selectedMsgIds.size === filteredMessages.length && filteredMessages.length > 0 ? (
+                      <CheckSquare className="h-3.5 w-3.5 mr-1 text-emerald-600" />
                     ) : (
-                      <RefreshCw className="h-3 w-3" />
+                      <Square className="h-3.5 w-3.5 mr-1 text-slate-400" />
                     )}
-                    Sync Newest Live Messages
+                    Tick All ({selectedMsgIds.size}/{filteredMessages.length})
                   </Button>
-                )}
+
+                  <div className="flex items-center gap-1 border-l border-slate-300 pl-2">
+                    <button
+                      type="button"
+                      onClick={() => setHoursFilterMode('all')}
+                      className={cn(
+                        'px-2 py-0.5 rounded text-[10px] font-bold border transition-colors',
+                        hoursFilterMode === 'all'
+                          ? 'bg-slate-800 text-white border-slate-900'
+                          : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
+                      )}
+                    >
+                      All Hours
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHoursFilterMode('office_dd')}
+                      title="Show messages sent between 07:00 and 16:00 or mentioning maintenance for Daily Diary (DD)"
+                      className={cn(
+                        'px-2 py-0.5 rounded text-[10px] font-bold border transition-colors',
+                        hoursFilterMode === 'office_dd'
+                          ? 'bg-amber-600 text-white border-amber-700'
+                          : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-50'
+                      )}
+                    >
+                      ☀️ 07:00–16:00 Maint (For DD)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHoursFilterMode('after_hours_fsr')}
+                      title="Show after-hours call-out and breakdown messages for FSR"
+                      className={cn(
+                        'px-2 py-0.5 rounded text-[10px] font-bold border transition-colors',
+                        hoursFilterMode === 'after_hours_fsr'
+                          ? 'bg-emerald-600 text-white border-emerald-700'
+                          : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-50'
+                      )}
+                    >
+                      🌙 Call-Out Hrs (For FSR)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative w-48">
+                  <Filter className="h-3 w-3 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                  <Input
+                    placeholder="Keep keyword..."
+                    value={keywordFilter}
+                    onChange={(e) => setKeywordFilter(e.target.value)}
+                    className="h-6 pl-6 text-[11px] bg-white"
+                  />
+                </div>
               </div>
 
-              <div className="relative w-56">
-                <Filter className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              {/* EXCLUDE OTHER BREAKDOWNS IN SAME TIMESTAMP (e.g. MPE) */}
+              <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-slate-200/80">
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[9px] font-black uppercase text-red-700">
+                    Filter Out Other Breakdown in Same Time:
+                  </span>
+                  {(['MPA', 'MPC', 'MPD', 'MPE', 'Smelter'] as const).map((areaCode) => {
+                    const isExcluded = excludedAreasFilter.includes(areaCode);
+                    return (
+                      <button
+                        key={areaCode}
+                        type="button"
+                        onClick={() => toggleExcludeArea(areaCode)}
+                        className={cn(
+                          'px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors',
+                          isExcluded
+                            ? 'bg-red-600 text-white border-red-700'
+                            : 'bg-white text-slate-600 border-slate-300 hover:bg-red-50 hover:text-red-700'
+                        )}
+                      >
+                        {isExcluded ? `🚫 Filtered Out ${areaCode}` : `Exclude ${areaCode}`}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <Input
-                  placeholder="Filter messages by keyword..."
-                  value={keywordFilter}
-                  onChange={(e) => setKeywordFilter(e.target.value)}
-                  className="h-7 pl-8 text-xs"
+                  placeholder="Exclude word (e.g. MPE)..."
+                  value={excludeKeyword}
+                  onChange={(e) => setExcludeKeyword(e.target.value)}
+                  className="h-6 w-48 text-[11px] bg-white border-red-200"
                 />
               </div>
             </div>
 
             {/* MESSAGE LIST WITH CHECKBOXES */}
-            <div className="flex-1 min-h-[160px] max-h-[240px] overflow-y-auto border rounded-lg bg-slate-50/60 p-2.5 space-y-1.5">
+            <div className="flex-1 min-h-[140px] max-h-[210px] overflow-y-auto border rounded-lg bg-slate-50/60 p-2 space-y-1.5">
               {loadingMessages ? (
-                <div className="flex items-center justify-center h-36 text-slate-400 text-xs gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading group messages for selected dates...
+                <div className="flex items-center justify-center h-32 text-slate-400 text-xs gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading group messages across stored folders...
                 </div>
               ) : !selectedSourceId ? (
-                <div className="flex flex-col items-center justify-center h-36 text-center text-slate-500 text-xs gap-2 p-4">
+                <div className="flex flex-col items-center justify-center h-32 text-center text-slate-500 text-xs gap-2 p-4">
                   <p className="font-semibold">
                     Select a Stored WhatsApp Group above, or click Tab 2 to upload your exported WhatsApp `.txt` file.
                   </p>
                 </div>
               ) : filteredMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-36 text-center text-slate-500 text-xs gap-2 p-4">
+                <div className="flex flex-col items-center justify-center h-32 text-center text-slate-500 text-xs gap-2 p-4">
                   <p>
-                    No messages found in this group between <strong>{fromDate || 'start'}</strong> and{' '}
-                    <strong>{toDate || 'end'}</strong>.
+                    No messages found between <strong>{fromDate || 'start'}</strong> and{' '}
+                    <strong>{toDate || 'end'}</strong> with the active filters.
                   </p>
                   {messageDateSpan && (
                     <Button
@@ -1848,16 +2298,20 @@ export function WhatsAppGroupSyncDialog({
                       onClick={() => {
                         setFromDate(messageDateSpan.earliest);
                         setToDate(messageDateSpan.latest);
+                        setHoursFilterMode('all');
+                        setExcludedAreasFilter([]);
+                        setExcludeKeyword('');
                       }}
                       className="text-xs h-7 font-bold"
                     >
-                      Show Full Stored Range ({messageDateSpan.earliest} → {messageDateSpan.latest})
+                      Reset Filters &amp; Show Full Range ({messageDateSpan.earliest} → {messageDateSpan.latest})
                     </Button>
                   )}
                 </div>
               ) : (
                 filteredMessages.map((msg) => {
                   const isChecked = selectedMsgIds.has(msg.id);
+                  const isOfficeHrs = isOfficeHoursTime(msg.timeStr);
                   return (
                     <div
                       key={msg.id}
@@ -1876,8 +2330,25 @@ export function WhatsAppGroupSyncDialog({
                         className="mt-0.5 h-4 w-4 accent-emerald-600 rounded cursor-pointer"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <span className="font-bold text-slate-900">{msg.senderName}</span>
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 mb-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-900">{msg.senderName}</span>
+                            {msg.groupName && (
+                              <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 text-[9px] font-bold">
+                                📁 {msg.groupName}
+                              </span>
+                            )}
+                            <span
+                              className={cn(
+                                'px-1.5 py-0.2 rounded text-[9px] font-bold',
+                                isOfficeHrs
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-purple-100 text-purple-800'
+                              )}
+                            >
+                              {isOfficeHrs ? '☀️ 07:00–16:00 (DD)' : '🌙 Call-Out Hrs (FSR)'}
+                            </span>
+                          </div>
                           <span className="font-mono text-[10px] text-slate-500">
                             {msg.dateStr} {msg.timeStr}
                           </span>
@@ -2069,78 +2540,147 @@ export function WhatsAppGroupSyncDialog({
                 </Button>
               </div>
 
-              {/* RIGHT CARD: EXPORT TO FIELD SERVICE REPORT (FSR) */}
+              {/* RIGHT CARD: EXPORT TO FIELD SERVICE REPORT (FSR) & DAILY DIARY (DD) */}
               <div className="bg-white border border-emerald-200 rounded-lg p-2.5 space-y-2 shadow-sm flex flex-col justify-between">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black uppercase text-emerald-800 flex items-center gap-1.5">
                       <FileText className="h-3.5 w-3.5 text-emerald-600" />
-                      B. Export Ticked to FSR
+                      B. Export Ticked to FSR &amp; Daily Diary (DD)
                     </span>
                     <span className="text-[10px] font-bold text-emerald-700">AI Auto-Fill</span>
                   </div>
 
-                  <div>
-                    <Label className="text-[9px] font-bold uppercase text-slate-500">
-                      Select Target FSR (Current, by FSR Number, or New)
-                    </Label>
-                    <select
-                      value={selectedFsrTarget}
-                      onChange={(e) => setSelectedFsrTarget(e.target.value)}
-                      className="w-full h-8 mt-0.5 px-2 border border-emerald-300 rounded text-xs font-bold bg-white"
-                    >
-                      {onExtractedToFsr && (
-                        <option value="__current_fsr__">
-                          📌 Current Open FSR (Populate This Report)
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    <div>
+                      <Label className="text-[9px] font-bold uppercase text-slate-500">
+                        Target FSR (Breakdown / Call-Out)
+                      </Label>
+                      <select
+                        value={selectedFsrTarget}
+                        onChange={(e) => setSelectedFsrTarget(e.target.value)}
+                        className="w-full h-7 mt-0.5 px-1.5 border border-emerald-300 rounded text-[11px] font-bold bg-white"
+                      >
+                        {onExtractedToFsr && (
+                          <option value="__current_fsr__">
+                            📌 Current Open FSR
+                          </option>
+                        )}
+                        <option value="__new_fsr__">
+                          ➕ Create New FSR
                         </option>
-                      )}
-                      <option value="__new_fsr__">
-                        ➕ Create New FSR from Ticked Messages
-                      </option>
-                      {fsrOptions.length > 0 && (
-                        <optgroup label="Select Existing FSR by Number">
-                          {fsrOptions.map((fsr) => (
-                            <option key={fsr.id} value={fsr.id}>
-                              📄 {fsr.fsrReference} • {fsr.date || 'No date'} • {fsr.assetName}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </select>
+                        {fsrOptions.length > 0 && (
+                          <optgroup label="Select Existing FSR by Number">
+                            {fsrOptions.map((fsr) => (
+                              <option key={fsr.id} value={fsr.id}>
+                                📄 {fsr.fsrReference} • {fsr.date || 'No date'} • {fsr.assetName}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label className="text-[9px] font-bold uppercase text-amber-800">
+                        Target Daily Diary (07:00–16:00 Maint)
+                      </Label>
+                      <select
+                        value={selectedDiaryTarget}
+                        onChange={(e) => setSelectedDiaryTarget(e.target.value)}
+                        className="w-full h-7 mt-0.5 px-1.5 border border-amber-300 rounded text-[11px] font-bold bg-white"
+                      >
+                        {onExtractedToDiary && (
+                          <option value="__current_dd__">
+                            📌 Current Open Daily Diary
+                          </option>
+                        )}
+                        <option value="__new_dd__">
+                          ➕ Create New Daily Diary (DD)
+                        </option>
+                        {diaryOptions.length > 0 && (
+                          <optgroup label="Select Existing Daily Diary by Number">
+                            {diaryOptions.map((dd) => (
+                              <option key={dd.id} value={dd.id}>
+                                📘 {dd.id} • {dd.date || 'No date'} • {dd.workSummary}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1.5 pt-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={isExtractingToFsr || selectedMsgIds.size === 0}
-                    onClick={() => handleExportTickedToFsr(false)}
-                    className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold gap-1 px-2"
-                  >
-                    {isExtractingToFsr ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5" />
-                    )}
-                    Export to FSR
-                  </Button>
+                <div className="space-y-1.5 pt-1">
+                  {/* ROW 1: FSR BUTTONS */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isExtractingToFsr || isExtractingToDiary || selectedMsgIds.size === 0}
+                      onClick={() => handleExportTickedToFsr(false)}
+                      className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold gap-1 px-2"
+                    >
+                      {isExtractingToFsr ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      Export to FSR
+                    </Button>
 
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={isExtractingToFsr || isExportingToChat || selectedMsgIds.size === 0}
-                    onClick={() => handleExportTickedToFsr(true)}
-                    className="h-8 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold gap-1 px-2"
-                    title="Saves the ticked messages into the Equipment Chat AND populates the selected FSR at the same time"
-                  >
-                    {isExtractingToFsr ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                    )}
-                    Export to Chat &amp; FSR
-                  </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isExtractingToFsr || isExtractingToDiary || isExportingToChat || selectedMsgIds.size === 0}
+                      onClick={() => handleExportTickedToFsr(true)}
+                      className="h-8 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold gap-1 px-2"
+                      title="Saves the ticked messages into the Equipment Chat AND populates the selected FSR at the same time"
+                    >
+                      {isExtractingToFsr ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                      )}
+                      Export to Chat &amp; FSR
+                    </Button>
+                  </div>
+
+                  {/* ROW 2: DAILY DIARY (DD) BUTTONS */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isExtractingToDiary || isExtractingToFsr || selectedMsgIds.size === 0}
+                      onClick={() => handleExportTickedToDailyDiary(false)}
+                      className="h-8 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold gap-1 px-2"
+                      title="Populates the Contractors Daily Diary (DD) from the ticked messages"
+                    >
+                      {isExtractingToDiary ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      Export to DD
+                    </Button>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isExtractingToDiary || isExtractingToFsr || isExportingToChat || selectedMsgIds.size === 0}
+                      onClick={() => handleExportTickedToDailyDiary(true)}
+                      className="h-8 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold gap-1 px-2"
+                      title="Saves the ticked messages into the Equipment Chat AND populates the selected Daily Diary (DD) at the same time"
+                    >
+                      {isExtractingToDiary ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-amber-400" />
+                      )}
+                      Export to Chat &amp; DD
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
