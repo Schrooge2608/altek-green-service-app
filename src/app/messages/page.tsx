@@ -47,6 +47,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  addDoc,
   writeBatch,
   deleteDoc
 } from 'firebase/firestore';
@@ -113,6 +114,7 @@ export default function MessagingPage() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [summaryData, setSummaryData] = useState<SummarizeChatWithRcaOutput | null>(null);
   const [selectedDdTarget, setSelectedDdTarget] = useState<string>('__new_dd__');
+  const [selectedFsrTarget, setSelectedFsrTarget] = useState<string>('__new_fsr__');
   const [diaryOptions, setDiaryOptions] = useState<
     { id: string; date: string; area: string; workSummary: string }[]
   >([]);
@@ -120,6 +122,7 @@ export default function MessagingPage() {
     { id: string; fsrReference: string; date: string; assetName: string }[]
   >([]);
   const [isExportingSummaryToDd, setIsExportingSummaryToDd] = useState(false);
+  const [isExportingSummaryToFsr, setIsExportingSummaryToFsr] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 1. FETCH CHANNELS (Fetch all channels without orderBy so documents missing lastMessageTime are never dropped, then sort in-memory)
@@ -524,24 +527,46 @@ export default function MessagingPage() {
     if (saved && Array.isArray(saved.equipmentBreakdowns) && saved.equipmentBreakdowns.length > 0) {
       setSummaryData(saved);
       setIsSummaryPanelOpen(true);
+
+      // Auto-rename channel if it still says "Unknown Equipment" or "Callout Chat"
+      const primaryEq = saved.equipmentBreakdowns[0]?.equipmentName || '';
+      const curName = activeChannel?.name || '';
+      if (
+        activeChannelId &&
+        firestore &&
+        primaryEq &&
+        !primaryEq.toLowerCase().includes('unknown equipment') &&
+        (curName.toLowerCase().includes('unknown equipment') ||
+          curName.toLowerCase().startsWith('callout chat') ||
+          !(activeChannel as any)?.equipmentName)
+      ) {
+        const nextName = curName.toLowerCase().includes('unknown equipment') || curName.toLowerCase().startsWith('callout chat')
+          ? `Breakdown: ${primaryEq}${saved.date ? ` (${saved.date})` : ''}`
+          : curName;
+        updateDoc(doc(firestore, 'channels', activeChannelId), {
+          name: nextName,
+          equipmentName: primaryEq,
+          type: 'breakdown',
+        }).catch(() => {});
+      }
     } else {
       setSummaryData(null);
     }
-  }, [activeChannelId, (activeChannel as any)?.aiSummaryRca]);
+  }, [activeChannelId, (activeChannel as any)?.aiSummaryRca, activeChannel?.name, firestore]);
 
-  const handleSummarizeChat = async (forceRegenerate = false) => {
+  const handleSummarizeChat = async (forceRegenerate = false): Promise<SummarizeChatWithRcaOutput | null> => {
     if (!messages || messages.length === 0) {
       toast({
         variant: 'destructive',
         title: 'No Messages to Summarize',
         description: 'This chat does not have any messages yet.',
       });
-      return;
+      return null;
     }
 
     setIsSummaryPanelOpen(true);
     if (!forceRegenerate && summaryData && summaryData.equipmentBreakdowns?.length > 0) {
-      return;
+      return summaryData;
     }
 
     setIsGeneratingSummary(true);
@@ -557,9 +582,16 @@ export default function MessagingPage() {
         })
         .join('\n');
 
-      const eqHint =
+      const rawEqHint = (
         (activeChannel as any)?.equipmentName ||
-        (activeChannel?.name || '').replace(/^#?Breakdown:\s*/i, '').trim();
+        (activeChannel?.name || '').replace(/^#?Breakdown:\s*/i, '').trim()
+      ).trim();
+      const eqHint =
+        rawEqHint &&
+        !rawEqHint.toLowerCase().includes('unknown equipment') &&
+        !rawEqHint.toLowerCase().startsWith('callout chat')
+          ? rawEqHint
+          : '';
 
       const res = await summarizeChatWithRca({
         chatHistory: chatTranscript,
@@ -572,7 +604,7 @@ export default function MessagingPage() {
           title: 'Summary Error',
           description: res.error || 'Could not generate Summary & RCA from this chat.',
         });
-        return;
+        return null;
       }
 
       setSummaryData(res);
@@ -606,19 +638,26 @@ export default function MessagingPage() {
         title: 'Summary & RCA Ready',
         description: `Generated factual Summary & RCA for ${res.equipmentBreakdowns.length} piece(s) of equipment.`,
       });
+      return res;
     } catch (err: any) {
       toast({
         variant: 'destructive',
         title: 'Summary Error',
         description: err?.message || 'Failed to summarize chat.',
       });
+      return null;
     } finally {
       setIsGeneratingSummary(false);
     }
   };
 
   const handleExportSummaryToDailyDiary = async () => {
-    if (!firestore || !summaryData || summaryData.equipmentBreakdowns.length === 0) return;
+    if (!firestore) return;
+    let activeSummary = summaryData;
+    if (!activeSummary || !activeSummary.equipmentBreakdowns || activeSummary.equipmentBreakdowns.length === 0) {
+      activeSummary = await handleSummarizeChat(false);
+    }
+    if (!activeSummary || !activeSummary.equipmentBreakdowns || activeSummary.equipmentBreakdowns.length === 0) return;
 
     setIsExportingSummaryToDd(true);
     try {
@@ -645,8 +684,8 @@ export default function MessagingPage() {
         }
       }
 
-      // Derive primary date from summaryData or first message in chat
-      let primaryDate = summaryData.date || '';
+      // Derive primary date from activeSummary or first message in chat
+      let primaryDate = activeSummary.date || '';
       if (!primaryDate && messages && messages.length > 0) {
         const firstMsg = messages[0];
         primaryDate =
@@ -655,11 +694,11 @@ export default function MessagingPage() {
       }
       if (!primaryDate) primaryDate = format(new Date(), 'yyyy-MM-dd');
 
-      const newWorks = summaryData.equipmentBreakdowns.map((eqItem) => ({
+      const newWorks = activeSummary.equipmentBreakdowns.map((eqItem) => ({
         area: eqItem.equipmentName || 'Plant Equipment',
         scope: `SUMMARY:\n• ${eqItem.summaryBullets.join('\n• ')}\n\nRCA:\n• ${eqItem.rcaBullets.join('\n• ')}`,
-        timeStart: eqItem.timeStart || summaryData.shiftStart || '07:00',
-        timeEnd: eqItem.timeEnd || summaryData.shiftEnd || '16:00',
+        timeStart: eqItem.timeStart || activeSummary.shiftStart || '07:00',
+        timeEnd: eqItem.timeEnd || activeSummary.shiftEnd || '16:00',
         hrs: eqItem.hrs || 4,
       }));
 
@@ -669,7 +708,7 @@ export default function MessagingPage() {
       const mergedWorks = [...existingWorks, ...newWorks];
 
       const summaryCommentBlocks: string[] = [];
-      for (const eqItem of summaryData.equipmentBreakdowns) {
+      for (const eqItem of activeSummary.equipmentBreakdowns) {
         summaryCommentBlocks.push(
           `[${eqItem.equipmentName}] SUMMARY: ${eqItem.summaryBullets.map((b) => `• ${b}`).join(' ')}`
         );
@@ -687,20 +726,20 @@ export default function MessagingPage() {
       const existingDelays = Array.isArray(existingDdData.delays)
         ? existingDdData.delays.filter(Boolean)
         : [];
-      const mergedDelays = [...existingDelays, ...(summaryData.delays || []).filter(Boolean)];
+      const mergedDelays = [...existingDelays, ...(activeSummary.delays || []).filter(Boolean)];
       while (mergedDelays.length < 3) mergedDelays.push('');
 
       const techManpower =
-        summaryData.technicians && summaryData.technicians.length > 0
-          ? summaryData.technicians.map((tName) => ({
+        activeSummary.technicians && activeSummary.technicians.length > 0
+          ? activeSummary.technicians.map((tName) => ({
               designation: tName,
               forecast: 1,
               actual: 1,
-              normalHrs: summaryData.hrs || 8,
+              normalHrs: activeSummary.hrs || 8,
               overtime1_5: 0,
               overtime2_0: 0,
-              totalManHrs: summaryData.hrs || 8,
-              comments: summaryData.equipmentBreakdowns.map((e) => e.equipmentName).join(', '),
+              totalManHrs: activeSummary.hrs || 8,
+              comments: activeSummary.equipmentBreakdowns.map((e) => e.equipmentName).join(', '),
             }))
           : [
               {
@@ -711,7 +750,7 @@ export default function MessagingPage() {
                 overtime1_5: 0,
                 overtime2_0: 0,
                 totalManHrs: 8,
-                comments: summaryData.equipmentBreakdowns.map((e) => e.equipmentName).join(', '),
+                comments: activeSummary.equipmentBreakdowns.map((e) => e.equipmentName).join(', '),
               },
             ];
 
@@ -725,12 +764,12 @@ export default function MessagingPage() {
         id: targetDdId,
         reportNumber: targetDdId,
         date: existingDdData.date || primaryDate,
-        area: existingDdData.area || summaryData.area || 'Mining',
-        workType: existingDdData.workType || summaryData.workType || 'Callout',
-        maintenanceType: existingDdData.maintenanceType || summaryData.maintenanceType || 'Unscheduled',
-        shiftStart: existingDdData.shiftStart || summaryData.shiftStart || '07:00',
-        shiftEnd: existingDdData.shiftEnd || summaryData.shiftEnd || '16:00',
-        hrs: existingDdData.hrs || summaryData.hrs || 8,
+        area: existingDdData.area || activeSummary.area || 'Mining',
+        workType: existingDdData.workType || activeSummary.workType || 'Callout',
+        maintenanceType: existingDdData.maintenanceType || activeSummary.maintenanceType || 'Unscheduled',
+        shiftStart: existingDdData.shiftStart || activeSummary.shiftStart || '07:00',
+        shiftEnd: existingDdData.shiftEnd || activeSummary.shiftEnd || '16:00',
+        hrs: existingDdData.hrs || activeSummary.hrs || 8,
         incidents: existingDdData.incidents || 'None reported',
         toolboxTalk: existingDdData.toolboxTalk || 'LOTOTO & Safe Working Procedures',
         manpower: mergedManpower,
@@ -756,7 +795,7 @@ export default function MessagingPage() {
 
       toast({
         title: `Exported Summary & RCA to ${targetDdId}!`,
-        description: `Populated ${summaryData.equipmentBreakdowns.length} equipment section(s) into ${targetDdId}. Opening Daily Diary...`,
+        description: `Populated ${activeSummary.equipmentBreakdowns.length} equipment section(s) into ${targetDdId}. Opening Daily Diary...`,
       });
 
       router.push(`/reports/contractors-daily-diary?id=${encodeURIComponent(targetDdId)}`);
@@ -770,6 +809,362 @@ export default function MessagingPage() {
       setIsExportingSummaryToDd(false);
     }
   };
+
+  /**
+   * EXPORT SUMMARY & RCA TO FIELD SERVICE REPORT (FSR)
+   * Exports the generated Equipment Summary & Root Cause Analysis (RCA) bullet points
+   * (NOT raw chat history) into the target FSR.
+   */
+  const handleExportSummaryToFsr = async (overrideFsrTarget?: string) => {
+    if (!firestore) return;
+    let activeSummary = summaryData;
+    if (!activeSummary || !activeSummary.equipmentBreakdowns || activeSummary.equipmentBreakdowns.length === 0) {
+      activeSummary = await handleSummarizeChat(false);
+    }
+    if (!activeSummary || !activeSummary.equipmentBreakdowns || activeSummary.equipmentBreakdowns.length === 0) return;
+
+    setIsExportingSummaryToFsr(true);
+    try {
+      let targetFsrId = overrideFsrTarget || selectedFsrTarget;
+      let existingFsrData: any = {};
+
+      // Derive primary date from activeSummary or first message in chat
+      let primaryDate = activeSummary.date || '';
+      if (!primaryDate && messages && messages.length > 0) {
+        const firstMsg = messages[0];
+        primaryDate =
+          firstMsg.messageDate ||
+          (firstMsg.createdAt ? format(firstMsg.createdAt.toDate(), 'yyyy-MM-dd') : '');
+      }
+      if (!primaryDate) primaryDate = format(new Date(), 'yyyy-MM-dd');
+
+      // Load equipment catalog to match equipmentId / OEM / model / serialNo
+      const eqSnap = await getDocs(collection(firestore, 'equipment'));
+      const allEquip: any[] = [];
+      eqSnap.forEach((d) => allEquip.push({ id: d.id, ...(d.data() as any) }));
+
+      const matchEquip = (rawName: string) => {
+        const clean = (rawName || '').trim().toLowerCase();
+        const found = allEquip.find((e) => {
+          const name = (e.name || '').trim().toLowerCase();
+          const prefix = (e.mcc || e.location || e.division || '').trim().toLowerCase();
+          const full = prefix ? `${prefix} - ${name}` : name;
+          return (
+            full === clean ||
+            name === clean ||
+            (clean.length > 3 && (full.includes(clean) || clean.includes(name)))
+          );
+        });
+        if (!found) {
+          return {
+            equipmentId: null,
+            assetName: rawName.trim(),
+            oem: '',
+            model: '',
+            serialNo: '',
+            rating: '',
+            location: '',
+          };
+        }
+        const prefix = found.mcc || found.location || found.division || '';
+        return {
+          equipmentId: found.id,
+          assetName: prefix ? `${prefix} - ${found.name}` : found.name,
+          oem: found.oem || found.manufacturer || '',
+          model: found.model || found.vsdModel || '',
+          serialNo: found.serialNumber || found.serialNo || '',
+          rating: found.motorPower ? `${found.motorPower} kW` : found.rating || '',
+          location: found.location || found.plant || '',
+        };
+      };
+
+      const eqDetails = activeSummary.equipmentBreakdowns.map((b) => matchEquip(b.equipmentName));
+      const primaryEq = eqDetails[0];
+      const primaryBreakdown = activeSummary.equipmentBreakdowns[0];
+
+      if (!targetFsrId || targetFsrId === '__new_fsr__') {
+        // Generate next sequential FSR-XXXX reference
+        const fsrSnap = await getDocs(collection(firestore, 'field_service_reports'));
+        let maxNum = 200;
+        fsrSnap.forEach((d) => {
+          const ref = (d.data() as any)?.fsrReference || '';
+          const m = ref.match(/FSR-(\d+)/i);
+          if (m) {
+            const n = parseInt(m[1], 10);
+            if (!isNaN(n) && n > maxNum) maxNum = n;
+          }
+        });
+        const nextFsrRef = `FSR-${String(maxNum + 1).padStart(4, '0')}`;
+
+        const newFsrPayload: any = {
+          userId: user?.uid || '',
+          fsrReference: nextFsrRef,
+          date: primaryDate,
+          status: 'Draft',
+          createdAt: new Date().toISOString(),
+          customer: 'Richards Bay Minerals',
+          site: 'RBM',
+          area: activeSummary.area || primaryEq?.location || 'Mining',
+          jobCategory: 'Call-Out',
+          equipmentId: primaryEq?.equipmentId || null,
+          assetName: primaryEq?.assetName || primaryBreakdown.equipmentName || '',
+          oem: primaryEq?.oem || '',
+          model: primaryEq?.model || '',
+          serialNo: primaryEq?.serialNo || '',
+          rating: primaryEq?.rating || '',
+          additionalEquipment: eqDetails.slice(1).map((item) => ({
+            equipmentId: item.equipmentId,
+            assetName: item.assetName,
+            oem: item.oem,
+            model: item.model,
+            serialNo: item.serialNo,
+            rating: item.rating,
+          })),
+          parts: [],
+          personnel: [],
+          hse: {
+            ppe: 'NA',
+            riskAssessment: 'NA',
+            permit: 'NA',
+            incidents: 'NA',
+            areaCleaned: 'NA',
+            environmentalImpact: 'NA',
+            observations: '',
+          },
+        };
+        const createdRef = await addDoc(collection(firestore, 'field_service_reports'), newFsrPayload);
+        targetFsrId = createdRef.id;
+        existingFsrData = newFsrPayload;
+      } else {
+        const fsrSnap = await getDoc(doc(firestore, 'field_service_reports', targetFsrId));
+        if (fsrSnap.exists()) {
+          existingFsrData = fsrSnap.data() || {};
+        }
+      }
+
+      // Build structured Summary & RCA text (NOT raw chat messages)
+      const isMultiEquip = activeSummary.equipmentBreakdowns.length > 1;
+
+      const customerFaultText = activeSummary.equipmentBreakdowns
+        .map((eq) =>
+          isMultiEquip
+            ? `[${eq.equipmentName}] ${eq.summaryBullets[0] || 'Breakdown call-out attended.'}`
+            : eq.summaryBullets[0] || 'Breakdown call-out attended.'
+        )
+        .join('\n');
+
+      const summaryFindingsText = activeSummary.equipmentBreakdowns
+        .map((eq) => {
+          const header = isMultiEquip ? `${eq.equipmentName} — SUMMARY:\n` : `SUMMARY (${eq.equipmentName}):\n`;
+          return `${header}${eq.summaryBullets.map((b) => `• ${b}`).join('\n')}`;
+        })
+        .join('\n\n');
+
+      const rcaText = activeSummary.equipmentBreakdowns
+        .map((eq) => {
+          const header = isMultiEquip
+            ? `${eq.equipmentName} — RCA (Root Cause Analysis):\n`
+            : `RCA (${eq.equipmentName}):\n`;
+          return `${header}${eq.rcaBullets.map((b) => `• ${b}`).join('\n')}`;
+        })
+        .join('\n\n');
+
+      // Extract action / repair / resolution bullets for Corrective Actions
+      const correctiveBlocks = activeSummary.equipmentBreakdowns
+        .map((eq) => {
+          const actionKeywords =
+            /\b(replaced|repaired|reset|tested|installed|fitted|cleaned|checked|isolated|measured|tightened|adjusted|restored|commissioned|started|completed|ran|handover|handed over|operational)\b/i;
+          const actionBullets = eq.summaryBullets.filter((b) => actionKeywords.test(b));
+          const chosenBullets = actionBullets.length > 0 ? actionBullets : eq.summaryBullets.slice(-2);
+          const header = isMultiEquip ? `${eq.equipmentName} — CORRECTIVE ACTIONS:\n` : '';
+          return `${header}${chosenBullets.map((b) => `• ${b}`).join('\n')}`;
+        })
+        .join('\n\n');
+
+      const personnelList =
+        activeSummary.technicians && activeSummary.technicians.length > 0
+          ? activeSummary.technicians.map((name) => ({
+              name,
+              role: 'Technician',
+              hrs: primaryBreakdown.hrs || activeSummary.hrs || 4,
+              ot: primaryBreakdown.hrs || activeSummary.hrs || 4,
+            }))
+          : existingFsrData.personnel || [];
+
+      const updatePayload: any = {
+        date: existingFsrData.date || primaryDate,
+        area: existingFsrData.area || activeSummary.area || primaryEq?.location || 'Mining',
+        equipmentId: existingFsrData.equipmentId || primaryEq?.equipmentId || null,
+        assetName: existingFsrData.assetName || primaryEq?.assetName || primaryBreakdown.equipmentName || '',
+        ...(primaryEq?.oem && !existingFsrData.oem ? { oem: primaryEq.oem } : {}),
+        ...(primaryEq?.model && !existingFsrData.model ? { model: primaryEq.model } : {}),
+        ...(primaryEq?.serialNo && !existingFsrData.serialNo ? { serialNo: primaryEq.serialNo } : {}),
+        ...(primaryEq?.rating && !existingFsrData.rating ? { rating: primaryEq.rating } : {}),
+        ...(eqDetails.length > 1
+          ? {
+              additionalEquipment: eqDetails.slice(1).map((item) => ({
+                equipmentId: item.equipmentId,
+                assetName: item.assetName,
+                oem: item.oem,
+                model: item.model,
+                serialNo: item.serialNo,
+                rating: item.rating,
+              })),
+            }
+          : {}),
+        timeCallOut:
+          existingFsrData.timeCallOut || primaryBreakdown.timeStart || activeSummary.shiftStart || '',
+        timeStart:
+          existingFsrData.timeStart || primaryBreakdown.timeStart || activeSummary.shiftStart || '',
+        timeEnd:
+          existingFsrData.timeEnd || primaryBreakdown.timeEnd || activeSummary.shiftEnd || '',
+        customerFault: customerFaultText,
+        techFindings: summaryFindingsText,
+        rca: rcaText,
+        correctiveActions: correctiveBlocks,
+        personnel: personnelList,
+        ...(activeChannelId ? { linkedChannelId: activeChannelId } : {}),
+      };
+
+      await setDoc(doc(firestore, 'field_service_reports', targetFsrId), updatePayload, { merge: true });
+
+      if (activeChannelId) {
+        await updateDoc(doc(firestore, 'channels', activeChannelId), {
+          linkedFsrId: targetFsrId,
+        }).catch(() => {});
+      }
+
+      const targetRef =
+        existingFsrData.fsrReference ||
+        fsrOptions.find((f) => f.id === targetFsrId)?.fsrReference ||
+        targetFsrId;
+
+      toast({
+        title: `Exported Summary & RCA to ${targetRef}!`,
+        description: `Populated Summary & Root Cause Analysis for ${activeSummary.equipmentBreakdowns.length} equipment item(s) into ${targetRef}. Opening FSR...`,
+      });
+
+      router.push(`/reports/field-service-report/${targetFsrId}`);
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Export Summary to FSR Failed',
+        description: err?.message || 'Could not export Summary & RCA to FSR.',
+      });
+    } finally {
+      setIsExportingSummaryToFsr(false);
+    }
+  };
+
+  // Helper to parse "HH:mm" into minutes since midnight (0..1439)
+  const parseTimeMins = (timeStr?: string | null): number | null => {
+    if (!timeStr) return null;
+    const m = String(timeStr).trim().match(/(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (isNaN(hh) || isNaN(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return hh * 60 + mm;
+  };
+
+  /**
+   * Determines whether the active breakdown chat is an Office Hours Breakdown (07:00 - 16:00 -> Daily Diary, NOT FSR)
+   * or an After-Hours Call-Out Breakdown (16:00 - 07:00 -> FSR).
+   */
+  const isOfficeHoursBreakdown = React.useMemo(() => {
+    const chanAny = activeChannel as any;
+    if (chanAny?.breakdownShiftType === 'office_hours') return true;
+    if (chanAny?.breakdownShiftType === 'after_hours') return false;
+
+    // 1. Check AI Summary & RCA timestamps if available
+    const primaryEb = summaryData?.equipmentBreakdowns?.[0];
+    const startMins = parseTimeMins(primaryEb?.timeStart || summaryData?.shiftStart);
+    const endMins = parseTimeMins(primaryEb?.timeEnd || summaryData?.shiftEnd);
+    if (startMins !== null) {
+      // Office hours: 07:00 (420 mins) to 16:00 (960 mins)
+      const startsInOffice = startMins >= 420 && startMins < 960;
+      const endsInOffice = endMins === null || (endMins >= 420 && endMins <= 990);
+      return startsInOffice && endsInOffice;
+    }
+
+    // 2. Fallback: Check message timestamps in the active chat
+    if (messages && messages.length > 0) {
+      const msgMins: number[] = [];
+      for (const m of messages) {
+        const tStr =
+          m.timeStr || (m.createdAt?.toDate ? format(m.createdAt.toDate(), 'HH:mm') : '');
+        const mins = parseTimeMins(tStr);
+        if (mins !== null) msgMins.push(mins);
+      }
+      if (msgMins.length > 0) {
+        const inOfficeCount = msgMins.filter((m) => m >= 420 && m <= 960).length;
+        const afterHoursCount = msgMins.filter((m) => m < 420 || m > 960).length;
+        const firstMin = msgMins[0];
+        if (firstMin >= 420 && firstMin < 960 && inOfficeCount >= afterHoursCount) {
+          return true;
+        }
+        return false;
+      }
+    }
+
+    // 3. Fallback: URL / linked document hints
+    if (returnDdId && !returnFsrId) return true;
+    if (chanAny?.linkedDdId && !chanAny?.linkedFsrId) return true;
+    return false;
+  }, [activeChannel, summaryData, messages, returnDdId, returnFsrId]);
+
+  // Matched FSR and Daily Diary for the active channel
+  const { matchedFsr, matchedDd } = React.useMemo(() => {
+    const chanAny = activeChannel as any;
+    const cleanChanEquip = (
+      summaryData?.equipmentBreakdowns?.[0]?.equipmentName ||
+      chanAny?.equipmentName ||
+      (activeChannel?.name || '').replace(/^#?Breakdown:\s*/i, '')
+    )
+      .trim()
+      .toLowerCase();
+    const chatDate =
+      summaryData?.date ||
+      (messages && messages.length > 0 ? messages[0].messageDate || '' : '');
+
+    const foundFsr =
+      (returnFsrId && fsrOptions.find((f) => f.id === returnFsrId)) ||
+      (chanAny?.linkedFsrId && fsrOptions.find((f) => f.id === chanAny.linkedFsrId)) ||
+      fsrOptions.find((f) => {
+        const asset = (f.assetName || '').trim().toLowerCase();
+        if (!asset || !cleanChanEquip || cleanChanEquip.includes('unknown equipment')) return false;
+        return (
+          asset === cleanChanEquip ||
+          cleanChanEquip.includes(asset) ||
+          asset.includes(cleanChanEquip)
+        );
+      }) ||
+      (chatDate ? fsrOptions.find((f) => f.date === chatDate) : undefined);
+
+    const foundDd =
+      (returnDdId && diaryOptions.find((d) => d.id === returnDdId)) ||
+      (chanAny?.linkedDdId && diaryOptions.find((d) => d.id === chanAny.linkedDdId)) ||
+      (chatDate ? diaryOptions.find((d) => d.date === chatDate) : undefined);
+
+    return { matchedFsr: foundFsr, matchedDd: foundDd };
+  }, [activeChannel, summaryData, messages, returnFsrId, returnDdId, fsrOptions, diaryOptions]);
+
+  // Sync default selectedFsrTarget and selectedDdTarget when matchedFsr / matchedDd updates
+  useEffect(() => {
+    if (matchedFsr?.id) {
+      setSelectedFsrTarget(matchedFsr.id);
+    } else {
+      setSelectedFsrTarget('__new_fsr__');
+    }
+  }, [activeChannelId, matchedFsr?.id]);
+
+  useEffect(() => {
+    if (matchedDd?.id) {
+      setSelectedDdTarget(matchedDd.id);
+    } else {
+      setSelectedDdTarget('__new_dd__');
+    }
+  }, [activeChannelId, matchedDd?.id]);
 
   /**
    * SIDEBAR FILTER FIX
@@ -963,7 +1358,40 @@ export default function MessagingPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="font-bold text-slate-900 leading-tight">#{activeChannel?.name}</h2>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="font-bold text-slate-900 leading-tight">#{activeChannel?.name}</h2>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!firestore || !activeChannelId) return;
+                        const nextShiftType = isOfficeHoursBreakdown ? 'after_hours' : 'office_hours';
+                        await updateDoc(doc(firestore, 'channels', activeChannelId), {
+                          breakdownShiftType: nextShiftType,
+                        }).catch(() => {});
+                        toast({
+                          title:
+                            nextShiftType === 'office_hours'
+                              ? 'Classified as Office Hours Breakdown (07:00–16:00 • Daily Diary)'
+                              : 'Classified as Call-Out Breakdown (FSR)',
+                          description:
+                            nextShiftType === 'office_hours'
+                              ? 'Showing Daily Diary buttons (not FSR-related).'
+                              : 'Showing FSR buttons for this breakdown.',
+                        });
+                      }}
+                      className={cn(
+                        'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide border transition-colors',
+                        isOfficeHoursBreakdown
+                          ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                          : 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100'
+                      )}
+                      title="Click to switch between Office Hours Breakdown (Daily Diary) and After-Hours Call-Out Breakdown (FSR)"
+                    >
+                      {isOfficeHoursBreakdown
+                        ? '☀️ Office Hrs Breakdown (07:00–16:00 • DD)'
+                        : '🌙 Call-Out Breakdown (FSR)'}
+                    </button>
+                  </div>
                   <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> ONLINE TEAM
                   </p>
@@ -986,30 +1414,6 @@ export default function MessagingPage() {
                 )}
                 {(() => {
                   const chanAny = activeChannel as any;
-                  const cleanChanEquip = (
-                    chanAny?.equipmentName ||
-                    (activeChannel?.name || '').replace(/^#?Breakdown:\s*/i, '')
-                  )
-                    .trim()
-                    .toLowerCase();
-                  const chatDate =
-                    summaryData?.date ||
-                    (messages && messages.length > 0 ? messages[0].messageDate || '' : '');
-
-                  const matchedFsr =
-                    (returnFsrId && fsrOptions.find((f) => f.id === returnFsrId)) ||
-                    (chanAny?.linkedFsrId && fsrOptions.find((f) => f.id === chanAny.linkedFsrId)) ||
-                    fsrOptions.find((f) => {
-                      const asset = (f.assetName || '').trim().toLowerCase();
-                      if (!asset || !cleanChanEquip) return false;
-                      return (
-                        asset === cleanChanEquip ||
-                        cleanChanEquip.includes(asset) ||
-                        asset.includes(cleanChanEquip)
-                      );
-                    }) ||
-                    (chatDate ? fsrOptions.find((f) => f.date === chatDate) : undefined);
-
                   const fsrHref = returnFsrId
                     ? `/reports/field-service-report/${returnFsrId}`
                     : chanAny?.linkedFsrId
@@ -1017,11 +1421,6 @@ export default function MessagingPage() {
                     : matchedFsr
                     ? `/reports/field-service-report/${matchedFsr.id}`
                     : '/reports/field-service-report';
-
-                  const matchedDd =
-                    (returnDdId && diaryOptions.find((d) => d.id === returnDdId)) ||
-                    (chanAny?.linkedDdId && diaryOptions.find((d) => d.id === chanAny.linkedDdId)) ||
-                    (chatDate ? diaryOptions.find((d) => d.date === chatDate) : undefined);
 
                   const ddHref = returnDdId
                     ? `/reports/contractors-daily-diary?id=${encodeURIComponent(returnDdId)}`
@@ -1031,31 +1430,30 @@ export default function MessagingPage() {
                     ? `/reports/contractors-daily-diary?id=${encodeURIComponent(matchedDd.id)}`
                     : '/reports/contractors-daily-diary';
 
-                  return (
-                    <>
-                      <Link href={fsrHref}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-blue-700 border-blue-300 hover:bg-blue-50 font-bold text-xs flex items-center gap-1.5 mr-1.5"
-                          title="Go back to the linked Field Service Report (FSR)"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          Back to FSR{matchedFsr?.fsrReference ? ` (${matchedFsr.fsrReference})` : ''}
-                        </Button>
-                      </Link>
-                      <Link href={ddHref}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-amber-800 border-amber-300 hover:bg-amber-50 font-bold text-xs flex items-center gap-1.5 mr-1.5"
-                          title="Go back to the linked Contractors Daily Diary (DD)"
-                        >
-                          <FileText className="h-3.5 w-3.5 text-amber-600" />
-                          Back to Daily Diary{matchedDd?.id ? ` (${matchedDd.id})` : ''}
-                        </Button>
-                      </Link>
-                    </>
+                  return isOfficeHoursBreakdown ? (
+                    <Link href={ddHref}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-amber-800 border-amber-300 hover:bg-amber-50 font-bold text-xs flex items-center gap-1.5 mr-1.5"
+                        title="Office Hours Breakdown (07:00–16:00) — Go back to the linked Contractors Daily Diary (DD)"
+                      >
+                        <FileText className="h-3.5 w-3.5 text-amber-600" />
+                        Back to Daily Diary{matchedDd?.id ? ` (${matchedDd.id})` : ''}
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link href={fsrHref}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-blue-700 border-blue-300 hover:bg-blue-50 font-bold text-xs flex items-center gap-1.5 mr-1.5"
+                        title="After-Hours Breakdown — Go back to the linked Field Service Report (FSR)"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Back to FSR{matchedFsr?.fsrReference ? ` (${matchedFsr.fsrReference})` : ''}
+                      </Button>
+                    </Link>
                   );
                 })()}
                 {activeChannel?.type === 'breakdown' && activeChannel?.relatedId && (
@@ -1085,19 +1483,39 @@ export default function MessagingPage() {
                     >
                       {isSelectingChatMsgs ? 'Done Filtering Chat' : 'Tick / Filter Out Messages'}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setWaForceSourceId(`app:${activeChannel.id}`);
-                        setIsWhatsAppSyncOpen(true);
-                      }}
-                      className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 font-bold flex items-center gap-1.5 mr-2"
-                      title="Tick messages from this chat and export them into a selected FSR or Daily Diary (DD)"
-                    >
-                      <FileText className="h-4 w-4 text-emerald-600" />
-                      Export Chat to FSR / DD
-                    </Button>
+                    {isOfficeHoursBreakdown ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isExportingSummaryToDd || isGeneratingSummary}
+                        onClick={handleExportSummaryToDailyDiary}
+                        className="text-amber-800 border-amber-300 hover:bg-amber-50 font-bold flex items-center gap-1.5 mr-2"
+                        title="Export the Equipment Summary & Root Cause Analysis (RCA) to the Daily Diary (DD)"
+                      >
+                        {isExportingSummaryToDd ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                        ) : (
+                          <FileText className="h-4 w-4 text-amber-600" />
+                        )}
+                        Export Summary to DD
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isExportingSummaryToFsr || isGeneratingSummary}
+                        onClick={() => handleExportSummaryToFsr()}
+                        className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 font-bold flex items-center gap-1.5 mr-2"
+                        title="Export the Equipment Summary & Root Cause Analysis (RCA) — not raw chat history — to the FSR"
+                      >
+                        {isExportingSummaryToFsr ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                        ) : (
+                          <FileText className="h-4 w-4 text-emerald-600" />
+                        )}
+                        Export Summary to FSR
+                      </Button>
+                    )}
                   </>
                 )}
                 {/* Archive/Restore Button */}
@@ -1390,45 +1808,85 @@ export default function MessagingPage() {
                     )}
                   </div>
 
-                  {/* EXPORT SUMMARY & RCA TO DAILY DIARY (DD) */}
+                  {/* EXPORT SUMMARY & RCA TO FSR (After-Hours Breakdown) OR DAILY DIARY (Office Hours Breakdown) */}
                   {summaryData && summaryData.equipmentBreakdowns.length > 0 && (
-                    <div className="p-3 border-t bg-amber-50/70 space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-amber-900 block">
-                        Export Summary &amp; RCA to Daily Diary (DD) ({summaryData.date || 'Selected Day'})
-                      </Label>
-                      <select
-                        value={selectedDdTarget}
-                        onChange={(e) => setSelectedDdTarget(e.target.value)}
-                        className="w-full h-8 px-2 border border-amber-300 rounded-md text-xs font-bold bg-white"
-                      >
-                        <option value="__new_dd__">
-                          ➕ Create New Daily Diary (DD) for {summaryData.date || 'This Day'}
-                        </option>
-                        {diaryOptions.length > 0 && (
-                          <optgroup label="Existing Daily Diaries (By DD Number)">
-                            {diaryOptions.map((dd) => (
-                              <option key={dd.id} value={dd.id}>
-                                📋 {dd.id} • {dd.date || 'No date'} • {dd.area} ({dd.workSummary})
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
-                      </select>
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={isExportingSummaryToDd}
-                        onClick={handleExportSummaryToDailyDiary}
-                        className="w-full h-8 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5"
-                      >
-                        {isExportingSummaryToDd ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <FileText className="h-3.5 w-3.5" />
-                        )}
-                        Export Summary &amp; RCA to DD
-                      </Button>
-                    </div>
+                    isOfficeHoursBreakdown ? (
+                      <div className="p-3 border-t bg-amber-50/70 space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-amber-900 block">
+                          Export Summary &amp; RCA to Daily Diary (DD) ({summaryData.date || 'Selected Day'})
+                        </Label>
+                        <select
+                          value={selectedDdTarget}
+                          onChange={(e) => setSelectedDdTarget(e.target.value)}
+                          className="w-full h-8 px-2 border border-amber-300 rounded-md text-xs font-bold bg-white"
+                        >
+                          <option value="__new_dd__">
+                            ➕ Create New Daily Diary (DD) for {summaryData.date || 'This Day'}
+                          </option>
+                          {diaryOptions.length > 0 && (
+                            <optgroup label="Existing Daily Diaries (By DD Number)">
+                              {diaryOptions.map((dd) => (
+                                <option key={dd.id} value={dd.id}>
+                                  📋 {dd.id} • {dd.date || 'No date'} • {dd.area} ({dd.workSummary})
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </select>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={isExportingSummaryToDd}
+                          onClick={handleExportSummaryToDailyDiary}
+                          className="w-full h-8 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5"
+                        >
+                          {isExportingSummaryToDd ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <FileText className="h-3.5 w-3.5" />
+                          )}
+                          Export Summary &amp; RCA to DD
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="p-3 border-t bg-emerald-50/70 space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-emerald-900 block">
+                          Export Summary &amp; RCA to FSR ({summaryData.date || 'Selected Day'})
+                        </Label>
+                        <select
+                          value={selectedFsrTarget}
+                          onChange={(e) => setSelectedFsrTarget(e.target.value)}
+                          className="w-full h-8 px-2 border border-emerald-300 rounded-md text-xs font-bold bg-white"
+                        >
+                          <option value="__new_fsr__">
+                            ➕ Create New FSR for {summaryData.equipmentBreakdowns[0]?.equipmentName || 'This Breakdown'}
+                          </option>
+                          {fsrOptions.length > 0 && (
+                            <optgroup label="Existing Field Service Reports (By FSR Number)">
+                              {fsrOptions.map((f) => (
+                                <option key={f.id} value={f.id}>
+                                  📄 {f.fsrReference || f.id} • {f.date || 'No date'} • {f.assetName || 'No asset'}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </select>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={isExportingSummaryToFsr}
+                          onClick={() => handleExportSummaryToFsr()}
+                          className="w-full h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5"
+                        >
+                          {isExportingSummaryToFsr ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <FileText className="h-3.5 w-3.5" />
+                          )}
+                          Export Summary &amp; RCA to FSR
+                        </Button>
+                      </div>
+                    )
                   )}
                 </div>
               )}
