@@ -483,6 +483,9 @@ function groupNameToStoreDocId(name: string): string {
   return `wa_store_${slug || 'group'}`;
 }
 
+/** Section B (Export Ticked to FSR & Daily Diary) is hidden; flow is Comms Summary -> FSR -> Chat -> FSR. */
+const SHOW_DIALOG_FSR_DD_EXPORT = false;
+
 interface WhatsAppGroupSyncDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -2479,7 +2482,7 @@ export function WhatsAppGroupSyncDialog({
             </div>
 
             {/* BOTTOM EXPORT BAR: 1) EXPORT TO CHAT (WITH EQUIPMENT / NAME) AND 2) EXPORT TO FSR (WITH FSR DROPDOWN) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-100/90 border border-slate-300 rounded-xl p-3">
+            <div className="grid grid-cols-1 gap-3 bg-slate-100/90 border border-slate-300 rounded-xl p-3"
               {/* LEFT CARD: EXPORT TO SITE COMMS CHAT */}
               <div className="bg-white border border-slate-200 rounded-lg p-2.5 space-y-2 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -2657,7 +2660,9 @@ export function WhatsAppGroupSyncDialog({
                 </Button>
               </div>
 
-              {/* RIGHT CARD: EXPORT TO FIELD SERVICE REPORT (FSR) & DAILY DIARY (DD) */}
+              {/* RIGHT CARD: EXPORT TO FIELD SERVICE REPORT (FSR) & DAILY DIARY (DD)
+                  Hidden: workflow is now Site Comms Summary -> FSR/DD, FSR -> Export to Chat, Chat -> Export Summary to FSR. */}
+              {SHOW_DIALOG_FSR_DD_EXPORT && (
               <div className="bg-white border border-emerald-200 rounded-lg p-2.5 space-y-2 shadow-sm flex flex-col justify-between">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -2800,6 +2805,7 @@ export function WhatsAppGroupSyncDialog({
                   </div>
                 </div>
               </div>
+              )}
             </div>
           </TabsContent>
 
