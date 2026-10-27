@@ -2482,7 +2482,7 @@ export function WhatsAppGroupSyncDialog({
             </div>
 
             {/* BOTTOM EXPORT BAR: 1) EXPORT TO CHAT (WITH EQUIPMENT / NAME) AND 2) EXPORT TO FSR (WITH FSR DROPDOWN) */}
-            <div className="grid grid-cols-1 gap-3 bg-slate-100/90 border border-slate-300 rounded-xl p-3"
+            <div className="grid grid-cols-1 gap-3 bg-slate-100/90 border border-slate-300 rounded-xl p-3">
               {/* LEFT CARD: EXPORT TO SITE COMMS CHAT */}
               <div className="bg-white border border-slate-200 rounded-lg p-2.5 space-y-2 shadow-sm">
                 <div className="flex items-center justify-between">
