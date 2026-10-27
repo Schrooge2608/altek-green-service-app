@@ -271,7 +271,7 @@ export default function MessagingPage() {
    */
   const filteredChannels = channels?.filter(c => {
     if ((c as any).isDeleted) return false;
-    if (c.id?.startsWith('wa_grp_')) return false;
+    if (c.id?.startsWith('wa_grp_') || c.id?.startsWith('wa_store_') || (c as any).isPrivateWhatsAppStore) return false;
     const isArchived = c.isArchived || false;
     return isArchived === showArchived && c.name.toLowerCase().includes(searchTerm.toLowerCase());
   });
