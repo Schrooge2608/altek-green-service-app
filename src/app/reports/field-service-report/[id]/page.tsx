@@ -1082,9 +1082,8 @@ export default function FieldServiceReportDetailPage() {
     #printable-fsr form, #printable-fsr fieldset { display: block !important; }
     #printable-fsr .overflow-hidden { overflow: visible !important; }
     #printable-fsr textarea { field-sizing: content !important; height: auto !important; min-height: 1.4em !important; overflow: visible !important; }
-    #printable-fsr .fsr-print-stack { display: block !important; }
-    #printable-fsr .fsr-print-stack > div { display: block !important; border-left: 2px solid #000 !important; border-right: 2px solid #000 !important; border-bottom: 2px solid #000 !important; }
-    #printable-fsr .fsr-print-stack > div > div { height: auto !important; min-height: 0 !important; break-inside: avoid; page-break-inside: avoid; }
+    #printable-fsr .fsr-print-stack { display: grid !important; grid-template-columns: 1fr 1fr !important; break-inside: avoid; page-break-inside: avoid; }
+    #printable-fsr .fsr-print-stack > div { break-inside: avoid; page-break-inside: avoid; }
     #printable-fsr .fsr-section-header { break-after: avoid; page-break-after: avoid; }
     #printable-fsr tr, #printable-fsr .fsr-keep-together { break-inside: avoid; page-break-inside: avoid; }
     #printable-fsr thead { display: table-header-group; }
