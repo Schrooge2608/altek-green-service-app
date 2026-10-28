@@ -16,10 +16,11 @@ export function getSecondToLastThursday(date: Date): Date {
 }
 
 /**
- * Calculates the start and end dates for the custom Altek Green payroll cycle.
- * Cutoff: Second-to-last Thursday of the target month.
- * Start: Friday immediately following the previous month's cutoff.
- * 
+ * Payroll cycle for Altek Green time & attendance.
+ * Every month runs from the 18th of the previous month to the 17th of the
+ * target month (inclusive), regardless of weekday.
+ * e.g. '2026-10' => 2026-09-18 to 2026-10-17; '2026-11' => 2026-10-18 to 2026-11-17.
+ *
  * @param selectedPeriod String in 'YYYY-MM' format
  */
 export function getPayrollPeriod(selectedPeriod: string) {
@@ -29,36 +30,22 @@ export function getPayrollPeriod(selectedPeriod: string) {
   }
 
   const [year, month] = selectedPeriod.split('-').map(Number);
-  
-  // Target month date object (1st of the month)
-  const targetMonth = new Date(year, month - 1, 1);
-  
-  // Period End: Second-to-last Thursday of this month
-  const periodEnd = getSecondToLastThursday(targetMonth);
-  
-  // Period Start: Friday following the previous month's second-to-last Thursday
-  const previousMonth = new Date(year, month - 2, 1);
-  const prevCutoff = getSecondToLastThursday(previousMonth);
-  const periodStart = addDays(prevCutoff, 1);
-  
+
+  const periodEnd = startOfDay(new Date(year, month - 1, 17));
+  const periodStart = startOfDay(new Date(year, month - 2, 18));
+
   return { periodStart, periodEnd };
 }
 
 /**
- * Returns the default selected month for payroll based on rollover logic.
- * If the current date is past the second-to-last Thursday of the month (midnight rollover),
- * it returns the next month.
- * 
+ * Returns the default selected payroll month.
+ * Once the 17th has passed (from the 18th onward), the next month's cycle is selected.
+ *
  * @param systemDate The date to evaluate (defaults to now)
  */
 export function getDefaultPayrollMonth(systemDate: Date = new Date()): string {
-  const currentMonthCutoff = getSecondToLastThursday(systemDate);
-  const rolloverTime = endOfDay(currentMonthCutoff); // 23:59:59.999 local time
-
-  if (systemDate > rolloverTime) {
-    const nextMonth = addMonths(systemDate, 1);
-    return format(nextMonth, 'yyyy-MM');
+  if (systemDate.getDate() >= 18) {
+    return format(addMonths(new Date(systemDate.getFullYear(), systemDate.getMonth(), 1), 1), 'yyyy-MM');
   }
-
   return format(systemDate, 'yyyy-MM');
 }
