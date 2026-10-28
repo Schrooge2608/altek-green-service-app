@@ -60,7 +60,7 @@ import { WhatsAppGroupSyncDialog } from '@/components/whatsapp/whatsapp-group-sy
  */
 
 const SectionHeader = ({ number, title, action }: { number: string; title: string; action?: React.ReactNode }) => (
-  <div className="bg-[#1b5e20] text-white px-2 py-1 flex items-center justify-between gap-3 mb-0 border-x border-t border-black">
+  <div className="fsr-section-header bg-[#1b5e20] text-white px-2 py-1 flex items-center justify-between gap-3 mb-0 border-x border-t border-black">
     <div className="flex items-center gap-3">
       <span className="font-black text-sm">{number}</span>
       <h2 className="font-bold text-[11px] uppercase tracking-tight">{title}</h2>
@@ -1075,7 +1075,21 @@ export default function FieldServiceReportDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-100/50 p-4 md:p-8 pb-32">
-      <style>{'@media print { @page { size: portrait; } }'}</style>
+      <style>{`
+  @media print {
+    @page { size: A4 portrait; margin: 8mm; }
+    #printable-fsr { display: block !important; min-height: 0 !important; width: 100% !important; max-width: 100% !important; box-shadow: none !important; }
+    #printable-fsr form, #printable-fsr fieldset { display: block !important; }
+    #printable-fsr .overflow-hidden { overflow: visible !important; }
+    #printable-fsr textarea { field-sizing: content !important; height: auto !important; min-height: 1.4em !important; overflow: visible !important; }
+    #printable-fsr .fsr-print-stack { display: block !important; }
+    #printable-fsr .fsr-print-stack > div { display: block !important; border-left: 2px solid #000 !important; border-right: 2px solid #000 !important; border-bottom: 2px solid #000 !important; }
+    #printable-fsr .fsr-print-stack > div > div { height: auto !important; min-height: 0 !important; break-inside: avoid; page-break-inside: avoid; }
+    #printable-fsr .fsr-section-header { break-after: avoid; page-break-after: avoid; }
+    #printable-fsr tr, #printable-fsr .fsr-keep-together { break-inside: avoid; page-break-inside: avoid; }
+    #printable-fsr thead { display: table-header-group; }
+  }
+`}</style>
       <header className="max-w-[21cm] mx-auto flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => router.push('/reports/field-service-report')}>
@@ -1417,7 +1431,7 @@ export default function FieldServiceReportDetailPage() {
                 </div>
 
                 {/* 04 & 05: FAULT DESCRIPTION & WORK PERFORMED */}
-                <div className="grid grid-cols-2 mb-0">
+                <div className="grid grid-cols-2 mb-0 fsr-print-stack">
                   <div className="border-l-2 border-b-2 border-r border-black flex flex-col">
                     <SectionHeader number="04" title="Fault Description & Root Cause" />
                     <FormField control={form.control} name="customerFault" render={({ field }) => (<div className="p-2 border-b border-black"><DenseLabel>Customer Reported Fault</DenseLabel><Textarea {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="min-h-[40px] text-[10px] border-none p-0 resize-none focus-visible:ring-0" /></div>)} />
@@ -1516,7 +1530,7 @@ export default function FieldServiceReportDetailPage() {
                 </div>
 
                 {/* 07 & 08: PERSONNEL & HSE */}
-                <div className="grid grid-cols-2 mb-0">
+                <div className="grid grid-cols-2 mb-0 fsr-print-stack">
                   <div className="border-l-2 border-b-2 border-r border-black flex flex-col">
                     <SectionHeader number="07" title="Personnel on Site" />
                     <Table className="border-none">
