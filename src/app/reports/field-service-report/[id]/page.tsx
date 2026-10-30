@@ -26,8 +26,19 @@ import {
   AlertTriangle,
   Share2,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  PenTool,
+  RotateCcw
 } from 'lucide-react';
+import SignatureCanvas from 'react-signature-canvas';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -88,6 +99,9 @@ export default function FieldServiceReportDetailPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [isGeneratingRef, setIsGeneratingRef] = useState(false);
   const [isWhatsAppImportOpen, setIsWhatsAppImportOpen] = useState(false);
+  const [sigDialogOpen, setSigDialogOpen] = useState(false);
+  const [sigDialogTarget, setSigDialogTarget] = useState<'tech' | 'client'>('tech');
+  const dialogSigRef = useRef<SignatureCanvas>(null);
 
   const reportRef = useMemoFirebase(() => (reportId ? doc(firestore, 'field_service_reports', reportId) : null), [firestore, reportId]);
   const { data: report, isLoading: reportLoading } = useDoc<FieldServiceReport>(reportRef);
@@ -245,6 +259,8 @@ export default function FieldServiceReportDetailPage() {
   const watchedTimeStart = useWatch({ control: form.control, name: 'timeStart' });
   const watchedTimeEnd = useWatch({ control: form.control, name: 'timeEnd' });
   const watchedTimeDeparture = useWatch({ control: form.control, name: 'timeDeparture' });
+  const watchedTechSig = useWatch({ control: form.control, name: 'techSignature' });
+  const watchedClientSig = useWatch({ control: form.control, name: 'clientSignature' });
 
   // Calculate time difference in decimal hours (e.g. 02:30 to 06:30 = 4.0h)
   const calculateTimeDiff = useCallback((start?: string, end?: string): number => {
@@ -289,8 +305,15 @@ export default function FieldServiceReportDetailPage() {
     if (report) {
       const initialOT = report.otHours || report.ntHours || report.totalHours || 0;
       const initialKm = (Number(report.travelKmTo) || 0) + (Number(report.travelKmReturn) || 0);
+      const defaultTechSig = report.techSignature || (userData?.signatureUrl || null);
+      const defaultTechName = report.techName || (userData?.name || authUser?.displayName || '');
+      const defaultTechEmpNo = report.techEmpNo || (userData?.employeeNumber || '');
+
       form.reset({
         ...report,
+        techSignature: defaultTechSig,
+        techName: defaultTechName,
+        techEmpNo: defaultTechEmpNo,
         ntHours: report.ntHours ?? 0,
         otHours: initialOT,
         dtHours: report.dtHours ?? 0,
@@ -303,8 +326,17 @@ export default function FieldServiceReportDetailPage() {
         personnel: report.personnel ?? [],
         images: report.images ?? []
       });
+
+      if (!report.techSignature && userData?.signatureUrl && !report.status?.toLowerCase().includes('final')) {
+        handleAutosave({
+          techSignature: userData.signatureUrl,
+          techName: defaultTechName,
+          techEmpNo: defaultTechEmpNo,
+          techSignDate: new Date().toISOString()
+        });
+      }
     }
-  }, [report, form]);
+  }, [report, form, userData, authUser, handleAutosave]);
 
   const isFinalized = report?.status === 'Finalized';
   const isAdmin = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
@@ -369,6 +401,68 @@ export default function FieldServiceReportDetailPage() {
       setSaveStatus('idle');
     }
   }, [firestore, reportId, isFinalized, form, equipmentList, computedTotalHours, computedTotalKm]);
+
+  const handleConfirmDialogSignature = async () => {
+    if (!dialogSigRef.current || dialogSigRef.current.isEmpty()) {
+      toast({ variant: 'destructive', title: 'Signature Required', description: 'Please draw your signature before confirming.' });
+      return;
+    }
+
+    const dataUrl = dialogSigRef.current.getTrimmedCanvas().toDataURL('image/png', 1.0);
+    if (!dataUrl) return;
+
+    if (sigDialogTarget === 'tech') {
+      const signDate = new Date().toISOString();
+      const techName = form.getValues('techName') || userData?.name || authUser?.displayName || '';
+      form.setValue('techSignature', dataUrl);
+      form.setValue('techSignDate', signDate);
+      if (techName) form.setValue('techName', techName);
+      setSigDialogOpen(false);
+      await handleAutosave({ 
+        techSignature: dataUrl, 
+        techSignDate: signDate,
+        ...(techName ? { techName } : {})
+      });
+      toast({ title: 'Technician Signature Added', description: 'Captured successfully on glass.' });
+    } else {
+      const signDate = new Date().toISOString();
+      form.setValue('clientSignature', dataUrl);
+      form.setValue('clientSignDate', signDate);
+      setSigDialogOpen(false);
+      await handleAutosave({ 
+        clientSignature: dataUrl, 
+        clientSignDate: signDate
+      });
+      toast({ title: 'Representative Signature Added', description: 'Captured successfully on glass.' });
+    }
+  };
+
+  const handleApplyProfileSignature = async (target: 'tech' | 'client') => {
+    if (!userData?.signatureUrl) return;
+    const signDate = new Date().toISOString();
+    if (target === 'tech') {
+      const techName = form.getValues('techName') || userData.name || authUser?.displayName || '';
+      form.setValue('techSignature', userData.signatureUrl);
+      form.setValue('techSignDate', signDate);
+      if (techName) form.setValue('techName', techName);
+      setSigDialogOpen(false);
+      await handleAutosave({
+        techSignature: userData.signatureUrl,
+        techSignDate: signDate,
+        ...(techName ? { techName } : {})
+      });
+      toast({ title: 'Profile Signature Applied', description: 'Using your saved technician signature.' });
+    } else {
+      form.setValue('clientSignature', userData.signatureUrl);
+      form.setValue('clientSignDate', signDate);
+      setSigDialogOpen(false);
+      await handleAutosave({
+        clientSignature: userData.signatureUrl,
+        clientSignDate: signDate
+      });
+      toast({ title: 'Profile Signature Applied', description: 'Using saved profile signature.' });
+    }
+  };
 
   const handlePaperScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1625,34 +1719,123 @@ export default function FieldServiceReportDetailPage() {
                 {/* 09: SIGN-OFF & CUSTOMER ACCEPTANCE */}
                 <SectionHeader number="09" title="Sign-Off & Customer Acceptance" />
                 <div className="border-x-2 border-b-2 border-black grid grid-cols-2 divide-x-2 divide-black bg-white">
+                  {/* ALTEK GREEN TECHNICIAN */}
                   <div className="p-3 space-y-3 flex flex-col">
                     <h3 className="text-[10px] font-black uppercase text-white bg-[#37474f] px-2 py-0.5 text-center">Altek Green Technician</h3>
                     <div className="grid grid-cols-2 gap-2">
                       <FormField control={form.control} name="techName" render={({ field }) => (<div><DenseLabel>Full Name</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-6 text-[10px] border-none border-b border-black/10 rounded-none px-0 focus-visible:ring-0" /></div>)} />
                       <FormField control={form.control} name="techEmpNo" render={({ field }) => (<div><DenseLabel>Employee No</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-6 text-[10px] border-none border-b border-black/10 rounded-none px-0 focus-visible:ring-0" /></div>)} />
                     </div>
-                    <div className="h-20 border rounded bg-slate-50/50 relative">
-                      {form.getValues('techSignature') ? (
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <img src={form.getValues('techSignature')!} alt="Tech Sig" className="max-h-16 object-contain" />
-                          {!isFinalized && <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-5 w-5 text-red-400" onClick={() => { form.setValue('techSignature', null); handleAutosave({ techSignature: null }); }}><Trash2 className="h-3 w-3" /></Button>}
+                    <div className="h-24 border rounded bg-slate-50/50 relative flex items-center justify-center p-2">
+                      {watchedTechSig ? (
+                        <div className="flex flex-col items-center justify-center h-full w-full relative group">
+                          <img src={watchedTechSig} alt="Tech Sig" className="max-h-16 w-auto object-contain mix-blend-multiply" />
+                          {!isFinalized && (
+                            <div className="absolute top-1 right-1 flex items-center gap-1 print:hidden">
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => { setSigDialogTarget('tech'); setSigDialogOpen(true); }}
+                                className="h-6 text-[9px] px-1.5 py-0 border-slate-300 bg-white/90 hover:bg-slate-100"
+                              >
+                                <PenTool className="h-2.5 w-2.5 mr-1 text-blue-600" /> Re-sign
+                              </Button>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-red-500 hover:bg-red-50" 
+                                onClick={() => { 
+                                  form.setValue('techSignature', null); 
+                                  handleAutosave({ techSignature: null }); 
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      ) : <SignaturePad onSave={(data) => { form.setValue('techSignature', data); handleAutosave({ techSignature: data, techSignDate: new Date().toISOString() }); }} />}
+                      ) : (
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 w-full">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            disabled={isFinalized}
+                            onClick={() => { setSigDialogTarget('tech'); setSigDialogOpen(true); }}
+                            className="h-8 text-xs font-bold border-dashed border-blue-400 bg-blue-50/70 hover:bg-blue-100 text-blue-800 shadow-none flex items-center gap-1.5 px-3"
+                          >
+                            <PenTool className="h-3.5 w-3.5 text-blue-600" /> Sign on Glass
+                          </Button>
+                          {userData?.signatureUrl && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isFinalized}
+                              onClick={() => handleApplyProfileSignature('tech')}
+                              className="h-8 text-xs font-bold border-dashed border-emerald-400 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 shadow-none flex items-center gap-1.5 px-3"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Use Profile Sig
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* REPRESENTATIVE */}
                   <div className="p-3 space-y-3 flex flex-col">
                     <h3 className="text-[10px] font-black uppercase text-white bg-[#37474f] px-2 py-0.5 text-center">Representative</h3>
                     <div className="grid grid-cols-2 gap-2">
                       <FormField control={form.control} name="clientName" render={({ field }) => (<div><DenseLabel>Full Name</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-6 text-[10px] border-none border-b border-black/10 rounded-none px-0 focus-visible:ring-0" /></div>)} />
                       <FormField control={form.control} name="clientDesignation" render={({ field }) => (<div><DenseLabel>ID / Designation</DenseLabel><Input {...field} value={field.value ?? ''} onBlur={() => handleAutosave()} className="h-6 text-[10px] border-none border-b border-black/10 rounded-none px-0 focus-visible:ring-0" /></div>)} />
                     </div>
-                    <div className="h-20 border rounded bg-slate-50/50 relative">
-                      {form.getValues('clientSignature') ? (
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <img src={form.getValues('clientSignature')!} alt="Client Sig" className="max-h-16 object-contain" />
-                          {!isFinalized && <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-5 w-5 text-red-400" onClick={() => { form.setValue('clientSignature', null); handleAutosave({ clientSignature: null }); }}><Trash2 className="h-3 w-3" /></Button>}
+                    <div className="h-24 border rounded bg-slate-50/50 relative flex items-center justify-center p-2">
+                      {watchedClientSig ? (
+                        <div className="flex flex-col items-center justify-center h-full w-full relative group">
+                          <img src={watchedClientSig} alt="Client Sig" className="max-h-16 w-auto object-contain mix-blend-multiply" />
+                          {!isFinalized && (
+                            <div className="absolute top-1 right-1 flex items-center gap-1 print:hidden">
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => { setSigDialogTarget('client'); setSigDialogOpen(true); }}
+                                className="h-6 text-[9px] px-1.5 py-0 border-slate-300 bg-white/90 hover:bg-slate-100"
+                              >
+                                <PenTool className="h-2.5 w-2.5 mr-1 text-emerald-600" /> Re-sign
+                              </Button>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-red-500 hover:bg-red-50" 
+                                onClick={() => { 
+                                  form.setValue('clientSignature', null); 
+                                  handleAutosave({ clientSignature: null }); 
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      ) : <SignaturePad onSave={(data) => { form.setValue('clientSignature', data); handleAutosave({ clientSignature: data, clientSignDate: new Date().toISOString() }); }} />}
+                      ) : (
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 w-full">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            disabled={isFinalized}
+                            onClick={() => { setSigDialogTarget('client'); setSigDialogOpen(true); }}
+                            className="h-8 text-xs font-bold border-dashed border-emerald-400 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 shadow-none flex items-center gap-1.5 px-3"
+                          >
+                            <PenTool className="h-3.5 w-3.5 text-emerald-600" /> Sign on Glass
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1680,6 +1863,74 @@ export default function FieldServiceReportDetailPage() {
         availableEquipmentNames={equipmentOptions.map((o) => o.value)}
         onExtractedToFsr={(extracted) => handleExtractedFromWhatsApp(extracted)}
       />
+
+      {/* SIGN ON GLASS MODAL */}
+      <Dialog open={sigDialogOpen} onOpenChange={setSigDialogOpen}>
+        <DialogContent className="max-w-md p-6 bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-800">
+              <PenTool className="h-5 w-5 text-primary" />
+              {sigDialogTarget === 'tech' ? 'Technician Sign on Glass' : 'Representative Sign on Glass'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Draw your signature below using your finger, stylus, trackpad, or mouse.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Quick profile signature button if available */}
+          {Boolean(userData?.signatureUrl) && (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src={userData!.signatureUrl!} alt="Saved Signature" className="h-9 w-auto object-contain mix-blend-multiply" />
+                <span className="text-xs text-slate-700 font-semibold">Saved profile signature ({userData?.name})</span>
+              </div>
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="outline"
+                className="text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                onClick={() => handleApplyProfileSignature(sigDialogTarget)}
+              >
+                Use Profile Signature
+              </Button>
+            </div>
+          )}
+
+          <div className="border-2 border-slate-300 rounded-lg overflow-hidden bg-white shadow-inner relative">
+            <SignatureCanvas
+              ref={dialogSigRef}
+              penColor="black"
+              minWidth={1.5}
+              maxWidth={3}
+              velocityFilterWeight={0.2}
+              canvasProps={{
+                className: 'w-full h-44 cursor-crosshair touch-none bg-white',
+                style: { width: '100%', height: '176px', touchAction: 'none' }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => dialogSigRef.current?.clear()}
+              className="absolute top-2 right-2 text-xs text-slate-500 hover:text-red-600 bg-white/95 border border-slate-200 px-2 py-1 rounded shadow-xs flex items-center gap-1 font-medium transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" /> Clear
+            </button>
+          </div>
+
+          <DialogFooter className="flex justify-between sm:justify-between items-center gap-2 pt-2">
+            <Button type="button" variant="ghost" onClick={() => setSigDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleConfirmDialogSignature}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              Confirm Signature
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
