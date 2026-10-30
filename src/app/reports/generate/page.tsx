@@ -51,7 +51,7 @@ const sanitizeForServer = (data: any): any => {
 };
 
 
-export interface ReportPromptPreset {
+interface ReportPromptPreset {
     id: string;
     title: string;
     badge: string;
@@ -60,7 +60,7 @@ export interface ReportPromptPreset {
     prompt: string;
 }
 
-export const REPORT_PROMPT_PRESETS: ReportPromptPreset[] = [
+const REPORT_PROMPT_PRESETS: ReportPromptPreset[] = [
     {
         id: 'key-operations-by-site',
         title: 'Key Operations by Site (Week 38 PDF)',
@@ -145,7 +145,7 @@ Include 3 distinct bullet points:
     }
 ];
 
-export function buildCombinedPrompt(selectedIds: string[]): string {
+function buildCombinedPrompt(selectedIds: string[]): string {
     if (!selectedIds || selectedIds.length === 0) {
         return '';
     }
