@@ -31,7 +31,7 @@ export default function FSRTrackerPage() {
   const { user } = useUser();
   const [searchTerm, setSearchTerm] = React.useState('');
 
-  const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const userRoleRef = useMemoFirebase(() => (user && firestore ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
   const canCreate = userData?.role && userData.role !== 'Client' && userData.role !== 'Client Manager';
 
@@ -45,7 +45,7 @@ export default function FSRTrackerPage() {
   };
 
   const fsrQuery = useMemoFirebase(
-    () => query(collection(firestore, 'field_service_reports'), orderBy('date', 'desc')),
+    () => (firestore ? query(collection(firestore, 'field_service_reports'), orderBy('date', 'desc')) : null),
     [firestore]
   );
   const { data: reports, isLoading } = useCollection<FieldServiceReport>(fsrQuery);
@@ -63,7 +63,11 @@ export default function FSRTrackerPage() {
   const groupedReports = useMemo(() => {
     const groups: { monthStr: string, reports: FieldServiceReport[] }[] = [];
     filteredReports.forEach(r => {
-      const dateObj = new Date(r.date || r.createdAt);
+      let rawDate = r.date || r.createdAt;
+      if (rawDate && typeof rawDate === 'object' && 'toDate' in rawDate && typeof rawDate.toDate === 'function') {
+        rawDate = rawDate.toDate();
+      }
+      const dateObj = new Date(rawDate);
       if (isNaN(dateObj.getTime())) return;
       const monthStr = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       let group = groups.find(g => g.monthStr === monthStr);
@@ -181,7 +185,7 @@ export default function FSRTrackerPage() {
                         <TableCell className="text-sm font-medium text-slate-600">{report.poNumber || '---'}</TableCell>
                         <TableCell className="text-sm font-medium">
                           <div>{report.assetName || '---'}</div>
-                          {report.additionalEquipment && report.additionalEquipment.filter(eq => eq.assetName).length > 0 && (
+                          {Array.isArray(report.additionalEquipment) && report.additionalEquipment.filter(eq => eq && eq.assetName).length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {report.additionalEquipment.filter(eq => eq.assetName).map((eq, i) => (
                                 <span key={i} className="text-[10px] bg-slate-100 text-slate-700 border border-slate-200 rounded px-1.5 py-0.5 font-medium">
@@ -191,7 +195,13 @@ export default function FSRTrackerPage() {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="text-xs text-slate-500 font-mono">{report.date}</TableCell>
+                        <TableCell className="text-xs text-slate-500 font-mono">
+                          {typeof report.date === 'string'
+                            ? report.date
+                            : (report.date && typeof report.date.toDate === 'function'
+                                ? report.date.toDate().toISOString().split('T')[0]
+                                : '---')}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={report.status === 'Finalized' ? 'default' : 'secondary'} className={cn(
                             report.status === 'Draft' ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200"

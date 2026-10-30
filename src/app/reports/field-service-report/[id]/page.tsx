@@ -301,43 +301,6 @@ export default function FieldServiceReportDetailPage() {
     form.setValue('totalKm', computedTotalKm);
   }, [computedTotalKm, form]);
 
-  useEffect(() => {
-    if (report) {
-      const initialOT = report.otHours || report.ntHours || report.totalHours || 0;
-      const initialKm = (Number(report.travelKmTo) || 0) + (Number(report.travelKmReturn) || 0);
-      const defaultTechSig = report.techSignature || (userData?.signatureUrl || null);
-      const defaultTechName = report.techName || (userData?.name || authUser?.displayName || '');
-      const defaultTechEmpNo = report.techEmpNo || (userData?.employeeNumber || '');
-
-      form.reset({
-        ...report,
-        techSignature: defaultTechSig,
-        techName: defaultTechName,
-        techEmpNo: defaultTechEmpNo,
-        ntHours: report.ntHours ?? 0,
-        otHours: initialOT,
-        dtHours: report.dtHours ?? 0,
-        travelKmTo: report.travelKmTo ?? 0,
-        travelKmReturn: report.travelKmReturn ?? 0,
-        totalHours: report.totalHours || initialOT,
-        totalKm: report.totalKm || initialKm,
-        additionalEquipment: report.additionalEquipment ?? [],
-        parts: report.parts ?? [],
-        personnel: report.personnel ?? [],
-        images: report.images ?? []
-      });
-
-      if (!report.techSignature && userData?.signatureUrl && !report.status?.toLowerCase().includes('final')) {
-        handleAutosave({
-          techSignature: userData.signatureUrl,
-          techName: defaultTechName,
-          techEmpNo: defaultTechEmpNo,
-          techSignDate: new Date().toISOString()
-        });
-      }
-    }
-  }, [report, form, userData, authUser, handleAutosave]);
-
   const isFinalized = report?.status === 'Finalized';
   const isAdmin = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
   const isManagerOrAdmin = userData?.role && [
@@ -401,6 +364,44 @@ export default function FieldServiceReportDetailPage() {
       setSaveStatus('idle');
     }
   }, [firestore, reportId, isFinalized, form, equipmentList, computedTotalHours, computedTotalKm]);
+
+  useEffect(() => {
+    if (report) {
+      const initialOT = report.otHours || report.ntHours || report.totalHours || 0;
+      const initialKm = (Number(report.travelKmTo) || 0) + (Number(report.travelKmReturn) || 0);
+      const defaultTechSig = report.techSignature || (userData?.signatureUrl || null);
+      const defaultTechName = report.techName || (userData?.name || authUser?.displayName || '');
+      const defaultTechEmpNo = report.techEmpNo || (userData?.employeeNumber || '');
+
+      form.reset({
+        ...report,
+        techSignature: defaultTechSig,
+        techName: defaultTechName,
+        techEmpNo: defaultTechEmpNo,
+        ntHours: report.ntHours ?? 0,
+        otHours: initialOT,
+        dtHours: report.dtHours ?? 0,
+        travelKmTo: report.travelKmTo ?? 0,
+        travelKmReturn: report.travelKmReturn ?? 0,
+        totalHours: report.totalHours || initialOT,
+        totalKm: report.totalKm || initialKm,
+        additionalEquipment: report.additionalEquipment ?? [],
+        parts: report.parts ?? [],
+        personnel: report.personnel ?? [],
+        images: report.images ?? []
+      });
+
+      if (!report.techSignature && userData?.signatureUrl && !report.status?.toLowerCase().includes('final')) {
+        handleAutosave({
+          techSignature: userData.signatureUrl,
+          techName: defaultTechName,
+          techEmpNo: defaultTechEmpNo,
+          techSignDate: new Date().toISOString()
+        });
+      }
+    }
+  }, [report, form, userData, authUser, handleAutosave]);
+
 
   const handleConfirmDialogSignature = async () => {
     if (!dialogSigRef.current || dialogSigRef.current.isEmpty()) {
