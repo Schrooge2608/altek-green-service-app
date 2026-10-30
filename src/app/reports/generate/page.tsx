@@ -265,8 +265,8 @@ export default function GenerateReportPage() {
 
 
     return (
-        <div className="flex flex-col gap-8 p-4 md:p-8">
-            <style>{'@media print { @page { size: portrait; } }'}</style>
+        <div className="flex flex-col gap-8 p-4 md:p-8 print:p-0 print:gap-0">
+            <style>{'@media print { @page { size: portrait; margin: 8mm; } }'}</style>
             <header>
                 <h1 className="text-3xl font-bold tracking-tight">AI Report Aggregator</h1>
                 <p className="text-muted-foreground text-sm">
@@ -381,8 +381,8 @@ export default function GenerateReportPage() {
                             </Button>
                         </div>
                     </CardHeader>
-                    <CardContent className="pt-6">
-                        <div className="bg-white p-8 md:p-12 border shadow-sm print:shadow-none print:border-none min-h-[29.7cm] mx-auto max-w-[21cm]">
+                    <CardContent className="pt-6 print:p-0">
+                        <div className="bg-white p-8 md:p-12 border shadow-sm print:shadow-none print:border-none print:p-0 min-h-[29.7cm] print:min-h-0 mx-auto max-w-[21cm] print:max-w-none print:w-full">
                             <div className="flex justify-between items-center border-b-2 border-slate-800 pb-6 mb-8">
                                 <div className="w-1/3">
                                 <img src="/Altek-Logo.jpeg" alt="Altek Green Logo" className="h-20 w-auto object-contain" />
@@ -429,7 +429,7 @@ export default function GenerateReportPage() {
                             {generatedReport}
                         </ReactMarkdown>
 
-                        <div className="mt-16 pt-8 border-t border-slate-300 flex justify-start relative h-32 w-64">
+                        <div className="mt-16 pt-8 border-t border-slate-300 flex justify-start relative h-32 w-64 print:mt-6 print:pt-4 print:h-24 print:break-inside-avoid">
                             <Image src="/signature.png" alt="Signature" fill className="object-contain" />
                         </div>
                         </div>
