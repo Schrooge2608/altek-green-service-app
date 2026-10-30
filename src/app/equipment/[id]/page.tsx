@@ -29,6 +29,7 @@ import { EditFanForm } from '@/components/equipment/edit-fan-form';
 import { EditValveForm } from '@/components/equipment/edit-valve-form';
 import { EditUpsBtuForm } from '@/components/equipment/edit-ups-btu-form';
 import { CreateUnscheduledScheduleDialog } from '@/components/equipment/create-unscheduled-schedule-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 function getDivisionSlug(divisionName?: string) {
     if (!divisionName) return '';
@@ -86,6 +87,7 @@ function EquipmentDetailSkeleton() {
 }
 
 export default function EquipmentDetail() {
+  const { toast } = useToast();
   const params = useParams();
   const router = useRouter();
   const rawId = Array.isArray(params.id) ? params.id.join('/') : ((params.id as string) || '');
@@ -485,15 +487,27 @@ export default function EquipmentDetail() {
       if (!eqRef || !eq) return;
       
       const currentStatus = eq.status || (vsd ? vsd.status : 'active');
-      const newStatus = currentStatus === 'active' || (!eq.status && eq.breakdownStatus !== 'Active') ? 'inactive' : 'active';
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       
       try {
           if (vsdRef && vsd) {
               await updateDoc(vsdRef, { status: newStatus });
           }
-          await updateDoc(eqRef, { status: newStatus });
+          await updateDoc(eqRef, { 
+            status: newStatus,
+            ...(newStatus === 'active' && eq.breakdownStatus === 'Active' ? { breakdownStatus: 'None' } : {})
+          });
+          toast({
+            title: "Equipment Status Updated",
+            description: `Status changed to ${newStatus === 'active' ? 'Active' : 'Inactive'}.`
+          });
       } catch (error) {
           console.error('Failed to update status', error);
+          toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: "Could not update equipment status in database."
+          });
       }
   };
 
@@ -560,14 +574,14 @@ export default function EquipmentDetail() {
                     <button 
                         onClick={toggleEquipmentStatus}
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                            eq.status === 'active' || (!eq.status && eq.breakdownStatus !== 'Active')
-                            ? 'bg-green-500 focus:ring-green-500' 
+                            eq.status === 'inactive'
+                            ? 'bg-red-500 focus:ring-red-500' 
                             : eq.status === 'maintenance'
                             ? 'bg-yellow-500 focus:ring-yellow-500'
-                            : 'bg-red-500 focus:ring-red-500'
+                            : 'bg-green-500 focus:ring-green-500'
                         }`}
                     >
-                        {eq.status === 'inactive' ? 'Inactive' : (eq.status || 'Operational')}
+                        {eq.status === 'inactive' ? 'Inactive' : (eq.status === 'maintenance' ? 'Maintenance' : 'Active')}
                     </button>
                 </div>
             </CardContent>
@@ -762,7 +776,7 @@ export default function EquipmentDetail() {
                                 : 'bg-red-500 focus:ring-red-500'
                             }`}
                           >
-                            {vsd?.status || 'Unknown'}
+                            {vsd?.status === 'inactive' ? 'Inactive' : (vsd?.status === 'maintenance' ? 'Maintenance' : 'Active')}
                           </button>
                       </div>
                   </CardContent>

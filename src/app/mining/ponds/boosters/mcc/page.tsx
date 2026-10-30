@@ -192,8 +192,8 @@ export default function BoostersMCCPage() {
                           </TableCell>
                           <TableCell className="text-sm">{eq.assignedToName || 'Unassigned'}</TableCell>
                           <TableCell>
-                              <Badge variant={eq.status === 'inactive' || eq.breakdownStatus === 'Active' ? 'destructive' : 'default'} className={eq.status === 'inactive' || eq.breakdownStatus === 'Active' ? 'bg-red-500 text-white hover:bg-red-600 border-none' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none'}>
-                                  {eq.status === 'inactive' ? 'Inactive' : (eq.breakdownStatus === 'Active' ? 'Breakdown' : (eq.breakdownStatus || 'Operational'))}
+                              <Badge variant={eq.status === 'inactive' || eq.breakdownStatus === 'Active' ? 'destructive' : 'default'} className={eq.status === 'inactive' || eq.breakdownStatus === 'Active' ? 'bg-red-500 text-white hover:bg-red-600 border-none' : eq.status === 'maintenance' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100 border-none' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none'}>
+                                  {eq.status === 'inactive' ? 'Inactive' : (eq.breakdownStatus === 'Active' ? 'Breakdown' : (eq.status === 'maintenance' ? 'Maintenance' : 'Active'))}
                               </Badge>
                           </TableCell>
                             <TableCell className="text-center">

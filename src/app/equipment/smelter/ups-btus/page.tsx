@@ -111,7 +111,7 @@ export default function SmelterUpsBtusPage() {
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell>{item.amount}</TableCell>
                         <TableCell>{item.assignedTo}</TableCell>
-                        <TableCell><Badge variant="outline">{item.breakdownStatus}</Badge></TableCell>
+                        <TableCell><Badge variant="default" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none">{item.breakdownStatus === 'None' ? 'Active' : item.breakdownStatus}</Badge></TableCell>
                         <TableCell className="text-right"><Badge variant="default">{item.uptime}</Badge></TableCell>
                         <TableCell className="text-right">{item.power}</TableCell>
                         {canDelete && (
@@ -155,7 +155,7 @@ export default function SmelterUpsBtusPage() {
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell>{item.amount}</TableCell>
                         <TableCell>{item.assignedTo}</TableCell>
-                        <TableCell><Badge variant="outline">{item.breakdownStatus}</Badge></TableCell>
+                        <TableCell><Badge variant="default" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none">{item.breakdownStatus === 'None' ? 'Active' : item.breakdownStatus}</Badge></TableCell>
                         <TableCell className="text-right"><Badge variant="default">{item.uptime}</Badge></TableCell>
                         <TableCell className="text-right">{item.power}</TableCell>
                         {canDelete && (

@@ -110,20 +110,20 @@ function AuthenticatedSmelterDivisionPage() {
         });
     };
 
-    const getStatusVariant = (status?: Equipment['breakdownStatus']) => {
-        switch (status) {
-          case 'Active':
-            return 'destructive';
-          case 'Resolved':
-          case 'Pending PO':
-          case 'Awaiting OT':
-            return 'secondary';
-          case 'Signed Off':
-          case 'Invoiced':
-            return 'default';
-          default:
-            return 'outline';
+    const getStatusDisplay = (item: Equipment) => {
+        if (item.status === 'inactive') {
+          return { label: 'Inactive', variant: 'destructive', className: 'bg-red-500 text-white hover:bg-red-600 border-none' };
         }
+        if (item.breakdownStatus === 'Active') {
+          return { label: 'Breakdown', variant: 'destructive', className: 'bg-red-500 text-white hover:bg-red-600 border-none' };
+        }
+        if (item.status === 'maintenance') {
+          return { label: 'Maintenance', variant: 'default', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100 border-none' };
+        }
+        if (item.breakdownStatus && item.breakdownStatus !== 'None' && item.breakdownStatus !== 'Resolved') {
+          return { label: item.breakdownStatus, variant: 'secondary', className: '' };
+        }
+        return { label: 'Active', variant: 'default', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none' };
     };
 
   if (!memoizedDivisionName) {
@@ -209,9 +209,14 @@ function AuthenticatedSmelterDivisionPage() {
                                                                 )}
                                                             </TableCell>
                                                             <TableCell>
-                                                                <Badge variant={getStatusVariant(eq.breakdownStatus)}>
-                                                                    {eq.breakdownStatus || 'None'}
-                                                                </Badge>
+                                                                {(() => {
+                                                                    const st = getStatusDisplay(eq);
+                                                                    return (
+                                                                        <Badge variant={st.variant as any} className={st.className}>
+                                                                            {st.label}
+                                                                        </Badge>
+                                                                    );
+                                                                })()}
                                                             </TableCell>
                                                             <TableCell className="text-right">
                                                             <Badge variant={uptime > 99 ? 'default' : 'destructive'}>
@@ -282,9 +287,14 @@ function AuthenticatedSmelterDivisionPage() {
                                     )}
                                 </TableCell>
                                 <TableCell>
-                                    <Badge variant={getStatusVariant(eq.breakdownStatus)}>
-                                        {eq.breakdownStatus || 'None'}
-                                    </Badge>
+                                    {(() => {
+                                        const st = getStatusDisplay(eq);
+                                        return (
+                                            <Badge variant={st.variant as any} className={st.className}>
+                                                {st.label}
+                                            </Badge>
+                                        );
+                                    })()}
                                 </TableCell>
                                 <TableCell className="text-right">
                                 <Badge variant={uptime > 99 ? 'default' : 'destructive'}>
