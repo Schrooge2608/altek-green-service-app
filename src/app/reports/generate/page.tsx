@@ -132,6 +132,11 @@ Extract all FSR interventions strictly into this table:
 
 Followed by a concise paragraph titled 'Analytical Insights from FSR Data:' summarizing key themes and critical assets.
 
+## Scheduled and Unscheduled Maintenance (Daily Diaries)
+Extract all daily diary interventions strictly into this table:
+| Date | Technician | Site | Activity Summary |
+|---|---|---|---|
+
 ## Safety, Incidents & Administrative Updates
 Include 3 distinct bullet points:
 - **Reporting Discipline:** Emphasize real-time app submission, accurate arrival/departure logging on FSRs, and cost-center allocations.
@@ -139,6 +144,89 @@ Include 3 distinct bullet points:
 - **Preventative Facilities Maintenance:** Highlight housekeeping, MCC panel dust/thermal inspection, and risk mitigation.`
     }
 ];
+
+export function buildCombinedPrompt(selectedIds: string[]): string {
+    if (!selectedIds || selectedIds.length === 0) {
+        return '';
+    }
+
+    if (selectedIds.length === 1) {
+        const found = REPORT_PROMPT_PRESETS.find(p => p.id === selectedIds[0]);
+        return found ? found.prompt : '';
+    }
+
+    const modularKeys = ['key-operations-by-site', 'executive-summary', 'fsr-breakdown-table', 'fsr-analytical-summary', 'daily-diaries-table'];
+    const hasAllModular = modularKeys.every(k => selectedIds.includes(k));
+    if (selectedIds.includes('full-modular-report') || hasAllModular) {
+        const fullPreset = REPORT_PROMPT_PRESETS.find(p => p.id === 'full-modular-report');
+        if (fullPreset) return fullPreset.prompt;
+    }
+
+    const canonicalOrder = [
+        'executive-summary',
+        'key-operations-by-site',
+        'fsr-breakdown-table',
+        'fsr-analytical-summary',
+        'daily-diaries-table'
+    ];
+
+    const activeOrderedIds = canonicalOrder.filter(id => selectedIds.includes(id));
+    selectedIds.forEach(id => {
+        if (!activeOrderedIds.includes(id) && id !== 'full-modular-report') {
+            activeOrderedIds.push(id);
+        }
+    });
+
+    const sectionsText: string[] = [];
+
+    activeOrderedIds.forEach(id => {
+        switch (id) {
+            case 'executive-summary':
+                sectionsText.push(`## Executive Summary
+Based on the provided raw data for this period, generate a 1-2 paragraph 'Executive Summary'. Focus on the critical path activities, major equipment breakdowns (e.g., VFDs, boosters, winches), and overall plant stability. Do not use bullet points here; write flowing, professional paragraphs.`);
+                break;
+            case 'key-operations-by-site':
+                sectionsText.push(`## Key Operations by Site
+Categorize the provided maintenance data by site (e.g., MPE, MPC, MPA, MPD). For each site, create a bolded heading. Below each heading, provide a bolded title for the specific asset (e.g., • **[Equipment Name / Breakdown]**:), followed by a concise, professional summary of the fault, diagnostics performed, and the resolution.`);
+                break;
+            case 'fsr-breakdown-table':
+                sectionsText.push(`## After Hours Breakdowns (16:00 to 07:00) - Field Service Reports
+Extract all Field Service Report (FSR) interventions from the provided data and format them STRICTLY into a Markdown table.
+You MUST use these exact column headers:
+| Date | Site | Asset | FSR Number | Status |
+|---|---|---|---|---|
+Ensure the markdown separator line is included immediately below the headers.`);
+                break;
+            case 'fsr-analytical-summary':
+                sectionsText.push(`### Analytical Insights from FSR Data
+Review the provided FSR table data. Write a single concise paragraph summarizing the key themes of these interventions. Highlight if tasks were grouped to optimize deployment time or if specific critical assets (like Motor Control Centers or Tails Boosters) required the most attention.`);
+                break;
+            case 'daily-diaries-table':
+                sectionsText.push(`## Scheduled & Unscheduled Maintenance (Office Hours) - Daily Diaries
+Extract the daily diary logs from the provided data and format them STRICTLY into a Markdown table.
+You MUST use these exact column headers:
+| Date | Technician | Site | Activity Summary |
+|---|---|---|---|
+Ensure the markdown separator line is included immediately below the headers.`);
+                break;
+            default: {
+                const found = REPORT_PROMPT_PRESETS.find(p => p.id === id);
+                if (found) {
+                    sectionsText.push(`## ${found.title}\n${found.prompt}`);
+                }
+                break;
+            }
+        }
+    });
+
+    return `Generate a formal, professional Weekly Service & Maintenance Report combining the following selected sections:
+
+# Weekly Service & Maintenance Report
+**Prepared By:** Fritz Schroeder, Services Manager (KZN)  
+**Reporting Period:** Weekly Activity Period (Week 43)
+
+${sectionsText.join('\n\n')}`;
+}
 
 export default function GenerateReportPage() {
     const { toast } = useToast();
@@ -154,7 +242,46 @@ export default function GenerateReportPage() {
     const [date, setDate] = useState<DateRange | undefined>();
     const [aggregatedData, setAggregatedData] = useState<AggregatedData | null>(null);
     const [customQuery, setCustomQuery] = useState('');
-    const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+    const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
+
+    const togglePreset = (presetId: string) => {
+        setSelectedPresetIds(prev => {
+            let next: string[];
+            const modularIds = ['key-operations-by-site', 'executive-summary', 'fsr-breakdown-table', 'fsr-analytical-summary', 'daily-diaries-table'];
+
+            if (presetId === 'full-modular-report') {
+                if (prev.includes('full-modular-report')) {
+                    next = [];
+                } else {
+                    next = REPORT_PROMPT_PRESETS.map(p => p.id);
+                }
+            } else {
+                if (prev.includes(presetId)) {
+                    next = prev.filter(id => id !== presetId && id !== 'full-modular-report');
+                } else {
+                    next = [...prev, presetId];
+                    if (modularIds.every(id => next.includes(id))) {
+                        if (!next.includes('full-modular-report')) {
+                            next.push('full-modular-report');
+                        }
+                    }
+                }
+            }
+            setCustomQuery(buildCombinedPrompt(next));
+            return next;
+        });
+    };
+
+    const handleSelectAllPresets = () => {
+        const allIds = REPORT_PROMPT_PRESETS.map(p => p.id);
+        setSelectedPresetIds(allIds);
+        setCustomQuery(buildCombinedPrompt(allIds));
+    };
+
+    const handleClearPresets = () => {
+        setSelectedPresetIds([]);
+        setCustomQuery('');
+    };
 
     const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
     const { data: userData, isLoading: userDataLoading } = useDoc<User>(userRoleRef);
@@ -460,50 +587,49 @@ export default function GenerateReportPage() {
                 
                 <Card className="border-slate-200 shadow-sm">
                     <CardHeader className="pb-3 bg-slate-50/50 border-b">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div>
                                 <CardTitle className="text-sm uppercase tracking-widest font-bold text-slate-800 flex items-center gap-2">
                                     <Sparkles className="h-4 w-4 text-primary" />
-                                    2. Report Focus & Template Prompts
+                                    2. Report Focus & Modular Template Prompts
                                 </CardTitle>
                                 <CardDescription className="text-xs text-slate-500 mt-1">
-                                    Select any of the 6 modular templates below to populate the prompt, or click &ldquo;Generate with Template&rdquo; to execute directly.
+                                    Select one or multiple section templates to combine into a unified report, or click &ldquo;Run Section Only&rdquo; to test an individual component.
                                 </CardDescription>
                             </div>
-                            {selectedPresetId && (
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => {
-                                        setSelectedPresetId(null);
-                                        setCustomQuery('');
-                                    }}
-                                    className="text-xs h-7 text-muted-foreground hover:text-slate-900 border-slate-300"
+                            <div className="flex items-center gap-2 shrink-0">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleSelectAllPresets}
+                                    className="text-xs h-7 text-primary hover:text-primary font-medium border-primary/30 hover:bg-primary/5"
                                 >
-                                    <RotateCcw className="h-3 w-3 mr-1" /> Reset to Custom Prompt
+                                    <Check className="h-3 w-3 mr-1" /> Select All Sections
                                 </Button>
-                            )}
+                                {selectedPresetIds.length > 0 && (
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={handleClearPresets}
+                                        className="text-xs h-7 text-muted-foreground hover:text-slate-900 border-slate-300"
+                                    >
+                                        <RotateCcw className="h-3 w-3 mr-1" /> Clear Selection ({selectedPresetIds.length})
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6 space-y-6">
                         {/* 6 Modular Template Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                             {REPORT_PROMPT_PRESETS.map((preset) => {
-                                const isSelected = selectedPresetId === preset.id;
+                                const isSelected = selectedPresetIds.includes(preset.id);
                                 return (
                                     <div
                                         key={preset.id}
-                                        onClick={() => {
-                                            if (isSelected) {
-                                                setSelectedPresetId(null);
-                                                setCustomQuery('');
-                                            } else {
-                                                setSelectedPresetId(preset.id);
-                                                setCustomQuery(preset.prompt);
-                                            }
-                                        }}
+                                        onClick={() => togglePreset(preset.id)}
                                         className={cn(
-                                            "cursor-pointer p-3.5 rounded-lg border text-left transition-all relative flex flex-col justify-between hover:shadow-md",
+                                            "cursor-pointer p-3.5 rounded-lg border text-left transition-all relative flex flex-col justify-between hover:shadow-md select-none",
                                             isSelected
                                                 ? "border-primary bg-primary/5 ring-2 ring-primary shadow-sm"
                                                 : "border-slate-200 bg-white hover:border-primary/40"
@@ -516,7 +642,7 @@ export default function GenerateReportPage() {
                                                         "h-4 w-4 rounded border flex items-center justify-center transition-colors shrink-0",
                                                         isSelected 
                                                             ? "bg-primary border-primary text-white" 
-                                                            : "border-slate-300 bg-white"
+                                                            : "border-slate-300 bg-white hover:border-primary/60"
                                                     )}>
                                                         {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
                                                     </div>
@@ -534,17 +660,28 @@ export default function GenerateReportPage() {
                                         </div>
 
                                         <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between pl-6.5">
-                                            <span className="text-[10px] font-medium text-slate-500">
-                                                {isSelected ? "Active Prompt" : "Click to select"}
+                                            <span className={cn(
+                                                "text-[10px] font-medium flex items-center gap-1",
+                                                isSelected ? "text-primary font-semibold" : "text-slate-500"
+                                            )}>
+                                                {isSelected ? (
+                                                    <>
+                                                        <Check className="h-3 w-3 stroke-[3]" /> Included in Combined Report
+                                                    </>
+                                                ) : (
+                                                    "Click to include"
+                                                )}
                                             </span>
                                             <Button
                                                 size="sm"
-                                                variant={isSelected ? "default" : "secondary"}
+                                                variant={isSelected ? "outline" : "secondary"}
                                                 disabled={isGenerating}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setSelectedPresetId(preset.id);
-                                                    setCustomQuery(preset.prompt);
+                                                    toast({
+                                                        title: "Running Single Section",
+                                                        description: `Generating preview for "${preset.title}"...`
+                                                    });
                                                     handleGenerateReport(preset.prompt);
                                                 }}
                                                 className="h-7 text-xs px-2.5 gap-1.5"
@@ -554,7 +691,7 @@ export default function GenerateReportPage() {
                                                 ) : (
                                                     <Play className="h-3 w-3 fill-current" />
                                                 )}
-                                                Generate with Template
+                                                Run Section Only
                                             </Button>
                                         </div>
                                     </div>
@@ -567,37 +704,47 @@ export default function GenerateReportPage() {
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                                     <span>Active Prompt Instructions:</span>
-                                    {selectedPresetId && (
-                                        <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-normal">
-                                            Loaded from template
+                                    {selectedPresetIds.length > 0 && (
+                                        <span className="text-[10px] bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded">
+                                            {selectedPresetIds.length === 1
+                                                ? "1 section selected"
+                                                : `${selectedPresetIds.length} sections combined into unified report`}
                                         </span>
                                     )}
                                 </label>
                                 <span className="text-[11px] text-muted-foreground font-normal">
-                                    {selectedPresetId ? "Editable before running" : "Custom instruction mode"}
+                                    {selectedPresetIds.length > 0 ? "Editable before running" : "Custom instruction mode"}
                                 </span>
                             </div>
                             <Textarea
-                                placeholder="Select a preset template above, or type custom prompt instructions here..."
+                                placeholder="Select preset templates above to combine sections, or type custom prompt instructions here..."
                                 value={customQuery}
                                 onChange={(e) => setCustomQuery(e.target.value)}
-                                rows={5}
+                                rows={6}
                                 className="bg-white text-xs font-sans leading-relaxed border-slate-200"
                             />
                         </div>
 
-                        <div className="flex items-center justify-between pt-2">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                             <p className="text-xs text-muted-foreground">
-                                Ready to generate? Ensure your date range is fetched above.
+                                {selectedPresetIds.length > 0 
+                                    ? `${selectedPresetIds.length} section(s) selected to generate in a single unified document.`
+                                    : "Ready to generate? Ensure your date range is fetched above."}
                             </p>
                             <Button 
                                 onClick={() => handleGenerateReport()} 
                                 disabled={isGenerating} 
                                 size="lg" 
-                                className="bg-primary hover:bg-primary/90 gap-2 shadow-sm"
+                                className="w-full sm:w-auto bg-primary hover:bg-primary/90 gap-2 shadow-sm font-semibold"
                             >
                                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                {isGenerating ? 'Synthesizing Report...' : 'Generate AI Report'}
+                                {isGenerating 
+                                    ? 'Synthesizing Report...' 
+                                    : selectedPresetIds.length > 1
+                                        ? `Generate Combined Report (${selectedPresetIds.length} Sections Selected)`
+                                        : selectedPresetIds.length === 1
+                                            ? 'Generate Report (1 Section Selected)'
+                                            : 'Generate AI Report'}
                             </Button>
                         </div>
                     </CardContent>
