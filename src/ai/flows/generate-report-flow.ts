@@ -34,7 +34,9 @@ const CompletedScheduleSchema = z.object({
 const DailyDiarySchema = z.object({
     id: z.string(),
     contractTitle: z.string().optional().default('N/A'),
+    contractorName: z.string().optional().default(''),
     date: z.string().optional().default('N/A'),
+    area: z.string().optional().default(''),
     works: z.array(z.object({
         area: z.string().optional(),
         scope: z.string().optional(),
@@ -44,13 +46,19 @@ const DailyDiarySchema = z.object({
 });
 
 const FieldServiceReportSchema = z.object({
-    id: z.string(),
+    id: z.string().optional(),
     fsrReference: z.string().optional().default('N/A'),
     date: z.string().optional().default('N/A'),
     customer: z.string().optional().default('N/A'),
     site: z.string().optional().default('N/A'),
+    location: z.string().optional().default(''),
     assetName: z.string().optional().default('N/A'),
     status: z.string().optional().default('N/A'),
+    customerFault: z.string().optional().default(''),
+    techFindings: z.string().optional().default(''),
+    rca: z.string().optional().default(''),
+    correctiveActions: z.string().optional().default(''),
+    recommendations: z.string().optional().default(''),
 });
 
 const EquipmentSchema = z.object({
@@ -109,9 +117,10 @@ const prompt = ai.definePrompt({
     ],
   },
   prompt: `{{#if customQuery}}
-You are an expert technical writer and Maintenance Analyst for Altek Green.
-Your task is to fulfill the user's request based on the provided data. The user may ask you to generate a specific type of report, analyze trends, summarize activities, or answer a specific question.
-Be incredibly thorough, highly detailed, and professional. Write an extensive, analytical report providing deep insights based on the data. Format your response beautifully using Markdown (e.g. tables, lists, headers). Do NOT include any internal thoughts, monologue, or JSON syntax in your output.
+You are the Altek Green Technical Reporting Agent. Your job is to convert rough notes, WhatsApp messages, Field Service Reports (FSRs), Daily Diaries, and raw data into formal, professional engineering reports.
+Always write in the third person or passive voice (e.g., 'Diagnostics were performed' instead of 'I performed diagnostics').
+Never use filler text or conversational openings. Output exactly the format and structure requested by the user prompt.
+When Markdown tables are requested, you MUST include clear header names and the standard markdown separator line (|---|---|) immediately below the headers.
 
 User Request: "{{{customQuery}}}"
 
@@ -141,12 +150,20 @@ Completed Schedules:
 
 Daily Diaries:
 {{#each dailyDiaries}}
-- Date: {{this.date}}, Title: {{this.contractTitle}}
+- Date: {{this.date}}, Title: {{this.contractTitle}}{{#if this.contractorName}} (Technician: {{this.contractorName}}){{/if}}{{#if this.area}} [Area: {{this.area}}]{{/if}}
+  {{#each this.works}}
+  * Scope: {{this.scope}}{{#if this.area}} (Area: {{this.area}}){{/if}}
+  {{/each}}
 {{/each}}
 
 Field Service Reports:
 {{#each fieldServiceReports}}
-- Ref: {{this.fsrReference}}, Customer: {{this.customer}}, Site: {{this.site}}, Asset: {{this.assetName}}, Date: {{this.date}}, Status: {{this.status}}
+- Ref: {{this.fsrReference}}, Customer: {{this.customer}}, Site: {{this.site}}{{#if this.location}} ({{this.location}}){{/if}}, Asset: {{this.assetName}}, Date: {{this.date}}, Status: {{this.status}}
+  {{#if this.customerFault}}* Customer Fault: {{this.customerFault}}{{/if}}
+  {{#if this.techFindings}}* Tech Findings: {{this.techFindings}}{{/if}}
+  {{#if this.rca}}* RCA: {{this.rca}}{{/if}}
+  {{#if this.correctiveActions}}* Corrective Actions: {{this.correctiveActions}}{{/if}}
+  {{#if this.recommendations}}* Recommendations: {{this.recommendations}}{{/if}}
 {{/each}}
 ---
 
