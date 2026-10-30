@@ -103,13 +103,13 @@ export default function FieldServiceReportDetailPage() {
   const [sigDialogTarget, setSigDialogTarget] = useState<'tech' | 'client'>('tech');
   const dialogSigRef = useRef<SignatureCanvas>(null);
 
-  const reportRef = useMemoFirebase(() => (reportId ? doc(firestore, 'field_service_reports', reportId) : null), [firestore, reportId]);
+  const reportRef = useMemoFirebase(() => (reportId && firestore ? doc(firestore, 'field_service_reports', reportId) : null), [firestore, reportId]);
   const { data: report, isLoading: reportLoading } = useDoc<FieldServiceReport>(reportRef);
 
   const { user: authUser } = useUser();
   const { firestore: db } = useFirebase();
   const { data: userData } = useDoc<User>(
-    useMemoFirebase(() => authUser ? doc(db, 'users', authUser.uid) : null, [db, authUser])
+    useMemoFirebase(() => (authUser && db ? doc(db, 'users', authUser.uid) : null), [db, authUser])
   );
   const canUseWhatsAppImport = useMemo(() => {
     const r = (userData?.role || '').toLowerCase();
@@ -122,10 +122,10 @@ export default function FieldServiceReportDetailPage() {
     );
   }, [userData?.role]);
   
-  const equipmentQuery = useMemoFirebase(() => query(collection(db, 'equipment'), orderBy('name', 'asc')), [db]);
+  const equipmentQuery = useMemoFirebase(() => (db ? query(collection(db, 'equipment'), orderBy('name', 'asc')) : null), [db]);
   const { data: equipmentList } = useCollection<any>(equipmentQuery);
 
-  const vsdsQuery = useMemoFirebase(() => query(collection(db, 'vsds')), [db]);
+  const vsdsQuery = useMemoFirebase(() => (db ? query(collection(db, 'vsds')) : null), [db]);
   const { data: vsdsList } = useCollection<any>(vsdsQuery);
 
   const form = useForm<FieldServiceReport>({
@@ -193,7 +193,7 @@ export default function FieldServiceReportDetailPage() {
   const { fields: partFields, append: appendPart, remove: removePart } = useFieldArray({ control: form.control, name: "parts" });
   const { fields: personFields, append: appendPerson, remove: removePerson } = useFieldArray({ control: form.control, name: "personnel" });
 
-  const sparesQuery = useMemoFirebase(() => query(collection(firestore, 'spare_parts'), orderBy('rbmNumber')), [firestore]);
+  const sparesQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, 'spare_parts'), orderBy('rbmNumber')) : null), [firestore]);
   const { data: sparesList } = useCollection(sparesQuery);
   const watchedArea = useWatch({ control: form.control, name: 'area' });
 
@@ -365,8 +365,11 @@ export default function FieldServiceReportDetailPage() {
     }
   }, [firestore, reportId, isFinalized, form, equipmentList, computedTotalHours, computedTotalKm]);
 
+  const isInitializedRef = useRef(false);
+
   useEffect(() => {
-    if (report) {
+    if (report && !isInitializedRef.current) {
+      isInitializedRef.current = true;
       const initialOT = report.otHours || report.ntHours || report.totalHours || 0;
       const initialKm = (Number(report.travelKmTo) || 0) + (Number(report.travelKmReturn) || 0);
       const defaultTechSig = report.techSignature || (userData?.signatureUrl || null);
@@ -390,17 +393,8 @@ export default function FieldServiceReportDetailPage() {
         personnel: report.personnel ?? [],
         images: report.images ?? []
       });
-
-      if (!report.techSignature && userData?.signatureUrl && !report.status?.toLowerCase().includes('final')) {
-        handleAutosave({
-          techSignature: userData.signatureUrl,
-          techName: defaultTechName,
-          techEmpNo: defaultTechEmpNo,
-          techSignDate: new Date().toISOString()
-        });
-      }
     }
-  }, [report, form, userData, authUser, handleAutosave]);
+  }, [report, userData, authUser, form]);
 
 
   const handleConfirmDialogSignature = async () => {
