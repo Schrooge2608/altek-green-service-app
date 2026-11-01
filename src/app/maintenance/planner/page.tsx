@@ -22,7 +22,11 @@ import {
   Check,
   Send,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Users,
+  Briefcase,
+  UserCheck,
+  CalendarDays
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useUser, useMemoFirebase, useDoc } from '@/firebase';
@@ -98,7 +102,6 @@ export default function AIMaintenancePlannerPage() {
   const { data: userData } = useDoc<User>(userDocRef);
 
   // 1. Target Week Calculation (Default: Upcoming Week)
-  // If Friday (5), Saturday (6), Sunday (0), target next week. If Monday-Thursday, target next week or current.
   const initialTarget = useMemo(() => {
     const now = new Date();
     const day = now.getDay();
@@ -129,6 +132,9 @@ export default function AIMaintenancePlannerPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // New Client Mandate State & Custom Directives
+  const [clientSuggestedWork, setClientSuggestedWork] = useState<string>('');
   const [customInstructions, setCustomInstructions] = useState<string>('');
   const [selectedPreset, setSelectedPreset] = useState<string>('full_plan');
 
@@ -150,10 +156,10 @@ export default function AIMaintenancePlannerPage() {
     {
       id: 'full_plan',
       title: 'Full Weekly Predictive Plan (Mon – Sun)',
-      badge: 'Comprehensive',
+      badge: 'Balanced Schedule',
       badgeVariant: 'default',
-      description: 'Generates the strategic plant overview, critical risk matrix, and day-by-day maintenance schedule for all sites.',
-      promptDirective: 'Generate the complete Altek Green Weekly Predictive Maintenance Plan. Analyze all recurring faults and unaddressed FSR recommendations to build an actionable Monday through Sunday schedule.',
+      description: 'Coordinates client-suggested work for Mon/Tue, allocates the 5-person crew, and schedules Altek PMs for the rest of the week.',
+      promptDirective: 'Generate the complete Altek Green Weekly Predictive Maintenance Plan. Respect client-mandated work first with required multi-person crew sizes, then fill remaining team capacity for the rest of the week.',
     },
     {
       id: 'critical_components',
@@ -161,7 +167,7 @@ export default function AIMaintenancePlannerPage() {
       badge: 'High Risk Focus',
       badgeVariant: 'destructive',
       description: 'Prioritizes assets showing repeat trips (earth faults, IGBT overcurrent, capacitor degradation) and evaluates component failure risk.',
-      promptDirective: 'Focus heavily on high-frequency breakdown equipment, repeat VSD trips, capacitor bank age, and motor insulation degradation. Provide a deeply detailed Priority Risk Matrix with explicit root causes and preventative testing instructions.',
+      promptDirective: 'Focus heavily on high-frequency breakdown equipment, repeat VSD trips, capacitor bank age, and motor insulation degradation. Provide a deeply detailed Priority Risk Matrix with explicit root causes, preventative testing, and required crew sizes.',
     },
     {
       id: 'local_mode_audit',
@@ -306,6 +312,7 @@ export default function AIMaintenancePlannerPage() {
         targetWeek: targetWeekNumber,
         targetStartDate: format(targetDateRange.from, 'yyyy-MM-dd'),
         targetEndDate: format(targetDateRange.to, 'yyyy-MM-dd'),
+        clientSuggestedWork: clientSuggestedWork.trim() || undefined,
         customQuery: fullPrompt,
         newBreakdowns: sanitizeForServer(aggregatedData.newBreakdowns),
         closedBreakdowns: sanitizeForServer(aggregatedData.closedBreakdowns),
@@ -372,7 +379,7 @@ export default function AIMaintenancePlannerPage() {
         await navigator.share({
           files: [file],
           title: `Altek Green Maintenance Plan - Week ${targetWeekNumber}`,
-          text: `Please find the Altek Green Weekly Predictive Maintenance Plan for Week ${targetWeekNumber} (${format(targetDateRange.from!, 'dd MMM')} – ${format(targetDateRange.to!, 'dd MMM yyyy')}).`,
+          text: `Please find the Altek Green Weekly Maintenance Plan for Week ${targetWeekNumber} (${format(targetDateRange.from!, 'dd MMM')} – ${format(targetDateRange.to!, 'dd MMM yyyy')}).`,
         });
         toast({ title: 'Shared Successfully' });
       } else {
@@ -383,7 +390,7 @@ export default function AIMaintenancePlannerPage() {
         });
 
         const shareMsg = encodeURIComponent(
-          `*Altek Green - Weekly Predictive Maintenance Plan*\n` +
+          `*Altek Green - Weekly Maintenance Plan*\n` +
           `*Planning Period:* Week ${targetWeekNumber} (${format(targetDateRange.from!, 'dd MMM')} – ${format(targetDateRange.to!, 'dd MMM yyyy')})\n` +
           `*Prepared By:* Fritz Schroeder, Services Manager\n\n` +
           `Please find the downloaded maintenance plan attached.`
@@ -406,10 +413,9 @@ export default function AIMaintenancePlannerPage() {
   // WhatsApp Quick Text Summary
   const handleShareWhatsAppText = () => {
     if (!generatedPlan) return;
-    // Extract first 1500 chars or summary for direct WhatsApp message
     const cleanSnippet = generatedPlan.slice(0, 1500).replace(/#/g, '').trim();
     const text = encodeURIComponent(
-      `*Altek Green Predictive Maintenance Plan (Week ${targetWeekNumber})*\n` +
+      `*Altek Green Maintenance Plan (Week ${targetWeekNumber})*\n` +
       `*Period:* ${format(targetDateRange.from!, 'dd MMM')} – ${format(targetDateRange.to!, 'dd MMM yyyy')}\n` +
       `*Prepared By:* Fritz Schroeder\n\n` +
       `${cleanSnippet}...\n\n_(Full official PDF available on portal)_`
@@ -432,6 +438,7 @@ export default function AIMaintenancePlannerPage() {
         title: `Weekly Predictive Maintenance Plan (Week ${targetWeekNumber})`,
         type: 'maintenance_plan',
         targetWeek: targetWeekNumber,
+        clientSuggestedWork: clientSuggestedWork.trim() || null,
         startDate: format(targetDateRange.from!, 'yyyy-MM-dd'),
         endDate: format(targetDateRange.to!, 'yyyy-MM-dd'),
         lookbackStartDate: format(lookbackRange.from!, 'yyyy-MM-dd'),
@@ -472,11 +479,11 @@ export default function AIMaintenancePlannerPage() {
               AI Maintenance Planner
             </h1>
             <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-300">
-              Predictive Engineering
+              Predictive Engineering & Work Order Planning
             </Badge>
           </div>
           <p className="text-sm text-slate-600 mt-1">
-            Formulate forward-looking work orders, risk matrices, and weekly maintenance programs from historical FSRs and breakdown trends.
+            Formulate balanced weekly work orders, risk matrices, and multi-technician allocations from client requests and historical FSR trends.
           </p>
         </div>
 
@@ -493,6 +500,30 @@ export default function AIMaintenancePlannerPage() {
               Client Report Generator
             </Button>
           </Link>
+        </div>
+      </div>
+
+      {/* Team Resource Capacity Notice */}
+      <div className="bg-slate-900 text-slate-100 rounded-lg p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm print-hidden border border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-emerald-500/20 rounded-md text-emerald-400">
+            <Users className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              Field Crew Capacity: Strict 5-Technician Pool
+            </h4>
+            <p className="text-[11px] text-slate-300">
+              The AI strictly enforces a maximum of 5 technicians per day across all tasks (Full Team of 5 for major shuts, 2–3 techs for overhauls, safety pairs for MCC work).
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Full Team (5)</span>
+          <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Crew (3)</span>
+          <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Pair (2)</span>
+          <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Solo (1)</span>
         </div>
       </div>
 
@@ -675,15 +706,84 @@ export default function AIMaintenancePlannerPage() {
           </CardContent>
         </Card>
 
-        {/* Step 3: Predictive Planning Presets & Custom Directives */}
+        {/* Step 3: Client Mandated / Suggested Work (Priority Directives) */}
+        <Card className="lg:col-span-12 border-blue-200 shadow-sm bg-gradient-to-br from-blue-50/40 via-white to-white">
+          <CardHeader className="pb-3 bg-blue-50/70 border-b">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 text-blue-950">
+                <UserCheck className="h-4 w-4 text-blue-600" />
+                3. Client Mandated / Suggested Work (Priority Directives)
+              </CardTitle>
+              <Badge className="bg-blue-100 text-blue-800 border-blue-300 font-normal text-xs">
+                Priority #1 Lock-In
+              </Badge>
+            </div>
+            <CardDescription className="text-xs text-blue-900/80">
+              Specify work requested or suggested by the client (e.g., Monday & Tuesday shuts or breakdowns). The AI will lock these in first with the required team size, then plan the rest of the week for Altek Green preventative maintenance.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase">Quick Suggestions:</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs bg-white text-slate-700 border-slate-300 hover:bg-blue-50"
+                onClick={() => setClientSuggestedWork('Monday: Full 5-man team on Smelter West Crane Drive testing and commissioning shut.\nTuesday: 2 technicians on MPE Tails Pump capacitor change.')}
+              >
+                Mon (Full Team Shut) + Tue (Pair)
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs bg-white text-slate-700 border-slate-300 hover:bg-blue-50"
+                onClick={() => setClientSuggestedWork('Monday & Tuesday: 3 technicians on Roaster Plant MCC2 VSD 3-monthly maintenance. Client requested Altek Green to plan Wednesday to Friday.')}
+              >
+                Mon–Tue 3-Man Roaster PM
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs bg-white text-slate-700 border-slate-300 hover:bg-blue-50"
+                onClick={() => setClientSuggestedWork('Monday: 2 technicians on Smelter S30 Vibrator Feeder DeviceNet PLC comms restoration.\nTuesday: Client shut on MPD Dredger MCC.')}
+              >
+                DeviceNet Comms + Dredger Shut
+              </Button>
+              {clientSuggestedWork && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-slate-500 hover:text-red-600"
+                  onClick={() => setClientSuggestedWork('')}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            <textarea
+              value={clientSuggestedWork}
+              onChange={(e) => setClientSuggestedWork(e.target.value)}
+              placeholder="Example: Client requested that on Monday the entire 5-man team attends the Smelter West Crane shut. On Tuesday, 2 technicians attend the MPE Tails Pump. What is the plan for the rest of the week?"
+              rows={3}
+              className="w-full text-xs p-3 rounded-md border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sans bg-white shadow-inner"
+            />
+          </CardContent>
+        </Card>
+
+        {/* Step 4: Predictive Planning Presets & Custom Directives */}
         <Card className="lg:col-span-12 border-slate-200 shadow-sm">
           <CardHeader className="pb-3 bg-slate-50/70 border-b">
             <CardTitle className="text-base font-semibold flex items-center gap-2 text-slate-900">
               <Layers className="h-4 w-4 text-emerald-600" />
-              3. Planning Focus & Predictive Templates
+              4. Planning Focus & Predictive Templates
             </CardTitle>
             <CardDescription className="text-xs">
-              Choose an engineering objective or customize priority equipment (e.g. MPE tails pumps, Smelter west crane, roaster MCC).
+              Choose an engineering objective or customize priority equipment for the remaining days of the week.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
@@ -723,12 +823,12 @@ export default function AIMaintenancePlannerPage() {
             {/* Custom Focus Textarea */}
             <div className="pt-2">
               <label className="text-xs font-medium text-slate-700 block mb-1">
-                Specific Managerial Focus / Technician Allocation Notes (Optional):
+                Services Manager Notes / Specific Spares & Allocations (Optional):
               </label>
               <textarea
                 value={customInstructions}
                 onChange={(e) => setCustomInstructions(e.target.value)}
-                placeholder="Example: Priority attention on Smelter S30 feeder DeviceNet comms and MPE TB21 cable insulation tests. Allocate David Msane to MPE and Buyani Mthembu to MPD Dredger."
+                placeholder="Example: Ensure David Msane leads the VSD capacitor team and Buyani Mthembu oversees cable insulation testing at MPE."
                 rows={2}
                 className="w-full text-xs p-2.5 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono bg-white"
               />
@@ -737,7 +837,7 @@ export default function AIMaintenancePlannerPage() {
             {/* Generate Button Bar */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t">
               <div className="text-xs text-slate-500">
-                Planning for <strong className="text-slate-800">Week {targetWeekNumber}</strong> using <strong className="text-slate-800">{lookbackDays}-day</strong> diagnostic lookback.
+                Planning for <strong className="text-slate-800">Week {targetWeekNumber}</strong> (5 Technicians) using <strong className="text-slate-800">{lookbackDays}-day</strong> history.
               </div>
 
               <Button
@@ -749,12 +849,12 @@ export default function AIMaintenancePlannerPage() {
                 {isGenerating ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Synthesizing Work Program...
+                    Synthesizing Multi-Technician Work Program...
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-5 w-5" />
-                    Generate Predictive Maintenance Plan
+                    Generate Maintenance Plan
                   </>
                 )}
               </Button>
@@ -785,7 +885,7 @@ export default function AIMaintenancePlannerPage() {
                     Weekly Predictive Maintenance Plan (Week {targetWeekNumber})
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Ready for client review, technician work packs, or team dispatch via WhatsApp.
+                    {clientSuggestedWork ? 'Coordinating Client-Mandated Tasks & Altek Green Preventative Schedule (5-Tech Team).' : 'Altek Green Proactive Maintenance & Multi-Technician Allocations.'}
                   </p>
                 </div>
               </div>
@@ -803,7 +903,7 @@ export default function AIMaintenancePlannerPage() {
                   Print to PDF
                 </Button>
 
-                {/* Export to WhatsApp (Smart PDF attachment with Web/App launcher) */}
+                {/* Export to WhatsApp */}
                 <Button
                   variant="outline"
                   size="sm"

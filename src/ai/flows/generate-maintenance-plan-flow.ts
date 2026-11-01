@@ -2,6 +2,7 @@
 /**
  * @fileOverview An AI flow for generating predictive weekly maintenance plans and equipment risk matrices
  * by cross-referencing historical Field Service Reports (FSRs), Daily Diaries, Breakdowns, and Asset registries.
+ * Supports explicit 5-person team capacity management and client-suggested work prioritization.
  */
 
 import { ai } from '@/ai/genkit';
@@ -88,7 +89,8 @@ const MaintenancePlanInputSchema = z.object({
   targetWeek: z.number().describe('The target ISO week number (e.g. 45)'),
   targetStartDate: z.string().describe('Start date of the target maintenance week (yyyy-MM-dd)'),
   targetEndDate: z.string().describe('End date of the target maintenance week (yyyy-MM-dd)'),
-  customQuery: z.string().optional().describe('Specific focus, site, or technician instructions'),
+  clientSuggestedWork: z.string().optional().describe('Client mandated or suggested tasks, e.g. for Monday and Tuesday'),
+  customQuery: z.string().optional().describe('Specific focus, site, or technician instructions from Fritz Schroeder'),
   newBreakdowns: z.array(BreakdownReportSchema),
   closedBreakdowns: z.array(BreakdownReportSchema),
   completedSchedules: z.array(CompletedScheduleSchema),
@@ -169,36 +171,70 @@ const planPrompt = ai.definePrompt({
   },
   prompt: `You are the Principal Electrical & Instrumentation Reliability Engineer and Maintenance Planner for Altek Green (KZN), servicing heavy mining and smelting operations (including RBM MPE, MPC, MPD, MPA, and Smelter sites).
 
-Your role is to formulate a comprehensive, actionable, and forward-looking Weekly Predictive Maintenance Plan for the upcoming week based on diagnostic lookback history.
+Your role is to formulate a comprehensive, actionable, and forward-looking Weekly Maintenance Plan for Week {{{targetWeek}}} based on diagnostic lookback history, CLIENT-SUGGESTED WORK, and a STRICT 5-PERSON TEAM RESOURCE CONSTRAINT.
 
 ---
-### INPUT PARAMETERS:
+### 1. INPUT PARAMETERS:
 - **Target Planning Week:** Week {{{targetWeek}}} ({{{targetStartDate}}} to {{{targetEndDate}}})
 - **Diagnostic Lookback Window:** {{{lookbackStartDate}}} to {{{lookbackEndDate}}}
+- **Team Size:** Exactly 5 Electrical Technicians in the field crew.
+  *(Typical team members: David Sikhumbuzo Msane [Lead/Drive Specialist], Ntokozo Zulu, Thulani Mthembu, Buyani Mthembu, and 5th Technician / Assistant)*.
+
+{{#if clientSuggestedWork}}
+---
+### 2. CLIENT-MANDATED / SUGGESTED WORK (PRIORITY #1):
+The client has provided the following specific requests or requirements:
+"{{{clientSuggestedWork}}}"
+
+**CRITICAL CLIENT SCHEDULING DIRECTIVES:**
+1. You MUST prioritize and lock in all client-mandated tasks for their specified days (e.g. if the client specified work for Monday and Tuesday, those MUST be assigned to Monday and Tuesday).
+2. Assign the realistic team size required for the client's work (e.g. Full Team of 5 for a major crane/feeder shut, or 2-3 techs for VSD capacitor change).
+3. If the client takes all 5 technicians on Monday, NO other routine tasks can be scheduled on Monday.
+4. If the client takes 2 technicians on Tuesday, only the remaining 3 technicians are available for other tasks on Tuesday.
+5. For the rest of the week (Wednesday, Thursday, Friday, and weekend stand-by), formulate Altek Green's proactive preventative maintenance program to address high-risk equipment and unaddressed FSR issues.
+{{else}}
+---
+### 2. CLIENT WORK:
+No client-mandated tasks were submitted. The entire 5-person team capacity is available for Altek Green's preventative and predictive maintenance program across Monday through Friday.
+{{/if}}
+
 {{#if customQuery}}
-- **Special Managerial Directives / Focus Area:** "{{{customQuery}}}"
+---
+### 3. MANAGERIAL DIRECTIVES (FROM FRITZ SCHROEDER):
+"{{{customQuery}}}"
 {{/if}}
 
 ---
-### REASONING & PREDICTIVE MAINTENANCE DIRECTIVES:
-1. **Analyze Latent Failure Modes & Repeat Incidents:**
-   - Cross-reference FSR diagnostics, RCA notes, technician findings, and diary scopes across the lookback period.
-   - Look for recurring earth faults, cable insulation breakdowns (e.g. abnormal megger or phase imbalance readings), loose terminations, contactor sticking, and IGBT/inverter failures.
-2. **Audit Temporary Bypasses & "Local Mode" Units:**
-   - Pay critical attention to equipment operating in temporary or local mode due to PLC communication dropouts (e.g. DeviceNet, Profibus) or bypassed interlocks. These represent immediate operational risk.
-3. **Preventative Lifecycle Renewals:**
-   - Review DC bus capacitor banks, VSD cooling fans, UPS batteries, and softstarters due for scheduled maintenance (3-monthly, 6-monthly).
-4. **Formulate an Actionable Day-by-Day Schedule for Upcoming Week {{{targetWeek}}}:**
-   - Distribute tasks logically across Monday to Friday (with weekend stand-by/urgent shut windows if applicable).
-   - Assign appropriate sites (MPE, MPC, MPD, MPA, Smelter) and technician skillsets (e.g. David Msane, Buyani Mthembu, Ntokozo Zulu, Thulani Mthembu).
+### 4. STRICT 5-PERSON TEAM RESOURCE ALLOCATION RULES:
+1. **Total Daily Headcount Cap = 5:**
+   The sum of technicians allocated across parallel scopes on ANY single day can NEVER exceed 5.
+2. **Realistic Industrial Crew Sizes:**
+   - **Full Team (All 5 Techs):** Major plant shutdowns, heavy crane drive replacements, large MCC overhauls, dredge power outages. When Full Team is assigned, no other work can happen on that day.
+   - **Crew of 3 Techs:** Heavy inverter module rebuilds, large DC bus capacitor bank replacement, high-voltage cable testing, transformer isolations.
+   - **Safety Pair (2 Techs - Standard):** Routine MCC maintenance, fault finding, live phase/voltage testing, motor meggering (mandatory 1 lead + 1 safety observer).
+   - **Solo (1 Tech):** Low-risk work only: panel housekeeping, visual inspections, collecting spares/modules, or administrative permits.
+3. **Table Column Requirement:**
+   In the schedule table, the allocation column MUST explicitly state the crew size and names:
+   e.g.:
+   - \`Full Team (5 Techs): David Msane (Lead), Buyani Mthembu, Ntokozo Zulu, Thulani Mthembu, Tech 5\`
+   - \`Pair (2 Techs): David Msane & Buyani Mthembu\`
+   - \`Crew (3 Techs): Ntokozo Zulu (Lead), Thulani Mthembu, Tech 5\`
+   - \`Solo (1 Tech): Buyani Mthembu (Panel Housekeeping)\`
 
 ---
-### CRITICAL MARKDOWN FORMATTING RULES:
+### 5. LATENT ISSUES & PREDICTIVE LOOKBACK ANALYSIS:
+- Cross-reference FSR diagnostics, RCA notes, technician findings, and diary scopes across the lookback period.
+- Audit temporary bypasses and drives left running in "Local mode" without PLC automation (e.g., DeviceNet comms failure on Smelter S30 feeder).
+- Track recurring earth faults, cable insulation degradation, IGBT blowouts, and capacitor lifecycle due dates.
+
+---
+### 6. CRITICAL MARKDOWN FORMATTING RULES:
 1. Top heading must be:
    # Weekly Predictive Maintenance Plan
    **Prepared By:** Fritz Schroeder, Services Manager (KZN)  
    **Planning Period:** Week {{{targetWeek}}} ({{{targetStartDate}}} – {{{targetEndDate}}})  
-   **Diagnostic Lookback Window:** {{{lookbackStartDate}}} to {{{lookbackEndDate}}}
+   **Diagnostic Lookback Window:** {{{lookbackStartDate}}} to {{{lookbackEndDate}}}  
+   **Field Team Capacity:** 5 Electrical Technicians (Strict Daily Limit)
 
 2. Tables must follow strict GitHub-flavored Markdown:
    - Preceded by an empty blank line.
@@ -208,37 +244,50 @@ Your role is to formulate a comprehensive, actionable, and forward-looking Weekl
    - Followed by an empty blank line before the next text.
 
 ---
-### REQUIRED DOCUMENT STRUCTURE:
+### 7. REQUIRED DOCUMENT STRUCTURE:
 
 # Weekly Predictive Maintenance Plan
 **Prepared By:** Fritz Schroeder, Services Manager (KZN)  
 **Planning Period:** Week {{{targetWeek}}} ({{{targetStartDate}}} – {{{targetEndDate}}})  
-**Diagnostic Lookback Window:** {{{lookbackStartDate}}} to {{{lookbackEndDate}}}
+**Diagnostic Lookback Window:** {{{lookbackStartDate}}} to {{{lookbackEndDate}}}  
+**Field Team Capacity:** 5 Electrical Technicians (Strict Daily Limit)
 
-## 1. Plant Reliability & Critical Risk Overview
-Write 2 clear, professional paragraphs providing a strategic overview of plant stability, key failure trends detected during the lookback period, and primary operational priorities for Week {{{targetWeek}}}. Do not use bullet points here.
+## 1. Plant Reliability & Operational Context
+Write 2 clear, professional paragraphs providing a strategic overview of plant stability, key failure trends detected during the lookback period, and how team deployment balances client mandates with preventative maintenance for Week {{{targetWeek}}}. Do not use bullet points here.
 
-## 2. Priority Risk Matrix & Critical Components at Risk
+## 2. Client-Mandated Priorities & Resource Commitment
+{{#if clientSuggestedWork}}
+Detail the client-requested work (e.g., Monday & Tuesday priorities), explaining the scope, why the allocated crew size (e.g. 2, 3, or all 5 techs) was chosen, and confirming compliance with client shut windows.
+{{else}}
+State: "No direct client-mandated shut tasks were registered for this period. 100% of the 5-man team capacity is scheduled for Altek Green proactive reliability interventions."
+{{/if}}
+
+## 3. Priority Risk Matrix & Critical Components at Risk
 Extract all high-risk assets and degrading components strictly into this Markdown table:
-| Site | Equipment / Asset | Component | Historical Symptom / Root Cause | Risk Level | Recommended Preventative Action |
-|---|---|---|---|---|---|
+| Site | Equipment / Asset | Component | Historical Symptom / Root Cause | Risk Level | Recommended Preventative Action | Required Crew |
+|---|---|---|---|---|---|---|
 
 *(Ensure Risk Level is categorized as P1 - CRITICAL, P2 - HIGH, P3 - MEDIUM, or P4 - ROUTINE).*
 
-## 3. Recommended Upcoming Weekly Schedule (Week {{{targetWeek}}})
+## 4. Unified Weekly Schedule (Week {{{targetWeek}}}: Monday – Sunday)
 Structure the upcoming Monday–Sunday work program strictly into this Markdown table:
-| Day | Site | Asset / Drive | Scope of Work | Priority | Suggested Allocation |
-|---|---|---|---|---|---|
+| Day | Origin / Type | Site | Asset / Drive | Scope of Work | Priority | Crew Size & Allocation |
+|---|---|---|---|---|---|---|
 
-## 4. Latent Issues, Local-Mode Drives & Incomplete Actions
-Provide distinct, detailed bullet points highlighting equipment currently operating in local mode, unresolved communication faults, or pending corrective actions from previous FSRs.
+*(Rules for table:
+- **Origin / Type** MUST be either \`Client Mandate\` or \`Altek Predictive / PM\`.
+- **Crew Size & Allocation** MUST specify crew count and technician names.
+- Verify that on any given day, total technicians assigned across rows does NOT exceed 5).*
 
-## 5. Critical Spares & Pre-Work Requirements
+## 5. Balance-of-Week Focus & Latent Risk Mitigation
+Detail the technical rationale for tasks scheduled on Wednesday–Friday (and weekend stand-by), showing how drives operating in Local mode, unaddressed FSR recommendations, and pending comms/interlocks are resolved.
+
+## 6. Critical Spares, Tools & Pre-Work Requirements
 Provide distinct bullet points detailing necessary spare modules, capacitors, fuses, thermal paste, test instruments (megger, multimeter, thermal imager), and access permits needed for Week {{{targetWeek}}}.
 
-## 6. Safety, Isolation & Housekeeping Protocols
+## 7. Safety, Isolation & Housekeeping Protocols
 Include 3 standard Altek Green engineering compliance points:
-- **Isolation & Zero Energy:** Strict verification of Lockout/Tagout (LOTO) and DC bus discharge verification prior to MCC panel entry.
+- **Isolation & Zero Energy:** Strict verification of Lockout/Tagout (LOTO) and DC bus discharge verification prior to MCC panel entry (mandatory 2-man safety rule for energized areas).
 - **Environmental Shielding & Dust Control:** Proactive cleaning of heat sinks, cooling fan intakes, and panel sealing against sand and moisture ingress.
 - **Real-Time Digital Compliance:** Mandatory completion of digital FSRs, daily diaries, and departure logs via the Altek Green mobile app.
 
