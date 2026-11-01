@@ -45,31 +45,48 @@ const DailyDiarySchema = z.object({
     afterWorkImages: z.array(z.string()).optional(),
 });
 
+const toSafeString = (val: any): string => {
+  if (!val) return '';
+  if (Array.isArray(val)) {
+    return val.filter(Boolean).map(v => typeof v === 'string' ? v : JSON.stringify(v)).join('\n');
+  }
+  if (typeof val === 'string') return val;
+  return String(val);
+};
+
+const safeStringSchema = z.union([
+  z.string(),
+  z.array(z.any()),
+  z.null(),
+  z.undefined()
+]).transform(val => toSafeString(val)).default('');
+
 const FieldServiceReportSchema = z.object({
     id: z.string().optional(),
-    fsrReference: z.string().optional().default('N/A'),
-    date: z.string().optional().default('N/A'),
-    customer: z.string().optional().default('N/A'),
-    site: z.string().optional().default('N/A'),
-    location: z.string().optional().default(''),
-    assetName: z.string().optional().default('N/A'),
-    status: z.string().optional().default('N/A'),
-    customerFault: z.string().optional().default(''),
-    techFindings: z.string().optional().default(''),
-    rca: z.string().optional().default(''),
-    correctiveActions: z.string().optional().default(''),
-    recommendations: z.string().optional().default(''),
+    fsrReference: safeStringSchema,
+    date: safeStringSchema,
+    customer: safeStringSchema,
+    site: safeStringSchema,
+    location: safeStringSchema,
+    assetName: safeStringSchema,
+    status: safeStringSchema,
+    customerFault: safeStringSchema,
+    techFindings: safeStringSchema,
+    rca: safeStringSchema,
+    correctiveActions: safeStringSchema,
+    recommendations: safeStringSchema,
 });
 
 const EquipmentSchema = z.object({
-  name: z.string().optional().default('Unknown'),
-  serialNumber: z.string().optional().default('N/A'),
-  plant: z.string().optional().default('Unknown'),
-  division: z.string().optional().default('Unknown'),
-  status: z.string().optional().default('Unknown'),
-  location: z.string().optional().default('N/A'),
-  vsdId: z.string().optional().default(''),
-});
+  name: safeStringSchema,
+  serialNumber: safeStringSchema,
+  plant: safeStringSchema,
+  division: safeStringSchema,
+  status: safeStringSchema,
+  location: safeStringSchema,
+  vsdId: safeStringSchema,
+  flag: safeStringSchema,
+}).passthrough();
 
 
 const ReportInputSchema = z.object({
@@ -95,6 +112,43 @@ export async function generateReport(
 ): Promise<{ success: boolean; data?: ReportOutput; error?: string }> {
   try {
     const safeInput = JSON.parse(JSON.stringify(input));
+
+    // Ensure all FSR fields are safe strings before passing into Genkit flow
+    if (Array.isArray(safeInput.fieldServiceReports)) {
+      safeInput.fieldServiceReports = safeInput.fieldServiceReports.map((f: any) => ({
+        ...f,
+        id: String(f.id || ''),
+        fsrReference: toSafeString(f.fsrReference || 'N/A'),
+        date: toSafeString(f.date || 'N/A'),
+        customer: toSafeString(f.customer || 'N/A'),
+        site: toSafeString(f.site || 'N/A'),
+        location: toSafeString(f.location || ''),
+        assetName: toSafeString(f.assetName || 'N/A'),
+        status: toSafeString(f.status || 'N/A'),
+        customerFault: toSafeString(f.customerFault),
+        techFindings: toSafeString(f.techFindings),
+        rca: toSafeString(f.rca),
+        correctiveActions: toSafeString(f.correctiveActions),
+        recommendations: toSafeString(f.recommendations),
+      }));
+    }
+
+    // Ensure dailyDiaries works scopes are strings
+    if (Array.isArray(safeInput.dailyDiaries)) {
+      safeInput.dailyDiaries = safeInput.dailyDiaries.map((d: any) => ({
+        ...d,
+        id: String(d.id || ''),
+        contractTitle: toSafeString(d.contractTitle || 'N/A'),
+        contractorName: toSafeString(d.contractorName || ''),
+        date: toSafeString(d.date || 'N/A'),
+        area: toSafeString(d.area || ''),
+        works: Array.isArray(d.works) ? d.works.map((w: any) => ({
+          area: toSafeString(w?.area || ''),
+          scope: toSafeString(w?.scope || ''),
+        })) : [],
+      }));
+    }
+
     const result = await generateReportFlow(safeInput);
     return { success: true, data: result };
   } catch (e: any) {

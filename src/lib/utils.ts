@@ -55,7 +55,8 @@ export function formatMarkdownTables(markdown: string): string {
   let text = markdown
     .replace(/\\n/g, '\n')
     .replace(/^"|"$/g, '')
-    .replace(/\r\n/g, '\n');
+    .replace(/\r\n/g, '\n')
+    .replace(/([^\n])\s*•\s+/g, '$1\n\n• ');
 
   const lines = text.split('\n');
   const processedLines: string[] = [];

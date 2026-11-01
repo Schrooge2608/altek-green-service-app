@@ -10,6 +10,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useFieldArray, useForm, Controller, useWatch } from 'react-hook-form';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { generateSmartPagedPdf } from '@/lib/pdf-utils';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from '@/firebase';
@@ -473,24 +474,7 @@ export default function NewDailyDiaryV2Page() {
                 element.className = originalClass;
             }
             
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            
-            let heightLeft = pdfHeight;
-            let position = 0;
-            
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-            heightLeft -= pageHeight;
-            
-            while (heightLeft > 0) {
-              position -= pageHeight;
-              pdf.addPage();
-              pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-              heightLeft -= pageHeight;
-            }
+            const pdf = await generateSmartPagedPdf(element, { canvas });
             
             const pdfBlob = pdf.output('blob');
             const file = new File([pdfBlob], `DailyDiary-${uniqueId || 'Draft'}.pdf`, { type: 'application/pdf' });

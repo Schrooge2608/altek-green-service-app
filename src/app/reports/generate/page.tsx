@@ -454,39 +454,48 @@ export default function GenerateReportPage() {
                 flag: item.breakdownStatus || 'N/A'
             }));
 
+        const toSafeString = (val: any): string => {
+            if (!val) return '';
+            if (Array.isArray(val)) {
+                return val.filter(Boolean).map(v => (typeof v === 'string' ? v : JSON.stringify(v))).join('\n');
+            }
+            if (typeof val === 'string') return val;
+            return String(val);
+        };
+
         const sanitizeBreakdowns = (list: Breakdown[]) => list.map(b => ({
             id: b.id,
-            equipmentName: b.equipmentName || 'Unknown Equipment',
-            component: b.component || 'Other',
-            date: b.date || '',
+            equipmentName: toSafeString(b.equipmentName || 'Unknown Equipment'),
+            component: toSafeString(b.component || 'Other'),
+            date: toSafeString(b.date || ''),
             resolved: !!b.resolved,
-            resolution: b.resolution || 'Work completed.',
-            timeBackInService: b.timeBackInService || null
+            resolution: toSafeString(b.resolution || 'Work completed.'),
+            timeBackInService: b.timeBackInService ? toSafeString(b.timeBackInService) : null
         }));
 
         const minimalDiaries = aggregatedData.dailyDiaries.map(d => ({
             id: d.id || 'unknown-id',
-            contractTitle: d.contractTitle || 'Contractor Daily Diary',
-            contractorName: d.contractorName || '',
-            date: d.date,
-            area: d.area || '',
-            works: d.works?.map(w => ({ scope: w.scope, area: w.area }))
+            contractTitle: toSafeString(d.contractTitle || 'Contractor Daily Diary'),
+            contractorName: toSafeString(d.contractorName || ''),
+            date: toSafeString(d.date),
+            area: toSafeString(d.area || ''),
+            works: d.works?.map(w => ({ scope: toSafeString(w.scope), area: toSafeString(w.area) }))
         }));
 
         const minimalFSRs = (aggregatedData.fieldServiceReports || []).map((f: any) => ({
             id: f.id || 'unknown-fsr',
-            fsrReference: f.fsrReference || 'N/A',
-            date: f.date || 'N/A',
-            customer: f.customer || 'N/A',
-            site: f.site || 'N/A',
-            location: f.location || '',
-            assetName: f.assetName || 'N/A',
-            status: f.status || 'N/A',
-            customerFault: f.customerFault || '',
-            techFindings: f.techFindings || '',
-            rca: f.rca || '',
-            correctiveActions: f.correctiveActions || '',
-            recommendations: f.recommendations || ''
+            fsrReference: toSafeString(f.fsrReference || 'N/A'),
+            date: toSafeString(f.date || 'N/A'),
+            customer: toSafeString(f.customer || 'N/A'),
+            site: toSafeString(f.site || 'N/A'),
+            location: toSafeString(f.location || ''),
+            assetName: toSafeString(f.assetName || 'N/A'),
+            status: toSafeString(f.status || 'N/A'),
+            customerFault: toSafeString(f.customerFault),
+            techFindings: toSafeString(f.techFindings),
+            rca: toSafeString(f.rca),
+            correctiveActions: toSafeString(f.correctiveActions),
+            recommendations: toSafeString(f.recommendations)
         }));
 
         const reportInput: ReportInput = {

@@ -42,6 +42,7 @@ import {
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { generateSmartPagedPdf } from '@/lib/pdf-utils';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { useUser, useFirebase, useDoc, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase';
 import { doc, updateDoc, setDoc, writeBatch, serverTimestamp, collection, query, orderBy, getDocs, addDoc, where, limit } from 'firebase/firestore';
@@ -755,24 +756,7 @@ export default function FieldServiceReportDetailPage() {
       });
       element.className = originalClass; // restore
       
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      
-      let heightLeft = pdfHeight;
-      let position = 0;
-      
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
-      
-      while (heightLeft > 0) {
-        position -= pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
-      }
+      const pdf = await generateSmartPagedPdf(element, { canvas });
       
       const pdfBlob = pdf.output('blob');
       const file = new File([pdfBlob], `FSR-${report?.fsrReference || reportId}.pdf`, { type: 'application/pdf' });
