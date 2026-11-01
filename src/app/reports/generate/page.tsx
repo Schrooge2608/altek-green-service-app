@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { format, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfDay, endOfDay, getISOWeek } from 'date-fns';
 import { cn, formatMarkdownTables } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Textarea } from '@/components/ui/textarea';
@@ -60,70 +60,53 @@ interface ReportPromptPreset {
     prompt: string;
 }
 
-const REPORT_PROMPT_PRESETS: ReportPromptPreset[] = [
-    {
-        id: 'key-operations-by-site',
-        title: 'Key Operations by Site (Week 38 PDF)',
-        badge: 'Target PDF Style',
-        badgeVariant: 'default',
-        description: 'Categorizes maintenance data by site (MPE, MPC, MPA, MPD). Creates bolded site headings, bolded asset titles (e.g. TB25 Breakdown:), and detailed technical narrative paragraphs of faults, diagnostics, and resolutions.',
-        prompt: `Categorize the provided maintenance data by site (e.g., MPE, MPC, MPA, MPD). For each site, create a bolded heading. Below each heading, provide a bolded title for the specific asset (e.g., TB25 Breakdown:), followed by a concise, professional summary of the fault, the diagnostics performed, and the resolution.`
-    },
-    {
-        id: 'executive-summary',
-        title: 'Executive Summary',
-        badge: 'Executive Brief',
-        badgeVariant: 'secondary',
-        description: 'Generates a 1-2 paragraph Executive Summary focusing on critical path activities, major equipment breakdowns (e.g. VFDs, boosters, winches), and overall plant stability. Flowing professional paragraphs without bullet points.',
-        prompt: `Based on the provided raw data for this week, generate a 1-2 paragraph 'Executive Summary'. Focus on the critical path activities, major equipment breakdowns (e.g., VFDs, boosters, winches), and the overall stability of the plant. Do not use bullet points here; write flowing, professional paragraphs.`
-    },
-    {
-        id: 'fsr-breakdown-table',
-        title: 'FSR Breakdown Table',
-        badge: 'Strict Table',
-        badgeVariant: 'outline',
-        description: 'Extracts all Field Service Report (FSR) interventions strictly into a Markdown table with exact column headers: | Date | Site | Asset | FSR Number | Status |.',
-        prompt: `Extract all Field Service Report (FSR) interventions from the provided data and format them STRICTLY into a Markdown table.
-You MUST use these exact column headers:
-| Date | Site | Asset | FSR Number | Status |
-You MUST include the markdown separator line |---|---|---|---|---| immediately below the headers. Do not output any text before or after the table.`
-    },
-    {
-        id: 'fsr-analytical-summary',
-        title: 'FSR Analytical Summary',
-        badge: 'Analysis',
-        badgeVariant: 'secondary',
-        description: 'Reviews FSR table data and generates a single paragraph titled "Analytical Insights from FSR Data:" summarizing key themes, optimized deployment times, and critical asset attention.',
-        prompt: `Review the provided FSR table data. Write a single paragraph titled 'Analytical Insights from FSR Data:' that summarizes the key themes of these interventions. Highlight if tasks were grouped to optimize deployment time or if specific critical assets (like Motor Control Centers or Tails Boosters) required the most attention.`
-    },
-    {
-        id: 'daily-diaries-table',
-        title: 'Daily Diaries Table',
-        badge: 'Strict Table',
-        badgeVariant: 'outline',
-        description: 'Extracts daily diary logs strictly into a Markdown table with exact column headers: | Date | Technician | Site | Activity Summary |.',
-        prompt: `Extract the daily diary logs from the provided data and format them STRICTLY into a Markdown table.
-You MUST use these exact column headers:
-| Date | Technician | Site | Activity Summary |
-Include the separator line |---|---|---|---| . Do not output any text before or after the table.`
-    },
-    {
-        id: 'full-modular-report',
-        title: 'Full Modular Weekly Report (Complete Week 38 Standard)',
-        badge: 'Complete Document',
-        badgeVariant: 'default',
-        description: 'Stitches the full document together: Executive Summary + Key Operations by Site (MPE, MPC, MPD, MPA) + FSR & Diary summaries + Safety, Incidents & Administrative Updates.',
-        prompt: `Generate a complete, formal Weekly Service & Maintenance Report combining all key sections in the Altek Green management style:
+export function formatReportingPeriod(dateRange?: DateRange): string {
+    if (!dateRange || !dateRange.from) {
+        const now = new Date();
+        const week = getISOWeek(now);
+        const from = startOfWeek(now, { weekStartsOn: 1 });
+        const to = endOfWeek(now, { weekStartsOn: 1 });
+        return `Weekly Activity Period (Week ${week}) ${format(from, 'd')}-${format(to, 'd MMM yyyy')}`;
+    }
+
+    const from = dateRange.from;
+    const to = dateRange.to || dateRange.from;
+    const weekFrom = getISOWeek(from);
+    const weekTo = getISOWeek(to);
+
+    const diffDays = Math.round(Math.abs(to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000));
+
+    let datePart = '';
+    if (from.getFullYear() === to.getFullYear()) {
+        if (from.getMonth() === to.getMonth()) {
+            datePart = `${format(from, 'd')}-${format(to, 'd MMM yyyy')}`;
+        } else {
+            datePart = `${format(from, 'd MMM')} – ${format(to, 'd MMM yyyy')}`;
+        }
+    } else {
+        datePart = `${format(from, 'd MMM yyyy')} – ${format(to, 'd MMM yyyy')}`;
+    }
+
+    if (diffDays <= 7) {
+        const weekLabel = weekFrom === weekTo ? `Week ${weekFrom}` : `Week ${weekFrom}-Week ${weekTo}`;
+        return `Weekly Activity Period (${weekLabel}) ${datePart}`;
+    }
+
+    return `Activity Period (Week ${weekFrom} to Week ${weekTo}) ${datePart}`;
+}
+
+export function getFullModularPrompt(reportingPeriodText: string): string {
+    return `Generate a complete, formal Weekly Service & Maintenance Report combining all key sections in the Altek Green management style:
 
 # Weekly Service & Maintenance Report
 **Prepared By:** Fritz Schroeder, Services Manager (KZN)  
-**Reporting Period:** Weekly Activity Period (Week 43)
+**Reporting Period:** ${reportingPeriodText}
 
 ## Executive Summary
 Write 1-2 flowing professional paragraphs on critical path activities, major equipment breakdowns, and overall plant stability. Do not use bullet points here.
 
 ## Key Operations by Site
-Categorize all maintenance data by site (MPE, MPC, MPD, MPA). For each site, create a bolded heading. Below each heading, provide a bolded title for each asset (e.g. • **[Equipment Name / Breakdown]**:), followed by a concise, professional summary of the fault, diagnostics performed, and the resolution.
+Categorize all maintenance data by site (MPE, MPC, MPD, MPA). For each site, create a bolded heading. Below each heading, provide a bolded title for each asset (e.g. • **Equipment Name / Breakdown**:), followed by a concise, professional summary of the fault, diagnostics performed, and the resolution.
 
 ## Field Service Report (FSR) Interventions
 Extract all FSR interventions strictly into this table with each row on its own separate line:
@@ -141,13 +124,73 @@ Extract all daily diary interventions strictly into this table with each row on 
 Include 3 distinct bullet points:
 - **Reporting Discipline:** Emphasize real-time app submission, accurate arrival/departure logging on FSRs, and cost-center allocations.
 - **Site Compliance:** Confirm zero lost-time injuries, safety incidents, or environmental non-conformances.
-- **Preventative Facilities Maintenance:** Highlight housekeeping, MCC panel dust/thermal inspection, and risk mitigation.`
+- **Preventative Facilities Maintenance:** Highlight housekeeping, MCC panel dust/thermal inspection, and risk mitigation.`;
+}
+
+const REPORT_PROMPT_PRESETS: ReportPromptPreset[] = [
+    {
+        id: 'key-operations-by-site',
+        title: 'Key Operations by Site (Week 38 PDF)',
+        badge: 'Target PDF Style',
+        badgeVariant: 'default',
+        description: 'Categorizes maintenance data by site (MPE, MPC, MPD, MPA). Creates bolded site headings, bolded asset titles (e.g. • Equipment Name / Breakdown:), and detailed technical narrative paragraphs of faults, diagnostics, and resolutions.',
+        prompt: `Categorize all maintenance data by site (MPE, MPC, MPD, MPA). For each site, create a bolded heading. Below each heading, provide a bolded title for each asset (e.g. • **Equipment Name / Breakdown**:), followed by a concise, professional summary of the fault, diagnostics performed, and the resolution.`
+    },
+    {
+        id: 'executive-summary',
+        title: 'Executive Summary',
+        badge: 'Executive Brief',
+        badgeVariant: 'secondary',
+        description: 'Generates a 1-2 paragraph Executive Summary focusing on critical path activities, major equipment breakdowns (e.g. VFDs, boosters, winches), and overall plant stability. Flowing professional paragraphs without bullet points.',
+        prompt: `Write 1-2 flowing professional paragraphs on critical path activities, major equipment breakdowns, and overall plant stability. Do not use bullet points here.`
+    },
+    {
+        id: 'fsr-breakdown-table',
+        title: 'FSR Breakdown Table',
+        badge: 'Strict Table',
+        badgeVariant: 'outline',
+        description: 'Extracts all Field Service Report (FSR) interventions strictly into a Markdown table with exact column headers: | Date | Site | Asset | FSR Number | Status |.',
+        prompt: `Extract all FSR interventions strictly into this table with each row on its own separate line:
+| Date | Site | Asset | FSR Number | Status |
+|---|---|---|---|---|`
+    },
+    {
+        id: 'fsr-analytical-summary',
+        title: 'FSR Analytical Summary',
+        badge: 'Analysis',
+        badgeVariant: 'secondary',
+        description: 'Reviews FSR table data and generates a single paragraph titled "Analytical Insights from FSR Data:" summarizing key themes, optimized deployment times, and critical asset attention.',
+        prompt: `Followed by a concise paragraph titled 'Analytical Insights from FSR Data:' summarizing key themes and critical assets.`
+    },
+    {
+        id: 'daily-diaries-table',
+        title: 'Daily Diaries Table',
+        badge: 'Strict Table',
+        badgeVariant: 'outline',
+        description: 'Extracts daily diary logs strictly into a Markdown table with exact column headers: | Date | Technician | Site | Activity Summary |.',
+        prompt: `Extract all daily diary interventions strictly into this table with each row on its own separate line:
+| Date | Technician | Site | Activity Summary |
+|---|---|---|---|`
+    },
+    {
+        id: 'full-modular-report',
+        title: 'Full Modular Weekly Report (Complete Week 38 Standard)',
+        badge: 'Complete Document',
+        badgeVariant: 'default',
+        description: 'Stitches the full document together: Executive Summary + Key Operations by Site (MPE, MPC, MPD, MPA) + FSR & Diary summaries + Safety, Incidents & Administrative Updates.',
+        prompt: getFullModularPrompt(formatReportingPeriod())
     }
 ];
 
-function buildCombinedPrompt(selectedIds: string[]): string {
+function buildCombinedPrompt(selectedIds: string[], dateRange?: DateRange): string {
     if (!selectedIds || selectedIds.length === 0) {
         return '';
+    }
+
+    const reportingPeriodText = formatReportingPeriod(dateRange);
+
+    if (selectedIds.length === 1 && selectedIds[0] === 'full-modular-report') {
+        return getFullModularPrompt(reportingPeriodText);
     }
 
     if (selectedIds.length === 1) {
@@ -158,8 +201,7 @@ function buildCombinedPrompt(selectedIds: string[]): string {
     const modularKeys = ['key-operations-by-site', 'executive-summary', 'fsr-breakdown-table', 'fsr-analytical-summary', 'daily-diaries-table'];
     const hasAllModular = modularKeys.every(k => selectedIds.includes(k));
     if (selectedIds.includes('full-modular-report') || hasAllModular) {
-        const fullPreset = REPORT_PROMPT_PRESETS.find(p => p.id === 'full-modular-report');
-        if (fullPreset) return fullPreset.prompt;
+        return getFullModularPrompt(reportingPeriodText);
     }
 
     const canonicalOrder = [
@@ -183,31 +225,26 @@ function buildCombinedPrompt(selectedIds: string[]): string {
         switch (id) {
             case 'executive-summary':
                 sectionsText.push(`## Executive Summary
-Based on the provided raw data for this period, generate a 1-2 paragraph 'Executive Summary'. Focus on the critical path activities, major equipment breakdowns (e.g., VFDs, boosters, winches), and overall plant stability. Do not use bullet points here; write flowing, professional paragraphs.`);
+Write 1-2 flowing professional paragraphs on critical path activities, major equipment breakdowns, and overall plant stability. Do not use bullet points here.`);
                 break;
             case 'key-operations-by-site':
                 sectionsText.push(`## Key Operations by Site
-Categorize the provided maintenance data by site (e.g., MPE, MPC, MPA, MPD). For each site, create a bolded heading. Below each heading, provide a bolded title for the specific asset (e.g., • **[Equipment Name / Breakdown]**:), followed by a concise, professional summary of the fault, diagnostics performed, and the resolution.`);
+Categorize all maintenance data by site (MPE, MPC, MPD, MPA). For each site, create a bolded heading. Below each heading, provide a bolded title for each asset (e.g. • **Equipment Name / Breakdown**:), followed by a concise, professional summary of the fault, diagnostics performed, and the resolution.`);
                 break;
             case 'fsr-breakdown-table':
-                sectionsText.push(`## After Hours Breakdowns (16:00 to 07:00) - Field Service Reports
-Extract all Field Service Report (FSR) interventions from the provided data and format them STRICTLY into a Markdown table.
-You MUST use these exact column headers:
+                sectionsText.push(`## Field Service Report (FSR) Interventions
+Extract all FSR interventions strictly into this table with each row on its own separate line:
 | Date | Site | Asset | FSR Number | Status |
-|---|---|---|---|---|
-CRITICAL: Every table row (header, separator, and each data row) MUST be on its own separate line ending with a newline.`);
+|---|---|---|---|---|`);
                 break;
             case 'fsr-analytical-summary':
-                sectionsText.push(`### Analytical Insights from FSR Data
-Review the provided FSR table data. Write a single concise paragraph summarizing the key themes of these interventions. Highlight if tasks were grouped to optimize deployment time or if specific critical assets (like Motor Control Centers or Tails Boosters) required the most attention.`);
+                sectionsText.push(`Followed by a concise paragraph titled 'Analytical Insights from FSR Data:' summarizing key themes and critical assets.`);
                 break;
             case 'daily-diaries-table':
-                sectionsText.push(`## Scheduled & Unscheduled Maintenance (Office Hours) - Daily Diaries
-Extract the daily diary logs from the provided data and format them STRICTLY into a Markdown table.
-You MUST use these exact column headers:
+                sectionsText.push(`## Scheduled and Unscheduled Maintenance (Daily Diaries)
+Extract all daily diary interventions strictly into this table with each row on its own separate line:
 | Date | Technician | Site | Activity Summary |
-|---|---|---|---|
-CRITICAL: Every table row (header, separator, and each data row) MUST be on its own separate line ending with a newline.`);
+|---|---|---|---|`);
                 break;
             default: {
                 const found = REPORT_PROMPT_PRESETS.find(p => p.id === id);
@@ -219,13 +256,19 @@ CRITICAL: Every table row (header, separator, and each data row) MUST be on its 
         }
     });
 
-    return `Generate a formal, professional Weekly Service & Maintenance Report combining the following selected sections:
+    return `Generate a complete, formal Weekly Service & Maintenance Report combining all key sections in the Altek Green management style:
 
 # Weekly Service & Maintenance Report
 **Prepared By:** Fritz Schroeder, Services Manager (KZN)  
-**Reporting Period:** Weekly Activity Period (Week 43)
+**Reporting Period:** ${reportingPeriodText}
 
-${sectionsText.join('\n\n')}`;
+${sectionsText.join('\n\n')}
+
+## Safety, Incidents & Administrative Updates
+Include 3 distinct bullet points:
+- **Reporting Discipline:** Emphasize real-time app submission, accurate arrival/departure logging on FSRs, and cost-center allocations.
+- **Site Compliance:** Confirm zero lost-time injuries, safety incidents, or environmental non-conformances.
+- **Preventative Facilities Maintenance:** Highlight housekeeping, MCC panel dust/thermal inspection, and risk mitigation.`;
 }
 
 export default function GenerateReportPage() {
@@ -267,7 +310,7 @@ export default function GenerateReportPage() {
                     }
                 }
             }
-            setCustomQuery(buildCombinedPrompt(next));
+            setCustomQuery(buildCombinedPrompt(next, date));
             return next;
         });
     };
@@ -275,7 +318,7 @@ export default function GenerateReportPage() {
     const handleSelectAllPresets = () => {
         const allIds = REPORT_PROMPT_PRESETS.map(p => p.id);
         setSelectedPresetIds(allIds);
-        setCustomQuery(buildCombinedPrompt(allIds));
+        setCustomQuery(buildCombinedPrompt(allIds, date));
     };
 
     const handleClearPresets = () => {
@@ -535,7 +578,18 @@ export default function GenerateReportPage() {
                         </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2}/>
+                        <Calendar
+                            mode="range"
+                            defaultMonth={date?.from}
+                            selected={date}
+                            onSelect={(newDate) => {
+                                setDate(newDate);
+                                if (selectedPresetIds.length > 0) {
+                                    setCustomQuery(buildCombinedPrompt(selectedPresetIds, newDate));
+                                }
+                            }}
+                            numberOfMonths={2}
+                        />
                         </PopoverContent>
                     </Popover>
                     <Button onClick={handleFetchData} disabled={isFetching}>
@@ -791,7 +845,9 @@ export default function GenerateReportPage() {
                             remarkPlugins={[remarkGfm]}
                             className="space-y-6 font-sans text-slate-800 leading-relaxed"
                             components={{
-                            h1: () => null,
+                            h1: ({ node, ...props }) => (
+                                <h1 className="text-xl font-black text-slate-900 mt-2 mb-4 border-b-2 border-slate-900 pb-2 uppercase tracking-wide" {...props} />
+                            ),
                             h2: ({ node, ...props }) => (
                                 <h2 className="text-lg font-bold text-slate-900 mt-8 mb-4 border-b border-slate-300 pb-1 break-after-avoid" {...props} />
                             ),

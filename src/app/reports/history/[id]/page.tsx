@@ -185,7 +185,9 @@ export default function ViewReportPage() {
                             remarkPlugins={[remarkGfm]}
                             className="space-y-6 font-sans text-slate-800 leading-relaxed"
                             components={{
-                            h1: () => null,
+                            h1: ({ node, ...props }) => (
+                                <h1 className="text-xl font-black text-slate-900 mt-2 mb-4 border-b-2 border-slate-900 pb-2 uppercase tracking-wide" {...props} />
+                            ),
                             h2: ({ node, ...props }) => (
                                 <h2 className="text-lg font-bold text-slate-900 mt-8 mb-4 border-b border-slate-300 pb-1 break-after-avoid" {...props} />
                             ),

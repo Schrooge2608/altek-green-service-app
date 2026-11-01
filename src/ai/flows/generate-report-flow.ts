@@ -129,6 +129,11 @@ CRITICAL MARKDOWN TABLE RULES:
 5. NEVER concatenate multiple table rows on the same line. NEVER separate table rows with spaces or "| |".
 6. After the table, leave an empty blank line before any subsequent text or headings.
 
+CRITICAL FORMATTING & HEADING RULES:
+1. Always format top-level report titles with a single hashtag (e.g., # Weekly Service & Maintenance Report) and major sections with two hashtags (e.g., ## Executive Summary).
+2. When listing asset entries under site sections, do NOT wrap asset names or breakdown titles in square brackets (e.g., write '• **Equipment Name / Breakdown**:' instead of '• **[Equipment Name / Breakdown]**:').
+3. Strictly preserve the date range and reporting period line as requested in the user prompt.
+
 User Request: "{{{customQuery}}}"
 
 ---
