@@ -220,51 +220,67 @@ export default function AIMaintenancePlannerPage() {
     try {
       const fromStr = format(startOfDay(lookbackRange.from), 'yyyy-MM-dd');
       const toStr = format(endOfDay(lookbackRange.to), 'yyyy-MM-dd');
+      const fromISO = startOfDay(lookbackRange.from).toISOString();
+      const toISO = endOfDay(lookbackRange.to).toISOString();
 
-      // 1. Breakdowns
-      const breakdownsRef = collection(firestore, 'breakdowns');
-      const bQuery = query(breakdownsRef, where('date', '>=', fromStr), where('date', '<=', toStr));
-      const bSnap = await getDocs(bQuery);
-      const allB: Breakdown[] = [];
-      bSnap.forEach(doc => allB.push({ id: doc.id, ...doc.data() } as Breakdown));
-      const newB = allB.filter(b => !b.resolved);
-      const closedB = allB.filter(b => b.resolved);
+      const newBreakdownsQuery = query(
+        collection(firestore, 'breakdown_reports'),
+        where('date', '>=', fromStr),
+        where('date', '<=', toStr)
+      );
 
-      // 2. Completed Schedules
-      const schedRef = collection(firestore, 'completed_schedules');
-      const sQuery = query(schedRef, where('completionDate', '>=', fromStr), where('completionDate', '<=', toStr));
-      const sSnap = await getDocs(sQuery);
-      const compS: CompletedSchedule[] = [];
-      sSnap.forEach(doc => compS.push({ id: doc.id, ...doc.data() } as CompletedSchedule));
+      const closedBreakdownsQuery = query(
+        collection(firestore, 'breakdown_reports'),
+        where('resolved', '==', true),
+        where('timeBackInService', '>=', fromISO),
+        where('timeBackInService', '<=', toISO)
+      );
 
-      // 3. Daily Diaries
-      const diaryRef = collection(firestore, 'contractors_daily_diary');
-      const dQuery = query(diaryRef, where('date', '>=', fromStr), where('date', '<=', toStr));
-      const dSnap = await getDocs(dQuery);
-      const diaries: DailyDiary[] = [];
-      dSnap.forEach(doc => diaries.push({ id: doc.id, ...doc.data() } as DailyDiary));
+      const schedulesQuery = query(
+        collection(firestore, 'completed_schedules'),
+        where('completionDate', '>=', fromStr),
+        where('completionDate', '<=', toStr)
+      );
 
-      // 4. Field Service Reports
-      const fsrRef = collection(firestore, 'field_service_reports');
-      const fQuery = query(fsrRef, where('date', '>=', fromStr), where('date', '<=', toStr));
-      const fSnap = await getDocs(fQuery);
-      const fsrs: FieldServiceReport[] = [];
-      fSnap.forEach(doc => fsrs.push({ id: doc.id, ...doc.data() } as FieldServiceReport));
+      const diariesQuery = query(
+        collection(firestore, 'daily_diaries'),
+        where('date', '>=', fromStr),
+        where('date', '<=', toStr)
+      );
 
-      // 5. Equipment master list
-      const eqRef = collection(firestore, 'equipment');
-      const eqSnap = await getDocs(eqRef);
-      const eq: Equipment[] = [];
-      eqSnap.forEach(doc => eq.push({ id: doc.id, ...doc.data() } as Equipment));
+      const fsrQuery = query(
+        collection(firestore, 'field_service_reports'),
+        where('date', '>=', fromStr),
+        where('date', '<=', toStr)
+      );
 
-      setAggregatedData({
-        newBreakdowns: newB,
-        closedBreakdowns: closedB,
-        completedSchedules: compS,
-        dailyDiaries: diaries,
-        equipment: eq,
-        fieldServiceReports: fsrs,
-      });
+      const equipmentQuery = collection(firestore, 'equipment');
+
+      const [newBreakdownsSnap, closedBreakdownsSnap, schedulesSnap, diariesSnap, fsrSnap, equipmentSnap] = await Promise.all([
+        getDocs(newBreakdownsQuery),
+        getDocs(closedBreakdownsQuery),
+        getDocs(schedulesQuery),
+        getDocs(diariesQuery),
+        getDocs(fsrQuery),
+        getDocs(equipmentQuery),
+      ]);
+
+      const fetchedData: AggregatedLookbackData = {
+        newBreakdowns: newBreakdownsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Breakdown)),
+        closedBreakdowns: closedBreakdownsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Breakdown)),
+        completedSchedules: schedulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompletedSchedule)),
+        dailyDiaries: diariesSnap.docs.map(doc => {
+          const data = doc.data();
+          if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+            data.createdAt = data.createdAt.toDate().toISOString();
+          }
+          return { id: doc.id, ...data } as DailyDiary;
+        }),
+        fieldServiceReports: fsrSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FieldServiceReport)),
+        equipment: equipmentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Equipment)),
+      };
+
+      setAggregatedData(fetchedData);
 
       toast({
         title: 'Diagnostic Data Loaded',
