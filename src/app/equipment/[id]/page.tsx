@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info, Fan, GitCommit, FilePlus, Loader2, Trash2, TriangleAlert } from 'lucide-react';
+import { PlusCircle, User, Shield, Wrench, Cpu, Droplets, ArrowLeft, Cable, Cog, Power, Zap, Info, Fan, GitCommit, FilePlus, Loader2, Trash2, TriangleAlert, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
@@ -209,23 +209,45 @@ export default function EquipmentDetail() {
   const { data: compatibleSpares, isLoading: sparesLoading } = useCollection<SparePart>(sparesQuery);
 
   const eqBreakdowns = useMemo(() => {
-    const combined: Breakdown[] = [];
+    const combined: (Breakdown & { fsrId?: string; fsrReference?: string; isFsr?: boolean; cleanDescription?: string })[] = [];
     if (eqBreakdownsRaw) {
-        combined.push(...eqBreakdownsRaw);
+        combined.push(...eqBreakdownsRaw.map(b => ({
+            ...b,
+            isFsr: false,
+            fsrId: (b as any).linkedToReportId || (b as any).fsrId || undefined,
+            fsrReference: (b as any).fsrReference || undefined,
+            cleanDescription: b.description
+        })));
     }
     if (eqFsrsRaw) {
-        const fsrMapped = eqFsrsRaw.map(fsr => ({
-            id: fsr.id,
-            equipmentId: fsr.equipmentId || id,
-            equipmentName: fsr.assetName,
-            component: 'Other' as const,
-            date: fsr.date,
-            description: `[FSR] ${fsr.customerFault || fsr.jobType || 'Field Service Report'}`,
-            resolved: fsr.status === 'Finalized',
-            status: fsr.status === 'Finalized' ? 'Closed' : 'In Progress',
-            timeReported: fsr.createdAt || fsr.date,
-            isLocked: fsr.status === 'Finalized'
-        } as Breakdown));
+        const fsrMapped = eqFsrsRaw.map(fsr => {
+            const rawRef = (
+                fsr.fsrReference ||
+                (fsr as any).fsrNumber ||
+                (fsr as any).reportNumber ||
+                (fsr.id && fsr.id.toUpperCase().startsWith('FSR') ? fsr.id : '')
+            )?.trim();
+            const refNumber = rawRef ? rawRef : '';
+            const displayTag = refNumber ? `[${refNumber}]` : '[FSR]';
+            const faultText = fsr.customerFault || fsr.jobType || 'Field Service Report';
+
+            return {
+                id: fsr.id,
+                fsrId: fsr.id,
+                fsrReference: refNumber || 'FSR',
+                isFsr: true,
+                equipmentId: fsr.equipmentId || id,
+                equipmentName: fsr.assetName,
+                component: 'Other' as const,
+                date: fsr.date,
+                description: `${displayTag} ${faultText}`,
+                cleanDescription: faultText,
+                resolved: fsr.status === 'Finalized',
+                status: (fsr.status === 'Finalized' ? 'Closed' : 'In Progress') as any,
+                timeReported: fsr.createdAt || fsr.date,
+                isLocked: fsr.status === 'Finalized'
+            };
+        });
         combined.push(...fsrMapped);
     }
     
@@ -905,30 +927,56 @@ export default function EquipmentDetail() {
                                 <TableHead className="text-[10px] font-black uppercase">Date</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase">Description</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase">Status</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase text-right pr-4">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {(breakdownsLoading || fsrsLoading) ? (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24">
+                                    <TableCell colSpan={4} className="text-center h-24">
                                         <Loader2 className="animate-spin h-4 w-4 mx-auto" />
                                     </TableCell>
                                 </TableRow>
                             ) : eqBreakdowns && eqBreakdowns.length > 0 ? eqBreakdowns.map(b => {
                                 const isFinished = b.resolved || b.status === 'Closed' || b.isLocked;
                                 return (
-                                <TableRow key={b.id} className="text-xs">
+                                <TableRow key={b.id} className="text-xs hover:bg-slate-50/80 transition-colors">
                                     <TableCell className="font-medium whitespace-nowrap">{b.date}</TableCell>
-                                    <TableCell className="max-w-md truncate">{b.description}</TableCell>
+                                    <TableCell className="max-w-md">
+                                        <div className="flex items-center gap-2">
+                                            {b.fsrId ? (
+                                                <Link href={`/reports/field-service-report/${b.fsrId}`} className="hover:opacity-80 transition-opacity flex-shrink-0">
+                                                    <Badge variant="outline" className="font-mono text-[10px] font-bold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 cursor-pointer">
+                                                        {b.fsrReference || 'FSR'}
+                                                    </Badge>
+                                                </Link>
+                                            ) : null}
+                                            <span className="truncate" title={b.cleanDescription || b.description}>
+                                                {b.cleanDescription || b.description}
+                                            </span>
+                                        </div>
+                                    </TableCell>
                                     <TableCell>
                                         <Badge variant={isFinished ? 'default' : 'destructive'} className="text-[9px] px-1.5 py-0">
                                             {isFinished ? 'Resolved' : 'Active'}
                                         </Badge>
                                     </TableCell>
+                                    <TableCell className="text-right pr-4">
+                                        {b.fsrId ? (
+                                            <Link href={`/reports/field-service-report/${b.fsrId}`}>
+                                                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 text-primary hover:text-primary hover:bg-primary/10 gap-1 font-semibold">
+                                                    <span>View FSR</span>
+                                                    <ExternalLink className="h-3 w-3" />
+                                                </Button>
+                                            </Link>
+                                        ) : (
+                                            <span className="text-muted-foreground text-[10px]">-</span>
+                                        )}
+                                    </TableCell>
                                 </TableRow>
                             )}) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground italic text-xs">No incidents recorded.</TableCell>
+                                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground italic text-xs">No incidents recorded.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
