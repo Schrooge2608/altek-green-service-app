@@ -2,7 +2,7 @@
 /**
  * @fileOverview An AI flow for generating predictive weekly maintenance plans and equipment risk matrices
  * by cross-referencing historical Field Service Reports (FSRs), Daily Diaries, Breakdowns, and Asset registries.
- * Supports explicit 5-person team capacity management and client-suggested work prioritization.
+ * Strictly limits schedule to Monday through Friday (excluding weekends) and returns structured tasks for editing.
  */
 
 import { ai } from '@/ai/genkit';
@@ -83,12 +83,25 @@ const EquipmentSchema = z.object({
   flag: safeStringSchema,
 }).passthrough();
 
+export const MaintenanceTaskItemSchema = z.object({
+  id: z.string().optional().default(''),
+  day: z.string().describe('Monday, Tuesday, Wednesday, Thursday, or Friday ONLY. NEVER Saturday or Sunday.'),
+  origin: z.string().describe('Client Mandate or Altek Predictive / PM'),
+  site: z.string().describe('Site code, e.g. MPE, MPC, MPD, MPA, Smelter'),
+  asset: z.string().describe('Equipment, drive, or asset name'),
+  scope: z.string().describe('Specific scope of work and diagnostics to perform'),
+  priority: z.string().describe('P1 - CRITICAL, P2 - HIGH, P3 - MEDIUM, or P4 - ROUTINE'),
+  crewAllocation: z.string().describe('Exact crew size and technician names (e.g. Full Team (5 Techs), Pair (2 Techs): David & Buyani, Crew (3 Techs), or Solo (1 Tech))'),
+  included: z.boolean().optional().default(true),
+});
+export type MaintenanceTaskItem = z.infer<typeof MaintenanceTaskItemSchema>;
+
 const MaintenancePlanInputSchema = z.object({
   lookbackStartDate: z.string().describe('The start date of the diagnostic lookback window (yyyy-MM-dd)'),
-  lookbackEndDate: z.string().describe('The end date of the diagnostic lookback window (yyyy-MM-dd)'),
+  lookbackEndDate: z.string().describe('End date of the diagnostic lookback window (yyyy-MM-dd)'),
   targetWeek: z.number().describe('The target ISO week number (e.g. 45)'),
-  targetStartDate: z.string().describe('Start date of the target maintenance week (yyyy-MM-dd)'),
-  targetEndDate: z.string().describe('End date of the target maintenance week (yyyy-MM-dd)'),
+  targetStartDate: z.string().describe('Start date of the target maintenance week (Monday, yyyy-MM-dd)'),
+  targetEndDate: z.string().describe('End date of the target maintenance week (Friday, yyyy-MM-dd)'),
   clientSuggestedWork: z.string().optional().describe('Client mandated or suggested tasks, e.g. for Monday and Tuesday'),
   customQuery: z.string().optional().describe('Specific focus, site, or technician instructions from Fritz Schroeder'),
   newBreakdowns: z.array(BreakdownReportSchema),
@@ -98,17 +111,115 @@ const MaintenancePlanInputSchema = z.object({
   fieldServiceReports: z.array(FieldServiceReportSchema),
   equipment: z.array(EquipmentSchema),
 });
-
 export type MaintenancePlanInput = z.infer<typeof MaintenancePlanInputSchema>;
 
-const MaintenancePlanOutputSchema = z.object({
-  plan: z.string().describe('The predictive maintenance plan in clean GitHub-flavored markdown with strict table formatting.'),
+export const MaintenancePlanOutputSchema = z.object({
+  overview: z.string().describe('Executive plant reliability overview (2 flowing professional paragraphs, no bullet points)'),
+  clientSection: z.string().describe('Summary of client-mandated priorities and shut window coordination'),
+  riskMatrix: z.string().describe('Markdown table for Priority Risk Matrix & Critical Components at Risk with headers: | Site | Equipment / Asset | Component | Historical Symptom / Root Cause | Risk Level | Recommended Preventative Action | Required Crew |'),
+  proposedTasks: z.array(MaintenanceTaskItemSchema).describe('List of scheduled tasks for Monday to Friday ONLY. Must NOT include Saturday or Sunday.'),
+  latentIssues: z.string().describe('Bullet points of latent issues, drives operating in local mode, and unresolved FSR recommendations'),
+  sparesRequirements: z.string().describe('Bullet points of critical spares, modules, capacitors, and test instruments required'),
+  safetyProtocols: z.string().describe('Standard safety, LOTO, zero energy verification, and dust control compliance points'),
 });
 export type MaintenancePlanOutput = z.infer<typeof MaintenancePlanOutputSchema>;
 
+export interface PlanGenerationResult {
+  structured: MaintenancePlanOutput;
+  compiledMarkdown: string;
+}
+
+/**
+ * Compiles a formal Altek Green Markdown Report from the structured sections and ticked tasks.
+ */
+export async function compileMaintenanceReportMarkdown(params: {
+  targetWeek: number;
+  targetStartDate: string;
+  targetEndDate: string;
+  lookbackStartDate: string;
+  lookbackEndDate: string;
+  overview: string;
+  clientSection: string;
+  riskMatrix: string;
+  tasks: Array<{
+    id?: string;
+    day: string;
+    origin: string;
+    site: string;
+    asset: string;
+    scope: string;
+    priority: string;
+    crewAllocation: string;
+    included?: boolean;
+  }>;
+  latentIssues: string;
+  sparesRequirements: string;
+  safetyProtocols: string;
+}): Promise<string> {
+  const activeTasks = (params.tasks || []).filter(t => t.included !== false);
+
+  let scheduleTable = `| Day | Origin / Type | Site | Asset / Drive | Scope of Work | Priority | Crew Size & Allocation |\n|---|---|---|---|---|---|---|`;
+
+  if (activeTasks.length === 0) {
+    scheduleTable += `\n| Monday – Friday | Altek Predictive / PM | All Sites | Plant-Wide Maintenance | No specific work orders selected for this period. | P4 - ROUTINE | Standby Team |`;
+  } else {
+    const dayOrder: Record<string, number> = {
+      Monday: 1,
+      Tuesday: 2,
+      Wednesday: 3,
+      Thursday: 4,
+      Friday: 5,
+    };
+
+    const sorted = [...activeTasks].sort((a, b) => {
+      const dayA = dayOrder[a.day] || 99;
+      const dayB = dayOrder[b.day] || 99;
+      return dayA - dayB;
+    });
+
+    sorted.forEach(t => {
+      const cleanScope = (t.scope || '').replace(/\|/g, '-').replace(/\n/g, ' ').trim();
+      const cleanAsset = (t.asset || '').replace(/\|/g, '-').trim();
+      const cleanCrew = (t.crewAllocation || '').replace(/\|/g, '-').trim();
+      const cleanSite = (t.site || '').replace(/\|/g, '-').trim();
+      const cleanOrigin = (t.origin || 'Altek Predictive / PM').replace(/\|/g, '-').trim();
+      const cleanPriority = (t.priority || 'P2 - HIGH').replace(/\|/g, '-').trim();
+      scheduleTable += `\n| ${t.day} | ${cleanOrigin} | ${cleanSite} | ${cleanAsset} | ${cleanScope} | ${cleanPriority} | ${cleanCrew} |`;
+    });
+  }
+
+  return `# Weekly Predictive Maintenance Plan
+**Prepared By:** Fritz Schroeder, Services Manager (KZN)  
+**Planning Period:** Week ${params.targetWeek} (${params.targetStartDate} – ${params.targetEndDate})  
+**Diagnostic Lookback Window:** ${params.lookbackStartDate} to ${params.lookbackEndDate}  
+**Field Team Capacity:** 5 Electrical Technicians (Strict Daily Limit: Monday – Friday)
+
+## 1. Plant Reliability & Operational Context
+${params.overview.trim()}
+
+## 2. Client-Mandated Priorities & Resource Commitment
+${params.clientSection.trim()}
+
+## 3. Priority Risk Matrix & Critical Components at Risk
+${params.riskMatrix.trim()}
+
+## 4. Finalized Weekly Schedule (Week ${params.targetWeek}: Monday – Friday)
+${scheduleTable}
+
+## 5. Balance-of-Week Focus & Latent Risk Mitigation
+${params.latentIssues.trim()}
+
+## 6. Critical Spares, Tools & Pre-Work Requirements
+${params.sparesRequirements.trim()}
+
+## 7. Safety, Isolation & Housekeeping Protocols
+${params.safetyProtocols.trim()}
+`;
+}
+
 export async function generateMaintenancePlan(
   input: any
-): Promise<{ success: boolean; data?: MaintenancePlanOutput; error?: string }> {
+): Promise<{ success: boolean; data?: PlanGenerationResult; error?: string }> {
   try {
     const safeInput = JSON.parse(JSON.stringify(input));
 
@@ -148,8 +259,40 @@ export async function generateMaintenancePlan(
       }));
     }
 
-    const result = await generateMaintenancePlanFlow(safeInput);
-    return { success: true, data: result };
+    const structuredOutput = await generateMaintenancePlanFlow(safeInput);
+
+    // Ensure all proposed tasks have unique IDs and default included = true
+    const tasksWithIds = (structuredOutput.proposedTasks || []).map((t, idx) => ({
+      ...t,
+      id: t.id || `task-${Date.now()}-${idx}`,
+      included: true,
+      day: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(t.day) ? t.day : 'Monday',
+    }));
+
+    structuredOutput.proposedTasks = tasksWithIds;
+
+    const compiledMarkdown = await compileMaintenanceReportMarkdown({
+      targetWeek: safeInput.targetWeek,
+      targetStartDate: safeInput.targetStartDate,
+      targetEndDate: safeInput.targetEndDate,
+      lookbackStartDate: safeInput.lookbackStartDate,
+      lookbackEndDate: safeInput.lookbackEndDate,
+      overview: structuredOutput.overview,
+      clientSection: structuredOutput.clientSection,
+      riskMatrix: structuredOutput.riskMatrix,
+      tasks: tasksWithIds,
+      latentIssues: structuredOutput.latentIssues,
+      sparesRequirements: structuredOutput.sparesRequirements,
+      safetyProtocols: structuredOutput.safetyProtocols,
+    });
+
+    return {
+      success: true,
+      data: {
+        structured: structuredOutput,
+        compiledMarkdown,
+      },
+    };
   } catch (e: any) {
     console.error("AI Maintenance Planner Error:", e);
     return { success: false, error: e.message || String(e) };
@@ -174,11 +317,12 @@ const planPrompt = ai.definePrompt({
 Your role is to formulate a comprehensive, actionable, and forward-looking Weekly Maintenance Plan for Week {{{targetWeek}}} based on diagnostic lookback history, CLIENT-SUGGESTED WORK, and a STRICT 5-PERSON TEAM RESOURCE CONSTRAINT.
 
 ---
-### 1. INPUT PARAMETERS:
-- **Target Planning Week:** Week {{{targetWeek}}} ({{{targetStartDate}}} to {{{targetEndDate}}})
-- **Diagnostic Lookback Window:** {{{lookbackStartDate}}} to {{{lookbackEndDate}}}
+### 1. CRITICAL SCHEDULE RULES & WEEKEND EXCLUSION:
+- **Planning Window:** Monday {{{targetStartDate}}} to Friday {{{targetEndDate}}} (Week {{{targetWeek}}}).
+- **STRICT WEEKEND EXCLUSION:** The Altek Green team DOES NOT work on Saturdays and Sundays. You MUST NOT schedule any tasks for Saturday or Sunday. All proposed tasks MUST be strictly assigned to: Monday, Tuesday, Wednesday, Thursday, or Friday.
 - **Team Size:** Exactly 5 Electrical Technicians in the field crew.
   *(Typical team members: David Sikhumbuzo Msane [Lead/Drive Specialist], Ntokozo Zulu, Thulani Mthembu, Buyani Mthembu, and 5th Technician / Assistant)*.
+- **Daily Headcount Cap:** The sum of technicians across all tasks on ANY given day can NEVER exceed 5.
 
 {{#if clientSuggestedWork}}
 ---
@@ -186,12 +330,12 @@ Your role is to formulate a comprehensive, actionable, and forward-looking Weekl
 The client has provided the following specific requests or requirements:
 "{{{clientSuggestedWork}}}"
 
-**CRITICAL CLIENT SCHEDULING DIRECTIVES:**
-1. You MUST prioritize and lock in all client-mandated tasks for their specified days (e.g. if the client specified work for Monday and Tuesday, those MUST be assigned to Monday and Tuesday).
-2. Assign the realistic team size required for the client's work (e.g. Full Team of 5 for a major crane/feeder shut, or 2-3 techs for VSD capacitor change).
+**CLIENT SCHEDULING DIRECTIVES:**
+1. Prioritize and lock in all client-mandated tasks for their specified days (e.g. if the client specified work for Monday and Tuesday, those MUST be assigned to Monday and Tuesday).
+2. Assign the realistic crew size required for the client's work (e.g. Full Team of 5 for a major crane/feeder shut, or 2-3 techs for VSD capacitor change).
 3. If the client takes all 5 technicians on Monday, NO other routine tasks can be scheduled on Monday.
 4. If the client takes 2 technicians on Tuesday, only the remaining 3 technicians are available for other tasks on Tuesday.
-5. For the rest of the week (Wednesday, Thursday, Friday, and weekend stand-by), formulate Altek Green's proactive preventative maintenance program to address high-risk equipment and unaddressed FSR issues.
+5. For Wednesday, Thursday, and Friday, formulate Altek Green's proactive preventative maintenance program to address high-risk equipment and unaddressed FSR issues.
 {{else}}
 ---
 ### 2. CLIENT WORK:
@@ -205,96 +349,36 @@ No client-mandated tasks were submitted. The entire 5-person team capacity is av
 {{/if}}
 
 ---
-### 4. STRICT 5-PERSON TEAM RESOURCE ALLOCATION RULES:
-1. **Total Daily Headcount Cap = 5:**
-   The sum of technicians allocated across parallel scopes on ANY single day can NEVER exceed 5.
-2. **Realistic Industrial Crew Sizes:**
-   - **Full Team (All 5 Techs):** Major plant shutdowns, heavy crane drive replacements, large MCC overhauls, dredge power outages. When Full Team is assigned, no other work can happen on that day.
-   - **Crew of 3 Techs:** Heavy inverter module rebuilds, large DC bus capacitor bank replacement, high-voltage cable testing, transformer isolations.
-   - **Safety Pair (2 Techs - Standard):** Routine MCC maintenance, fault finding, live phase/voltage testing, motor meggering (mandatory 1 lead + 1 safety observer).
-   - **Solo (1 Tech):** Low-risk work only: panel housekeeping, visual inspections, collecting spares/modules, or administrative permits.
-3. **Table Column Requirement:**
-   In the schedule table, the allocation column MUST explicitly state the crew size and names:
-   e.g.:
-   - \`Full Team (5 Techs): David Msane (Lead), Buyani Mthembu, Ntokozo Zulu, Thulani Mthembu, Tech 5\`
-   - \`Pair (2 Techs): David Msane & Buyani Mthembu\`
-   - \`Crew (3 Techs): Ntokozo Zulu (Lead), Thulani Mthembu, Tech 5\`
-   - \`Solo (1 Tech): Buyani Mthembu (Panel Housekeeping)\`
+### 4. REALISTIC CREW SIZING (MAX 5 TECHS DAILY):
+- **Full Team (All 5 Techs):** Major plant shutdowns, heavy crane drive replacements, large MCC overhauls. (When scheduled, no other work occurs on that day).
+- **Crew of 3 Techs:** Heavy inverter module rebuilds, large DC bus capacitor bank replacement, high-voltage cable testing.
+- **Safety Pair (2 Techs - Standard):** Routine MCC maintenance, fault finding, live phase/voltage testing, motor meggering (mandatory 1 lead + 1 safety observer).
+- **Solo (1 Tech):** Low-risk work only: panel housekeeping, visual inspections, collecting spares/modules.
 
 ---
-### 5. LATENT ISSUES & PREDICTIVE LOOKBACK ANALYSIS:
-- Cross-reference FSR diagnostics, RCA notes, technician findings, and diary scopes across the lookback period.
-- Audit temporary bypasses and drives left running in "Local mode" without PLC automation (e.g., DeviceNet comms failure on Smelter S30 feeder).
-- Track recurring earth faults, cable insulation degradation, IGBT blowouts, and capacitor lifecycle due dates.
+### 5. OUTPUT SPECIFICATIONS:
+You must return structured data conforming to the output schema:
+1. **overview:** 2 flowing professional paragraphs summarizing plant reliability, critical failure trends detected during the lookback period, and how the team is deployed for Week {{{targetWeek}}}.
+2. **clientSection:** Detail the client-requested work (or state none were submitted) and explain how the team satisfies the client's window.
+3. **riskMatrix:** A strict Markdown table with columns:
+   | Site | Equipment / Asset | Component | Historical Symptom / Root Cause | Risk Level | Recommended Preventative Action | Required Crew |
+   (Categorize Risk Level as P1 - CRITICAL, P2 - HIGH, P3 - MEDIUM, or P4 - ROUTINE).
+4. **proposedTasks:** An array of task objects for **Monday to Friday ONLY**.
+   - \`day\`: Monday, Tuesday, Wednesday, Thursday, or Friday. (NEVER Saturday or Sunday).
+   - \`origin\`: 'Client Mandate' or 'Altek Predictive / PM'.
+   - \`site\`: e.g. MPE, MPC, MPD, MPA, Smelter.
+   - \`asset\`: Equipment / drive name.
+   - \`scope\`: Clear scope of work and diagnostic action.
+   - \`priority\`: 'P1 - CRITICAL', 'P2 - HIGH', 'P3 - MEDIUM', or 'P4 - ROUTINE'.
+   - \`crewAllocation\`: e.g., 'Full Team (5 Techs): David Msane, Buyani Mthembu, Ntokozo Zulu, Thulani Mthembu, Tech 5' or 'Pair (2 Techs): David Msane & Buyani Mthembu'.
+5. **latentIssues:** Bullet points of drives running in Local mode, unaddressed FSR recommendations, and pending comms/interlocks.
+6. **sparesRequirements:** Bullet points of capacitors, IGBT modules, fuses, thermal paste, test meters, and permits needed for Week {{{targetWeek}}}.
+7. **safetyProtocols:** Standard 3 points: Isolation & zero energy verification (2-man safety rule), MCC dust/moisture mitigation, and real-time app logging.
 
 ---
-### 6. CRITICAL MARKDOWN FORMATTING RULES:
-1. Top heading must be:
-   # Weekly Predictive Maintenance Plan
-   **Prepared By:** Fritz Schroeder, Services Manager (KZN)  
-   **Planning Period:** Week {{{targetWeek}}} ({{{targetStartDate}}} – {{{targetEndDate}}})  
-   **Diagnostic Lookback Window:** {{{lookbackStartDate}}} to {{{lookbackEndDate}}}  
-   **Field Team Capacity:** 5 Electrical Technicians (Strict Daily Limit)
+### HISTORICAL DIAGNOSTIC DATA CONTEXT (Lookback: {{{lookbackStartDate}}} to {{{lookbackEndDate}}}):
 
-2. Tables must follow strict GitHub-flavored Markdown:
-   - Preceded by an empty blank line.
-   - Header row immediately followed by delimiter row (\`|---|---|...|\`).
-   - Every data row on its own separate line.
-   - NEVER combine multiple rows onto one line.
-   - Followed by an empty blank line before the next text.
-
----
-### 7. REQUIRED DOCUMENT STRUCTURE:
-
-# Weekly Predictive Maintenance Plan
-**Prepared By:** Fritz Schroeder, Services Manager (KZN)  
-**Planning Period:** Week {{{targetWeek}}} ({{{targetStartDate}}} – {{{targetEndDate}}})  
-**Diagnostic Lookback Window:** {{{lookbackStartDate}}} to {{{lookbackEndDate}}}  
-**Field Team Capacity:** 5 Electrical Technicians (Strict Daily Limit)
-
-## 1. Plant Reliability & Operational Context
-Write 2 clear, professional paragraphs providing a strategic overview of plant stability, key failure trends detected during the lookback period, and how team deployment balances client mandates with preventative maintenance for Week {{{targetWeek}}}. Do not use bullet points here.
-
-## 2. Client-Mandated Priorities & Resource Commitment
-{{#if clientSuggestedWork}}
-Detail the client-requested work (e.g., Monday & Tuesday priorities), explaining the scope, why the allocated crew size (e.g. 2, 3, or all 5 techs) was chosen, and confirming compliance with client shut windows.
-{{else}}
-State: "No direct client-mandated shut tasks were registered for this period. 100% of the 5-man team capacity is scheduled for Altek Green proactive reliability interventions."
-{{/if}}
-
-## 3. Priority Risk Matrix & Critical Components at Risk
-Extract all high-risk assets and degrading components strictly into this Markdown table:
-| Site | Equipment / Asset | Component | Historical Symptom / Root Cause | Risk Level | Recommended Preventative Action | Required Crew |
-|---|---|---|---|---|---|---|
-
-*(Ensure Risk Level is categorized as P1 - CRITICAL, P2 - HIGH, P3 - MEDIUM, or P4 - ROUTINE).*
-
-## 4. Unified Weekly Schedule (Week {{{targetWeek}}}: Monday – Sunday)
-Structure the upcoming Monday–Sunday work program strictly into this Markdown table:
-| Day | Origin / Type | Site | Asset / Drive | Scope of Work | Priority | Crew Size & Allocation |
-|---|---|---|---|---|---|---|
-
-*(Rules for table:
-- **Origin / Type** MUST be either \`Client Mandate\` or \`Altek Predictive / PM\`.
-- **Crew Size & Allocation** MUST specify crew count and technician names.
-- Verify that on any given day, total technicians assigned across rows does NOT exceed 5).*
-
-## 5. Balance-of-Week Focus & Latent Risk Mitigation
-Detail the technical rationale for tasks scheduled on Wednesday–Friday (and weekend stand-by), showing how drives operating in Local mode, unaddressed FSR recommendations, and pending comms/interlocks are resolved.
-
-## 6. Critical Spares, Tools & Pre-Work Requirements
-Provide distinct bullet points detailing necessary spare modules, capacitors, fuses, thermal paste, test instruments (megger, multimeter, thermal imager), and access permits needed for Week {{{targetWeek}}}.
-
-## 7. Safety, Isolation & Housekeeping Protocols
-Include 3 standard Altek Green engineering compliance points:
-- **Isolation & Zero Energy:** Strict verification of Lockout/Tagout (LOTO) and DC bus discharge verification prior to MCC panel entry (mandatory 2-man safety rule for energized areas).
-- **Environmental Shielding & Dust Control:** Proactive cleaning of heat sinks, cooling fan intakes, and panel sealing against sand and moisture ingress.
-- **Real-Time Digital Compliance:** Mandatory completion of digital FSRs, daily diaries, and departure logs via the Altek Green mobile app.
-
----
-### HISTORICAL DIAGNOSTIC DATA CONTEXT:
-
-Field Service Reports (FSRs) logged in window:
+Field Service Reports (FSRs):
 {{#each fieldServiceReports}}
 - Ref: {{this.fsrReference}}, Customer: {{this.customer}}, Site: {{this.site}}{{#if this.location}} ({{this.location}}){{/if}}, Asset: {{this.assetName}}, Date: {{this.date}}, Status: {{this.status}}
   {{#if this.customerFault}}* Customer Fault: {{this.customerFault}}{{/if}}
@@ -304,7 +388,7 @@ Field Service Reports (FSRs) logged in window:
   {{#if this.recommendations}}* Recommendations: {{this.recommendations}}{{/if}}
 {{/each}}
 
-Daily Diaries in window:
+Daily Diaries:
 {{#each dailyDiaries}}
 - Date: {{this.date}}, Title: {{this.contractTitle}}{{#if this.contractorName}} (Technician: {{this.contractorName}}){{/if}}{{#if this.area}} [Area: {{this.area}}]{{/if}}
   {{#each this.works}}
@@ -312,22 +396,22 @@ Daily Diaries in window:
   {{/each}}
 {{/each}}
 
-New Breakdowns in window:
+New Breakdowns:
 {{#each newBreakdowns}}
 - Eq: {{this.equipmentName}}, Comp: {{this.component}}, Date: {{this.date}}, Resolved: {{this.resolved}}
 {{/each}}
 
-Resolved Breakdowns in window:
+Resolved Breakdowns:
 {{#each closedBreakdowns}}
 - Eq: {{this.equipmentName}}, Comp: {{this.component}}, Date: {{this.date}}, Res: {{this.resolution}}
 {{/each}}
 
-Completed Maintenance Schedules in window:
+Completed Schedules:
 {{#each completedSchedules}}
 - Eq: {{this.equipmentName}}, Type: {{this.maintenanceType}}, Freq: {{this.frequency}}, Date: {{this.completionDate}}
 {{/each}}
 
-Equipment Master List:
+Equipment Master:
 {{#each equipment}}
 - Name: {{this.name}}, SN: {{this.serialNumber}}, Plant: {{this.plant}}, Div: {{this.division}}, Status: {{this.status}}, Loc: {{this.location}}
 {{/each}}

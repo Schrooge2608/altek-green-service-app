@@ -16,23 +16,32 @@ import {
   MessageCircle, 
   RotateCcw, 
   AlertTriangle, 
-  ShieldCheck, 
   Clock, 
-  Wrench,
-  Check,
-  Send,
-  Layers,
-  ArrowRight,
-  Users,
-  Briefcase,
-  UserCheck,
-  CalendarDays
+  Wrench, 
+  Check, 
+  Send, 
+  Layers, 
+  Users, 
+  UserCheck, 
+  Plus, 
+  Trash2, 
+  CheckSquare, 
+  Square,
+  Edit3,
+  FileCheck2,
+  ArrowDown
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, serverTimestamp, addDoc, query, where, getDocs, doc } from 'firebase/firestore';
 import type { Breakdown, CompletedSchedule, DailyDiary, Equipment, User, FieldServiceReport, GeneratedReport } from '@/lib/types';
-import { generateMaintenancePlan, type MaintenancePlanInput } from '@/ai/flows/generate-maintenance-plan-flow';
+import { 
+  generateMaintenancePlan, 
+  compileMaintenanceReportMarkdown, 
+  type MaintenancePlanInput, 
+  type MaintenanceTaskItem,
+  type MaintenancePlanOutput 
+} from '@/ai/flows/generate-maintenance-plan-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -40,13 +49,12 @@ import { DateRange } from 'react-day-picker';
 import { 
   format, 
   startOfWeek, 
-  endOfWeek, 
+  addDays, 
   addWeeks, 
   subDays, 
   startOfDay, 
   endOfDay, 
-  getISOWeek,
-  isMonday
+  getISOWeek 
 } from 'date-fns';
 import { cn, formatMarkdownTables } from '@/lib/utils';
 import { generateSmartPagedPdf } from '@/lib/pdf-utils';
@@ -96,19 +104,20 @@ export default function AIMaintenancePlannerPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const reportContainerRef = useRef<HTMLDivElement>(null);
+  const stagingSectionRef = useRef<HTMLDivElement>(null);
 
   // User Profile
   const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userDocRef);
 
-  // 1. Target Week Calculation (Default: Upcoming Week)
+  // 1. Target Week Calculation: STRICTLY MONDAY TO FRIDAY (Weekends Excluded)
   const initialTarget = useMemo(() => {
     const now = new Date();
     const day = now.getDay();
     // Default to upcoming week
     const targetBase = (day === 5 || day === 6 || day === 0) ? addWeeks(now, 1) : addWeeks(now, 1);
-    const from = startOfWeek(targetBase, { weekStartsOn: 1 });
-    const to = endOfWeek(targetBase, { weekStartsOn: 1 });
+    const from = startOfWeek(targetBase, { weekStartsOn: 1 }); // Monday
+    const to = addDays(from, 4); // Friday
     return { from, to };
   }, []);
 
@@ -128,17 +137,22 @@ export default function AIMaintenancePlannerPage() {
   const [isFetchingData, setIsFetchingData] = useState(false);
   const [aggregatedData, setAggregatedData] = useState<AggregatedLookbackData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedPlan, setGeneratedPlan] = useState<string | null>(null);
+  const [isCompiling, setIsCompiling] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // New Client Mandate State & Custom Directives
+  // Client Mandates & Custom Notes
   const [clientSuggestedWork, setClientSuggestedWork] = useState<string>('');
   const [customInstructions, setCustomInstructions] = useState<string>('');
   const [selectedPreset, setSelectedPreset] = useState<string>('full_plan');
 
-  // Computed Target Week details
+  // Interactive Staging State (Editable Tasks before compiling report)
+  const [stagingTasks, setStagingTasks] = useState<MaintenanceTaskItem[]>([]);
+  const [structuredPlan, setStructuredPlan] = useState<MaintenancePlanOutput | null>(null);
+  const [generatedPlan, setGeneratedPlan] = useState<string | null>(null);
+
+  // Computed Target Week details (Strictly Monday to Friday)
   const targetWeekNumber = useMemo(() => {
     if (!targetDateRange.from) return getISOWeek(new Date());
     return getISOWeek(targetDateRange.from);
@@ -147,19 +161,19 @@ export default function AIMaintenancePlannerPage() {
   const targetPeriodLabel = useMemo(() => {
     if (!targetDateRange.from) return 'Upcoming Week';
     const from = targetDateRange.from;
-    const to = targetDateRange.to || targetDateRange.from;
-    return `Week ${targetWeekNumber}: ${format(from, 'dd MMM')} – ${format(to, 'dd MMM yyyy')}`;
+    const to = targetDateRange.to || addDays(from, 4);
+    return `Week ${targetWeekNumber}: Monday ${format(from, 'dd MMM')} – Friday ${format(to, 'dd MMM yyyy')}`;
   }, [targetDateRange, targetWeekNumber]);
 
   // Presets
   const presets: PlannerPreset[] = useMemo(() => [
     {
       id: 'full_plan',
-      title: 'Full Weekly Predictive Plan (Mon – Sun)',
+      title: 'Full Weekly Predictive Plan (Mon – Fri)',
       badge: 'Balanced Schedule',
       badgeVariant: 'default',
       description: 'Coordinates client-suggested work for Mon/Tue, allocates the 5-person crew, and schedules Altek PMs for the rest of the week.',
-      promptDirective: 'Generate the complete Altek Green Weekly Predictive Maintenance Plan. Respect client-mandated work first with required multi-person crew sizes, then fill remaining team capacity for the rest of the week.',
+      promptDirective: 'Generate the complete Altek Green Weekly Predictive Maintenance Plan for Monday to Friday ONLY. Respect client-mandated work first with required multi-person crew sizes, then fill remaining team capacity for the rest of the week.',
     },
     {
       id: 'critical_components',
@@ -167,7 +181,7 @@ export default function AIMaintenancePlannerPage() {
       badge: 'High Risk Focus',
       badgeVariant: 'destructive',
       description: 'Prioritizes assets showing repeat trips (earth faults, IGBT overcurrent, capacitor degradation) and evaluates component failure risk.',
-      promptDirective: 'Focus heavily on high-frequency breakdown equipment, repeat VSD trips, capacitor bank age, and motor insulation degradation. Provide a deeply detailed Priority Risk Matrix with explicit root causes, preventative testing, and required crew sizes.',
+      promptDirective: 'Focus heavily on high-frequency breakdown equipment, repeat VSD trips, capacitor bank age, and motor insulation degradation. Provide a deeply detailed Priority Risk Matrix with explicit root causes, preventative testing, and required crew sizes for Monday to Friday.',
     },
     {
       id: 'local_mode_audit',
@@ -175,7 +189,7 @@ export default function AIMaintenancePlannerPage() {
       badge: 'Safety & Automation',
       badgeVariant: 'secondary',
       description: 'Identifies drives running on Local control, lost DeviceNet/PLC comms, temporary jumpers, or deferred FSR repairs.',
-      promptDirective: 'Perform a dedicated audit of latent risks: identify drives running on Local mode without PLC automation, communication line dropouts, bypassed interlocks, and pending repair recommendations that have not yet been closed out.',
+      promptDirective: 'Perform a dedicated audit of latent risks: identify drives running on Local mode without PLC automation, communication line dropouts, bypassed interlocks, and pending repair recommendations for the Monday-Friday work week.',
     },
     {
       id: 'vsd_pm_focus',
@@ -183,7 +197,7 @@ export default function AIMaintenancePlannerPage() {
       badge: 'Lifecycle PM',
       badgeVariant: 'outline',
       description: 'Schedules 3-monthly and 6-monthly VSD services, capacitor replacements, fan filter cleaning, and thermal imaging scans.',
-      promptDirective: 'Prioritize routine lifecycle renewals: 3-monthly/6-monthly VSD servicing, capacitor renewals, blower fan inspections, busbar torquing, and MCC dust mitigation across MPE, MPC, MPD, MPA, and Smelter.',
+      promptDirective: 'Prioritize routine lifecycle renewals: 3-monthly/6-monthly VSD servicing, capacitor renewals, blower fan inspections, busbar torquing, and MCC dust mitigation across MPE, MPC, MPD, MPA, and Smelter for Monday to Friday.',
     },
   ], []);
 
@@ -197,16 +211,16 @@ export default function AIMaintenancePlannerPage() {
     });
   };
 
-  // Quick Target Week Select
+  // Quick Target Week Select: Monday to Friday
   const handleTargetWeekOffset = (weekOffset: number) => {
     const now = new Date();
     const target = addWeeks(now, weekOffset);
-    const from = startOfWeek(target, { weekStartsOn: 1 });
-    const to = endOfWeek(target, { weekStartsOn: 1 });
+    const from = startOfWeek(target, { weekStartsOn: 1 }); // Monday
+    const to = addDays(from, 4); // Friday
     setTargetDateRange({ from, to });
   };
 
-  // Fetch Lookback Data
+  // Fetch Lookback Data using exact Firestore collection names
   const fetchData = async () => {
     if (!lookbackRange.from || !lookbackRange.to) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select a valid diagnostic lookback window.' });
@@ -223,6 +237,7 @@ export default function AIMaintenancePlannerPage() {
       const fromISO = startOfDay(lookbackRange.from).toISOString();
       const toISO = endOfDay(lookbackRange.to).toISOString();
 
+      // Query correct Firestore collections
       const newBreakdownsQuery = query(
         collection(firestore, 'breakdown_reports'),
         where('date', '>=', fromStr),
@@ -284,7 +299,7 @@ export default function AIMaintenancePlannerPage() {
 
       toast({
         title: 'Diagnostic Data Loaded',
-        description: `Loaded ${fsrs.length} FSRs, ${diaries.length} Diaries, and ${allB.length} Breakdowns over past ${lookbackDays} days.`,
+        description: `Loaded ${fetchedData.fieldServiceReports.length} FSRs, ${fetchedData.dailyDiaries.length} Diaries, and ${fetchedData.newBreakdowns.length + fetchedData.closedBreakdowns.length} Breakdowns.`,
       });
     } catch (e: any) {
       console.error('Data Fetch Error:', e);
@@ -301,7 +316,7 @@ export default function AIMaintenancePlannerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lookbackRange.from, lookbackRange.to]);
 
-  // Execute AI Maintenance Plan Generation
+  // Execute AI Maintenance Plan Analysis -> Populates Staging Area
   const handleGeneratePlan = async () => {
     if (!aggregatedData) {
       toast({ variant: 'destructive', title: 'No Data', description: 'Please wait for diagnostic data to finish loading.' });
@@ -327,7 +342,7 @@ export default function AIMaintenancePlannerPage() {
         lookbackEndDate: format(lookbackRange.to!, 'yyyy-MM-dd'),
         targetWeek: targetWeekNumber,
         targetStartDate: format(targetDateRange.from, 'yyyy-MM-dd'),
-        targetEndDate: format(targetDateRange.to, 'yyyy-MM-dd'),
+        targetEndDate: format(targetDateRange.to, 'yyyy-MM-dd'), // Friday
         clientSuggestedWork: clientSuggestedWork.trim() || undefined,
         customQuery: fullPrompt,
         newBreakdowns: sanitizeForServer(aggregatedData.newBreakdowns),
@@ -344,13 +359,19 @@ export default function AIMaintenancePlannerPage() {
         throw new Error(result.error || 'The AI model was unable to generate the plan. Please try again.');
       }
 
-      setGeneratedPlan(result.data.plan);
-      toast({ title: 'Maintenance Plan Generated', description: `Plan created successfully for Week ${targetWeekNumber}.` });
+      setStructuredPlan(result.data.structured);
+      setStagingTasks(result.data.structured.proposedTasks || []);
+      setGeneratedPlan(result.data.compiledMarkdown);
 
-      // Smooth scroll to generated plan
+      toast({ 
+        title: 'Work Orders Staged', 
+        description: `${(result.data.structured.proposedTasks || []).length} tasks staged for Monday to Friday. Review and edit below.` 
+      });
+
+      // Smooth scroll to staging section
       setTimeout(() => {
-        reportContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+        stagingSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
 
     } catch (e: any) {
       console.error('Plan Generation Error:', e);
@@ -361,7 +382,86 @@ export default function AIMaintenancePlannerPage() {
     }
   };
 
-  // Copy Markdown to Clipboard
+  // Compile Final Markdown from Staging Area
+  const handleCompileReport = async () => {
+    if (!structuredPlan) {
+      toast({ variant: 'destructive', title: 'No Plan Data', description: 'Please generate a plan draft first.' });
+      return;
+    }
+
+    setIsCompiling(true);
+    try {
+      const activeTasks = stagingTasks.filter(t => t.included !== false);
+      if (activeTasks.length === 0) {
+        toast({ variant: 'destructive', title: 'No Tasks Ticked', description: 'Please tick at least one task to include in the report.' });
+        setIsCompiling(false);
+        return;
+      }
+
+      const compiled = await compileMaintenanceReportMarkdown({
+        targetWeek: targetWeekNumber,
+        targetStartDate: format(targetDateRange.from!, 'yyyy-MM-dd'),
+        targetEndDate: format(targetDateRange.to!, 'yyyy-MM-dd'),
+        lookbackStartDate: format(lookbackRange.from!, 'yyyy-MM-dd'),
+        lookbackEndDate: format(lookbackRange.to!, 'yyyy-MM-dd'),
+        overview: structuredPlan.overview,
+        clientSection: structuredPlan.clientSection,
+        riskMatrix: structuredPlan.riskMatrix,
+        tasks: stagingTasks,
+        latentIssues: structuredPlan.latentIssues,
+        sparesRequirements: structuredPlan.sparesRequirements,
+        safetyProtocols: structuredPlan.safetyProtocols,
+      });
+
+      setGeneratedPlan(compiled);
+      toast({ title: 'Report Compiled', description: `Formal Weekly Maintenance Report updated with ${activeTasks.length} work orders.` });
+
+      setTimeout(() => {
+        reportContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+    } catch (e: any) {
+      console.error('Compilation Error:', e);
+      toast({ variant: 'destructive', title: 'Compile Error', description: e.message });
+    } finally {
+      setIsCompiling(false);
+    }
+  };
+
+  // Interactive Staging Handlers
+  const handleToggleTask = (id: string) => {
+    setStagingTasks(prev => prev.map(t => t.id === id ? { ...t, included: !t.included } : t));
+  };
+
+  const handleUpdateTaskField = (id: string, field: keyof MaintenanceTaskItem, value: any) => {
+    setStagingTasks(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
+  };
+
+  const handleDeleteTask = (id: string) => {
+    setStagingTasks(prev => prev.filter(t => t.id !== id));
+    toast({ title: 'Task Removed' });
+  };
+
+  const handleAddTask = () => {
+    const newTask: MaintenanceTaskItem = {
+      id: `custom-task-${Date.now()}`,
+      day: 'Monday',
+      origin: 'Altek Predictive / PM',
+      site: 'MPE',
+      asset: 'New Equipment / Drive',
+      scope: 'Inspect and perform diagnostic checks.',
+      priority: 'P2 - HIGH',
+      crewAllocation: 'Pair (2 Techs): David Msane & Buyani Mthembu',
+      included: true,
+    };
+    setStagingTasks(prev => [...prev, newTask]);
+    toast({ title: 'New Task Added', description: 'Fill in the scope and details in the table below.' });
+  };
+
+  const handleToggleAll = (included: boolean) => {
+    setStagingTasks(prev => prev.map(t => ({ ...t, included })));
+  };
+
+  // Copy Markdown
   const handleCopy = () => {
     if (!generatedPlan) return;
     navigator.clipboard.writeText(generatedPlan);
@@ -432,7 +532,7 @@ export default function AIMaintenancePlannerPage() {
     const cleanSnippet = generatedPlan.slice(0, 1500).replace(/#/g, '').trim();
     const text = encodeURIComponent(
       `*Altek Green Maintenance Plan (Week ${targetWeekNumber})*\n` +
-      `*Period:* ${format(targetDateRange.from!, 'dd MMM')} – ${format(targetDateRange.to!, 'dd MMM yyyy')}\n` +
+      `*Period:* ${format(targetDateRange.from!, 'dd MMM')} – ${format(targetDateRange.to!, 'dd MMM yyyy')} (Mon–Fri)\n` +
       `*Prepared By:* Fritz Schroeder\n\n` +
       `${cleanSnippet}...\n\n_(Full official PDF available on portal)_`
     );
@@ -476,6 +576,8 @@ export default function AIMaintenancePlannerPage() {
     }
   };
 
+  const totalTickedTasks = useMemo(() => stagingTasks.filter(t => t.included !== false).length, [stagingTasks]);
+
   return (
     <div className="flex flex-col gap-6 p-4 md:p-8 max-w-7xl mx-auto print:p-0 print:m-0 print:max-w-none">
       <style>{`
@@ -495,11 +597,11 @@ export default function AIMaintenancePlannerPage() {
               AI Maintenance Planner
             </h1>
             <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-300">
-              Predictive Engineering & Work Order Planning
+              Monday – Friday Work Program
             </Badge>
           </div>
           <p className="text-sm text-slate-600 mt-1">
-            Formulate balanced weekly work orders, risk matrices, and multi-technician allocations from client requests and historical FSR trends.
+            Formulate balanced weekly work orders, risk matrices, and multi-technician allocations (strictly excluding weekends).
           </p>
         </div>
 
@@ -527,10 +629,10 @@ export default function AIMaintenancePlannerPage() {
           </div>
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              Field Crew Capacity: Strict 5-Technician Pool
+              Field Crew Capacity: Strict 5-Technician Pool (Monday – Friday Only)
             </h4>
             <p className="text-[11px] text-slate-300">
-              The AI strictly enforces a maximum of 5 technicians per day across all tasks (Full Team of 5 for major shuts, 2–3 techs for overhauls, safety pairs for MCC work).
+              Saturdays & Sundays are excluded. Daily maximum of 5 technicians across all tasks (Full Team of 5 for major shuts, pairs for routine MCCs).
             </p>
           </div>
         </div>
@@ -545,20 +647,20 @@ export default function AIMaintenancePlannerPage() {
 
       {/* Control Configuration Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 print-hidden">
-        {/* Step 1: Target Week Selection */}
+        {/* Step 1: Target Week Selection (Strictly Monday - Friday) */}
         <Card className="lg:col-span-5 border-emerald-100 shadow-sm">
           <CardHeader className="pb-3 bg-emerald-50/40 border-b">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold flex items-center gap-2 text-emerald-950">
                 <CalendarIcon className="h-4 w-4 text-emerald-600" />
-                1. Target Maintenance Week
+                1. Target Maintenance Week (Mon – Fri)
               </CardTitle>
               <Badge variant="outline" className="font-mono text-xs bg-white text-emerald-800 border-emerald-200">
                 Week {targetWeekNumber}
               </Badge>
             </div>
             <CardDescription className="text-xs">
-              Select the upcoming week to schedule work orders and component actions.
+              Schedules are strictly Monday to Friday. Weekends are not scheduled.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
@@ -594,7 +696,7 @@ export default function AIMaintenancePlannerPage() {
 
             <div className="border rounded-md p-3 bg-slate-50 flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 font-medium">Active Planning Window:</p>
+                <p className="text-xs text-slate-500 font-medium">Work Program Window (Mon – Fri):</p>
                 <p className="text-sm font-semibold text-slate-800">
                   {targetPeriodLabel}
                 </p>
@@ -615,7 +717,7 @@ export default function AIMaintenancePlannerPage() {
                     onSelect={(range) => {
                       if (range?.from) {
                         const from = startOfWeek(range.from, { weekStartsOn: 1 });
-                        const to = endOfWeek(range.to || range.from, { weekStartsOn: 1 });
+                        const to = addDays(from, 4); // Friday
                         setTargetDateRange({ from, to });
                       }
                     }}
@@ -784,14 +886,14 @@ export default function AIMaintenancePlannerPage() {
             <textarea
               value={clientSuggestedWork}
               onChange={(e) => setClientSuggestedWork(e.target.value)}
-              placeholder="Example: Client requested that on Monday the entire 5-man team attends the Smelter West Crane shut. On Tuesday, 2 technicians attend the MPE Tails Pump. What is the plan for the rest of the week?"
+              placeholder="Example: Client requested that on Monday the entire 5-man team attends the Smelter West Crane shut. On Tuesday, 2 technicians attend the MPE Tails Pump. What is the plan for Wednesday to Friday?"
               rows={3}
               className="w-full text-xs p-3 rounded-md border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sans bg-white shadow-inner"
             />
           </CardContent>
         </Card>
 
-        {/* Step 4: Predictive Planning Presets & Custom Directives */}
+        {/* Step 4: Predictive Planning Presets & Managerial Focus */}
         <Card className="lg:col-span-12 border-slate-200 shadow-sm">
           <CardHeader className="pb-3 bg-slate-50/70 border-b">
             <CardTitle className="text-base font-semibold flex items-center gap-2 text-slate-900">
@@ -799,7 +901,7 @@ export default function AIMaintenancePlannerPage() {
               4. Planning Focus & Predictive Templates
             </CardTitle>
             <CardDescription className="text-xs">
-              Choose an engineering objective or customize priority equipment for the remaining days of the week.
+              Choose an engineering objective or customize priority equipment for the remaining days of the work week.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
@@ -853,7 +955,7 @@ export default function AIMaintenancePlannerPage() {
             {/* Generate Button Bar */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t">
               <div className="text-xs text-slate-500">
-                Planning for <strong className="text-slate-800">Week {targetWeekNumber}</strong> (5 Technicians) using <strong className="text-slate-800">{lookbackDays}-day</strong> history.
+                Planning for <strong className="text-slate-800">Week {targetWeekNumber}</strong> (Monday–Friday, 5 Technicians) using <strong className="text-slate-800">{lookbackDays}-day</strong> history.
               </div>
 
               <Button
@@ -865,12 +967,12 @@ export default function AIMaintenancePlannerPage() {
                 {isGenerating ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Synthesizing Multi-Technician Work Program...
+                    Generating Proposed Work Orders...
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-5 w-5" />
-                    Generate Maintenance Plan
+                    Generate Proposed Work Orders
                   </>
                 )}
               </Button>
@@ -888,9 +990,241 @@ export default function AIMaintenancePlannerPage() {
         </Alert>
       )}
 
-      {/* Generated Report Section with Top Action Buttons */}
+      {/* EDITABLE STAGING AREA (Review, Tick, and Edit before compiling report) */}
+      {stagingTasks.length > 0 && (
+        <div ref={stagingSectionRef} className="space-y-4 pt-2 print-hidden">
+          <Card className="border-amber-300 shadow-md bg-gradient-to-br from-amber-50/30 via-white to-white">
+            <CardHeader className="py-3 px-4 bg-amber-50/60 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Edit3 className="h-5 w-5 text-amber-700" />
+                  <CardTitle className="text-base font-bold text-amber-950">
+                    Editable Staged Work Orders (Monday – Friday)
+                  </CardTitle>
+                  <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-xs">
+                    {totalTickedTasks} of {stagingTasks.length} Ticked
+                  </Badge>
+                </div>
+                <CardDescription className="text-xs text-amber-900/80 mt-0.5">
+                  Tick to include tasks, or manually adjust Day, Site, Asset, Scope of Work, and Crew before compiling the final formal report.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleToggleAll(true)}
+                  className="bg-white text-xs"
+                >
+                  <CheckSquare className="mr-1 h-3.5 w-3.5" /> Tick All
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleToggleAll(false)}
+                  className="bg-white text-xs"
+                >
+                  <Square className="mr-1 h-3.5 w-3.5" /> Untick All
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddTask}
+                  className="bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-50 text-xs font-semibold"
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5 text-emerald-600" /> Add Task
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCompileReport}
+                  disabled={isCompiling}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md"
+                >
+                  {isCompiling ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileCheck2 className="mr-1.5 h-4 w-4" />
+                  )}
+                  Compile Final Report ({totalTickedTasks})
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0 overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 border-b text-slate-800 font-semibold">
+                    <th className="p-2.5 w-10 text-center">Include</th>
+                    <th className="p-2.5 w-28">Day (Mon-Fri)</th>
+                    <th className="p-2.5 w-32">Origin / Type</th>
+                    <th className="p-2.5 w-24">Site</th>
+                    <th className="p-2.5 w-44">Equipment / Asset / Drive</th>
+                    <th className="p-2.5 min-w-[240px]">Scope of Work (Editable)</th>
+                    <th className="p-2.5 w-32">Priority</th>
+                    <th className="p-2.5 w-48">Crew Size & Names</th>
+                    <th className="p-2.5 w-12 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {stagingTasks.map((task) => (
+                    <tr
+                      key={task.id}
+                      className={cn(
+                        'transition-colors',
+                        task.included !== false
+                          ? 'bg-white hover:bg-slate-50/60'
+                          : 'bg-slate-50/80 opacity-60 text-slate-400'
+                      )}
+                    >
+                      {/* Checkbox */}
+                      <td className="p-2.5 text-center align-middle">
+                        <input
+                          type="checkbox"
+                          checked={task.included !== false}
+                          onChange={() => handleToggleTask(task.id!)}
+                          className="h-4 w-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                        />
+                      </td>
+
+                      {/* Day Selector (Mon-Fri ONLY) */}
+                      <td className="p-2.5 align-top">
+                        <select
+                          value={task.day}
+                          onChange={(e) => handleUpdateTaskField(task.id!, 'day', e.target.value)}
+                          className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white font-medium focus:ring-emerald-500"
+                        >
+                          <option value="Monday">Monday</option>
+                          <option value="Tuesday">Tuesday</option>
+                          <option value="Wednesday">Wednesday</option>
+                          <option value="Thursday">Thursday</option>
+                          <option value="Friday">Friday</option>
+                        </select>
+                      </td>
+
+                      {/* Origin Selector */}
+                      <td className="p-2.5 align-top">
+                        <select
+                          value={task.origin}
+                          onChange={(e) => handleUpdateTaskField(task.id!, 'origin', e.target.value)}
+                          className={cn(
+                            'w-full text-[11px] p-1.5 rounded border font-semibold',
+                            task.origin === 'Client Mandate'
+                              ? 'bg-blue-50 text-blue-800 border-blue-300'
+                              : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          )}
+                        >
+                          <option value="Client Mandate">Client Mandate</option>
+                          <option value="Altek Predictive / PM">Altek Predictive / PM</option>
+                        </select>
+                      </td>
+
+                      {/* Site */}
+                      <td className="p-2.5 align-top">
+                        <input
+                          type="text"
+                          value={task.site}
+                          onChange={(e) => handleUpdateTaskField(task.id!, 'site', e.target.value)}
+                          className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white font-medium"
+                          placeholder="Site (e.g. MPE)"
+                        />
+                      </td>
+
+                      {/* Equipment / Asset / Drive */}
+                      <td className="p-2.5 align-top">
+                        <input
+                          type="text"
+                          value={task.asset}
+                          onChange={(e) => handleUpdateTaskField(task.id!, 'asset', e.target.value)}
+                          className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white font-semibold text-slate-900"
+                          placeholder="Asset / Drive Name"
+                        />
+                      </td>
+
+                      {/* Scope of Work (Editable) */}
+                      <td className="p-2.5 align-top">
+                        <textarea
+                          rows={2}
+                          value={task.scope}
+                          onChange={(e) => handleUpdateTaskField(task.id!, 'scope', e.target.value)}
+                          className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white font-sans focus:ring-emerald-500"
+                          placeholder="Describe the scope of work, diagnostics, or parts to replace"
+                        />
+                      </td>
+
+                      {/* Priority */}
+                      <td className="p-2.5 align-top">
+                        <select
+                          value={task.priority}
+                          onChange={(e) => handleUpdateTaskField(task.id!, 'priority', e.target.value)}
+                          className="w-full text-[11px] p-1.5 rounded border border-slate-300 bg-white"
+                        >
+                          <option value="P1 - CRITICAL">P1 - CRITICAL</option>
+                          <option value="P2 - HIGH">P2 - HIGH</option>
+                          <option value="P3 - MEDIUM">P3 - MEDIUM</option>
+                          <option value="P4 - ROUTINE">P4 - ROUTINE</option>
+                        </select>
+                      </td>
+
+                      {/* Crew Allocation */}
+                      <td className="p-2.5 align-top">
+                        <input
+                          type="text"
+                          value={task.crewAllocation}
+                          onChange={(e) => handleUpdateTaskField(task.id!, 'crewAllocation', e.target.value)}
+                          className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white font-mono text-[11px]"
+                          placeholder="e.g. Pair (2 Techs): David & Buyani"
+                        />
+                      </td>
+
+                      {/* Delete */}
+                      <td className="p-2.5 text-center align-middle">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteTask(task.id!)}
+                          className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Bottom Compilation Trigger */}
+              <div className="p-3 bg-amber-50/50 border-t flex flex-col sm:flex-row items-center justify-between gap-2">
+                <div className="text-xs text-amber-900">
+                  Ready to finalize? Click <strong>Compile Final Report</strong> to generate the official document with your chosen work orders.
+                </div>
+                <Button
+                  size="default"
+                  onClick={handleCompileReport}
+                  disabled={isCompiling}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md"
+                >
+                  {isCompiling ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileCheck2 className="mr-1.5 h-4 w-4" />
+                  )}
+                  Compile Final Report ({totalTickedTasks} Work Orders Ticked)
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* FINAL COMPILED REPORT SECTION */}
       {generatedPlan && (
-        <div ref={reportContainerRef} className="space-y-4 pt-2">
+        <div ref={reportContainerRef} className="space-y-4 pt-4">
           {/* Top Action Bar (Print to PDF, WhatsApp, Copy, Save) */}
           <Card className="border-emerald-200 bg-white shadow-sm print-hidden">
             <CardHeader className="py-3 px-4 bg-emerald-50/50 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -898,15 +1232,15 @@ export default function AIMaintenancePlannerPage() {
                 <FileText className="h-5 w-5 text-emerald-700" />
                 <div>
                   <h3 className="text-sm font-bold text-emerald-950">
-                    Weekly Predictive Maintenance Plan (Week {targetWeekNumber})
+                    Compiled Weekly Maintenance Report (Week {targetWeekNumber}: Mon – Fri)
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    {clientSuggestedWork ? 'Coordinating Client-Mandated Tasks & Altek Green Preventative Schedule (5-Tech Team).' : 'Altek Green Proactive Maintenance & Multi-Technician Allocations.'}
+                    {clientSuggestedWork ? 'Coordinated Client Mandates & Altek Green Preventative Schedule.' : 'Proactive Preventative Maintenance & Multi-Technician Allocations.'}
                   </p>
                 </div>
               </div>
 
-              {/* ACTION BUTTONS (As requested by user: Print to PDF, Export to WhatsApp, Copy, Save) */}
+              {/* ACTION BUTTONS */}
               <div className="flex flex-wrap items-center gap-2">
                 {/* Print to PDF */}
                 <Button
@@ -972,15 +1306,15 @@ export default function AIMaintenancePlannerPage() {
                   Save Plan
                 </Button>
 
-                {/* Re-run */}
+                {/* Edit Tasks Button (Scroll back up to staging) */}
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={handleGeneratePlan}
-                  disabled={isGenerating}
-                  className="text-slate-600 hover:text-slate-900 text-xs"
+                  onClick={() => stagingSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                  className="text-amber-800 border-amber-300 hover:bg-amber-50 text-xs"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
+                  <Edit3 className="mr-1 h-3.5 w-3.5 text-amber-600" />
+                  Edit Tasks
                 </Button>
               </div>
             </CardHeader>
