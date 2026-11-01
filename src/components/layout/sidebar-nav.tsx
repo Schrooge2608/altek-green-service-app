@@ -393,6 +393,14 @@ export function SidebarNav() {
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                     <SidebarMenuSubItem>
+                                        <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/planner'}>
+                                            <Link href="/maintenance/planner" prefetch={true}>
+                                                <Sparkles className="mr-2 h-4 w-4 text-emerald-600" />
+                                                <span>AI Maintenance Planner</span>
+                                            </Link>
+                                        </SidebarMenuSubButton>
+                                    </SidebarMenuSubItem>
+                                    <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild isActive={pathname.startsWith('/reports/history')}>
                                             <Link href="/reports/history" prefetch={true}>
                                                 <History className="mr-2 h-4 w-4" />
@@ -416,6 +424,14 @@ export function SidebarNav() {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                         <SidebarMenuSub>
+                            <SidebarMenuSubItem>
+                                <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/planner'}>
+                                    <Link href="/maintenance/planner" prefetch={true}>
+                                        <Sparkles className="mr-2 h-4 w-4 text-emerald-600" />
+                                        <span className="font-semibold text-emerald-950">AI Maintenance Planner</span>
+                                    </Link>
+                                </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
                             <SidebarMenuSubItem>
                                 <Collapsible open={isScheduleOpen} onOpenChange={setIsScheduleOpen} className="group/schedule">
                                     <CollapsibleTrigger asChild>

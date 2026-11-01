@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, FileText, Copy, Save, Calendar as CalendarIcon, Database, ShieldAlert, Check, Play, RotateCcw } from 'lucide-react';
+import { Loader2, Sparkles, FileText, Copy, Save, Calendar as CalendarIcon, Printer, MessageCircle, Database, ShieldAlert, Check, Play, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, serverTimestamp, addDoc, query, where, getDocs, doc } from 'firebase/firestore';
@@ -16,6 +16,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format, startOfWeek, endOfWeek, startOfDay, endOfDay, getISOWeek } from 'date-fns';
 import { cn, formatMarkdownTables } from '@/lib/utils';
+import { generateSmartPagedPdf } from '@/lib/pdf-utils';
 import { useRouter } from 'next/navigation';
 import { Textarea } from '@/components/ui/textarea';
 import ReactMarkdown from 'react-markdown';
@@ -280,6 +281,7 @@ export default function GenerateReportPage() {
     const [isFetching, setIsFetching] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
     const [generatedReport, setGeneratedReport] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [date, setDate] = useState<DateRange | undefined>();
@@ -527,6 +529,65 @@ export default function GenerateReportPage() {
         }
     };
     
+    
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const handleSharePDF = async (method: 'whatsapp' | 'email') => {
+        if (!generatedReport) return;
+        const element = document.getElementById('report-content');
+        if (!element) {
+            toast({ variant: 'destructive', title: 'Content Not Found', description: 'Could not locate the report to export.' });
+            return;
+        }
+
+        setIsSharing(true);
+        toast({ title: 'Generating PDF...', description: 'Preparing high-resolution document for export.' });
+
+        try {
+            const pdf = await generateSmartPagedPdf(element);
+            const pdfBlob = pdf.output('blob');
+            const fromStr = date?.from ? format(date.from, 'yyyy-MM-dd') : 'report';
+            const toStr = date?.to ? format(date.to, 'yyyy-MM-dd') : fromStr;
+            const fileName = `AltekGreen_Weekly_Report_${fromStr}_to_${toStr}.pdf`;
+            const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: `Altek Green Weekly Report ${fromStr} to ${toStr}`,
+                    text: `Please find attached the Altek Green Weekly Service & Maintenance Report.`,
+                });
+                toast({ title: 'Shared Successfully' });
+            } else {
+                pdf.save(fileName);
+                toast({
+                    title: 'PDF Downloaded',
+                    description: 'Direct browser file sharing is unavailable. The PDF has been downloaded—opening WhatsApp so you can attach it.',
+                });
+
+                const shareMsg = encodeURIComponent(
+                    `*Altek Green - Weekly Service & Maintenance Report*\n` +
+                    `*Period:* ${fromStr} to ${toStr}\n` +
+                    `*Prepared By:* Fritz Schroeder, Services Manager\n\n` +
+                    `Please find the downloaded report attached.`
+                );
+
+                if (method === 'whatsapp') {
+                    window.open(`https://api.whatsapp.com/send?text=${shareMsg}`, '_blank');
+                } else {
+                    window.open(`mailto:?subject=Altek Green Report ${fromStr} to ${toStr}&body=${shareMsg}`, '_blank');
+                }
+            }
+        } catch (e: any) {
+            console.error('PDF Share Error:', e);
+            toast({ variant: 'destructive', title: 'Export Failed', description: e.message || 'Failed to export PDF.' });
+        } finally {
+            setIsSharing(false);
+        }
+    };
+
     const handleCopy = () => {
         if (!generatedReport) return;
         navigator.clipboard.writeText(generatedReport);
@@ -837,7 +898,7 @@ export default function GenerateReportPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="pt-6 print:p-0">
-                        <div className="bg-white p-8 md:p-12 border shadow-sm print:shadow-none print:border-none print:p-0 min-h-[29.7cm] print:min-h-0 mx-auto max-w-[21cm] print:max-w-none print:w-full">
+                        <div id="report-content" className="bg-white p-8 md:p-12 border shadow-sm print:shadow-none print:border-none print:p-0 min-h-[29.7cm] print:min-h-0 mx-auto max-w-[21cm] print:max-w-none print:w-full">
                             <div className="flex justify-between items-center border-b-2 border-slate-800 pb-6 mb-8">
                                 <div className="w-1/3">
                                 <img src="/Altek-Logo.jpeg" alt="Altek Green Logo" className="h-20 w-auto object-contain" />

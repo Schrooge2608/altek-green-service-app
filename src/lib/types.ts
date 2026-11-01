@@ -506,6 +506,11 @@ export interface GeneratedReport {
   generatedAt: any; // Firestore Timestamp
   generatedByUserId: string;
   generatedByUserName: string;
+  type?: 'weekly_activity' | 'maintenance_plan' | string;
+  title?: string;
+  targetWeek?: number;
+  lookbackStartDate?: string;
+  lookbackEndDate?: string;
 }
 
 export interface Channel {
