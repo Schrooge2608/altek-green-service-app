@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useParams, notFound, useRouter } from 'next/navigation';
+import { formatMarkdownTables } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Printer, MessageCircle, Mail } from 'lucide-react';
@@ -211,7 +212,7 @@ export default function ViewReportPage() {
                             ),
                             }}
                         >
-                            {report.reportText}
+                            {formatMarkdownTables(report.reportText)}
                         </ReactMarkdown>
 
                         <div className="mt-16 pt-8 border-t border-slate-300 flex justify-start h-32 w-64 print:mt-6 print:pt-4 print:h-24 print:break-inside-avoid">

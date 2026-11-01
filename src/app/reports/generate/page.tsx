@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatMarkdownTables } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Textarea } from '@/components/ui/textarea';
 import ReactMarkdown from 'react-markdown';
@@ -126,14 +126,14 @@ Write 1-2 flowing professional paragraphs on critical path activities, major equ
 Categorize all maintenance data by site (MPE, MPC, MPD, MPA). For each site, create a bolded heading. Below each heading, provide a bolded title for each asset (e.g. • **[Equipment Name / Breakdown]**:), followed by a concise, professional summary of the fault, diagnostics performed, and the resolution.
 
 ## Field Service Report (FSR) Interventions
-Extract all FSR interventions strictly into this table:
+Extract all FSR interventions strictly into this table with each row on its own separate line:
 | Date | Site | Asset | FSR Number | Status |
 |---|---|---|---|---|
 
 Followed by a concise paragraph titled 'Analytical Insights from FSR Data:' summarizing key themes and critical assets.
 
 ## Scheduled and Unscheduled Maintenance (Daily Diaries)
-Extract all daily diary interventions strictly into this table:
+Extract all daily diary interventions strictly into this table with each row on its own separate line:
 | Date | Technician | Site | Activity Summary |
 |---|---|---|---|
 
@@ -195,7 +195,7 @@ Extract all Field Service Report (FSR) interventions from the provided data and 
 You MUST use these exact column headers:
 | Date | Site | Asset | FSR Number | Status |
 |---|---|---|---|---|
-Ensure the markdown separator line is included immediately below the headers.`);
+CRITICAL: Every table row (header, separator, and each data row) MUST be on its own separate line ending with a newline.`);
                 break;
             case 'fsr-analytical-summary':
                 sectionsText.push(`### Analytical Insights from FSR Data
@@ -207,7 +207,7 @@ Extract the daily diary logs from the provided data and format them STRICTLY int
 You MUST use these exact column headers:
 | Date | Technician | Site | Activity Summary |
 |---|---|---|---|
-Ensure the markdown separator line is included immediately below the headers.`);
+CRITICAL: Every table row (header, separator, and each data row) MUST be on its own separate line ending with a newline.`);
                 break;
             default: {
                 const found = REPORT_PROMPT_PRESETS.find(p => p.id === id);
@@ -462,9 +462,9 @@ export default function GenerateReportPage() {
             if (!result.success) {
                 throw new Error(result.error || 'Unknown server error');
             }
-            let rawText = typeof result.data === 'string' ? result.data : (result.data as any).report || '';
-            rawText = rawText.replace(/\\n/g, '\n').replace(/^"|"$/g, '').replace(/:\s*\|/g, ':\n\n|').replace(/([^\n])(\|---)/g, '$1\n$2');
-            setGeneratedReport(rawText);
+            const rawText = typeof result.data === 'string' ? result.data : (result.data as any).report || '';
+            const formatted = formatMarkdownTables(rawText);
+            setGeneratedReport(formatted);
             toast({ title: 'Report Generated', description: 'The weekly summary report has been created below.' });
         } catch (e: any) {
             console.error(e);
@@ -491,7 +491,7 @@ export default function GenerateReportPage() {
         try {
             const reportsRef = collection(firestore, 'generated_reports');
             const reportData: Omit<GeneratedReport, 'id'> = {
-                reportText: generatedReport,
+                reportText: formatMarkdownTables(generatedReport),
                 startDate: format(date.from, 'yyyy-MM-dd'),
                 endDate: format(date.to, 'yyyy-MM-dd'),
                 generatedAt: serverTimestamp(),

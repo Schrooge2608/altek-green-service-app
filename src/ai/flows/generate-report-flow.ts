@@ -86,7 +86,7 @@ const ReportInputSchema = z.object({
 export type ReportInput = z.infer<typeof ReportInputSchema>;
 
 const ReportOutputSchema = z.object({
-  report: z.string().describe('The generated professional, client-facing report in plain text format, using markdown for tables.'),
+  report: z.string().describe('The generated professional, client-facing report in clean GitHub-flavored markdown format with properly formatted markdown tables.'),
 });
 export type ReportOutput = z.infer<typeof ReportOutputSchema>;
 
@@ -120,7 +120,14 @@ const prompt = ai.definePrompt({
 You are the Altek Green Technical Reporting Agent. Your job is to convert rough notes, WhatsApp messages, Field Service Reports (FSRs), Daily Diaries, and raw data into formal, professional engineering reports.
 Always write in the third person or passive voice (e.g., 'Diagnostics were performed' instead of 'I performed diagnostics').
 Never use filler text or conversational openings. Output exactly the format and structure requested by the user prompt.
-When Markdown tables are requested, you MUST include clear header names and the standard markdown separator line (|---|---|) immediately below the headers.
+
+CRITICAL MARKDOWN TABLE RULES:
+1. Every table MUST start on its own line preceded by an empty blank line.
+2. The table header row MUST be immediately followed by a newline (\n) and the separator line (e.g. |---|---|---|).
+3. The separator line MUST be immediately followed by a newline (\n).
+4. Every single data row MUST be on its own separate line ending with a newline (\n).
+5. NEVER concatenate multiple table rows on the same line. NEVER separate table rows with spaces or "| |".
+6. After the table, leave an empty blank line before any subsequent text or headings.
 
 User Request: "{{{customQuery}}}"
 
