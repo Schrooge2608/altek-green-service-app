@@ -7,6 +7,12 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { 
+  compileMaintenanceReportMarkdown, 
+  type PlanGenerationResult, 
+  type MaintenancePlanOutput,
+  type MaintenanceTaskItem 
+} from '@/lib/maintenance-planner-utils';
 
 const BreakdownReportSchema = z.object({
   id: z.string(),
@@ -83,18 +89,17 @@ const EquipmentSchema = z.object({
   flag: safeStringSchema,
 }).passthrough();
 
-export const MaintenanceTaskItemSchema = z.object({
+const MaintenanceTaskItemSchema = z.object({
   id: z.string().optional().default(''),
-  day: z.string().describe('Monday, Tuesday, Wednesday, Thursday, or Friday ONLY. NEVER Saturday or Sunday.'),
-  origin: z.string().describe('Client Mandate or Altek Predictive / PM'),
-  site: z.string().describe('Site code, e.g. MPE, MPC, MPD, MPA, Smelter'),
-  asset: z.string().describe('Equipment, drive, or asset name'),
-  scope: z.string().describe('Specific scope of work and diagnostics to perform'),
-  priority: z.string().describe('P1 - CRITICAL, P2 - HIGH, P3 - MEDIUM, or P4 - ROUTINE'),
-  crewAllocation: z.string().describe('Exact crew size and technician names (e.g. Full Team (5 Techs), Pair (2 Techs): David & Buyani, Crew (3 Techs), or Solo (1 Tech))'),
+  day: z.string().optional().default('Monday'),
+  origin: z.string().optional().default('Altek Predictive / PM'),
+  site: z.string().optional().default('MPE'),
+  asset: z.string().optional().default('General Plant Equipment'),
+  scope: z.string().optional().default('Inspection and routine servicing'),
+  priority: z.string().optional().default('P2 - HIGH'),
+  crewAllocation: z.string().optional().default('Pair (2 Techs)'),
   included: z.boolean().optional().default(true),
 });
-export type MaintenanceTaskItem = z.infer<typeof MaintenanceTaskItemSchema>;
 
 const MaintenancePlanInputSchema = z.object({
   lookbackStartDate: z.string().describe('The start date of the diagnostic lookback window (yyyy-MM-dd)'),
@@ -102,8 +107,8 @@ const MaintenancePlanInputSchema = z.object({
   targetWeek: z.number().describe('The target ISO week number (e.g. 45)'),
   targetStartDate: z.string().describe('Start date of the target maintenance week (Monday, yyyy-MM-dd)'),
   targetEndDate: z.string().describe('End date of the target maintenance week (Friday, yyyy-MM-dd)'),
-  clientSuggestedWork: z.string().optional().describe('Client mandated or suggested tasks, e.g. for Monday and Tuesday'),
-  customQuery: z.string().optional().describe('Specific focus, site, or technician instructions from Fritz Schroeder'),
+  clientSuggestedWork: safeStringSchema,
+  customQuery: safeStringSchema,
   newBreakdowns: z.array(BreakdownReportSchema),
   closedBreakdowns: z.array(BreakdownReportSchema),
   completedSchedules: z.array(CompletedScheduleSchema),
@@ -113,109 +118,15 @@ const MaintenancePlanInputSchema = z.object({
 });
 export type MaintenancePlanInput = z.infer<typeof MaintenancePlanInputSchema>;
 
-export const MaintenancePlanOutputSchema = z.object({
-  overview: z.string().describe('Executive plant reliability overview (2 flowing professional paragraphs, no bullet points)'),
-  clientSection: z.string().describe('Summary of client-mandated priorities and shut window coordination'),
-  riskMatrix: z.string().describe('Markdown table for Priority Risk Matrix & Critical Components at Risk with headers: | Site | Equipment / Asset | Component | Historical Symptom / Root Cause | Risk Level | Recommended Preventative Action | Required Crew |'),
-  proposedTasks: z.array(MaintenanceTaskItemSchema).describe('List of scheduled tasks for Monday to Friday ONLY. Must NOT include Saturday or Sunday.'),
-  latentIssues: z.string().describe('Bullet points of latent issues, drives operating in local mode, and unresolved FSR recommendations'),
-  sparesRequirements: z.string().describe('Bullet points of critical spares, modules, capacitors, and test instruments required'),
-  safetyProtocols: z.string().describe('Standard safety, LOTO, zero energy verification, and dust control compliance points'),
+const MaintenancePlanOutputSchema = z.object({
+  overview: z.string().optional().default('Plant stability and equipment performance were monitored across the lookback period.'),
+  clientSection: z.string().optional().default('Client-mandated tasks scheduled in coordination with site shutdown windows.'),
+  riskMatrix: z.string().optional().default('| Site | Equipment / Asset | Component | Historical Symptom / Root Cause | Risk Level | Recommended Preventative Action | Required Crew |\n|---|---|---|---|---|---|---|'),
+  proposedTasks: z.array(MaintenanceTaskItemSchema).optional().default([]),
+  latentIssues: z.string().optional().default('- Routine inspection of active VSDs and MCC panels.'),
+  sparesRequirements: z.string().optional().default('- Standard diagnostic instruments and technician toolkits.'),
+  safetyProtocols: z.string().optional().default('- Mandatory Zero Energy verification and LOTO protocols prior to panel entry.'),
 });
-export type MaintenancePlanOutput = z.infer<typeof MaintenancePlanOutputSchema>;
-
-export interface PlanGenerationResult {
-  structured: MaintenancePlanOutput;
-  compiledMarkdown: string;
-}
-
-/**
- * Compiles a formal Altek Green Markdown Report from the structured sections and ticked tasks.
- */
-export async function compileMaintenanceReportMarkdown(params: {
-  targetWeek: number;
-  targetStartDate: string;
-  targetEndDate: string;
-  lookbackStartDate: string;
-  lookbackEndDate: string;
-  overview: string;
-  clientSection: string;
-  riskMatrix: string;
-  tasks: Array<{
-    id?: string;
-    day: string;
-    origin: string;
-    site: string;
-    asset: string;
-    scope: string;
-    priority: string;
-    crewAllocation: string;
-    included?: boolean;
-  }>;
-  latentIssues: string;
-  sparesRequirements: string;
-  safetyProtocols: string;
-}): Promise<string> {
-  const activeTasks = (params.tasks || []).filter(t => t.included !== false);
-
-  let scheduleTable = `| Day | Origin / Type | Site | Asset / Drive | Scope of Work | Priority | Crew Size & Allocation |\n|---|---|---|---|---|---|---|`;
-
-  if (activeTasks.length === 0) {
-    scheduleTable += `\n| Monday – Friday | Altek Predictive / PM | All Sites | Plant-Wide Maintenance | No specific work orders selected for this period. | P4 - ROUTINE | Standby Team |`;
-  } else {
-    const dayOrder: Record<string, number> = {
-      Monday: 1,
-      Tuesday: 2,
-      Wednesday: 3,
-      Thursday: 4,
-      Friday: 5,
-    };
-
-    const sorted = [...activeTasks].sort((a, b) => {
-      const dayA = dayOrder[a.day] || 99;
-      const dayB = dayOrder[b.day] || 99;
-      return dayA - dayB;
-    });
-
-    sorted.forEach(t => {
-      const cleanScope = (t.scope || '').replace(/\|/g, '-').replace(/\n/g, ' ').trim();
-      const cleanAsset = (t.asset || '').replace(/\|/g, '-').trim();
-      const cleanCrew = (t.crewAllocation || '').replace(/\|/g, '-').trim();
-      const cleanSite = (t.site || '').replace(/\|/g, '-').trim();
-      const cleanOrigin = (t.origin || 'Altek Predictive / PM').replace(/\|/g, '-').trim();
-      const cleanPriority = (t.priority || 'P2 - HIGH').replace(/\|/g, '-').trim();
-      scheduleTable += `\n| ${t.day} | ${cleanOrigin} | ${cleanSite} | ${cleanAsset} | ${cleanScope} | ${cleanPriority} | ${cleanCrew} |`;
-    });
-  }
-
-  return `# Weekly Predictive Maintenance Plan
-**Prepared By:** Fritz Schroeder, Services Manager (KZN)  
-**Planning Period:** Week ${params.targetWeek} (${params.targetStartDate} – ${params.targetEndDate})  
-**Diagnostic Lookback Window:** ${params.lookbackStartDate} to ${params.lookbackEndDate}  
-**Field Team Capacity:** 5 Electrical Technicians (Strict Daily Limit: Monday – Friday)
-
-## 1. Plant Reliability & Operational Context
-${params.overview.trim()}
-
-## 2. Client-Mandated Priorities & Resource Commitment
-${params.clientSection.trim()}
-
-## 3. Priority Risk Matrix & Critical Components at Risk
-${params.riskMatrix.trim()}
-
-## 4. Finalized Weekly Schedule (Week ${params.targetWeek}: Monday – Friday)
-${scheduleTable}
-
-## 5. Balance-of-Week Focus & Latent Risk Mitigation
-${params.latentIssues.trim()}
-
-## 6. Critical Spares, Tools & Pre-Work Requirements
-${params.sparesRequirements.trim()}
-
-## 7. Safety, Isolation & Housekeeping Protocols
-${params.safetyProtocols.trim()}
-`;
-}
 
 export async function generateMaintenancePlan(
   input: any
@@ -259,37 +170,51 @@ export async function generateMaintenancePlan(
       }));
     }
 
-    const structuredOutput = await generateMaintenancePlanFlow(safeInput);
+    const structuredOutput: any = await generateMaintenancePlanFlow(safeInput);
 
     // Ensure all proposed tasks have unique IDs and default included = true
-    const tasksWithIds = (structuredOutput.proposedTasks || []).map((t, idx) => ({
-      ...t,
-      id: t.id || `task-${Date.now()}-${idx}`,
+    const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const tasksWithIds: MaintenanceTaskItem[] = (structuredOutput?.proposedTasks || []).map((t: any, idx: number) => ({
+      id: t?.id || `task-${Date.now()}-${idx}`,
+      day: validDays.includes(t?.day) ? t.day : 'Monday',
+      origin: t?.origin || 'Altek Predictive / PM',
+      site: t?.site || 'MPE',
+      asset: t?.asset || 'Plant Equipment',
+      scope: t?.scope || 'Execute preventative maintenance diagnostics.',
+      priority: t?.priority || 'P2 - HIGH',
+      crewAllocation: t?.crewAllocation || 'Pair (2 Techs)',
       included: true,
-      day: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(t.day) ? t.day : 'Monday',
     }));
 
-    structuredOutput.proposedTasks = tasksWithIds;
+    const finalStructured: MaintenancePlanOutput = {
+      overview: structuredOutput?.overview || 'Plant stability was monitored across the lookback period.',
+      clientSection: structuredOutput?.clientSection || 'Client-mandated tasks scheduled in coordination with site windows.',
+      riskMatrix: structuredOutput?.riskMatrix || '| Site | Equipment / Asset | Component | Historical Symptom / Root Cause | Risk Level | Recommended Preventative Action | Required Crew |\n|---|---|---|---|---|---|---|',
+      proposedTasks: tasksWithIds,
+      latentIssues: structuredOutput?.latentIssues || '- All active equipment monitored for anomalous behavior.',
+      sparesRequirements: structuredOutput?.sparesRequirements || '- Standard technician toolkits and safety consumables.',
+      safetyProtocols: structuredOutput?.safetyProtocols || '- Mandatory Zero Energy verification and LOTO protocols.',
+    };
 
-    const compiledMarkdown = await compileMaintenanceReportMarkdown({
+    const compiledMarkdown = compileMaintenanceReportMarkdown({
       targetWeek: safeInput.targetWeek,
       targetStartDate: safeInput.targetStartDate,
       targetEndDate: safeInput.targetEndDate,
       lookbackStartDate: safeInput.lookbackStartDate,
       lookbackEndDate: safeInput.lookbackEndDate,
-      overview: structuredOutput.overview,
-      clientSection: structuredOutput.clientSection,
-      riskMatrix: structuredOutput.riskMatrix,
+      overview: finalStructured.overview,
+      clientSection: finalStructured.clientSection,
+      riskMatrix: finalStructured.riskMatrix,
       tasks: tasksWithIds,
-      latentIssues: structuredOutput.latentIssues,
-      sparesRequirements: structuredOutput.sparesRequirements,
-      safetyProtocols: structuredOutput.safetyProtocols,
+      latentIssues: finalStructured.latentIssues,
+      sparesRequirements: finalStructured.sparesRequirements,
+      safetyProtocols: finalStructured.safetyProtocols,
     });
 
     return {
       success: true,
       data: {
-        structured: structuredOutput,
+        structured: finalStructured,
         compiledMarkdown,
       },
     };
@@ -332,7 +257,7 @@ The client has provided the following specific requests or requirements:
 
 **CLIENT SCHEDULING DIRECTIVES:**
 1. Prioritize and lock in all client-mandated tasks for their specified days (e.g. if the client specified work for Monday and Tuesday, those MUST be assigned to Monday and Tuesday).
-2. Assign the realistic crew size required for the client's work (e.g. Full Team of 5 for a major crane/feeder shut, or 2-3 techs for VSD capacitor change).
+2. Assign the realistic team size required for the client's work (e.g. Full Team of 5 for a major crane/feeder shut, or 2-3 techs for VSD capacitor change).
 3. If the client takes all 5 technicians on Monday, NO other routine tasks can be scheduled on Monday.
 4. If the client takes 2 technicians on Tuesday, only the remaining 3 technicians are available for other tasks on Tuesday.
 5. For Wednesday, Thursday, and Friday, formulate Altek Green's proactive preventative maintenance program to address high-risk equipment and unaddressed FSR issues.

@@ -39,11 +39,13 @@ import { collection, serverTimestamp, addDoc, query, where, getDocs, doc } from 
 import type { Breakdown, CompletedSchedule, DailyDiary, Equipment, User, FieldServiceReport, GeneratedReport } from '@/lib/types';
 import { 
   generateMaintenancePlan, 
-  compileMaintenanceReportMarkdown, 
-  type MaintenancePlanInput, 
-  type MaintenanceTaskItem,
-  type MaintenancePlanOutput 
+  type MaintenancePlanInput 
 } from '@/ai/flows/generate-maintenance-plan-flow';
+import {
+  compileMaintenanceReportMarkdown,
+  type MaintenanceTaskItem,
+  type MaintenancePlanOutput
+} from '@/lib/maintenance-planner-utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
