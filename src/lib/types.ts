@@ -511,6 +511,15 @@ export interface GeneratedReport {
   targetWeek?: number;
   lookbackStartDate?: string;
   lookbackEndDate?: string;
+  clientSuggestedWork?: string | null;
+  stagingTasks?: any[];
+  structuredPlan?: any;
+  selectedPreset?: string;
+  customInstructions?: string;
+  isAmended?: boolean;
+  amendedAt?: any;
+  amendedByUserName?: string;
+  revision?: number;
 }
 
 export interface Channel {

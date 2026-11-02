@@ -5,7 +5,7 @@ import { useParams, notFound, useRouter } from 'next/navigation';
 import { formatMarkdownTables } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Printer, MessageCircle, Mail } from 'lucide-react';
+import { Loader2, ArrowLeft, Printer, MessageCircle, Mail, Edit3 } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { GeneratedReport } from '@/lib/types';
@@ -102,6 +102,18 @@ export default function ViewReportPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to History
                 </Button>
+
+                {report.type === 'maintenance_plan' && (
+                    <Button 
+                      variant="outline" 
+                      className="gap-2 border-emerald-400 text-emerald-800 hover:bg-emerald-50 bg-emerald-50/50"
+                      disabled={isSharing}
+                      onClick={() => router.push(`/maintenance/planner?planId=${id}`)}
+                    >
+                      <Edit3 className="h-4 w-4 text-emerald-600" />
+                      Amend in Planner
+                    </Button>
+                )}
                 
                 <Button 
                   variant="outline" 

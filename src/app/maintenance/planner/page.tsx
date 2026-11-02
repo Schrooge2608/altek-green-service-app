@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -31,11 +31,18 @@ import {
   Square,
   Edit3,
   FileCheck2,
-  ArrowDown
+  ArrowDown,
+  FolderOpen,
+  Eye,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  History,
+  PenTool
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useUser, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, serverTimestamp, addDoc, query, where, getDocs, doc } from 'firebase/firestore';
+import { collection, serverTimestamp, addDoc, updateDoc, getDoc, query, where, getDocs, doc, orderBy, limit } from 'firebase/firestore';
 import type { Breakdown, CompletedSchedule, DailyDiary, Equipment, User, FieldServiceReport, GeneratedReport } from '@/lib/types';
 import { 
   generateMaintenancePlan, 
@@ -43,11 +50,20 @@ import {
 } from '@/ai/flows/generate-maintenance-plan-flow';
 import {
   compileMaintenanceReportMarkdown,
+  parseMarkdownTableToTasks,
+  parseMarkdownSections,
   type MaintenanceTaskItem,
   type MaintenancePlanOutput
 } from '@/lib/maintenance-planner-utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { 
@@ -58,13 +74,16 @@ import {
   subDays, 
   startOfDay, 
   endOfDay, 
-  getISOWeek 
+  getISOWeek,
+  parseISO,
+  isValid
 } from 'date-fns';
 import { cn, formatMarkdownTables } from '@/lib/utils';
 import { generateSmartPagedPdf } from '@/lib/pdf-utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface AggregatedLookbackData {
   newBreakdowns: Breakdown[];
@@ -103,16 +122,29 @@ const sanitizeForServer = (data: any): any => {
   return data;
 };
 
-export default function AIMaintenancePlannerPage() {
+function PlannerContent() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
   const reportContainerRef = useRef<HTMLDivElement>(null);
   const stagingSectionRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const urlPlanId = searchParams?.get('planId');
 
   // User Profile
   const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userDocRef);
+
+  // Amendment & History Tracking State
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingPlanTitle, setEditingPlanTitle] = useState<string | null>(null);
+  const [editingPlanRevision, setEditingPlanRevision] = useState<number>(1);
+  const [isDirectMarkdownEdit, setIsDirectMarkdownEdit] = useState<boolean>(false);
+  const [isAmendingNarrative, setIsAmendingNarrative] = useState<boolean>(false);
+  const [isLoadPlanDialogOpen, setIsLoadPlanDialogOpen] = useState<boolean>(false);
+  const [savedPlansList, setSavedPlansList] = useState<GeneratedReport[]>([]);
+  const [isLoadingSavedPlans, setIsLoadingSavedPlans] = useState<boolean>(false);
 
   // 1. Target Week Calculation: STRICTLY MONDAY TO FRIDAY (Weekends Excluded)
   const initialTarget = useMemo(() => {
@@ -206,6 +238,146 @@ export default function AIMaintenancePlannerPage() {
       promptDirective: 'Prioritize routine lifecycle renewals: 3-monthly/6-monthly VSD servicing, capacitor renewals, blower fan inspections, busbar torquing, and MCC dust mitigation across MPE, MPC, MPD, MPA, and Smelter for Monday to Friday.',
     },
   ], []);
+
+  // Open Load Saved Plan Dialog
+  const handleOpenLoadPlanDialog = async () => {
+    setIsLoadPlanDialogOpen(true);
+    setIsLoadingSavedPlans(true);
+    try {
+      const q = query(
+        collection(firestore, 'generated_reports'),
+        where('type', '==', 'maintenance_plan'),
+        orderBy('generatedAt', 'desc'),
+        limit(25)
+      );
+      const snap = await getDocs(q);
+      const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as GeneratedReport));
+      setSavedPlansList(plans);
+    } catch (e: any) {
+      console.error('Error fetching saved plans:', e);
+      toast({ variant: 'destructive', title: 'Fetch Error', description: e.message });
+    } finally {
+      setIsLoadingSavedPlans(false);
+    }
+  };
+
+  // Load a Plan into State for Amendment
+  const handleLoadPlanForAmendment = (plan: GeneratedReport) => {
+    try {
+      // 1. Restore Target Week
+      if (plan.startDate && plan.endDate) {
+        try {
+          const from = parseISO(plan.startDate);
+          const to = parseISO(plan.endDate);
+          if (isValid(from) && isValid(to)) {
+            setTargetDateRange({ from, to });
+          }
+        } catch (e) {
+          console.warn('Could not parse target dates:', e);
+        }
+      }
+
+      // 2. Restore Lookback Range if stored
+      if (plan.lookbackStartDate && plan.lookbackEndDate) {
+        try {
+          const from = parseISO(plan.lookbackStartDate);
+          const to = parseISO(plan.lookbackEndDate);
+          if (isValid(from) && isValid(to)) {
+            setLookbackRange({ from, to });
+            setLookbackDays(Math.round(Math.abs(to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000)));
+          }
+        } catch (e) {
+          console.warn('Could not parse lookback dates:', e);
+        }
+      }
+
+      // 3. Restore Prompts & Presets
+      setClientSuggestedWork(plan.clientSuggestedWork || '');
+      setCustomInstructions(plan.customInstructions || '');
+      if (plan.selectedPreset) {
+        setSelectedPreset(plan.selectedPreset);
+      }
+
+      // 4. Restore Staging Tasks (From array or parsed from markdown table)
+      let tasksToLoad: MaintenanceTaskItem[] = [];
+      if (Array.isArray(plan.stagingTasks) && plan.stagingTasks.length > 0) {
+        tasksToLoad = plan.stagingTasks;
+      } else if (plan.reportText) {
+        tasksToLoad = parseMarkdownTableToTasks(plan.reportText);
+      }
+      setStagingTasks(tasksToLoad);
+
+      // 5. Restore Structured Plan Narrative
+      if (plan.structuredPlan && typeof plan.structuredPlan === 'object') {
+        setStructuredPlan(plan.structuredPlan);
+      } else if (plan.reportText) {
+        const parsed = parseMarkdownSections(plan.reportText);
+        setStructuredPlan({
+          overview: parsed.overview || 'Plant stability was monitored across the reporting period.',
+          clientSection: parsed.clientSection || 'Client-mandated tasks coordinated with site operational windows.',
+          riskMatrix: parsed.riskMatrix || '| Site | Equipment | Component | Symptom | Risk Level | Action | Crew |\n|---|---|---|---|---|---|---|',
+          proposedTasks: tasksToLoad,
+          latentIssues: parsed.latentIssues || '- All active equipment monitored for anomalous behavior.',
+          sparesRequirements: parsed.sparesRequirements || '- Standard technician toolkits and safety consumables.',
+          safetyProtocols: parsed.safetyProtocols || '- Zero Energy verification and LOTO prior to MCC entry.',
+        });
+      }
+
+      // 6. Restore Compiled Markdown Text
+      setGeneratedPlan(plan.reportText);
+
+      // 7. Track Amendment ID & Revision
+      setEditingPlanId(plan.id);
+      setEditingPlanTitle(plan.title || `Weekly Maintenance Plan (Week ${plan.targetWeek || ''})`);
+      setEditingPlanRevision(plan.revision || (plan.isAmended ? 2 : 1));
+
+      setIsLoadPlanDialogOpen(false);
+
+      toast({
+        title: 'Plan Loaded for Amendment',
+        description: `Week ${plan.targetWeek || ''} plan loaded. You can now alter tasks, adjust narrative, or edit markdown.`,
+      });
+
+      // Smooth scroll to staging
+      setTimeout(() => {
+        stagingSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 200);
+
+    } catch (err: any) {
+      console.error('Failed to load plan for amendment:', err);
+      toast({ variant: 'destructive', title: 'Load Failed', description: err.message });
+    }
+  };
+
+  // Clear Amendment Mode
+  const handleClearAmendmentMode = () => {
+    setEditingPlanId(null);
+    setEditingPlanTitle(null);
+    setEditingPlanRevision(1);
+    toast({
+      title: 'Amendment Mode Cleared',
+      description: 'You are now creating a new maintenance plan.',
+    });
+  };
+
+  // Check URL planId on initial mount
+  useEffect(() => {
+    if (!urlPlanId || !firestore) return;
+    const fetchPlanFromUrl = async () => {
+      try {
+        const snap = await getDoc(doc(firestore, 'generated_reports', urlPlanId));
+        if (snap.exists()) {
+          const planData = { id: snap.id, ...snap.data() } as GeneratedReport;
+          handleLoadPlanForAmendment(planData);
+        } else {
+          toast({ variant: 'destructive', title: 'Plan Not Found', description: `Plan ID ${urlPlanId} was not found.` });
+        }
+      } catch (e: any) {
+        console.error('Error loading plan from URL:', e);
+      }
+    };
+    fetchPlanFromUrl();
+  }, [urlPlanId, firestore]);
 
   // Update Lookback Quick Select
   const handleLookbackPreset = (days: number) => {
@@ -415,34 +587,28 @@ export default function AIMaintenancePlannerPage() {
   };
 
   // Compile Final Markdown from Staging Area
-  const handleCompileReport = async () => {
-    if (!structuredPlan) {
-      toast({ variant: 'destructive', title: 'No Plan Data', description: 'Please generate a plan draft first.' });
+  const handleCompileReport = () => {
+    const activeTasks = stagingTasks.filter(t => t.included !== false);
+    if (activeTasks.length === 0) {
+      toast({ variant: 'destructive', title: 'No Tasks Ticked', description: 'Please tick at least one task to include in the report.' });
       return;
     }
 
     setIsCompiling(true);
     try {
-      const activeTasks = stagingTasks.filter(t => t.included !== false);
-      if (activeTasks.length === 0) {
-        toast({ variant: 'destructive', title: 'No Tasks Ticked', description: 'Please tick at least one task to include in the report.' });
-        setIsCompiling(false);
-        return;
-      }
-
-      const compiled = await compileMaintenanceReportMarkdown({
+      const compiled = compileMaintenanceReportMarkdown({
         targetWeek: targetWeekNumber,
         targetStartDate: format(targetDateRange.from!, 'yyyy-MM-dd'),
         targetEndDate: format(targetDateRange.to!, 'yyyy-MM-dd'),
         lookbackStartDate: format(lookbackRange.from!, 'yyyy-MM-dd'),
         lookbackEndDate: format(lookbackRange.to!, 'yyyy-MM-dd'),
-        overview: structuredPlan.overview,
-        clientSection: structuredPlan.clientSection,
-        riskMatrix: structuredPlan.riskMatrix,
+        overview: structuredPlan?.overview,
+        clientSection: structuredPlan?.clientSection,
+        riskMatrix: structuredPlan?.riskMatrix,
         tasks: stagingTasks,
-        latentIssues: structuredPlan.latentIssues,
-        sparesRequirements: structuredPlan.sparesRequirements,
-        safetyProtocols: structuredPlan.safetyProtocols,
+        latentIssues: structuredPlan?.latentIssues,
+        sparesRequirements: structuredPlan?.sparesRequirements,
+        safetyProtocols: structuredPlan?.safetyProtocols,
       });
 
       setGeneratedPlan(compiled);
@@ -571,8 +737,8 @@ export default function AIMaintenancePlannerPage() {
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
 
-  // Save to Firestore History
-  const handleSavePlan = async () => {
+  // Save or Update in Firestore History
+  const handleSavePlan = async (asNewRevision: boolean = false) => {
     if (!generatedPlan || !user) {
       toast({ variant: 'destructive', title: 'Cannot Save', description: 'No plan content or user not authenticated.' });
       return;
@@ -580,26 +746,74 @@ export default function AIMaintenancePlannerPage() {
 
     setIsSaving(true);
     try {
-      const reportsRef = collection(firestore, 'generated_reports');
-      await addDoc(reportsRef, {
-        reportText: generatedPlan,
-        title: `Weekly Predictive Maintenance Plan (Week ${targetWeekNumber})`,
-        type: 'maintenance_plan',
-        targetWeek: targetWeekNumber,
-        clientSuggestedWork: clientSuggestedWork.trim() || null,
-        startDate: format(targetDateRange.from!, 'yyyy-MM-dd'),
-        endDate: format(targetDateRange.to!, 'yyyy-MM-dd'),
-        lookbackStartDate: format(lookbackRange.from!, 'yyyy-MM-dd'),
-        lookbackEndDate: format(lookbackRange.to!, 'yyyy-MM-dd'),
-        generatedAt: serverTimestamp(),
-        generatedByUserId: user.uid,
-        generatedByUserName: userData?.name || user.email || 'Services Manager',
-      });
+      const isUpdatingExisting = !asNewRevision && Boolean(editingPlanId);
 
-      toast({
-        title: 'Plan Saved to History',
-        description: `Week ${targetWeekNumber} Maintenance Plan is now archived in Reports History.`,
-      });
+      if (isUpdatingExisting && editingPlanId) {
+        const nextRev = (editingPlanRevision || 1) + 1;
+        const updatedTitle = `Weekly Predictive Maintenance Plan (Week ${targetWeekNumber} - Rev ${nextRev})`;
+
+        await updateDoc(doc(firestore, 'generated_reports', editingPlanId), {
+          reportText: generatedPlan,
+          title: updatedTitle,
+          clientSuggestedWork: clientSuggestedWork.trim() || null,
+          customInstructions: customInstructions.trim() || null,
+          selectedPreset,
+          stagingTasks,
+          structuredPlan,
+          startDate: format(targetDateRange.from!, 'yyyy-MM-dd'),
+          endDate: format(targetDateRange.to!, 'yyyy-MM-dd'),
+          lookbackStartDate: format(lookbackRange.from!, 'yyyy-MM-dd'),
+          lookbackEndDate: format(lookbackRange.to!, 'yyyy-MM-dd'),
+          targetWeek: targetWeekNumber,
+          isAmended: true,
+          amendedAt: serverTimestamp(),
+          amendedByUserName: userData?.name || user.email || 'Services Manager',
+          revision: nextRev,
+        });
+
+        setEditingPlanRevision(nextRev);
+        setEditingPlanTitle(updatedTitle);
+
+        toast({
+          title: 'Plan Updated Successfully',
+          description: `Week ${targetWeekNumber} Maintenance Plan updated (Revision ${nextRev}).`,
+        });
+      } else {
+        const nextRev = asNewRevision ? (editingPlanRevision || 1) + 1 : 1;
+        const title = `Weekly Predictive Maintenance Plan (Week ${targetWeekNumber}${nextRev > 1 ? ` - Rev ${nextRev}` : ''})`;
+
+        const docRef = await addDoc(collection(firestore, 'generated_reports'), {
+          reportText: generatedPlan,
+          title,
+          type: 'maintenance_plan',
+          targetWeek: targetWeekNumber,
+          clientSuggestedWork: clientSuggestedWork.trim() || null,
+          customInstructions: customInstructions.trim() || null,
+          selectedPreset,
+          stagingTasks,
+          structuredPlan,
+          startDate: format(targetDateRange.from!, 'yyyy-MM-dd'),
+          endDate: format(targetDateRange.to!, 'yyyy-MM-dd'),
+          lookbackStartDate: format(lookbackRange.from!, 'yyyy-MM-dd'),
+          lookbackEndDate: format(lookbackRange.to!, 'yyyy-MM-dd'),
+          generatedAt: serverTimestamp(),
+          generatedByUserId: user.uid,
+          generatedByUserName: userData?.name || user.email || 'Services Manager',
+          isAmended: nextRev > 1,
+          amendedAt: nextRev > 1 ? serverTimestamp() : null,
+          amendedByUserName: userData?.name || user.email || 'Services Manager',
+          revision: nextRev,
+        });
+
+        setEditingPlanId(docRef.id);
+        setEditingPlanRevision(nextRev);
+        setEditingPlanTitle(title);
+
+        toast({
+          title: nextRev > 1 ? `Revision ${nextRev} Saved` : 'Plan Saved to History',
+          description: `Week ${targetWeekNumber} Maintenance Plan is now archived in Reports History.`,
+        });
+      }
     } catch (e: any) {
       console.error('Save Plan Error:', e);
       toast({ variant: 'destructive', title: 'Save Failed', description: e.message });
@@ -637,21 +851,139 @@ export default function AIMaintenancePlannerPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenLoadPlanDialog}
+            className="bg-white border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-semibold shadow-sm"
+          >
+            <FolderOpen className="mr-1.5 h-4 w-4 text-emerald-600" />
+            Load Saved Plan to Amend
+          </Button>
           <Link href="/reports/history">
-            <Button variant="outline" size="sm" className="bg-white">
-              <Clock className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" className="bg-white text-xs">
+              <Clock className="mr-1.5 h-4 w-4" />
               Past Plans History
             </Button>
           </Link>
           <Link href="/reports/generate">
-            <Button variant="ghost" size="sm" className="text-slate-600">
-              <FileText className="mr-2 h-4 w-4" />
+            <Button variant="ghost" size="sm" className="text-slate-600 text-xs">
+              <FileText className="mr-1.5 h-4 w-4" />
               Client Report Generator
             </Button>
           </Link>
         </div>
       </div>
+
+      {/* Dialog: Load Saved Plan to Amend */}
+      <Dialog open={isLoadPlanDialogOpen} onOpenChange={setIsLoadPlanDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader className="border-b pb-3">
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-slate-900">
+              <FolderOpen className="h-5 w-5 text-emerald-600" />
+              Load Past Maintenance Plan to Amend
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Select any previously generated weekly plan to alter tasks, add/remove work orders, adjust scopes, or change crew allocations without having to start over.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-2 space-y-2">
+            {isLoadingSavedPlans ? (
+              <div className="py-12 flex flex-col items-center justify-center text-slate-500 gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+                <span className="text-xs">Retrieving saved maintenance plans...</span>
+              </div>
+            ) : savedPlansList.length === 0 ? (
+              <div className="py-12 text-center text-slate-500 text-xs">
+                No saved weekly maintenance plans found in history.
+              </div>
+            ) : (
+              savedPlansList.map((plan) => (
+                <div
+                  key={plan.id}
+                  className="p-3 border rounded-lg hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex items-center justify-between gap-3 bg-white"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-slate-900">
+                        {plan.title || `Weekly Maintenance Plan (Week ${plan.targetWeek || ''})`}
+                      </span>
+                      {plan.isAmended && (
+                        <Badge variant="outline" className="text-amber-800 bg-amber-50 border-amber-300 text-[10px]">
+                          Rev {plan.revision || 2}
+                        </Badge>
+                      )}
+                      {plan.targetWeek && (
+                        <Badge className="bg-emerald-100 text-emerald-900 border-emerald-300 text-[10px]">
+                          Week {plan.targetWeek}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      <span>Period: <strong>{plan.startDate} to {plan.endDate}</strong></span>
+                      <span className="mx-2">•</span>
+                      <span>By: {plan.generatedByUserName}</span>
+                      {plan.generatedAt && (
+                        <>
+                          <span className="mx-2">•</span>
+                          <span>{plan.generatedAt.seconds ? format(new Date(plan.generatedAt.seconds * 1000), 'dd MMM yyyy') : ''}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={() => handleLoadPlanForAmendment(plan)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shrink-0"
+                  >
+                    <Wrench className="mr-1.5 h-3.5 w-3.5" />
+                    Amend This Plan
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Active Amendment Mode Banner */}
+      {editingPlanId && (
+        <div className="bg-amber-500/10 border border-amber-300 rounded-lg p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-950 shadow-sm print-hidden">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-500/20 rounded-md text-amber-700">
+              <Wrench className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                  Amendment Mode: {editingPlanTitle || `Week ${targetWeekNumber} Maintenance Plan`}
+                </h4>
+                <Badge className="bg-amber-200 text-amber-900 border-amber-400 text-[10px]">
+                  Rev {editingPlanRevision}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-amber-800 mt-0.5">
+                You are altering a previously saved plan. You can edit tasks, add new work orders, adjust scopes or crew allocations, or tweak the narrative below, then click &ldquo;Update Saved Plan&rdquo;.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearAmendmentMode}
+              className="bg-white text-xs border-amber-300 text-amber-900 hover:bg-amber-100"
+            >
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              Exit / Start New Plan
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Team Resource Capacity Notice */}
       <div className="bg-slate-900 text-slate-100 rounded-lg p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm print-hidden border border-slate-800">
@@ -1247,6 +1579,165 @@ export default function AIMaintenancePlannerPage() {
                 </tbody>
               </table>
 
+              {/* Collapsible Section for Narrative & Risk Matrix Amendments */}
+              <div className="border-t border-amber-200 bg-amber-50/40 p-3">
+                <div
+                  onClick={() => setIsAmendingNarrative(!isAmendingNarrative)}
+                  className="flex items-center justify-between cursor-pointer select-none py-1"
+                >
+                  <div className="flex items-center gap-2">
+                    <PenTool className="h-4 w-4 text-amber-800" />
+                    <span className="text-xs font-bold text-amber-950">
+                      Amend Plan Narrative & Risk Matrix Sections (Optional)
+                    </span>
+                    <Badge variant="outline" className="text-[10px] bg-white text-amber-800 border-amber-300">
+                      {isAmendingNarrative ? 'Expanded' : 'Click to Edit Overview, Risks & Spares'}
+                    </Badge>
+                  </div>
+                  {isAmendingNarrative ? (
+                    <ChevronUp className="h-4 w-4 text-amber-800" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-amber-800" />
+                  )}
+                </div>
+
+                {isAmendingNarrative && (
+                  <div className="pt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Section 1: Executive Overview */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        1. Plant Reliability & Operational Context (Overview):
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={structuredPlan?.overview || ''}
+                        onChange={(e) => setStructuredPlan(prev => prev ? { ...prev, overview: e.target.value } : {
+                          overview: e.target.value,
+                          clientSection: '',
+                          riskMatrix: '',
+                          proposedTasks: stagingTasks,
+                          latentIssues: '',
+                          sparesRequirements: '',
+                          safetyProtocols: '',
+                        })}
+                        className="w-full text-xs p-2 rounded border border-slate-300 bg-white"
+                        placeholder="Executive overview paragraphs..."
+                      />
+                    </div>
+
+                    {/* Section 2: Client Mandated Section */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        2. Client-Mandated Priorities & Resource Commitment:
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={structuredPlan?.clientSection || ''}
+                        onChange={(e) => setStructuredPlan(prev => prev ? { ...prev, clientSection: e.target.value } : {
+                          overview: '',
+                          clientSection: e.target.value,
+                          riskMatrix: '',
+                          proposedTasks: stagingTasks,
+                          latentIssues: '',
+                          sparesRequirements: '',
+                          safetyProtocols: '',
+                        })}
+                        className="w-full text-xs p-2 rounded border border-slate-300 bg-white"
+                        placeholder="Client-suggested work and shutdown alignments..."
+                      />
+                    </div>
+
+                    {/* Section 3: Risk Matrix */}
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        3. Priority Risk Matrix & Critical Components at Risk (Markdown Table):
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={structuredPlan?.riskMatrix || ''}
+                        onChange={(e) => setStructuredPlan(prev => prev ? { ...prev, riskMatrix: e.target.value } : {
+                          overview: '',
+                          clientSection: '',
+                          riskMatrix: e.target.value,
+                          proposedTasks: stagingTasks,
+                          latentIssues: '',
+                          sparesRequirements: '',
+                          safetyProtocols: '',
+                        })}
+                        className="w-full text-xs p-2 font-mono rounded border border-slate-300 bg-white"
+                        placeholder="| Site | Equipment | Component | Symptom | Risk Level | Action | Crew |"
+                      />
+                    </div>
+
+                    {/* Section 5: Latent Issues */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        5. Balance-of-Week Focus & Latent Risk Mitigation:
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={structuredPlan?.latentIssues || ''}
+                        onChange={(e) => setStructuredPlan(prev => prev ? { ...prev, latentIssues: e.target.value } : {
+                          overview: '',
+                          clientSection: '',
+                          riskMatrix: '',
+                          proposedTasks: stagingTasks,
+                          latentIssues: e.target.value,
+                          sparesRequirements: '',
+                          safetyProtocols: '',
+                        })}
+                        className="w-full text-xs p-2 rounded border border-slate-300 bg-white"
+                        placeholder="Latent issues and unresolved observations..."
+                      />
+                    </div>
+
+                    {/* Section 6: Spares Requirements */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        6. Critical Spares, Tools & Pre-Work Requirements:
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={structuredPlan?.sparesRequirements || ''}
+                        onChange={(e) => setStructuredPlan(prev => prev ? { ...prev, sparesRequirements: e.target.value } : {
+                          overview: '',
+                          clientSection: '',
+                          riskMatrix: '',
+                          proposedTasks: stagingTasks,
+                          latentIssues: '',
+                          sparesRequirements: e.target.value,
+                          safetyProtocols: '',
+                        })}
+                        className="w-full text-xs p-2 rounded border border-slate-300 bg-white"
+                        placeholder="Capacitors, IGBT modules, fuses, tools needed..."
+                      />
+                    </div>
+
+                    {/* Section 7: Safety Protocols */}
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        7. Safety, Isolation & Housekeeping Protocols:
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={structuredPlan?.safetyProtocols || ''}
+                        onChange={(e) => setStructuredPlan(prev => prev ? { ...prev, safetyProtocols: e.target.value } : {
+                          overview: '',
+                          clientSection: '',
+                          riskMatrix: '',
+                          proposedTasks: stagingTasks,
+                          latentIssues: '',
+                          sparesRequirements: '',
+                          safetyProtocols: e.target.value,
+                        })}
+                        className="w-full text-xs p-2 rounded border border-slate-300 bg-white"
+                        placeholder="Zero energy, LOTO, and 2-man safety rules..."
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Bottom Compilation Trigger */}
               <div className="p-3 bg-amber-50/50 border-t flex flex-col sm:flex-row items-center justify-between gap-2">
                 <div className="text-xs text-amber-900">
@@ -1340,20 +1831,66 @@ export default function AIMaintenancePlannerPage() {
                   Copy
                 </Button>
 
-                {/* Save to History */}
+                {/* Direct Markdown Editing Toggle */}
                 <Button
+                  variant={isDirectMarkdownEdit ? 'default' : 'outline'}
                   size="sm"
-                  onClick={handleSavePlan}
-                  disabled={isSaving}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium shadow-sm"
-                >
-                  {isSaving ? (
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-1.5 h-4 w-4" />
+                  onClick={() => setIsDirectMarkdownEdit(!isDirectMarkdownEdit)}
+                  className={cn(
+                    'text-xs font-medium shadow-sm',
+                    isDirectMarkdownEdit
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-white border-amber-300 text-amber-800 hover:bg-amber-50'
                   )}
-                  Save Plan
+                >
+                  <PenTool className="mr-1.5 h-3.5 w-3.5" />
+                  {isDirectMarkdownEdit ? 'Preview Formatted' : 'Edit Text Directly'}
                 </Button>
+
+                {/* Save or Update Plan */}
+                {editingPlanId ? (
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSavePlan(false)}
+                      disabled={isSaving}
+                      className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm"
+                      title="Update the existing saved plan in history"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-1.5 h-4 w-4" />
+                      )}
+                      Update Saved Plan
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSavePlan(true)}
+                      disabled={isSaving}
+                      className="bg-white border-slate-300 text-slate-800 hover:bg-slate-50 text-xs font-medium shadow-sm"
+                      title="Save as a new revision without overwriting the previous copy"
+                    >
+                      <Copy className="mr-1.5 h-3.5 w-3.5 text-slate-600" />
+                      Save as New Rev
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => handleSavePlan(false)}
+                    disabled={isSaving}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium shadow-sm"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-1.5 h-4 w-4" />
+                    )}
+                    Save Plan
+                  </Button>
+                )}
 
                 {/* Edit Tasks Button (Scroll back up to staging) */}
                 <Button
@@ -1391,50 +1928,69 @@ export default function AIMaintenancePlannerPage() {
             </div>
 
             {/* Document Body */}
-            <div className="prose prose-slate max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-emerald-600 prose-img:rounded-md text-sm md:text-base leading-relaxed">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  h1: ({ node, ...props }) => (
-                    <h1 className="text-2xl font-black text-slate-900 border-b-2 border-emerald-600 pb-2 mb-4 mt-6 uppercase tracking-tight block print:mt-2" {...props} />
-                  ),
-                  h2: ({ node, ...props }) => (
-                    <h2 className="text-lg font-bold text-slate-800 border-b border-slate-300 pb-1 mt-6 mb-3 print:mt-4 print:break-after-avoid" {...props} />
-                  ),
-                  h3: ({ node, ...props }) => (
-                    <h3 className="text-base font-bold text-slate-800 mt-4 mb-2 print:break-after-avoid" {...props} />
-                  ),
-                  table: ({ node, ...props }) => (
-                    <div className="overflow-x-auto my-4 border rounded-md shadow-sm print:shadow-none print:border-slate-400 print:break-inside-avoid">
-                      <table className="w-full text-left border-collapse text-xs md:text-sm" {...props} />
-                    </div>
-                  ),
-                  thead: ({ node, ...props }) => (
-                    <thead className="bg-slate-100 border-b border-slate-300 font-semibold text-slate-900 print:bg-slate-200" {...props} />
-                  ),
-                  th: ({ node, ...props }) => (
-                    <th className="p-2.5 font-bold border-r last:border-r-0 border-slate-200 print:border-slate-400" {...props} />
-                  ),
-                  td: ({ node, ...props }) => (
-                    <td className="p-2.5 border-t border-r last:border-r-0 border-slate-200 print:border-slate-300 align-top" {...props} />
-                  ),
-                  tr: ({ node, ...props }) => (
-                    <tr className="even:bg-slate-50/60 hover:bg-slate-100/40 print:even:bg-transparent" {...props} />
-                  ),
-                  ul: ({ node, ...props }) => (
-                    <ul className="list-disc pl-5 my-2 space-y-1.5" {...props} />
-                  ),
-                  li: ({ node, ...props }) => (
-                    <li className="leading-snug" {...props} />
-                  ),
-                  p: ({ node, ...props }) => (
-                    <p className="my-2.5 leading-relaxed text-slate-700" {...props} />
-                  ),
-                }}
-              >
-                {formatMarkdownTables(generatedPlan)}
-              </ReactMarkdown>
-            </div>
+            {isDirectMarkdownEdit ? (
+              <div className="space-y-3 print-hidden">
+                <div className="flex items-center justify-between bg-amber-50 border border-amber-200 p-2.5 rounded text-xs text-amber-900">
+                  <div className="flex items-center gap-2">
+                    <Edit3 className="h-4 w-4 text-amber-700" />
+                    <span><strong>Direct Text / Markdown Editor:</strong> Edit text, modify tables, or adjust notes directly below. Changes update in real time and are included in the PDF and WhatsApp export.</span>
+                  </div>
+                  <Button size="sm" variant="outline" className="bg-white text-xs border-amber-300 hover:bg-amber-100" onClick={() => setIsDirectMarkdownEdit(false)}>
+                    Done Editing / Preview
+                  </Button>
+                </div>
+                <textarea
+                  value={generatedPlan}
+                  onChange={(e) => setGeneratedPlan(e.target.value)}
+                  className="w-full h-[650px] p-4 text-xs font-mono border rounded-md focus:ring-2 focus:ring-emerald-500 bg-slate-50 text-slate-900 leading-relaxed shadow-inner"
+                />
+              </div>
+            ) : (
+              <div className="prose prose-slate max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-emerald-600 prose-img:rounded-md text-sm md:text-base leading-relaxed">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ node, ...props }) => (
+                      <h1 className="text-2xl font-black text-slate-900 border-b-2 border-emerald-600 pb-2 mb-4 mt-6 uppercase tracking-tight block print:mt-2" {...props} />
+                    ),
+                    h2: ({ node, ...props }) => (
+                      <h2 className="text-lg font-bold text-slate-800 border-b border-slate-300 pb-1 mt-6 mb-3 print:mt-4 print:break-after-avoid" {...props} />
+                    ),
+                    h3: ({ node, ...props }) => (
+                      <h3 className="text-base font-bold text-slate-800 mt-4 mb-2 print:break-after-avoid" {...props} />
+                    ),
+                    table: ({ node, ...props }) => (
+                      <div className="overflow-x-auto my-4 border rounded-md shadow-sm print:shadow-none print:border-slate-400 print:break-inside-avoid">
+                        <table className="w-full text-left border-collapse text-xs md:text-sm" {...props} />
+                      </div>
+                    ),
+                    thead: ({ node, ...props }) => (
+                      <thead className="bg-slate-100 border-b border-slate-300 font-semibold text-slate-900 print:bg-slate-200" {...props} />
+                    ),
+                    th: ({ node, ...props }) => (
+                      <th className="p-2.5 font-bold border-r last:border-r-0 border-slate-200 print:border-slate-400" {...props} />
+                    ),
+                    td: ({ node, ...props }) => (
+                      <td className="p-2.5 border-t border-r last:border-r-0 border-slate-200 print:border-slate-300 align-top" {...props} />
+                    ),
+                    tr: ({ node, ...props }) => (
+                      <tr className="even:bg-slate-50/60 hover:bg-slate-100/40 print:even:bg-transparent" {...props} />
+                    ),
+                    ul: ({ node, ...props }) => (
+                      <ul className="list-disc pl-5 my-2 space-y-1.5" {...props} />
+                    ),
+                    li: ({ node, ...props }) => (
+                      <li className="leading-snug" {...props} />
+                    ),
+                    p: ({ node, ...props }) => (
+                      <p className="my-2.5 leading-relaxed text-slate-700" {...props} />
+                    ),
+                  }}
+                >
+                  {formatMarkdownTables(generatedPlan)}
+                </ReactMarkdown>
+              </div>
+            )}
 
             {/* Engineering Sign-off Block */}
             <div className="mt-16 pt-8 border-t border-slate-300 flex justify-between items-end print:mt-8 print:pt-4 print:break-inside-avoid">
@@ -1460,5 +2016,17 @@ export default function AIMaintenancePlannerPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AIMaintenancePlannerPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    }>
+      <PlannerContent />
+    </Suspense>
   );
 }
