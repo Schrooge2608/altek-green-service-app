@@ -2099,8 +2099,8 @@ export function WhatsAppGroupSyncDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col overflow-hidden p-5">
-        <DialogHeader className="pb-1">
+      <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col overflow-hidden p-4 sm:p-5">
+        <DialogHeader className="pb-1 shrink-0">
           <div className="flex items-center justify-between pr-6">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
               <MessageSquare className="h-5 w-5 text-emerald-600" />
@@ -2132,9 +2132,9 @@ export function WhatsAppGroupSyncDialog({
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as 'import' | 'sync' | 'qr')}
-          className="flex-1 flex flex-col overflow-hidden"
+          className="flex-1 flex flex-col overflow-hidden min-h-0"
         >
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3 shrink-0">
             <TabsTrigger value="import" className="gap-1.5 font-bold text-xs">
               <Calendar className="h-3.5 w-3.5 text-emerald-600" />
               1. Select Group, Dates &amp; Export
@@ -2150,7 +2150,7 @@ export function WhatsAppGroupSyncDialog({
           </TabsList>
 
           {/* TAB 1: SELECT STORED WHATSAPP GROUP + DATE RANGE + EXPORT TO CHAT / FSR / DD */}
-          <TabsContent value="import" className="flex-1 flex flex-col gap-2 overflow-hidden mt-2">
+          <TabsContent value="import" className="flex-1 flex flex-col gap-2.5 overflow-y-auto min-h-0 mt-2 pr-1.5 pb-6">
             {/* TOP FILTER BAR: GROUP + FROM DATE + TO DATE */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
               <div className="md:col-span-5 space-y-0.5">
@@ -2396,7 +2396,7 @@ export function WhatsAppGroupSyncDialog({
             </div>
 
             {/* MESSAGE LIST WITH CHECKBOXES */}
-            <div className="flex-1 min-h-[140px] max-h-[210px] overflow-y-auto border rounded-lg bg-slate-50/60 p-2 space-y-1.5">
+            <div className="shrink-0 min-h-[120px] max-h-[190px] overflow-y-auto border rounded-lg bg-slate-50/60 p-2 space-y-1.5">
               {loadingMessages ? (
                 <div className="flex items-center justify-center h-32 text-slate-400 text-xs gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading group messages across stored folders...
@@ -2485,7 +2485,7 @@ export function WhatsAppGroupSyncDialog({
             </div>
 
             {/* BOTTOM EXPORT BAR: 1) EXPORT TO CHAT (WITH EQUIPMENT / NAME) AND 2) EXPORT TO FSR (WITH FSR DROPDOWN) */}
-            <div className="grid grid-cols-1 gap-3 bg-slate-100/90 border border-slate-300 rounded-xl p-3">
+            <div className="grid grid-cols-1 gap-3 bg-slate-100/90 border border-slate-300 rounded-xl p-3 shrink-0 mb-4">
               {/* LEFT CARD: EXPORT TO SITE COMMS CHAT */}
               <div className="bg-white border border-slate-200 rounded-lg p-2.5 space-y-2 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -2813,7 +2813,7 @@ export function WhatsAppGroupSyncDialog({
           </TabsContent>
 
           {/* TAB 2: UPLOAD / INCREMENTAL UPDATE WHATSAPP .TXT STORE */}
-          <TabsContent value="sync" className="flex-1 flex flex-col gap-4 overflow-y-auto mt-3 pr-1">
+          <TabsContent value="sync" className="flex-1 flex flex-col gap-4 overflow-y-auto min-h-0 mt-3 pr-1 pb-6">
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-5">
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-700">
@@ -2901,7 +2901,7 @@ export function WhatsAppGroupSyncDialog({
           </TabsContent>
 
           {/* TAB 3: LIVE WHATSAPP QR LINK FOR CONTINUOUS UPDATES */}
-          <TabsContent value="qr" className="flex-1 flex flex-col gap-4 overflow-y-auto mt-3 pr-1">
+          <TabsContent value="qr" className="flex-1 flex flex-col gap-4 overflow-y-auto min-h-0 mt-3 pr-1 pb-6">
             <div className="border-2 border-slate-200 bg-slate-50/50 rounded-xl p-6 flex flex-col items-center text-center space-y-4">
               {isWaConnected ? (
                 <>
