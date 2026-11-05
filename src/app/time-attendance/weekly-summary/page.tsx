@@ -307,16 +307,6 @@ export default function WeeklyTimesheetSummaryPage() {
       const validCalloutOut = entry?.calloutOut && entry.calloutOut !== '--:--' ? entry.calloutOut : '';
       const hasCallout = !!(validCalloutIn && validCalloutOut);
 
-      // Combine Callout start/end time + Job Ref in Job Description
-      let jobDescription = '';
-      if (hasCallout && jobRef) {
-        jobDescription = `C/O ${validCalloutIn} – ${validCalloutOut} • ${jobRef}`;
-      } else if (hasCallout) {
-        jobDescription = `C/O ${validCalloutIn} – ${validCalloutOut}`;
-      } else {
-        jobDescription = jobRef;
-      }
-
       // Normal shift times (leave blank if not worked)
       const validNormalIn = entry?.normalIn && entry.normalIn !== '--:--' ? entry.normalIn : '';
       const validNormalOut = entry?.normalOut && entry.normalOut !== '--:--' ? entry.normalOut : '';
@@ -345,7 +335,7 @@ export default function WeeklyTimesheetSummaryPage() {
         calloutOut: validCalloutOut,
         ntHours: nt,
         overtimeHours: ot,
-        jobDescription,
+        jobDescription: jobRef,
         signature: entry?.signature || null,
       };
     });
@@ -589,16 +579,26 @@ export default function WeeklyTimesheetSummaryPage() {
         <div className="overflow-x-auto border border-slate-400 mb-6">
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="bg-[#cbd5e1] border-b border-slate-400 text-slate-900 font-black text-center">
-                <th className="border-r border-slate-400 p-2 w-16 whitespace-nowrap">Date</th>
-                <th className="border-r border-slate-400 p-2 w-12 whitespace-nowrap">Day</th>
-                <th className="border-r border-slate-400 p-2 w-24 whitespace-nowrap">Status</th>
-                <th className="border-r border-slate-400 p-2 w-20 whitespace-nowrap">Standby</th>
-                <th className="border-r border-slate-400 p-2 w-16 whitespace-nowrap">Start Time</th>
-                <th className="border-r border-slate-400 p-2 w-16 whitespace-nowrap">End Time</th>
-                <th className="border-r border-slate-400 p-2 w-20 bg-[#e2e8f0] whitespace-nowrap">NT Hrs</th>
-                <th className="border-r border-slate-400 p-2 w-28 bg-[#e2e8f0] whitespace-nowrap">Overtime Hours</th>
-                <th className="p-2 text-left">Job Description</th>
+              <tr className="bg-[#cbd5e1] border-b border-slate-400 text-slate-900 font-black text-center text-xs">
+                <th rowSpan={2} className="border-r border-slate-400 p-1.5 w-14 whitespace-nowrap">Date</th>
+                <th rowSpan={2} className="border-r border-slate-400 p-1.5 w-10 whitespace-nowrap">Day</th>
+                <th rowSpan={2} className="border-r border-slate-400 p-1.5 w-16 whitespace-nowrap">Status</th>
+                <th rowSpan={2} className="border-r border-slate-400 p-1.5 w-14 whitespace-nowrap">Standby</th>
+                <th colSpan={2} className="border-r border-slate-400 p-1 bg-[#dbe2ea] text-slate-900 font-black tracking-wide">
+                  Normal Shift
+                </th>
+                <th colSpan={2} className="border-r border-slate-400 p-1 bg-[#fed7aa] text-amber-950 font-black tracking-wide">
+                  Callout Shift
+                </th>
+                <th rowSpan={2} className="border-r border-slate-400 p-1.5 w-14 bg-[#e2e8f0] whitespace-nowrap">NT Hrs</th>
+                <th rowSpan={2} className="border-r border-slate-400 p-1.5 w-16 bg-[#e2e8f0] whitespace-nowrap">Overtime Hours</th>
+                <th rowSpan={2} className="p-2 text-left">Job Description</th>
+              </tr>
+              <tr className="bg-[#cbd5e1] border-b border-slate-400 text-slate-900 font-black text-center text-[10px]">
+                <th className="border-r border-slate-400 p-1 w-14 whitespace-nowrap">Start Time</th>
+                <th className="border-r border-slate-400 p-1 w-14 whitespace-nowrap">End Time</th>
+                <th className="border-r border-slate-400 p-1 w-14 whitespace-nowrap bg-[#fed7aa]/60 text-amber-950">Start Time</th>
+                <th className="border-r border-slate-400 p-1 w-14 whitespace-nowrap bg-[#fed7aa]/60 text-amber-950">End Time</th>
               </tr>
             </thead>
             <tbody>
@@ -610,56 +610,66 @@ export default function WeeklyTimesheetSummaryPage() {
                     className={`border-b border-slate-300 text-center ${isWeekend ? 'bg-slate-50' : 'bg-white'}`}
                   >
                     {/* Date */}
-                    <td className="border-r border-slate-300 p-2 font-semibold">
+                    <td className="border-r border-slate-300 p-1.5 font-semibold whitespace-nowrap">
                       {row.displayDate}
                     </td>
 
                     {/* Day */}
-                    <td className={`border-r border-slate-300 p-2 font-bold ${isWeekend ? 'text-red-700' : ''}`}>
+                    <td className={`border-r border-slate-300 p-1.5 font-bold whitespace-nowrap ${isWeekend ? 'text-red-700' : ''}`}>
                       {row.dayName}
                     </td>
 
                     {/* Status (Yellow cell) */}
-                    <td className="border-r border-slate-300 p-2 bg-[#fef9c3] font-semibold text-slate-900">
+                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] font-semibold text-slate-900 text-[11px] whitespace-nowrap">
                       {row.status || '-'}
                     </td>
 
                     {/* Standby (Green cell if yes) */}
                     <td
-                      className={`border-r border-slate-300 p-2 font-bold ${
+                      className={`border-r border-slate-300 p-1 font-bold ${
                         row.isStandby ? 'bg-[#dcfce7] text-[#166534]' : 'text-slate-400'
                       }`}
                     >
-                      {row.isStandby ? 'Yes' : 'No'}
+                      <div className="text-[11px] leading-tight">{row.isStandby ? 'Yes' : 'No'}</div>
                       {row.isStandby && row.standbyRole && (
-                        <span className="block text-[9px] font-semibold opacity-80">
+                        <span className="block text-[8px] font-semibold opacity-80 leading-tight">
                           {row.standbyRole}
                         </span>
                       )}
                     </td>
 
-                    {/* Start Time (Yellow cell) */}
-                    <td className="border-r border-slate-300 p-2 bg-[#fef9c3] font-mono font-bold text-slate-900">
+                    {/* Normal Shift Start Time (Yellow cell) */}
+                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] font-mono font-bold text-slate-900 text-center">
                       {row.startTime || ''}
                     </td>
 
-                    {/* End Time (Yellow cell) */}
-                    <td className="border-r border-slate-300 p-2 bg-[#fef9c3] font-mono font-bold text-slate-900">
+                    {/* Normal Shift End Time (Yellow cell) */}
+                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] font-mono font-bold text-slate-900 text-center">
                       {row.endTime || ''}
                     </td>
 
+                    {/* Callout Shift Start Time (Yellow cell with red text for callouts) */}
+                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] font-mono font-bold text-red-700 text-center">
+                      {row.calloutIn || ''}
+                    </td>
+
+                    {/* Callout Shift End Time (Yellow cell with red text for callouts) */}
+                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] font-mono font-bold text-red-700 text-center">
+                      {row.calloutOut || ''}
+                    </td>
+
                     {/* NT Hrs (Gray cell) */}
-                    <td className="border-r border-slate-300 p-2 font-bold bg-[#f1f5f9] text-emerald-800">
+                    <td className="border-r border-slate-300 p-1.5 font-bold bg-[#f1f5f9] text-emerald-800 text-center">
                       {fmt(row.ntHours)}
                     </td>
 
                     {/* Overtime Hours (Gray cell) */}
-                    <td className="border-r border-slate-300 p-2 font-bold bg-[#f1f5f9] text-red-700">
+                    <td className="border-r border-slate-300 p-1.5 font-bold bg-[#f1f5f9] text-red-700 text-center">
                       {fmt(row.overtimeHours)}
                     </td>
 
-                    {/* Job Description (Left-aligned text with callout times & job ref) */}
-                    <td className="p-2 text-left font-medium text-slate-800 break-words">
+                    {/* Job Description (Left-aligned text) */}
+                    <td className="p-1.5 text-left font-medium text-slate-800 break-words">
                       {row.jobDescription || '-'}
                     </td>
                   </tr>
@@ -668,21 +678,23 @@ export default function WeeklyTimesheetSummaryPage() {
 
               {/* TOTAL ROW */}
               <tr className="bg-[#cbd5e1] font-black border-t-2 border-slate-400 text-center">
-                <td colSpan={3} className="border-r border-slate-400 p-2 uppercase tracking-wider">
+                <td colSpan={3} className="border-r border-slate-400 p-1.5 uppercase tracking-wider">
                   TOTAL
                 </td>
-                <td className="border-r border-slate-400 p-2 bg-[#dcfce7] text-[#166534]">
+                <td className="border-r border-slate-400 p-1.5 bg-[#dcfce7] text-[#166534]">
                   {totals.standbyDays} days
                 </td>
-                <td className="border-r border-slate-400 p-2 bg-[#e2e8f0]"></td>
-                <td className="border-r border-slate-400 p-2 bg-[#e2e8f0]"></td>
-                <td className="border-r border-slate-400 p-2 bg-[#e2e8f0]">
+                <td className="border-r border-slate-400 p-1 bg-[#e2e8f0]"></td>
+                <td className="border-r border-slate-400 p-1 bg-[#e2e8f0]"></td>
+                <td className="border-r border-slate-400 p-1 bg-[#e2e8f0]"></td>
+                <td className="border-r border-slate-400 p-1 bg-[#e2e8f0]"></td>
+                <td className="border-r border-slate-400 p-1.5 bg-[#e2e8f0]">
                   {fmtTotal(totals.nt)}
                 </td>
-                <td className="border-r border-slate-400 p-2 bg-[#e2e8f0]">
+                <td className="border-r border-slate-400 p-1.5 bg-[#e2e8f0]">
                   {fmtTotal(totals.ot)}
                 </td>
-                <td className="p-2"></td>
+                <td className="p-1.5"></td>
               </tr>
             </tbody>
           </table>
