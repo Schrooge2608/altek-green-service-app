@@ -590,15 +590,14 @@ export default function WeeklyTimesheetSummaryPage() {
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="bg-[#cbd5e1] border-b border-slate-400 text-slate-900 font-black text-center">
-                <th className="border-r border-slate-400 p-2 w-16">Date</th>
-                <th className="border-r border-slate-400 p-2 w-12">Day</th>
-                <th className="border-r border-slate-400 p-2 w-28">Status</th>
-                <th className="border-r border-slate-400 p-2 w-20">Standby</th>
-                <th className="border-r border-slate-400 p-2 w-16">Start Time</th>
-                <th className="border-r border-slate-400 p-2 w-16">End Time</th>
-                <th className="border-r border-slate-400 p-2 w-14 bg-[#e2e8f0]">NT Hrs</th>
-                <th className="border-r border-slate-400 p-2 w-20 bg-[#e2e8f0]">Overtime Hours</th>
-                <th className="border-r border-slate-400 p-2 w-16">OT 1.0 Hrs</th>
+                <th className="border-r border-slate-400 p-2 w-16 whitespace-nowrap">Date</th>
+                <th className="border-r border-slate-400 p-2 w-12 whitespace-nowrap">Day</th>
+                <th className="border-r border-slate-400 p-2 w-24 whitespace-nowrap">Status</th>
+                <th className="border-r border-slate-400 p-2 w-20 whitespace-nowrap">Standby</th>
+                <th className="border-r border-slate-400 p-2 w-16 whitespace-nowrap">Start Time</th>
+                <th className="border-r border-slate-400 p-2 w-16 whitespace-nowrap">End Time</th>
+                <th className="border-r border-slate-400 p-2 w-20 bg-[#e2e8f0] whitespace-nowrap">NT Hrs</th>
+                <th className="border-r border-slate-400 p-2 w-28 bg-[#e2e8f0] whitespace-nowrap">Overtime Hours</th>
                 <th className="p-2 text-left">Job Description</th>
               </tr>
             </thead>
@@ -659,11 +658,6 @@ export default function WeeklyTimesheetSummaryPage() {
                       {fmt(row.overtimeHours)}
                     </td>
 
-                    {/* OT 1.0 Hrs (Yellow cell) */}
-                    <td className="border-r border-slate-300 p-2 bg-[#fef9c3] font-bold text-slate-900">
-                      {fmt(row.overtimeHours)}
-                    </td>
-
                     {/* Job Description (Left-aligned text with callout times & job ref) */}
                     <td className="p-2 text-left font-medium text-slate-800 break-words">
                       {row.jobDescription || '-'}
@@ -686,9 +680,6 @@ export default function WeeklyTimesheetSummaryPage() {
                   {fmtTotal(totals.nt)}
                 </td>
                 <td className="border-r border-slate-400 p-2 bg-[#e2e8f0]">
-                  {fmtTotal(totals.ot)}
-                </td>
-                <td className="border-r border-slate-400 p-2 bg-[#fef9c3]">
                   {fmtTotal(totals.ot)}
                 </td>
                 <td className="p-2"></td>
@@ -729,7 +720,7 @@ export default function WeeklyTimesheetSummaryPage() {
                   <td className="p-2 font-bold text-center">{totals.absentDays}</td>
                 </tr>
                 <tr>
-                  <td className="p-2 font-bold bg-slate-100 border-r border-slate-300">Overtime hours (1.0)</td>
+                  <td className="p-2 font-bold bg-slate-100 border-r border-slate-300">Overtime hours</td>
                   <td className="p-2 font-extrabold text-center bg-slate-100 text-red-700">
                     {fmtTotal(totals.ot)}
                   </td>
