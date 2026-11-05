@@ -14,6 +14,7 @@ import {
 import { 
   Loader2, 
   Printer, 
+  Calendar, 
   ShieldAlert,
   Users
 } from 'lucide-react';
@@ -27,6 +28,7 @@ import {
 import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 import type { Timesheet, User, TimesheetEntry, StandbyShift } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { format, addMonths, startOfDay, endOfDay } from 'date-fns';
 import { AltekLogo } from '@/components/altek-logo';
 import { Label } from '@/components/ui/label';
@@ -262,6 +264,11 @@ export default function OTSummaryPage() {
               </SelectContent>
             </Select>
           </div>
+          <Button variant="outline" asChild className="mt-4 md:mt-0 shadow-sm border-blue-200 text-blue-700 hover:bg-blue-50">
+            <Link href="/time-attendance/weekly-summary">
+              <Calendar className="h-4 w-4 mr-2 text-blue-600" />Weekly Summary
+            </Link>
+          </Button>
           <Button variant="outline" onClick={() => window.print()} className="mt-4 md:mt-0 shadow-sm"><Printer className="h-4 w-4 mr-2" />Print</Button>
         </div>
       </header>

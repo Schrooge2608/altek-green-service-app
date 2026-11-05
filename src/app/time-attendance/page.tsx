@@ -55,6 +55,7 @@ import {
   BadgeCheck, 
   X, 
   Printer, 
+  Calendar, 
   CheckCircle2,
   Timer,
   MapPin,
@@ -67,6 +68,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useKiosk } from '@/components/kiosk/kiosk-provider';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getPayrollPeriod, getDefaultPayrollMonth } from '@/lib/payroll-utils';
 
 // --- GEOFENCE CONSTANTS ---
@@ -591,6 +593,11 @@ export default function TimesheetPage() {
               </Select>
             </div>
             
+            <Button variant="outline" asChild className="shadow-sm border-blue-200 text-blue-700 hover:bg-blue-50">
+              <Link href="/time-attendance/weekly-summary">
+                <Calendar className="w-4 h-4 mr-2 text-blue-600" />Weekly Summary
+              </Link>
+            </Button>
             <Button variant="outline" onClick={() => window.print()} className="shadow-sm">
               <Printer className="w-4 h-4 mr-2" />Print
             </Button>

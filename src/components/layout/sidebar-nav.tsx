@@ -183,17 +183,31 @@ export function SidebarNav() {
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {isTechnician && (
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance'}>
-                          <Link href="/time-attendance" prefetch={true}>My Timesheet</Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
+                      <>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance'}>
+                            <Link href="/time-attendance" prefetch={true}>My Timesheet</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        {!isManager && (
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance/weekly-summary'}>
+                              <Link href="/time-attendance/weekly-summary" prefetch={true}>Weekly Summary</Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        )}
+                      </>
                     )}
                     {isManager && !userData?.role?.includes('Site Supervisor') && (
                       <>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance'}>
                             <Link href="/time-attendance" prefetch={true}>Review Timesheets</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance/weekly-summary'}>
+                            <Link href="/time-attendance/weekly-summary" prefetch={true}>Weekly Summary</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                         <SidebarMenuSubItem>
