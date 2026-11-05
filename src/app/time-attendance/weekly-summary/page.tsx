@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -15,107 +14,158 @@ import {
   useFirebase,
   useMemoFirebase,
   useUser,
-  useDoc
+  useDoc,
 } from '@/firebase';
-import { collection, query, where, doc, getDoc, setDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 import type { Timesheet, TimesheetEntry, User, StandbyShift } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { format, addDays, getDay, isSunday, isSaturday, parseISO } from 'date-fns';
-import { 
-  Printer, 
-  Share2, 
-  Save, 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar, 
-  User as UserIcon, 
-  Loader2, 
-  CheckCircle2, 
+import { format, addDays, addMonths, endOfDay } from 'date-fns';
+import {
+  Printer,
+  Share2,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  User as UserIcon,
+  Loader2,
   ArrowLeft,
   Clock,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { AltekLogo } from '@/components/altek-logo';
-import Link from 'next/link';
+import { getPayrollPeriod } from '@/lib/payroll-utils';
 
-// Helpers for cross-midnight math
+// ---------------------------------------------------------------------------
+// HOURS CALCULATION — mirrors calculateRowHours() in /time-attendance/page.tsx
+// so the weekly summary always shows the identical NT / OT as the monthly timesheet.
+// ---------------------------------------------------------------------------
 const getDuration = (startStr?: string, endStr?: string) => {
   if (!startStr || !endStr || startStr === '--:--' || endStr === '--:--' || startStr.trim() === '') return 0;
   const [sH, sM] = startStr.split(':').map(Number);
   const [eH, eM] = endStr.split(':').map(Number);
   if (isNaN(sH) || isNaN(eH)) return 0;
-  let start = sH + ((sM || 0) / 60);
+  const start = sH + ((sM || 0) / 60);
   let end = eH + ((eM || 0) / 60);
-  if (end < start) end += 24; 
+  if (end < start) end += 24;
   return end - start;
 };
 
-// Calculates Monday of given date
+const calculateHours = (
+  dayOfWeek: number,
+  normalIn?: string,
+  normalOut?: string,
+  lunchOut?: string,
+  lunchIn?: string,
+  calloutIn?: string,
+  calloutOut?: string
+) => {
+  const grossShift = getDuration(normalIn, normalOut);
+  let lunchBreak = getDuration(lunchOut, lunchIn);
+  const calloutDuration = getDuration(calloutIn, calloutOut);
+
+  if (dayOfWeek >= 1 && dayOfWeek <= 5 && grossShift >= 6 && lunchBreak === 0) {
+    lunchBreak = 0.5;
+  }
+
+  const netNormalShift = Math.max(0, grossShift - lunchBreak);
+  let nt = 0;
+  let ot = 0;
+
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    // Saturday / Sunday shifts are 100% overtime
+    ot = netNormalShift + calloutDuration;
+  } else if (dayOfWeek === 5) {
+    // Friday: 6.0 NT max
+    nt = Math.min(netNormalShift, 6.0);
+    ot = Math.max(0, netNormalShift - 6.0) + calloutDuration;
+  } else {
+    // Monday–Thursday: 8.5 NT max
+    nt = Math.min(netNormalShift, 8.5);
+    ot = Math.max(0, netNormalShift - 8.5) + calloutDuration;
+  }
+
+  return { nt: Number(nt.toFixed(1)), ot: Number(ot.toFixed(1)) };
+};
+
+// ---------------------------------------------------------------------------
+// PAYROLL PERIOD RESOLUTION
+// Timesheets in Firestore are keyed `${userId}_${payrollPeriod}` where
+// payrollPeriod is the cycle (e.g. "2026-11" = 18 Oct → 17 Nov).
+// ---------------------------------------------------------------------------
+const getPayrollKeyForDate = (date: Date): string => {
+  const sameMonth = format(date, 'yyyy-MM');
+  const nextMonth = format(addMonths(new Date(date.getFullYear(), date.getMonth(), 1), 1), 'yyyy-MM');
+  for (const key of [sameMonth, nextMonth]) {
+    const { periodStart, periodEnd } = getPayrollPeriod(key);
+    if (date >= periodStart && date <= endOfDay(periodEnd)) return key;
+  }
+  return sameMonth;
+};
+
+const hasEntryData = (e?: TimesheetEntry | null) =>
+  !!e && !!(e.normalIn || e.normalOut || e.calloutIn || e.calloutOut || e.overtimeReason || e.signature);
+
+// ---------------------------------------------------------------------------
+// WEEK HELPERS
+// ---------------------------------------------------------------------------
 function getMondayOfWeek(d: Date): Date {
   const date = new Date(d);
-  const day = date.getDay(); // 0 is Sunday, 1 is Monday...
+  const day = date.getDay();
   const diff = date.getDate() - day + (day === 0 ? -6 : 1);
   date.setDate(diff);
   date.setHours(0, 0, 0, 0);
   return date;
 }
 
-// Generates week options starting with Monday (past 16 weeks to future 4 weeks)
 function generateWeekOptions() {
   const options = [];
   const currentMonday = getMondayOfWeek(new Date());
-
   for (let i = 4; i >= -16; i--) {
     const monday = addDays(currentMonday, i * 7);
     const sunday = addDays(monday, 6);
     const val = format(monday, 'yyyy-MM-dd');
     options.push({
       value: val,
-      monday,
-      sunday,
       label: `${format(monday, 'EEE dd MMM yyyy')} – ${format(sunday, 'dd MMM yyyy')}`,
-      displayHeader: format(monday, 'EEE dd MMM yyyy'),
-      isCurrent: val === format(currentMonday, 'yyyy-MM-dd')
+      isCurrent: val === format(currentMonday, 'yyyy-MM-dd'),
     });
   }
   return options;
 }
 
+const fmt = (n: number) => (n > 0 ? n.toFixed(1).replace('.', ',') : '');
+const fmtTotal = (n: number) => n.toFixed(1).replace('.', ',');
+
 export interface WeeklyRowData {
-  date: string;              // '2026-11-16'
-  displayDate: string;       // '16 Nov'
-  dayName: string;           // 'Mon', 'Tue'...
-  dayIndex: number;          // 1=Mon, 2=Tue... 0=Sun
-  status: string;            // 'Present', 'Sick (with note)', 'Absent', 'Leave', 'Weekend'
-  isStandby: boolean;        // true/false
-  startTime: string;         // '07:00'
-  endTime: string;           // '16:00'
-  ntHours: number;           // 8.5
-  overtimeHours: number;     // total OT
-  ot10Hours: number;         // OT 1.0 (or 1.5)
-  dt20Hours: number;         // DT 2.0
-  jobDescription: string;    // 'VSD maintenance roaster MCC'
+  date: string;
+  displayDate: string;
+  dayName: string;
+  dayIndex: number;
+  status: string;
+  isStandby: boolean;
+  standbyRole: '' | 'Primary' | 'Backup';
+  startTime: string;       // normal shift in (blank if none)
+  endTime: string;         // normal shift out (blank if none)
+  calloutIn: string;       // callout shift in
+  calloutOut: string;      // callout shift out
+  ntHours: number;
+  overtimeHours: number;   // total O/T derived from timesheet
+  jobDescription: string;  // callout times + Job Ref
   signature?: string | null;
 }
 
 export default function WeeklyTimesheetSummaryPage() {
   const { firestore } = useFirebase();
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const router = useRouter();
-  const { toast } = useToast();
-
   const weekOptions = useMemo(() => generateWeekOptions(), []);
   const initialMonday = useMemo(() => format(getMondayOfWeek(new Date()), 'yyyy-MM-dd'), []);
 
   const [selectedMondayStr, setSelectedMondayStr] = useState<string>(initialMonday);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [tableRows, setTableRows] = useState<WeeklyRowData[]>([]);
 
-  // Current logged in user info
   const userRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-  const { data: currentUserData, isLoading: currentUserLoading } = useDoc<User>(userRef);
+  const { data: currentUserData } = useDoc<User>(userRef);
 
   const isManagement = useMemo(() => {
     if (!currentUserData?.role) return false;
@@ -123,71 +173,66 @@ export default function WeeklyTimesheetSummaryPage() {
     return managementRoles.some(role => currentUserData.role.includes(role));
   }, [currentUserData]);
 
-  // All users to populate technician dropdown
   const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
-  const { data: allUsers, isLoading: usersLoading } = useCollection<User>(usersQuery);
+  const { data: allUsers } = useCollection<User>(usersQuery);
 
-  // Standby shifts to determine Standby Yes/No
   const standbyQuery = useMemoFirebase(
     () => query(collection(firestore, 'standby_shifts'), orderBy('startDate', 'asc')),
     [firestore]
   );
   const { data: standbyShifts } = useCollection<StandbyShift>(standbyQuery);
 
-  // Technicians list
+  // Same technician filter as monthly timesheet "Admin: View Employee" dropdown
   const technicians = useMemo(() => {
     if (!allUsers) return [];
-    return allUsers.filter(u => 
-      u.role !== 'Client' && 
-      u.role !== 'Client Manager' && 
-      (u.role?.includes('Technician') || 
-       u.role?.includes('Engineer') || 
-       u.role?.includes('Technologist') ||
-       u.role?.includes('Specialist') ||
-       u.timesheetEnabled === true ||
-       !u.role)
-    ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    return allUsers
+      .filter(u =>
+        u.role?.includes('Technician') ||
+        u.role?.includes('Engineer') ||
+        u.role?.includes('Technologist') ||
+        u.timesheetEnabled === true
+      )
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [allUsers]);
 
-  // Auto-select technician
   useEffect(() => {
-    if (!selectedUserId && user) {
-      if (isManagement) {
-        // If admin, default to first tech or current user if in list
-        const defaultTech = technicians.find(t => t.id === user.uid) || technicians[0];
-        if (defaultTech) setSelectedUserId(defaultTech.id);
-      } else {
-        setSelectedUserId(user.uid);
-      }
+    if (selectedUserId || !user) return;
+    if (isManagement) {
+      const defaultTech = technicians.find(t => t.id === user.uid) || technicians[0];
+      if (defaultTech) setSelectedUserId(defaultTech.id);
+    } else {
+      setSelectedUserId(user.uid);
     }
   }, [selectedUserId, user, isManagement, technicians]);
 
-  const selectedTechnician = useMemo(() => {
-    return technicians.find(t => t.id === selectedUserId) || allUsers?.find(u => u.id === selectedUserId) || null;
-  }, [technicians, allUsers, selectedUserId]);
-
+  const selectedTechnician = useMemo(
+    () => technicians.find(t => t.id === selectedUserId) || allUsers?.find(u => u.id === selectedUserId) || null,
+    [technicians, allUsers, selectedUserId]
+  );
   const selectedTechName = selectedTechnician?.name || 'Technician';
 
-  // Compute the 7 dates of the selected week (Monday -> Sunday)
   const currentWeekDates = useMemo(() => {
     const monday = new Date(`${selectedMondayStr}T00:00:00`);
-    const dates: Date[] = [];
-    for (let i = 0; i < 7; i++) {
-      dates.push(addDays(monday, i));
-    }
-    return dates;
+    return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   }, [selectedMondayStr]);
 
-  // Months covered by this week (e.g. ['2026-11'] or ['2026-10', '2026-11'])
+  // Payroll period key for each day of the week (e.g. 19 Oct → "2026-11")
+  const payrollKeyByDate = useMemo(() => {
+    const map = new Map<string, string>();
+    currentWeekDates.forEach(d => map.set(format(d, 'yyyy-MM-dd'), getPayrollKeyForDate(d)));
+    return map;
+  }, [currentWeekDates]);
+
+  // Query all periods that cover this week (payroll period + calendar month for fallback)
   const relevantPeriods = useMemo(() => {
     const periods = new Set<string>();
     currentWeekDates.forEach(d => {
+      periods.add(getPayrollKeyForDate(d));
       periods.add(format(d, 'yyyy-MM'));
     });
     return Array.from(periods);
   }, [currentWeekDates]);
 
-  // Query timesheets for this user across relevant months
   const timesheetsQuery = useMemoFirebase(() => {
     if (!selectedUserId || relevantPeriods.length === 0) return null;
     return query(
@@ -199,346 +244,195 @@ export default function WeeklyTimesheetSummaryPage() {
 
   const { data: userTimesheets, isLoading: timesheetsLoading } = useCollection<Timesheet>(timesheetsQuery);
 
-  // Rebuild the 7 rows whenever timesheets, week, tech, or standby shifts change
-  useEffect(() => {
-    if (!currentWeekDates || currentWeekDates.length !== 7) return;
+  // ---------------------------------------------------------------------------
+  // LIVE CARBON COPY DERIVATION
+  // 100% derived from the actual monthly timesheet data. Any edit made on the
+  // monthly timesheet triggers an automatic real-time update here.
+  // ---------------------------------------------------------------------------
+  const tableRows = useMemo<WeeklyRowData[]>(() => {
+    if (currentWeekDates.length !== 7) return [];
 
-    // Combine all entries across months
-    const allEntriesMap = new Map<string, TimesheetEntry>();
-    if (userTimesheets) {
-      userTimesheets.forEach(ts => {
-        if (ts.entries && Array.isArray(ts.entries)) {
-          ts.entries.forEach(e => {
-            if (e.date) allEntriesMap.set(e.date, e);
-          });
+    // Map each date to its timesheet entry, preferring the doc for the correct payroll period
+    const entryByDate = new Map<string, TimesheetEntry>();
+    (userTimesheets || []).forEach(ts => {
+      (ts.entries || []).forEach(e => {
+        if (!e?.date || !payrollKeyByDate.has(e.date)) return;
+        const existing = entryByDate.get(e.date);
+        const isCorrectPeriod = ts.period === payrollKeyByDate.get(e.date);
+        if (!existing) {
+          entryByDate.set(e.date, e);
+        } else if (isCorrectPeriod && hasEntryData(e)) {
+          entryByDate.set(e.date, e);
+        } else if (!hasEntryData(existing) && hasEntryData(e)) {
+          entryByDate.set(e.date, e);
         }
       });
-    }
+    });
 
-    // Check standby qualification for this technician
-    const techNameClean = selectedTechName.replace(/\s+/g, ' ').trim().toLowerCase();
-    const isTechOnStandbyDate = (dateStr: string) => {
-      if (!standbyShifts) return false;
-      const targetDate = new Date(`${dateStr}T12:00:00`);
-      return standbyShifts.some(shift => {
-        const prim = (shift.primaryTech || '').replace(/\s+/g, ' ').trim().toLowerCase();
-        const back = (shift.backupTech || '').replace(/\s+/g, ' ').trim().toLowerCase();
-        if (prim !== techNameClean && back !== techNameClean) return false;
-        const start = new Date(`${shift.startDate}T00:00:00`);
-        const end = new Date(`${shift.endDate}T23:59:59`);
-        return targetDate >= start && targetDate <= end;
-      });
-    };
+    // Standby lookup: date >= startDate && date < endDate
+    const cleanName = (s?: string) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const techName = cleanName(selectedTechName);
+    const techShifts = (standbyShifts || []).filter(
+      s => cleanName(s.primaryTech) === techName || cleanName(s.backupTech) === techName
+    );
 
-    const newRows: WeeklyRowData[] = currentWeekDates.map((dayDate) => {
+    return currentWeekDates.map((dayDate): WeeklyRowData => {
       const dateStr = format(dayDate, 'yyyy-MM-dd');
-      const displayDate = format(dayDate, 'dd MMM');
-      const dayName = format(dayDate, 'EEE');
-      const dayOfWeek = dayDate.getDay(); // 1=Mon, 2=Tue... 5=Fri, 6=Sat, 0=Sun
+      const dayOfWeek = dayDate.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const isFriday = dayOfWeek === 5;
-      const isStandby = isTechOnStandbyDate(dateStr);
+      const entry = entryByDate.get(dateStr);
 
-      const entry = allEntriesMap.get(dateStr);
+      const dayShifts = techShifts.filter(s => dateStr >= s.startDate && dateStr < s.endDate);
+      const isPrimary = dayShifts.some(s => cleanName(s.primaryTech) === techName);
+      const isBackup = dayShifts.some(s => cleanName(s.backupTech) === techName);
 
-      // Default start/end times
-      let start = entry?.normalIn || '';
-      let end = entry?.normalOut || '';
-      
-      // Auto-suggest standard working hours on weekdays if user clocked or present
-      if (!start && !end && !isWeekend && entry?.comments) {
-        start = '07:00';
-        end = isFriday ? '13:30' : '16:00';
-      }
+      // Derive exact NT and OT
+      const { nt: calcNt, ot: calcOt } = calculateHours(
+        dayOfWeek,
+        entry?.normalIn, entry?.normalOut,
+        entry?.lunchOut, entry?.lunchIn,
+        entry?.calloutIn, entry?.calloutOut
+      );
 
-      // Compute durations
-      let grossShift = getDuration(start, end);
-      let lunchBreak = getDuration(entry?.lunchOut, entry?.lunchIn);
-      let calloutDuration = getDuration(entry?.calloutIn, entry?.calloutOut);
+      // Use stored values if available, else calculated
+      const nt = entry?.calculatedNT != null ? entry.calculatedNT : calcNt;
+      const ot = (entry?.calculatedOT15 || 0) + (entry?.calculatedOT20 || 0) > 0
+        ? (entry?.calculatedOT15 || 0) + (entry?.calculatedOT20 || 0)
+        : calcOt;
 
-      if (!isWeekend && grossShift >= 6 && lunchBreak === 0) {
-        lunchBreak = 0.5;
-      }
+      // Callout times & Job description
+      const jobRef = (entry?.overtimeReason || entry?.comments || '').trim();
+      const lowerRef = jobRef.toLowerCase();
+      const validCalloutIn = entry?.calloutIn && entry.calloutIn !== '--:--' ? entry.calloutIn : '';
+      const validCalloutOut = entry?.calloutOut && entry.calloutOut !== '--:--' ? entry.calloutOut : '';
+      const hasCallout = !!(validCalloutIn && validCalloutOut);
 
-      let netNormalShift = Math.max(0, grossShift - lunchBreak);
-      let nt = 0;
-      let ot10 = 0;
-      let dt20 = 0;
-
-      if (dayOfWeek === 0) {
-        // Sunday: Double Time (2.0x)
-        dt20 = netNormalShift + calloutDuration;
-      } else if (dayOfWeek === 6) {
-        // Saturday: Overtime 1.5x (OT 1.0)
-        ot10 = netNormalShift + calloutDuration;
-      } else if (isFriday) {
-        // Friday: Normal 6.0 hrs
-        nt = Math.min(netNormalShift, 6.0);
-        ot10 = Math.max(0, netNormalShift - 6.0) + calloutDuration;
+      // Combine Callout start/end time + Job Ref in Job Description
+      let jobDescription = '';
+      if (hasCallout && jobRef) {
+        jobDescription = `C/O ${validCalloutIn} – ${validCalloutOut} • ${jobRef}`;
+      } else if (hasCallout) {
+        jobDescription = `C/O ${validCalloutIn} – ${validCalloutOut}`;
       } else {
-        // Mon - Thu: Normal 8.5 hrs
-        nt = Math.min(netNormalShift, 8.5);
-        ot10 = Math.max(0, netNormalShift - 8.5) + calloutDuration;
+        jobDescription = jobRef;
       }
 
-      // If entry had explicit calculated fields from timesheet, respect them if present
-      if (entry?.calculatedNT !== undefined && grossShift === 0 && entry.calculatedNT > 0) {
-        nt = entry.calculatedNT;
-      }
-      if (entry?.calculatedOT15 !== undefined && ot10 === 0 && entry.calculatedOT15 > 0) {
-        ot10 = entry.calculatedOT15;
-      }
-      if (entry?.calculatedOT20 !== undefined && dt20 === 0 && entry.calculatedOT20 > 0) {
-        dt20 = entry.calculatedOT20;
-      }
+      // Normal shift times (leave blank if not worked)
+      const validNormalIn = entry?.normalIn && entry.normalIn !== '--:--' ? entry.normalIn : '';
+      const validNormalOut = entry?.normalOut && entry.normalOut !== '--:--' ? entry.normalOut : '';
 
-      // Status determination
+      // Determine Status
       let status = '';
-      if (entry?.comments?.toLowerCase().includes('sick')) {
-        status = 'Sick (with note)';
-      } else if (entry?.comments?.toLowerCase().includes('leave')) {
-        status = 'Leave / Holiday';
-      } else if (entry?.comments?.toLowerCase().includes('absent')) {
-        status = 'Absent - Unpaid';
-      } else if (nt > 0 || ot10 > 0 || dt20 > 0) {
-        status = isWeekend ? 'Call-Out / OT' : 'Present';
-      } else if (isStandby && isWeekend) {
-        status = 'Standby';
-      }
-
-      const totalOT = Number((ot10 + dt20).toFixed(1));
+      if (/\bsick\b/.test(lowerRef)) status = 'Sick (with note)';
+      else if (/\b(leave|holiday)\b/.test(lowerRef)) status = 'Leave';
+      else if (/\babsent\b/.test(lowerRef)) status = 'Absent';
+      else if (nt > 0) status = 'Present';
+      else if (ot > 0 && hasCallout) status = 'Call-Out';
+      else if (isWeekend) status = (isPrimary || isBackup) ? 'Standby' : 'Off';
+      else if (dateStr < format(new Date(), 'yyyy-MM-dd')) status = hasEntryData(entry) ? 'Present' : 'Off';
 
       return {
         date: dateStr,
-        displayDate,
-        dayName,
+        displayDate: format(dayDate, 'dd MMM'),
+        dayName: format(dayDate, 'EEE'),
         dayIndex: dayOfWeek,
         status,
-        isStandby,
-        startTime: start,
-        endTime: end,
-        ntHours: Number(nt.toFixed(1)),
-        overtimeHours: totalOT,
-        ot10Hours: Number(ot10.toFixed(1)),
-        dt20Hours: Number(dt20.toFixed(1)),
-        jobDescription: entry?.comments || entry?.overtimeReason || '',
-        signature: entry?.signature || null
+        isStandby: isPrimary || isBackup,
+        standbyRole: isPrimary ? 'Primary' : isBackup ? 'Backup' : '',
+        startTime: validNormalIn,
+        endTime: validNormalOut,
+        calloutIn: validCalloutIn,
+        calloutOut: validCalloutOut,
+        ntHours: nt,
+        overtimeHours: ot,
+        jobDescription,
+        signature: entry?.signature || null,
       };
     });
+  }, [currentWeekDates, userTimesheets, standbyShifts, selectedTechName, payrollKeyByDate]);
 
-    setTableRows(newRows);
-  }, [currentWeekDates, userTimesheets, standbyShifts, selectedTechName]);
-
-  // Handle cell edit
-  const handleUpdateRow = (index: number, field: keyof WeeklyRowData, value: any) => {
-    setTableRows(prev => {
-      const updated = [...prev];
-      const row = { ...updated[index], [field]: value };
-
-      // If times changed, recalculate hours
-      if (field === 'startTime' || field === 'endTime') {
-        const isWeekend = row.dayIndex === 0 || row.dayIndex === 6;
-        const isFriday = row.dayIndex === 5;
-        let gross = getDuration(row.startTime, row.endTime);
-        let lunch = (!isWeekend && gross >= 6) ? 0.5 : 0;
-        let net = Math.max(0, gross - lunch);
-
-        if (row.dayIndex === 0) {
-          row.ntHours = 0;
-          row.ot10Hours = 0;
-          row.dt20Hours = Number(net.toFixed(1));
-        } else if (row.dayIndex === 6) {
-          row.ntHours = 0;
-          row.ot10Hours = Number(net.toFixed(1));
-          row.dt20Hours = 0;
-        } else if (isFriday) {
-          row.ntHours = Number(Math.min(net, 6.0).toFixed(1));
-          row.ot10Hours = Number(Math.max(0, net - 6.0).toFixed(1));
-          row.dt20Hours = 0;
-        } else {
-          row.ntHours = Number(Math.min(net, 8.5).toFixed(1));
-          row.ot10Hours = Number(Math.max(0, net - 8.5).toFixed(1));
-          row.dt20Hours = 0;
-        }
-
-        row.overtimeHours = Number((row.ot10Hours + row.dt20Hours).toFixed(1));
-        if (!row.status && (row.ntHours > 0 || row.overtimeHours > 0)) {
-          row.status = isWeekend ? 'Call-Out / OT' : 'Present';
-        }
-      }
-
-      updated[index] = row;
-      return updated;
-    });
-  };
-
-  // Weekly Totals
+  // Derived Totals & Summary Metrics (strictly no OT 2.0)
   const totals = useMemo(() => {
     let nt = 0;
-    let ot10 = 0;
-    let dt20 = 0;
-    let totalOt = 0;
+    let ot = 0;
     let standbyDays = 0;
     let sickDays = 0;
     let absentDays = 0;
 
     tableRows.forEach(r => {
       nt += Number(r.ntHours || 0);
-      ot10 += Number(r.ot10Hours || 0);
-      dt20 += Number(r.dt20Hours || 0);
-      totalOt += Number(r.overtimeHours || 0);
+      ot += Number(r.overtimeHours || 0);
       if (r.isStandby) standbyDays += 1;
       if (r.status.toLowerCase().includes('sick')) sickDays += 1;
       if (r.status.toLowerCase().includes('absent')) absentDays += 1;
     });
 
     const ntRequired = 40.0;
-    const ntShort = Math.max(0, Number((ntRequired - nt).toFixed(1)));
-    const isNtMet = nt >= ntRequired;
+    const ntRounded = Number(nt.toFixed(1));
+    const otRounded = Number(ot.toFixed(1));
+    const ntShort = Math.max(0, Number((ntRequired - ntRounded).toFixed(1)));
 
     return {
-      nt: Number(nt.toFixed(1)),
-      ot10: Number(ot10.toFixed(1)),
-      dt20: Number(dt20.toFixed(1)),
-      totalOt: Number(totalOt.toFixed(1)),
+      nt: ntRounded,
+      ot: otRounded,
       standbyDays,
       sickDays,
       absentDays,
       ntRequired,
       ntShort,
-      isNtMet
+      isNtMet: ntRounded >= ntRequired,
     };
   }, [tableRows]);
 
-  // Stepper controls
+  // Week stepper
+  const curWeekIndex = weekOptions.findIndex(w => w.value === selectedMondayStr);
   const handlePrevWeek = () => {
-    const curIndex = weekOptions.findIndex(w => w.value === selectedMondayStr);
-    if (curIndex !== -1 && curIndex < weekOptions.length - 1) {
-      setSelectedMondayStr(weekOptions[curIndex + 1].value);
+    if (curWeekIndex !== -1 && curWeekIndex < weekOptions.length - 1) {
+      setSelectedMondayStr(weekOptions[curWeekIndex + 1].value);
     }
   };
-
   const handleNextWeek = () => {
-    const curIndex = weekOptions.findIndex(w => w.value === selectedMondayStr);
-    if (curIndex > 0) {
-      setSelectedMondayStr(weekOptions[curIndex - 1].value);
+    if (curWeekIndex > 0) {
+      setSelectedMondayStr(weekOptions[curWeekIndex - 1].value);
     }
   };
 
-  const handleCurrentWeek = () => {
-    setSelectedMondayStr(initialMonday);
-  };
+  const selectedWeekDisplay = useMemo(
+    () => format(new Date(`${selectedMondayStr}T00:00:00`), 'EEE dd MMM yyyy'),
+    [selectedMondayStr]
+  );
 
-  // Save changes back to Firestore
-  const handleSaveToFirestore = async () => {
-    if (!firestore || !selectedUserId || tableRows.length === 0) return;
-    setIsSaving(true);
-
-    try {
-      // Group rows by period (YYYY-MM)
-      const periodMap = new Map<string, WeeklyRowData[]>();
-      tableRows.forEach(r => {
-        const p = r.date.slice(0, 7);
-        if (!periodMap.has(p)) periodMap.set(p, []);
-        periodMap.get(p)!.push(r);
-      });
-
-      for (const [period, rows] of Array.from(periodMap.entries())) {
-        const tsDocId = `${selectedUserId}_${period}`;
-        const tsDocRef = doc(firestore, 'timesheets', tsDocId);
-        const existingSnap = await getDoc(tsDocRef);
-
-        let entries: TimesheetEntry[] = [];
-        if (existingSnap.exists()) {
-          const data = existingSnap.data() as Timesheet;
-          entries = data.entries || [];
-        }
-
-        // Merge updated rows
-        rows.forEach(r => {
-          const existingIdx = entries.findIndex(e => e.date === r.date);
-          const updatedEntry: TimesheetEntry = {
-            date: r.date,
-            normalIn: r.startTime,
-            normalOut: r.endTime,
-            calculatedNT: r.ntHours,
-            calculatedOT15: r.ot10Hours,
-            calculatedOT20: r.dt20Hours,
-            comments: r.jobDescription || r.status,
-            signature: r.signature || (existingIdx !== -1 ? entries[existingIdx].signature : null),
-          };
-
-          if (existingIdx !== -1) {
-            entries[existingIdx] = { ...entries[existingIdx], ...updatedEntry };
-          } else {
-            entries.push(updatedEntry);
-          }
-        });
-
-        // Save
-        await setDoc(tsDocRef, {
-          id: tsDocId,
-          userId: selectedUserId,
-          userName: selectedTechName,
-          period: period,
-          entries: entries,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      }
-
-      toast({
-        title: 'Weekly Timesheet Saved',
-        description: `Successfully saved weekly entries for ${selectedTechName}.`,
-      });
-    } catch (err: any) {
-      console.error('Error saving weekly timesheet:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: err.message || 'Could not save timesheet to Firestore.',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // WhatsApp share
   const handleExportWhatsApp = () => {
     const lines: string[] = [
       `*ALTEK GREEN WEEKLY TIMESHEET*`,
       `*Technician:* ${selectedTechName}`,
-      `*Week Starting:* ${format(new Date(`${selectedMondayStr}T00:00:00`), 'EEE dd MMM yyyy')}`,
+      `*Week Starting:* ${selectedWeekDisplay}`,
       `-----------------------------------------`,
-      ...tableRows.map(r => 
-        `• *${r.dayName} ${r.displayDate}*: ${r.status || 'Normal'} | NT: ${r.ntHours}h | OT: ${r.overtimeHours}h | DT: ${r.dt20Hours}h ${r.isStandby ? '[Standby]' : ''}${r.jobDescription ? `\n  _${r.jobDescription}_` : ''}`
-      ),
+      ...tableRows.map(r => {
+        const times = r.startTime && r.endTime ? ` (${r.startTime} - ${r.endTime})` : '';
+        const co = r.calloutIn && r.calloutOut ? ` [C/O ${r.calloutIn} - ${r.calloutOut}]` : '';
+        const sb = r.isStandby ? ` [Standby]` : '';
+        const desc = r.jobDescription ? `\n  _${r.jobDescription}_` : '';
+        return `• *${r.dayName} ${r.displayDate}*: ${r.status || '-'}${times}${co}${sb} | NT: ${r.ntHours}h | OT: ${r.overtimeHours}h${desc}`;
+      }),
       `-----------------------------------------`,
       `*SUMMARY:*`,
-      `• *Total NT Hours:* ${totals.nt} / 40.0 hrs ${totals.isNtMet ? '✅ (Target Met)' : '⚠️ (Short)'}`,
-      `• *Total Overtime:* ${totals.totalOt} hrs (OT 1.0: ${totals.ot10}h • DT 2.0: ${totals.dt20}h)`,
-      `• *Standby Allowance:* ${totals.standbyDays} days`,
-      `• *Generated:* ${format(new Date(), 'yyyy-MM-dd HH:mm')}`
+      `• *NT Hours:* ${totals.nt} / 40.0 ${totals.isNtMet ? '✅ (Met)' : '⚠️ (Short ' + totals.ntShort + 'h)'}`,
+      `• *Overtime Hours:* ${totals.ot}h`,
+      `• *Standby Days:* ${totals.standbyDays}`,
+      `• *Sick Days:* ${totals.sickDays}`,
     ];
-
-    const message = lines.join('\n');
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
   };
 
-  const selectedWeekDisplay = useMemo(() => {
-    const monday = new Date(`${selectedMondayStr}T00:00:00`);
-    return format(monday, 'EEE dd MMM yyyy');
-  }, [selectedMondayStr]);
-
-  // First available digital signature from entries
-  const capturedSignature = useMemo(() => {
-    const found = tableRows.find(r => r.signature);
-    return found?.signature || null;
-  }, [tableRows]);
+  const capturedSignature = useMemo(
+    () => tableRows.find(r => r.signature)?.signature || null,
+    [tableRows]
+  );
 
   return (
     <div className="min-h-screen bg-slate-100 p-3 sm:p-6 print:p-0 print:bg-white text-slate-900">
-      {/* ACTION BAR (Hidden on Print) */}
+      {/* ACTION BAR */}
       <div className="max-w-5xl mx-auto mb-4 print:hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-3">
           <Button
@@ -555,7 +449,6 @@ export default function WeeklyTimesheetSummaryPage() {
             Weekly Technician Timesheet
           </h2>
         </div>
-
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
@@ -563,99 +456,76 @@ export default function WeeklyTimesheetSummaryPage() {
             onClick={handleExportWhatsApp}
             className="text-xs font-semibold gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
           >
-            <Share2 className="h-3.5 w-3.5" />
-            WhatsApp
+            <Share2 className="h-3.5 w-3.5" /> WhatsApp
           </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSaveToFirestore}
-            disabled={isSaving}
-            className="text-xs font-semibold gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-50"
-          >
-            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            Save Changes
-          </Button>
-
           <Button
             size="sm"
             onClick={() => window.print()}
             className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold gap-1.5 shadow-sm"
           >
-            <Printer className="h-3.5 w-3.5" />
-            Print Timesheet (A4 / PDF)
+            <Printer className="h-3.5 w-3.5" /> Print Timesheet (A4 / PDF)
           </Button>
         </div>
       </div>
 
-      {/* FILTER & SELECTOR BAR (Hidden on Print) */}
-      <div className="max-w-5xl mx-auto mb-5 print:hidden bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+      {/* SELECTORS & LIVE BADGE */}
+      <div className="max-w-5xl mx-auto mb-5 print:hidden bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* 1. Technician Dropdown */}
           <div className="space-y-1">
             <label className="text-xs font-black uppercase text-slate-500 flex items-center gap-1.5">
-              <UserIcon className="h-3.5 w-3.5 text-primary" />
-              1. Select Technician:
+              <UserIcon className="h-3.5 w-3.5 text-primary" /> 1. Select Technician:
             </label>
-            <Select 
-              value={selectedUserId} 
-              onValueChange={setSelectedUserId}
-              disabled={!isManagement && user?.uid !== selectedUserId}
-            >
+            <Select value={selectedUserId} onValueChange={setSelectedUserId} disabled={!isManagement}>
               <SelectTrigger className="w-full bg-slate-50 font-bold border-slate-300 h-9 text-xs">
                 <SelectValue placeholder="Choose Technician..." />
               </SelectTrigger>
               <SelectContent>
                 {technicians.map(tech => (
                   <SelectItem key={tech.id} value={tech.id} className="text-xs font-semibold">
-                    {tech.name} {tech.role ? `(${tech.role})` : ''}
+                    {tech.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* 2. Week Starting Dropdown */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-black uppercase text-slate-500 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-primary" />
-                2. Select Week Starting (Monday):
+                <Clock className="h-3.5 w-3.5 text-primary" /> 2. Select Week Starting (Monday):
               </label>
               <div className="flex items-center gap-1">
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handlePrevWeek} 
-                  className="h-6 w-6 p-0 text-slate-600 hover:text-slate-900"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePrevWeek}
+                  className="h-6 w-6 p-0"
                   title="Previous Week"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleCurrentWeek}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedMondayStr(initialMonday)}
                   className="h-6 text-[10px] font-bold px-1.5 py-0"
                 >
                   This Week
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleNextWeek} 
-                  className="h-6 w-6 p-0 text-slate-600 hover:text-slate-900"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleNextWeek}
+                  className="h-6 w-6 p-0"
                   title="Next Week"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-
             <Select value={selectedMondayStr} onValueChange={setSelectedMondayStr}>
               <SelectTrigger className="w-full bg-slate-50 font-bold border-slate-300 h-9 text-xs">
                 <SelectValue />
@@ -670,29 +540,38 @@ export default function WeeklyTimesheetSummaryPage() {
             </Select>
           </div>
         </div>
+
+        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Live carbon copy: Automatically synced with {selectedTechName}&apos;s monthly timesheet.</span>
+          </div>
+          {timesheetsLoading && (
+            <span className="flex items-center gap-1 text-slate-400">
+              <Loader2 className="h-3 w-3 animate-spin" /> Syncing...
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* PRINTABLE TIMESHEET CONTAINER */}
+      {/* PRINTABLE SHEET */}
       <div className="max-w-5xl mx-auto bg-white border border-slate-300 print:border-none shadow-sm print:shadow-none p-5 sm:p-8 print:p-2 rounded-lg">
-        {/* TOP BANNER */}
-        <div className="w-full bg-[#dbe2ea] print:bg-[#dbe2ea] border border-slate-400 py-2 text-center mb-4">
+        {/* HEADER TITLE BANNER */}
+        <div className="w-full bg-[#dbe2ea] border border-slate-400 py-2 text-center mb-4">
           <h1 className="text-lg sm:text-xl font-black tracking-wider text-slate-900 uppercase">
             ALTEK GREEN WEEKLY TECHNICIAN TIMESHEET
           </h1>
         </div>
 
-        {/* HEADER DETAILS ROW */}
+        {/* METADATA + INSTRUCTIONS */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
           <div className="space-y-2">
-            {/* Name */}
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold w-32 shrink-0">Name:</span>
               <div className="bg-[#fef08a] border border-slate-400 px-3 py-1 font-bold text-sm min-w-[240px]">
                 {selectedTechName}
               </div>
             </div>
-
-            {/* Week Starting */}
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold w-32 shrink-0">Week Starting:</span>
               <div className="bg-[#fef08a] border border-slate-400 px-3 py-1 font-bold text-sm min-w-[240px]">
@@ -700,143 +579,94 @@ export default function WeeklyTimesheetSummaryPage() {
               </div>
             </div>
           </div>
-
-          {/* Right Instruction Note */}
           <div className="max-w-sm text-[11px] text-slate-700 italic leading-snug bg-slate-50 p-2.5 rounded border border-slate-200 print:border-none print:bg-transparent">
-            <p>
-              Fill in the yellow cells only. Pick the week from the drop-down.
-            </p>
-            <p className="mt-0.5">
-              Type times like 07:00. NT: Mon–Thu 8.5 hrs, Fri 6 hrs (40 per week). Sick note = day paid. Absent, no note = not paid.
-            </p>
+            <p>Read-only summary derived from the monthly timesheet. Pick the technician and week above.</p>
+            <p className="mt-0.5">NT: Mon–Thu 8.5 hrs, Fri 6 hrs (40 per week). Weekend &amp; call-outs = overtime. Sick note = day paid. Absent, no note = not paid.</p>
           </div>
         </div>
 
-        {/* WEEKLY TABLE */}
+        {/* 7-DAY SUMMARY TABLE */}
         <div className="overflow-x-auto border border-slate-400 mb-6">
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="bg-[#cbd5e1] border-b border-slate-400 text-slate-900 font-black text-center">
                 <th className="border-r border-slate-400 p-2 w-16">Date</th>
                 <th className="border-r border-slate-400 p-2 w-12">Day</th>
-                <th className="border-r border-slate-400 p-2 w-32">Status</th>
+                <th className="border-r border-slate-400 p-2 w-28">Status</th>
                 <th className="border-r border-slate-400 p-2 w-20">Standby</th>
                 <th className="border-r border-slate-400 p-2 w-16">Start Time</th>
                 <th className="border-r border-slate-400 p-2 w-16">End Time</th>
-                <th className="border-r border-slate-400 p-2 w-16 bg-[#e2e8f0]">NT Hrs</th>
+                <th className="border-r border-slate-400 p-2 w-14 bg-[#e2e8f0]">NT Hrs</th>
                 <th className="border-r border-slate-400 p-2 w-20 bg-[#e2e8f0]">Overtime Hours</th>
                 <th className="border-r border-slate-400 p-2 w-16">OT 1.0 Hrs</th>
-                <th className="border-r border-slate-400 p-2 w-16">DT 2.0 Hrs</th>
                 <th className="p-2 text-left">Job Description</th>
               </tr>
             </thead>
             <tbody>
-              {tableRows.map((row, idx) => {
-                const isSundayRow = row.dayIndex === 0;
-                const isSaturdayRow = row.dayIndex === 6;
-                const isWeekend = isSundayRow || isSaturdayRow;
-
+              {tableRows.map((row) => {
+                const isWeekend = row.dayIndex === 0 || row.dayIndex === 6;
                 return (
-                  <tr 
-                    key={row.date} 
-                    className={`border-b border-slate-300 text-center ${
-                      isWeekend ? 'bg-slate-50/50' : 'bg-white'
-                    }`}
+                  <tr
+                    key={row.date}
+                    className={`border-b border-slate-300 text-center ${isWeekend ? 'bg-slate-50' : 'bg-white'}`}
                   >
                     {/* Date */}
-                    <td className="border-r border-slate-300 p-1.5 font-semibold text-slate-800">
+                    <td className="border-r border-slate-300 p-2 font-semibold">
                       {row.displayDate}
                     </td>
 
                     {/* Day */}
-                    <td className="border-r border-slate-300 p-1.5 font-bold text-slate-800">
+                    <td className={`border-r border-slate-300 p-2 font-bold ${isWeekend ? 'text-red-700' : ''}`}>
                       {row.dayName}
                     </td>
 
-                    {/* Status (Yellow Editable Cell) */}
-                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] print:bg-[#fef9c3]">
-                      <Input
-                        value={row.status}
-                        onChange={(e) => handleUpdateRow(idx, 'status', e.target.value)}
-                        placeholder={isWeekend ? 'Weekend / Off' : 'Present'}
-                        className="h-7 text-xs font-semibold text-center bg-transparent border-none shadow-none focus-visible:ring-0 p-1"
-                      />
+                    {/* Status (Yellow cell) */}
+                    <td className="border-r border-slate-300 p-2 bg-[#fef9c3] font-semibold text-slate-900">
+                      {row.status || '-'}
                     </td>
 
-                    {/* Standby (Light Green if Yes) */}
-                    <td className={`border-r border-slate-300 p-1 font-bold ${
-                      row.isStandby ? 'bg-[#dcfce7] text-[#166534]' : 'bg-white text-slate-500'
-                    }`}>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateRow(idx, 'isStandby', !row.isStandby)}
-                        className="w-full h-full py-1 text-center font-bold"
-                        title="Click to toggle Standby Yes/No"
-                      >
-                        {row.isStandby ? 'Yes' : 'No'}
-                      </button>
+                    {/* Standby (Green cell if yes) */}
+                    <td
+                      className={`border-r border-slate-300 p-2 font-bold ${
+                        row.isStandby ? 'bg-[#dcfce7] text-[#166534]' : 'text-slate-400'
+                      }`}
+                    >
+                      {row.isStandby ? 'Yes' : 'No'}
+                      {row.isStandby && row.standbyRole && (
+                        <span className="block text-[9px] font-semibold opacity-80">
+                          {row.standbyRole}
+                        </span>
+                      )}
                     </td>
 
-                    {/* Start Time (Yellow Editable Cell) */}
-                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] print:bg-[#fef9c3]">
-                      <Input
-                        value={row.startTime}
-                        onChange={(e) => handleUpdateRow(idx, 'startTime', e.target.value)}
-                        placeholder="07:00"
-                        className="h-7 text-xs font-mono font-bold text-center bg-transparent border-none shadow-none focus-visible:ring-0 p-1"
-                      />
+                    {/* Start Time (Yellow cell) */}
+                    <td className="border-r border-slate-300 p-2 bg-[#fef9c3] font-mono font-bold text-slate-900">
+                      {row.startTime || ''}
                     </td>
 
-                    {/* End Time (Yellow Editable Cell) */}
-                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] print:bg-[#fef9c3]">
-                      <Input
-                        value={row.endTime}
-                        onChange={(e) => handleUpdateRow(idx, 'endTime', e.target.value)}
-                        placeholder={row.dayIndex === 5 ? '13:30' : '16:00'}
-                        className="h-7 text-xs font-mono font-bold text-center bg-transparent border-none shadow-none focus-visible:ring-0 p-1"
-                      />
+                    {/* End Time (Yellow cell) */}
+                    <td className="border-r border-slate-300 p-2 bg-[#fef9c3] font-mono font-bold text-slate-900">
+                      {row.endTime || ''}
                     </td>
 
-                    {/* NT Hrs (Gray Calculated Cell) */}
-                    <td className="border-r border-slate-300 p-1.5 font-bold bg-[#f1f5f9] text-slate-800">
-                      {row.ntHours > 0 ? row.ntHours.toFixed(1).replace('.', ',') : ''}
+                    {/* NT Hrs (Gray cell) */}
+                    <td className="border-r border-slate-300 p-2 font-bold bg-[#f1f5f9] text-emerald-800">
+                      {fmt(row.ntHours)}
                     </td>
 
-                    {/* Overtime Hours (Gray Calculated Cell) */}
-                    <td className="border-r border-slate-300 p-1.5 font-bold bg-[#f1f5f9] text-slate-900">
-                      {row.overtimeHours > 0 ? row.overtimeHours.toFixed(1).replace('.', ',') : ''}
+                    {/* Overtime Hours (Gray cell) */}
+                    <td className="border-r border-slate-300 p-2 font-bold bg-[#f1f5f9] text-red-700">
+                      {fmt(row.overtimeHours)}
                     </td>
 
-                    {/* OT 1.0 Hrs (Yellow Editable Cell) */}
-                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] print:bg-[#fef9c3]">
-                      <Input
-                        type="number"
-                        step="0.5"
-                        value={row.ot10Hours > 0 ? row.ot10Hours : ''}
-                        onChange={(e) => handleUpdateRow(idx, 'ot10Hours', parseFloat(e.target.value) || 0)}
-                        className="h-7 text-xs font-bold text-center bg-transparent border-none shadow-none focus-visible:ring-0 p-1"
-                      />
+                    {/* OT 1.0 Hrs (Yellow cell) */}
+                    <td className="border-r border-slate-300 p-2 bg-[#fef9c3] font-bold text-slate-900">
+                      {fmt(row.overtimeHours)}
                     </td>
 
-                    {/* DT 2.0 Hrs (Yellow Editable Cell) */}
-                    <td className="border-r border-slate-300 p-1 bg-[#fef9c3] print:bg-[#fef9c3]">
-                      <Input
-                        type="number"
-                        step="0.5"
-                        value={row.dt20Hours > 0 ? row.dt20Hours : ''}
-                        onChange={(e) => handleUpdateRow(idx, 'dt20Hours', parseFloat(e.target.value) || 0)}
-                        className="h-7 text-xs font-bold text-center bg-transparent border-none shadow-none focus-visible:ring-0 p-1"
-                      />
-                    </td>
-
-                    {/* Job Description (Comments Replaced) */}
-                    <td className="p-1 text-left bg-white">
-                      <Input
-                        value={row.jobDescription}
-                        onChange={(e) => handleUpdateRow(idx, 'jobDescription', e.target.value)}
-                        placeholder="Job details / breakdown scope..."
-                        className="h-7 text-xs text-left bg-transparent border-none shadow-none focus-visible:ring-0 p-1"
-                      />
+                    {/* Job Description (Left-aligned text with callout times & job ref) */}
+                    <td className="p-2 text-left font-medium text-slate-800 break-words">
+                      {row.jobDescription || '-'}
                     </td>
                   </tr>
                 );
@@ -844,7 +674,7 @@ export default function WeeklyTimesheetSummaryPage() {
 
               {/* TOTAL ROW */}
               <tr className="bg-[#cbd5e1] font-black border-t-2 border-slate-400 text-center">
-                <td colSpan={3} className="border-r border-slate-400 p-2 text-center uppercase tracking-wider">
+                <td colSpan={3} className="border-r border-slate-400 p-2 uppercase tracking-wider">
                   TOTAL
                 </td>
                 <td className="border-r border-slate-400 p-2 bg-[#dcfce7] text-[#166534]">
@@ -852,17 +682,14 @@ export default function WeeklyTimesheetSummaryPage() {
                 </td>
                 <td className="border-r border-slate-400 p-2 bg-[#e2e8f0]"></td>
                 <td className="border-r border-slate-400 p-2 bg-[#e2e8f0]"></td>
-                <td className="border-r border-slate-400 p-2 bg-[#e2e8f0] text-slate-900 font-extrabold">
-                  {totals.nt.toFixed(1).replace('.', ',')}
+                <td className="border-r border-slate-400 p-2 bg-[#e2e8f0]">
+                  {fmtTotal(totals.nt)}
                 </td>
-                <td className="border-r border-slate-400 p-2 bg-[#e2e8f0] text-slate-900 font-extrabold">
-                  {totals.totalOt.toFixed(1).replace('.', ',')}
+                <td className="border-r border-slate-400 p-2 bg-[#e2e8f0]">
+                  {fmtTotal(totals.ot)}
                 </td>
-                <td className="border-r border-slate-400 p-2 bg-[#fef9c3] text-slate-900 font-extrabold">
-                  {totals.ot10.toFixed(1).replace('.', ',')}
-                </td>
-                <td className="border-r border-slate-400 p-2 bg-[#fef9c3] text-slate-900 font-extrabold">
-                  {totals.dt20.toFixed(1).replace('.', ',')}
+                <td className="border-r border-slate-400 p-2 bg-[#fef9c3]">
+                  {fmtTotal(totals.ot)}
                 </td>
                 <td className="p-2"></td>
               </tr>
@@ -870,113 +697,67 @@ export default function WeeklyTimesheetSummaryPage() {
           </table>
         </div>
 
-        {/* BOTTOM SECTION: SUMMARY BOX + SIGNATURES */}
+        {/* BOTTOM SECTION: SUMMARY BOX & SIGNATURES */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start pt-2">
-          {/* LEFT: SUMMARY BOX (NAVY BLUE HEADER) */}
-          <div className="border border-slate-400 overflow-hidden shadow-xs">
+          {/* NAVY-BLUE SUMMARY BOX */}
+          <div className="border border-slate-400 overflow-hidden">
             <div className="bg-[#1e3a5f] text-white px-3 py-1.5 font-black text-xs uppercase tracking-wider">
               SUMMARY
             </div>
             <table className="w-full text-xs">
               <tbody className="divide-y divide-slate-300">
                 <tr>
-                  <td className="p-2 font-medium text-slate-700 bg-slate-50 w-2/3 border-r border-slate-300">
-                    NT hours required
-                  </td>
-                  <td className="p-2 font-bold text-center text-slate-900">
-                    {totals.ntRequired.toFixed(1).replace('.', ',')}
+                  <td className="p-2 bg-slate-50 w-2/3 border-r border-slate-300">NT hours required</td>
+                  <td className="p-2 font-bold text-center">{fmtTotal(totals.ntRequired)}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-bold bg-slate-50 border-r border-slate-300">NT hours</td>
+                  <td className="p-2 font-extrabold text-center">{fmtTotal(totals.nt)}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 bg-slate-50 border-r border-slate-300">NT hours short</td>
+                  <td className={`p-2 font-bold text-center ${totals.ntShort > 0 ? 'text-red-600' : ''}`}>
+                    {fmtTotal(totals.ntShort)}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2 font-bold text-slate-800 bg-slate-50 border-r border-slate-300">
-                    NT hours
-                  </td>
-                  <td className="p-2 font-extrabold text-center text-slate-900">
-                    {totals.nt.toFixed(1).replace('.', ',')}
+                  <td className="p-2 bg-slate-50 border-r border-slate-300">Sick days (with note)</td>
+                  <td className="p-2 font-bold text-center">{totals.sickDays}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-bold bg-slate-50 border-r border-slate-300">Days absent – NOT paid</td>
+                  <td className="p-2 font-bold text-center">{totals.absentDays}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-bold bg-slate-100 border-r border-slate-300">Overtime hours (1.0)</td>
+                  <td className="p-2 font-extrabold text-center bg-slate-100 text-red-700">
+                    {fmtTotal(totals.ot)}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2 font-medium text-slate-700 bg-slate-50 border-r border-slate-300">
-                    NT hours short
-                  </td>
-                  <td className="p-2 font-bold text-center text-red-600">
-                    {totals.ntShort.toFixed(1).replace('.', ',')}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 font-medium text-slate-700 bg-slate-50 border-r border-slate-300">
-                    Sick days (with note)
-                  </td>
-                  <td className="p-2 font-bold text-center text-slate-900">
-                    {totals.sickDays}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 font-medium text-slate-700 bg-slate-50 border-r border-slate-300">
-                    Days absent – NOT paid
-                  </td>
-                  <td className="p-2 font-bold text-center text-slate-900">
-                    {totals.absentDays}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 font-medium text-slate-700 bg-slate-50 border-r border-slate-300">
-                    Overtime hours (1.0)
-                  </td>
-                  <td className="p-2 font-bold text-center text-slate-900">
-                    {totals.ot10.toFixed(1).replace('.', ',')}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 font-medium text-slate-700 bg-slate-50 border-r border-slate-300">
-                    Double time hours (2.0)
-                  </td>
-                  <td className="p-2 font-bold text-center text-slate-900">
-                    {totals.dt20.toFixed(1).replace('.', ',')}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 font-bold text-slate-900 bg-slate-100 border-r border-slate-300">
-                    Total Overtime hours
-                  </td>
-                  <td className="p-2 font-extrabold text-center text-slate-900 bg-slate-100">
-                    {totals.totalOt.toFixed(1).replace('.', ',')}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 font-medium text-slate-700 bg-slate-50 border-r border-slate-300">
-                    Standby days (for allowance)
-                  </td>
-                  <td className="p-2 font-bold text-center text-emerald-800">
-                    {totals.standbyDays}
-                  </td>
+                  <td className="p-2 font-bold bg-slate-50 border-r border-slate-300">Standby days (for allowance)</td>
+                  <td className="p-2 font-bold text-center text-emerald-800">{totals.standbyDays}</td>
                 </tr>
                 <tr className={totals.isNtMet ? 'bg-[#dcfce7]' : 'bg-[#fee2e2]'}>
-                  <td className="p-2 font-black border-r border-slate-300">
-                    40 hrs NT met this week?
-                  </td>
-                  <td className="p-2 font-black text-center text-sm">
-                    {totals.isNtMet ? (
-                      <span className="text-emerald-800">YES</span>
-                    ) : (
-                      <span className="text-red-700">NO</span>
-                    )}
+                  <td className="p-2 font-black border-r border-slate-300">40 hrs NT met this week?</td>
+                  <td className={`p-2 font-black text-center text-sm ${totals.isNtMet ? 'text-emerald-800' : 'text-red-700'}`}>
+                    {totals.isNtMet ? 'YES' : 'NO'}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          {/* RIGHT: SIGNATURES */}
+          {/* SIGNATURES */}
           <div className="flex flex-col justify-between h-full pt-4 space-y-12">
-            {/* Technician Signature */}
             <div className="space-y-3">
-              <span className="text-sm font-bold text-slate-800">Technician signature:</span>
-              <div className="min-h-[50px] flex items-center justify-start pl-4">
+              <span className="text-sm font-bold">Technician signature:</span>
+              <div className="min-h-[50px] flex items-center pl-4">
                 {capturedSignature ? (
-                  <img 
-                    src={capturedSignature} 
-                    alt="Technician Digital Signature" 
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={capturedSignature}
+                    alt="Technician signature"
                     className="max-h-12 object-contain"
                   />
                 ) : (
@@ -990,9 +771,8 @@ export default function WeeklyTimesheetSummaryPage() {
               </div>
             </div>
 
-            {/* Supervisor Signature */}
             <div className="space-y-3">
-              <span className="text-sm font-bold text-slate-800">Supervisor signature:</span>
+              <span className="text-sm font-bold">Supervisor signature:</span>
               <div className="h-8" />
               <div className="border-b-2 border-slate-900 w-full" />
               <div className="flex justify-between text-xs text-slate-600 font-semibold px-1">
@@ -1003,15 +783,13 @@ export default function WeeklyTimesheetSummaryPage() {
           </div>
         </div>
 
-        {/* FOOTER BRANDING (Visible on Print) */}
+        {/* FOOTER */}
         <div className="mt-8 pt-4 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
           <div className="flex items-center gap-2">
             <AltekLogo className="h-6" />
             <span>ALTEK GREEN (PTY) LTD • Industrial Electrical &amp; Automation</span>
           </div>
-          <div>
-            DOC: AG-TA-WTS-001 • Printed: {format(new Date(), 'yyyy-MM-dd HH:mm')}
-          </div>
+          <div>DOC: AG-TA-WTS-001 • Printed: {format(new Date(), 'yyyy-MM-dd HH:mm')}</div>
         </div>
       </div>
     </div>
