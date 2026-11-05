@@ -15,8 +15,7 @@ import {
   Clock,
   CheckCircle2,
   ChevronDown,
-  ChevronRight,
-  Wrench
+  ChevronRight
 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, setDoc } from 'firebase/firestore';
@@ -26,14 +25,12 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { getNextFsrId } from '@/lib/fsr-id-utils';
-import { FsrAlignDialog } from '@/components/fsr/fsr-align-dialog';
 
 export default function FSRTrackerPage() {
   const router = useRouter();
   const firestore = useFirestore();
   const { user } = useUser();
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [isAlignDialogOpen, setIsAlignDialogOpen] = React.useState(false);
   const [isCreatingNew, setIsCreatingNew] = React.useState(false);
 
   const userRoleRef = useMemoFirebase(() => (user && firestore ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
@@ -129,16 +126,6 @@ export default function FSRTrackerPage() {
           <p className="text-muted-foreground italic">Manage official AG-FSR-001 digital reports.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {canCreate && (
-            <Button
-              variant="outline"
-              onClick={() => setIsAlignDialogOpen(true)}
-              className="border-amber-300 text-amber-900 bg-amber-50/60 hover:bg-amber-100/80 text-xs font-semibold shadow-xs"
-            >
-              <Wrench className="mr-1.5 h-4 w-4 text-amber-600" />
-              Align FSR Document IDs
-            </Button>
-          )}
           {canCreate && (
             <Button onClick={handleCreateNew} disabled={isCreatingNew} className="bg-primary">
               {isCreatingNew ? (
@@ -262,11 +249,6 @@ export default function FSRTrackerPage() {
           </Table>
         </CardContent>
       </Card>
-
-      <FsrAlignDialog
-        open={isAlignDialogOpen}
-        onOpenChange={setIsAlignDialogOpen}
-      />
     </div>
   );
 }
