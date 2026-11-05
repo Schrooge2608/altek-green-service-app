@@ -58,6 +58,7 @@ import {
 import type { Channel, FieldServiceReport, DailyDiary } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { getNextFsrId } from '@/lib/fsr-id-utils';
 
 interface WhatsAppLiveGroup {
   jid: string;
@@ -1717,9 +1718,11 @@ export function WhatsAppGroupSyncDialog({
       let existingFsrData: Partial<FieldServiceReport> = {};
 
       if (targetFsrId === '__new_fsr__' || targetFsrId === '__current_fsr__') {
+        const generatedFsrId = await getNextFsrId(firestore);
         const newFsrPayload: Partial<FieldServiceReport> = {
+          id: generatedFsrId,
           userId: user?.uid || '',
-          fsrReference: '',
+          fsrReference: generatedFsrId,
           date: res.date || fromDate || new Date().toISOString().split('T')[0],
           status: 'Draft',
           createdAt: new Date().toISOString(),
@@ -1744,8 +1747,8 @@ export function WhatsAppGroupSyncDialog({
             observations: '',
           },
         };
-        const createdRef = await addDoc(collection(firestore, 'field_service_reports'), newFsrPayload);
-        targetFsrId = createdRef.id;
+        await setDoc(doc(firestore, 'field_service_reports', generatedFsrId), newFsrPayload);
+        targetFsrId = generatedFsrId;
         existingFsrData = newFsrPayload;
       } else {
         const fsrSnap = await getDoc(doc(firestore, 'field_service_reports', targetFsrId));

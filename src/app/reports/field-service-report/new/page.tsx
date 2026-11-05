@@ -2,10 +2,11 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, getDocs, limit, doc, getDoc } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, query, orderBy, getDocs, limit, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import type { FieldServiceReport } from '@/lib/types';
+import { getNextFsrId } from '@/lib/fsr-id-utils';
 
 export default function NewFSRPage() {
   const router = useRouter();
@@ -33,12 +34,13 @@ export default function NewFSRPage() {
         }
       }
 
-      const refId = '';
-      
       try {
+        const nextFsrId = await getNextFsrId(firestore);
+
         const newReport: Partial<FieldServiceReport> = {
+          id: nextFsrId,
           userId: user.uid,
-          fsrReference: refId,
+          fsrReference: nextFsrId,
           date: new Date().toISOString().split('T')[0],
           status: 'Draft',
           createdAt: new Date().toISOString(),
@@ -60,8 +62,8 @@ export default function NewFSRPage() {
             observations: ''
           }
         };
-        const docRef = await addDocumentNonBlocking(collection(firestore, 'field_service_reports'), newReport);
-        router.replace(`/reports/field-service-report/${docRef.id}`);
+        await setDoc(doc(firestore, 'field_service_reports', nextFsrId), newReport);
+        router.replace(`/reports/field-service-report/${nextFsrId}`);
       } catch (e) {
         console.error(e);
         router.replace('/reports/field-service-report');

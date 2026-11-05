@@ -15,25 +15,31 @@ import {
   Clock,
   CheckCircle2,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Wrench
 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc, setDoc } from 'firebase/firestore';
 import type { FieldServiceReport, User } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { getNextFsrId } from '@/lib/fsr-id-utils';
+import { FsrAlignDialog } from '@/components/fsr/fsr-align-dialog';
 
 export default function FSRTrackerPage() {
   const router = useRouter();
   const firestore = useFirestore();
   const { user } = useUser();
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [isAlignDialogOpen, setIsAlignDialogOpen] = React.useState(false);
+  const [isCreatingNew, setIsCreatingNew] = React.useState(false);
 
   const userRoleRef = useMemoFirebase(() => (user && firestore ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userData } = useDoc<User>(userRoleRef);
-  const canCreate = userData?.role && userData.role !== 'Client' && userData.role !== 'Client Manager';
+  const isClient = userData?.role === 'Client' || userData?.role === 'Client Manager';
+  const canCreate = !isClient;
 
   const currentMonthStr = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const [expandedMonths, setExpandedMonths] = React.useState<Record<string, boolean>>({
@@ -81,14 +87,16 @@ export default function FSRTrackerPage() {
   }, [filteredReports]);
 
   const handleCreateNew = async () => {
-    if (!user || !canCreate) return;
+    if (!user || !canCreate || !firestore) return;
     
-    const refId = ''; // User will manually type the FSR reference from the hard copy book
-    
+    setIsCreatingNew(true);
     try {
+      const nextFsrId = await getNextFsrId(firestore);
+
       const newReport: Partial<FieldServiceReport> = {
+        id: nextFsrId,
         userId: user.uid,
-        fsrReference: refId,
+        fsrReference: nextFsrId,
         date: new Date().toISOString().split('T')[0],
         status: 'Draft',
         createdAt: new Date().toISOString(),
@@ -105,10 +113,11 @@ export default function FSRTrackerPage() {
           observations: ''
         }
       };
-      const docRef = await addDocumentNonBlocking(collection(firestore, 'field_service_reports'), newReport);
-      router.push(`/reports/field-service-report/${docRef.id}`);
+      await setDoc(doc(firestore, 'field_service_reports', nextFsrId), newReport);
+      router.push(`/reports/field-service-report/${nextFsrId}`);
     } catch (e) {
       console.error(e);
+      setIsCreatingNew(false);
     }
   };
 
@@ -119,11 +128,28 @@ export default function FSRTrackerPage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Field Service Reports</h1>
           <p className="text-muted-foreground italic">Manage official AG-FSR-001 digital reports.</p>
         </div>
-        {canCreate && (
-          <Button onClick={handleCreateNew} className="bg-primary">
-            <PlusCircle className="mr-2 h-4 w-4" /> New Field Report
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {canCreate && (
+            <Button
+              variant="outline"
+              onClick={() => setIsAlignDialogOpen(true)}
+              className="border-amber-300 text-amber-900 bg-amber-50/60 hover:bg-amber-100/80 text-xs font-semibold shadow-xs"
+            >
+              <Wrench className="mr-1.5 h-4 w-4 text-amber-600" />
+              Align FSR Document IDs
+            </Button>
+          )}
+          {canCreate && (
+            <Button onClick={handleCreateNew} disabled={isCreatingNew} className="bg-primary">
+              {isCreatingNew ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <PlusCircle className="mr-2 h-4 w-4" />
+              )}
+              New Field Report
+            </Button>
+          )}
+        </div>
       </header>
 
       <Card className="border-slate-200 shadow-sm">
@@ -236,6 +262,11 @@ export default function FSRTrackerPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <FsrAlignDialog
+        open={isAlignDialogOpen}
+        onOpenChange={setIsAlignDialogOpen}
+      />
     </div>
   );
 }
