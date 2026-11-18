@@ -16,8 +16,8 @@ import {
   useUser,
   useDoc,
 } from '@/firebase';
-import { collection, query, where, doc, orderBy } from 'firebase/firestore';
-import type { Timesheet, TimesheetEntry, User, StandbyShift } from '@/lib/types';
+import { collection, query, where, doc, orderBy, setDoc } from 'firebase/firestore';
+import type { Timesheet, TimesheetEntry, User, StandbyShift, WeeklyTimesheetSignoff } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { format, addDays, addMonths, endOfDay } from 'date-fns';
 import {
@@ -31,7 +31,20 @@ import {
   ArrowLeft,
   Clock,
   Sparkles,
+  PenTool,
+  CheckCircle2,
+  Trash2,
+  KeyRound,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { PinSigner } from '@/components/auth/PinSigner';
+import { SignaturePad } from '@/components/ui/signature-pad';
+import { useToast } from '@/hooks/use-toast';
 import { AltekLogo } from '@/components/altek-logo';
 import { getPayrollPeriod } from '@/lib/payroll-utils';
 
@@ -420,6 +433,110 @@ export default function WeeklyTimesheetSummaryPage() {
     [tableRows]
   );
 
+  const { toast } = useToast();
+
+  // ---------------------------------------------------------------------------
+  // WEEKLY TIMESHEET SIGNOFF (Technician & Supervisor)
+  // ---------------------------------------------------------------------------
+  const signoffDocId = useMemo(
+    () => (selectedUserId && selectedMondayStr ? `${selectedUserId}_${selectedMondayStr}` : null),
+    [selectedUserId, selectedMondayStr]
+  );
+
+  const signoffRef = useMemoFirebase(
+    () => (signoffDocId ? doc(firestore, 'weekly_timesheet_signoffs', signoffDocId) : null),
+    [firestore, signoffDocId]
+  );
+  const { data: signoffData } = useDoc<WeeklyTimesheetSignoff>(signoffRef);
+
+  // Supervisor date input (defaults to today)
+  const [supervisorDateInput, setSupervisorDateInput] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  // Technician date input (defaults to today)
+  const [techDateInput, setTechDateInput] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+
+  // Modals for Sign on Glass
+  const [isTechPadOpen, setIsTechPadOpen] = useState(false);
+  const [isSupervisorPadOpen, setIsSupervisorPadOpen] = useState(false);
+
+  // Sync state from signoffData when loaded
+  useEffect(() => {
+    if (signoffData?.supervisorDate) {
+      setSupervisorDateInput(signoffData.supervisorDate);
+    } else {
+      setSupervisorDateInput(format(new Date(), 'yyyy-MM-dd'));
+    }
+    if (signoffData?.technicianDate) {
+      setTechDateInput(signoffData.technicianDate);
+    } else {
+      setTechDateInput(format(new Date(), 'yyyy-MM-dd'));
+    }
+  }, [signoffData, signoffDocId]);
+
+  // Manager users for supervisor PIN signing
+  const managerUsers = useMemo(() => {
+    if (!allUsers) return [];
+    const roles = ['Admin', 'Superadmin', 'Client Manager', 'Corporate Manager', 'Services Manager', 'Data Admin', 'Site Supervisor'];
+    return allUsers.filter(u => roles.some(role => (u.role || '').includes(role)));
+  }, [allUsers]);
+
+  // Effective signatures & dates
+  const activeTechSignature = signoffData?.technicianSignature || capturedSignature;
+  const activeTechDate = signoffData?.technicianDate || techDateInput;
+
+  const activeSupervisorSignature = signoffData?.supervisorSignature || null;
+  const activeSupervisorDate = signoffData?.supervisorDate || supervisorDateInput;
+
+  const formatDisplayDate = (dStr?: string) => {
+    if (!dStr) return format(new Date(), 'dd/MM/yyyy');
+    try {
+      if (dStr.includes('/')) return dStr;
+      const parts = dStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      const d = new Date(dStr);
+      return isNaN(d.getTime()) ? dStr : format(d, 'dd/MM/yyyy');
+    } catch {
+      return dStr;
+    }
+  };
+
+  const handleSaveSignoff = async (updates: Partial<WeeklyTimesheetSignoff>) => {
+    if (!firestore || !selectedUserId || !selectedMondayStr) return;
+    const docRef = doc(firestore, 'weekly_timesheet_signoffs', `${selectedUserId}_${selectedMondayStr}`);
+    try {
+      await setDoc(
+        docRef,
+        {
+          userId: selectedUserId,
+          userName: selectedTechName,
+          weekMonday: selectedMondayStr,
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      toast({
+        title: 'Sign-Off Recorded',
+        description: 'Weekly timesheet signature successfully saved.',
+      });
+    } catch (err: any) {
+      console.error('Error saving weekly signoff:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Sign-Off Failed',
+        description: err.message || 'Could not save signature to database.',
+      });
+    }
+  };
+
+  const handleSupervisorDateChange = async (newDate: string) => {
+    setSupervisorDateInput(newDate);
+    if (activeSupervisorSignature && signoffDocId) {
+      await handleSaveSignoff({ supervisorDate: newDate });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 p-3 sm:p-6 print:p-0 print:bg-white text-slate-900">
       {/* ACTION BAR */}
@@ -752,35 +869,224 @@ export default function WeeklyTimesheetSummaryPage() {
           </div>
 
           {/* SIGNATURES */}
-          <div className="flex flex-col justify-between h-full pt-4 space-y-12">
-            <div className="space-y-3">
-              <span className="text-sm font-bold">Technician signature:</span>
-              <div className="min-h-[50px] flex items-center pl-4">
-                {capturedSignature ? (
+          <div className="flex flex-col justify-between h-full pt-4 space-y-8">
+            {/* 1. TECHNICIAN SIGNATURE */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-900">Technician signature:</span>
+                {activeTechSignature && (
+                  <span className="print:hidden text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Signed
+                  </span>
+                )}
+              </div>
+
+              <div className="min-h-[50px] flex items-center pl-4 bg-slate-50/50 rounded">
+                {activeTechSignature ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={capturedSignature}
+                    src={activeTechSignature}
                     alt="Technician signature"
                     className="max-h-12 object-contain"
                   />
                 ) : (
-                  <div className="h-8" />
+                  <span className="text-xs text-slate-400 italic">Awaiting technician signature...</span>
                 )}
               </div>
               <div className="border-b-2 border-slate-900 w-full" />
-              <div className="flex justify-between text-xs text-slate-600 font-semibold px-1">
+              <div className="flex justify-between text-xs text-slate-700 font-semibold px-1">
                 <span>{selectedTechName}</span>
-                <span>Date: {format(new Date(), 'dd/MM/yyyy')}</span>
+                <span>Date: {formatDisplayDate(activeTechDate)}</span>
+              </div>
+
+              {/* On-screen Technician Controls (hidden in print) */}
+              <div className="print:hidden pt-1 space-y-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {/* If user has saved signature and is the technician */}
+                  {user?.uid === selectedUserId && currentUserData?.signatureUrl && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                      onClick={async () => {
+                        await handleSaveSignoff({
+                          technicianSignature: currentUserData.signatureUrl,
+                          technicianDate: techDateInput || format(new Date(), 'yyyy-MM-dd'),
+                          technicianSignerName: currentUserData.name || selectedTechName,
+                          technicianSignMethod: 'saved',
+                        });
+                      }}
+                    >
+                      <CheckCircle2 className="h-3 w-3" /> Apply My Saved Signature
+                    </Button>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] font-bold border-slate-300 gap-1"
+                    onClick={() => setIsTechPadOpen(true)}
+                  >
+                    <PenTool className="h-3 w-3 text-primary" /> Sign on Glass
+                  </Button>
+
+                  {activeTechSignature && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-[11px] font-bold text-red-600 hover:bg-red-50 hover:text-red-700 gap-1"
+                      onClick={async () => {
+                        await handleSaveSignoff({
+                          technicianSignature: null,
+                          technicianSignMethod: null,
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" /> Clear
+                    </Button>
+                  )}
+                </div>
+
+                {/* PIN Code Signer for Technician */}
+                <div className="bg-slate-50 border border-slate-200 rounded p-2.5">
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide block mb-1">
+                    Or Enter 4-Digit Signature Code:
+                  </span>
+                  <PinSigner
+                    label="Sign Technician via PIN"
+                    users={allUsers || []}
+                    targetUserId={selectedUserId}
+                    onSigned={async (sigUrl, signerName) => {
+                      if (!sigUrl) return;
+                      await handleSaveSignoff({
+                        technicianSignature: sigUrl,
+                        technicianDate: techDateInput || format(new Date(), 'yyyy-MM-dd'),
+                        technicianSignerName: signerName || selectedTechName,
+                        technicianSignMethod: 'pin',
+                      });
+                    }}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <span className="text-sm font-bold">Supervisor signature:</span>
-              <div className="h-8" />
+            {/* 2. SUPERVISOR SIGNATURE */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-900">Supervisor signature:</span>
+                {activeSupervisorSignature && (
+                  <span className="print:hidden text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Approved
+                  </span>
+                )}
+              </div>
+
+              <div className="min-h-[50px] flex items-center pl-4 bg-slate-50/50 rounded">
+                {activeSupervisorSignature ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={activeSupervisorSignature}
+                    alt="Supervisor signature"
+                    className="max-h-12 object-contain"
+                  />
+                ) : (
+                  <span className="text-xs text-slate-400 italic">Awaiting supervisor signature...</span>
+                )}
+              </div>
               <div className="border-b-2 border-slate-900 w-full" />
-              <div className="flex justify-between text-xs text-slate-600 font-semibold px-1">
-                <span>Services / Operations Manager</span>
-                <span>Date: ________________</span>
+              <div className="flex justify-between items-center text-xs text-slate-700 font-semibold px-1">
+                <span>{signoffData?.supervisorSignerName || 'Services / Operations Manager'}</span>
+                <span>Date: {activeSupervisorDate ? formatDisplayDate(activeSupervisorDate) : '________________'}</span>
+              </div>
+
+              {/* On-screen Supervisor Controls (hidden in print) */}
+              <div className="print:hidden pt-1 space-y-2">
+                {/* Date Picker for Supervisor */}
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded p-2">
+                  <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1 shrink-0">
+                    <Calendar className="h-3.5 w-3.5 text-primary" /> Supervisor Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={supervisorDateInput}
+                    onChange={(e) => handleSupervisorDateChange(e.target.value)}
+                    className="h-7 text-xs border border-slate-300 rounded px-2 bg-white font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {/* Quick Sign with Manager Saved Signature */}
+                  {currentUserData?.signatureUrl && isManagement && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                      onClick={async () => {
+                        await handleSaveSignoff({
+                          supervisorSignature: currentUserData.signatureUrl,
+                          supervisorDate: supervisorDateInput || format(new Date(), 'yyyy-MM-dd'),
+                          supervisorSignerName: currentUserData.name || 'Services / Operations Manager',
+                          supervisorSignerId: user?.uid || null,
+                          supervisorSignMethod: 'saved',
+                        });
+                      }}
+                    >
+                      <CheckCircle2 className="h-3 w-3" /> Sign as {currentUserData.name?.split(' ')[0] || 'Manager'}
+                    </Button>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] font-bold border-slate-300 gap-1"
+                    onClick={() => setIsSupervisorPadOpen(true)}
+                  >
+                    <PenTool className="h-3 w-3 text-primary" /> Sign on Glass
+                  </Button>
+
+                  {activeSupervisorSignature && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-[11px] font-bold text-red-600 hover:bg-red-50 hover:text-red-700 gap-1"
+                      onClick={async () => {
+                        await handleSaveSignoff({
+                          supervisorSignature: null,
+                          supervisorSignMethod: null,
+                          supervisorSignerName: null,
+                          supervisorSignerId: null,
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" /> Clear
+                    </Button>
+                  )}
+                </div>
+
+                {/* PIN Code Signer for Supervisor */}
+                <div className="bg-slate-50 border border-slate-200 rounded p-2.5">
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide block mb-1">
+                    Or Enter 4-Digit Signature Code:
+                  </span>
+                  <PinSigner
+                    label="Sign Supervisor via PIN"
+                    users={managerUsers.length > 0 ? managerUsers : (allUsers || [])}
+                    onSigned={async (sigUrl, signerName) => {
+                      if (!sigUrl) return;
+                      await handleSaveSignoff({
+                        supervisorSignature: sigUrl,
+                        supervisorDate: supervisorDateInput || format(new Date(), 'yyyy-MM-dd'),
+                        supervisorSignerName: signerName || currentUserData?.name || 'Services / Operations Manager',
+                        supervisorSignerId: user?.uid || null,
+                        supervisorSignMethod: 'pin',
+                      });
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -795,6 +1101,63 @@ export default function WeeklyTimesheetSummaryPage() {
           <div>DOC: AG-TA-WTS-001 • Printed: {format(new Date(), 'yyyy-MM-dd HH:mm')}</div>
         </div>
       </div>
+
+      {/* DIALOG: Technician Sign on Glass */}
+      <Dialog open={isTechPadOpen} onOpenChange={setIsTechPadOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PenTool className="h-5 w-5 text-primary" />
+              Technician Signature — Sign on Glass
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-slate-500">
+              Draw your signature in the box below using your touchscreen or mouse.
+            </p>
+            <SignaturePad
+              onSave={async (dataUrl) => {
+                await handleSaveSignoff({
+                  technicianSignature: dataUrl,
+                  technicianDate: techDateInput || format(new Date(), 'yyyy-MM-dd'),
+                  technicianSignerName: selectedTechName,
+                  technicianSignMethod: 'pad',
+                });
+                setIsTechPadOpen(false);
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: Supervisor Sign on Glass */}
+      <Dialog open={isSupervisorPadOpen} onOpenChange={setIsSupervisorPadOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PenTool className="h-5 w-5 text-primary" />
+              Supervisor Signature — Sign on Glass
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-slate-500">
+              Draw your supervisor approval in the box below using your touchscreen or mouse.
+            </p>
+            <SignaturePad
+              onSave={async (dataUrl) => {
+                await handleSaveSignoff({
+                  supervisorSignature: dataUrl,
+                  supervisorDate: supervisorDateInput || format(new Date(), 'yyyy-MM-dd'),
+                  supervisorSignerName: currentUserData?.name || 'Services / Operations Manager',
+                  supervisorSignerId: user?.uid || null,
+                  supervisorSignMethod: 'pad',
+                });
+                setIsSupervisorPadOpen(false);
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

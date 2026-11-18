@@ -162,7 +162,7 @@ export function SidebarNav() {
           {dashboardLink && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname === dashboardLink.href} tooltip={dashboardLink.label}>
-                <Link href={dashboardLink.href} prefetch={true}>
+                <Link href={dashboardLink.href}>
                     <dashboardLink.icon />
                     <span>{dashboardLink.label}</span>
                 </Link>
@@ -186,13 +186,13 @@ export function SidebarNav() {
                       <>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance'}>
-                            <Link href="/time-attendance" prefetch={true}>My Timesheet</Link>
+                            <Link href="/time-attendance">My Timesheet</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                         {!isManager && (
                           <SidebarMenuSubItem>
                             <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance/weekly-summary'}>
-                              <Link href="/time-attendance/weekly-summary" prefetch={true}>Weekly Summary</Link>
+                              <Link href="/time-attendance/weekly-summary">Weekly Summary</Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         )}
@@ -202,17 +202,17 @@ export function SidebarNav() {
                       <>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance'}>
-                            <Link href="/time-attendance" prefetch={true}>Review Timesheets</Link>
+                            <Link href="/time-attendance">Review Timesheets</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance/weekly-summary'}>
-                            <Link href="/time-attendance/weekly-summary" prefetch={true}>Weekly Summary</Link>
+                            <Link href="/time-attendance/weekly-summary">Weekly Summary</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild isActive={pathname === '/time-attendance/ot-summary'}>
-                            <Link href="/time-attendance/ot-summary" prefetch={true}>Team OT Summary</Link>
+                            <Link href="/time-attendance/ot-summary">Team OT Summary</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       </>
@@ -226,7 +226,7 @@ export function SidebarNav() {
           {!isClient && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname === '/admin/vehicles'} tooltip="Logbook">
-                <Link href="/admin/vehicles" prefetch={true}>
+                <Link href="/admin/vehicles">
                     <Car />
                     <span>Logbook</span>
                 </Link>
@@ -237,7 +237,7 @@ export function SidebarNav() {
           {commsLink && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname === commsLink.href} tooltip={commsLink.label}>
-                <Link href={commsLink.href} prefetch={true}>
+                <Link href={commsLink.href}>
                     <commsLink.icon />
                     <span>{commsLink.label}</span>
                 </Link>
@@ -269,7 +269,7 @@ export function SidebarNav() {
                                         <SidebarMenuSub>
                                             <SidebarMenuSubItem>
                                                 <SidebarMenuSubButton asChild isActive={pathname === '/mining/ponds'}>
-                                                    <Link href="/mining/ponds" prefetch={true}>
+                                                    <Link href="/mining/ponds">
                                                         <Droplets className="h-4 w-4 mr-2" />
                                                         <span>Mining Ponds</span>
                                                     </Link>
@@ -277,7 +277,7 @@ export function SidebarNav() {
                                             </SidebarMenuSubItem>
                                             <SidebarMenuSubItem>
                                                 <SidebarMenuSubButton asChild isActive={pathname === '/mining/pump-stations'}>
-                                                    <Link href="/mining/pump-stations" prefetch={true}>
+                                                    <Link href="/mining/pump-stations">
                                                         <Activity className="h-4 w-4 mr-2" />
                                                         <span>Pump Stations</span>
                                                     </Link>
@@ -303,7 +303,7 @@ export function SidebarNav() {
                                         <SidebarMenuSub>
                                             <SidebarMenuSubItem>
                                                 <SidebarMenuSubButton asChild isActive={pathname === '/smelter-v2/smelter'}>
-                                                    <Link href="/smelter-v2/smelter" prefetch={true}>
+                                                    <Link href="/smelter-v2/smelter">
                                                         <Factory className="h-4 w-4 mr-2" />
                                                         <span>Smelter Plant</span>
                                                     </Link>
@@ -317,7 +317,7 @@ export function SidebarNav() {
                             {!isClient && (
                                 <SidebarMenuSubItem>
                                     <SidebarMenuSubButton asChild isActive={pathname === '/assets/tools-equipment'}>
-                                        <Link href="/assets/tools-equipment" prefetch={true}>
+                                        <Link href="/assets/tools-equipment">
                                             <Wrench className="h-4 w-4 mr-2" />
                                             <span>Tools & Equipment</span>
                                         </Link>
@@ -342,7 +342,7 @@ export function SidebarNav() {
                         <SidebarMenuSub>
                             <SidebarMenuSubItem>
                                 <SidebarMenuSubButton asChild isActive={pathname.startsWith('/reports/field-service-report')}>
-                                    <Link href="/reports/field-service-report" prefetch={true}>
+                                    <Link href="/reports/field-service-report">
                                         <PenTool className="mr-2 h-4 w-4" />
                                         <span>Field Service Report</span>
                                     </Link>
@@ -367,13 +367,13 @@ export function SidebarNav() {
                             {!isClient && (
                                 <SidebarMenuSubItem>
                                     <SidebarMenuSubButton asChild isActive={pathname === "/reports/contractors-daily-diary"}>
-                                        <Link href="/reports/contractors-daily-diary" prefetch={true}>New Diary</Link>
+                                        <Link href="/reports/contractors-daily-diary">New Diary</Link>
                                     </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                             )}
                             <SidebarMenuSubItem>
                                 <SidebarMenuSubButton asChild isActive={pathname === "/reports/diary-tracker"}>
-                                    <Link href="/reports/diary-tracker" prefetch={true}>Diary Tracker</Link>
+                                    <Link href="/reports/diary-tracker">Diary Tracker</Link>
                                 </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                         </SidebarMenuSub>
@@ -393,14 +393,14 @@ export function SidebarNav() {
                             <SidebarMenuSub>
                                     <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild isActive={pathname === '/reports'}>
-                                            <Link href="/reports" prefetch={true}>
+                                            <Link href="/reports">
                                                 <span>Performance Reports</span>
                                             </Link>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                     <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild isActive={pathname === '/reports/generate'}>
-                                            <Link href="/reports/generate" prefetch={true}>
+                                            <Link href="/reports/generate">
                                                 <Sparkles className="mr-2 h-4 w-4" />
                                                 <span>AI Report Generator</span>
                                             </Link>
@@ -408,7 +408,7 @@ export function SidebarNav() {
                                     </SidebarMenuSubItem>
                                     <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/planner'}>
-                                            <Link href="/maintenance/planner" prefetch={true}>
+                                            <Link href="/maintenance/planner">
                                                 <Sparkles className="mr-2 h-4 w-4 text-emerald-600" />
                                                 <span>AI Maintenance Planner</span>
                                             </Link>
@@ -416,7 +416,7 @@ export function SidebarNav() {
                                     </SidebarMenuSubItem>
                                     <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild isActive={pathname.startsWith('/reports/history')}>
-                                            <Link href="/reports/history" prefetch={true}>
+                                            <Link href="/reports/history">
                                                 <History className="mr-2 h-4 w-4" />
                                                 <span>Report History</span>
                                             </Link>
@@ -440,7 +440,7 @@ export function SidebarNav() {
                         <SidebarMenuSub>
                             <SidebarMenuSubItem>
                                 <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/planner'}>
-                                    <Link href="/maintenance/planner" prefetch={true}>
+                                    <Link href="/maintenance/planner">
                                         <Sparkles className="mr-2 h-4 w-4 text-emerald-600" />
                                         <span className="font-semibold text-emerald-950">AI Maintenance Planner</span>
                                     </Link>
@@ -460,13 +460,13 @@ export function SidebarNav() {
                                             {!isClient && (
                                                 <SidebarMenuSubItem>
                                                     <SidebarMenuSubButton asChild isActive={pathname === '/maintenance'}>
-                                                        <Link href="/maintenance" prefetch={true}>History</Link>
+                                                        <Link href="/maintenance">History</Link>
                                                     </SidebarMenuSubButton>
                                                 </SidebarMenuSubItem>
                                             )}
                                             <SidebarMenuSubItem>
                                                 <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/upcoming-schedules'}>
-                                                    <Link href="/maintenance/upcoming-schedules" prefetch={true}>Upcoming</Link>
+                                                    <Link href="/maintenance/upcoming-schedules">Upcoming</Link>
                                                 </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>
                                         </SidebarMenuSub>
@@ -486,7 +486,7 @@ export function SidebarNav() {
                                         <SidebarMenuSub>
                                             <SidebarMenuSubItem>
                                                 <SidebarMenuSubButton asChild isActive={pathname === '/maintenance/unscheduled/history'}>
-                                                    <Link href="/maintenance/unscheduled/history" prefetch={true}>History</Link>
+                                                    <Link href="/maintenance/unscheduled/history">History</Link>
                                                 </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>
                                         </SidebarMenuSub>
@@ -526,7 +526,7 @@ export function SidebarNav() {
                                             {vsdProcedureSubMenu.map((item) => (
                                                 <SidebarMenuSubItem key={item.href}>
                                                     <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                                                        <Link href={item.href} prefetch={true}>{item.label}</Link>
+                                                        <Link href={item.href}>{item.label}</Link>
                                                     </SidebarMenuSubButton>
                                                 </SidebarMenuSubItem>
                                             ))}
@@ -554,12 +554,12 @@ export function SidebarNav() {
                             <SidebarMenuSub>
                                 <SidebarMenuSubItem>
                                     <SidebarMenuSubButton asChild isActive={pathname === '/inventory/consumables'}>
-                                        <Link href="/inventory/consumables" prefetch={true}>Consumables</Link>
+                                        <Link href="/inventory/consumables">Consumables</Link>
                                     </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
                                     <SidebarMenuSubButton asChild isActive={pathname === '/inventory/spares'}>
-                                        <Link href="/inventory/spares" prefetch={true}>Spare Parts</Link>
+                                        <Link href="/inventory/spares">Spare Parts</Link>
                                     </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                             </SidebarMenuSub>
@@ -582,17 +582,17 @@ export function SidebarNav() {
                             <SidebarMenuSub>
                                 <SidebarMenuSubItem>
                                     <SidebarMenuSubButton asChild isActive={pathname === '/library/procedures'}>
-                                        <Link href="/library/procedures" prefetch={true}>Schedule Procedures</Link>
+                                        <Link href="/library/procedures">Schedule Procedures</Link>
                                     </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
                                     <SidebarMenuSubButton asChild isActive={pathname === '/library/data-sheets'}>
-                                        <Link href="/library/data-sheets" prefetch={true}>Data Sheets and Drawings</Link>
+                                        <Link href="/library/data-sheets">Data Sheets and Drawings</Link>
                                     </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
                                     <SidebarMenuSubButton asChild isActive={pathname === '/scan'}>
-                                        <Link href="/scan" prefetch={true}>
+                                        <Link href="/scan">
                                             <ScanLine className="mr-2 h-4 w-4" />
                                             <span>Scan Document</span>
                                         </Link>
@@ -607,7 +607,7 @@ export function SidebarNav() {
             {!userData?.role?.includes('Site Supervisor') && (
               <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/purchase-orders'} tooltip="Purchase Orders">
-                      <Link href="/purchase-orders" prefetch={true}>
+                      <Link href="/purchase-orders">
                           <ShoppingCart />
                           <span>Purchase Orders</span>
                       </Link>
@@ -619,7 +619,7 @@ export function SidebarNav() {
               <>
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/meters'} tooltip="Meters">
-                        <Link href="/meters" prefetch={true}>
+                        <Link href="/meters">
                             <Gauge />
                             <span>Meters</span>
                         </Link>
@@ -628,7 +628,7 @@ export function SidebarNav() {
 
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/vendors'} tooltip="Vendors">
-                        <Link href="/vendors" prefetch={true}>
+                        <Link href="/vendors">
                             <Store />
                             <span>Vendors</span>
                         </Link>
@@ -640,7 +640,7 @@ export function SidebarNav() {
              {(isAdmin || isManager) && (
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/users')} tooltip="User Management">
-                    <Link href="/admin/users" prefetch={true}>
+                    <Link href="/admin/users">
                         <Users />
                         <span>Team Management</span>
                     </Link>
@@ -661,7 +661,7 @@ export function SidebarNav() {
                       <SidebarMenuSub>
                           <SidebarMenuSubItem>
                               <SidebarMenuSubButton asChild isActive={pathname === '/admin/standby-roster'}>
-                                  <Link href="/admin/standby-roster" prefetch={true}>
+                                  <Link href="/admin/standby-roster">
                                       <Phone className="mr-2 h-4 w-4" />
                                       <span>Standby Roster</span>
                                   </Link>
@@ -670,7 +670,7 @@ export function SidebarNav() {
                           
                           <SidebarMenuSubItem>
                               <SidebarMenuSubButton asChild isActive={pathname === '/admin/safety-meetings'}>
-                                  <Link href="/admin/safety-meetings" prefetch={true}>
+                                  <Link href="/admin/safety-meetings">
                                       <ClipboardCheck className="mr-2 h-4 w-4" />
                                       <span>Safety Meetings</span>
                                   </Link>
@@ -680,7 +680,7 @@ export function SidebarNav() {
                           
                           <SidebarMenuSubItem>
                               <SidebarMenuSubButton asChild isActive={pathname === '/admin/organogram'}>
-                                  <Link href="/admin/organogram" prefetch={true}>
+                                  <Link href="/admin/organogram">
                                       <Network className="mr-2 h-4 w-4" />
                                       <span>Organogram</span>
                                   </Link>
@@ -690,7 +690,7 @@ export function SidebarNav() {
                           {(isAdmin || (isManager && !userData?.role?.includes('Site Supervisor'))) && (
                               <SidebarMenuSubItem>
                                   <SidebarMenuSubButton asChild isActive={pathname === '/admin/clients'}>
-                                      <Link href="/admin/clients" prefetch={true}>
+                                      <Link href="/admin/clients">
                                           <Briefcase className="mr-2 h-4 w-4" />
                                           <span>Client Management</span>
                                       </Link>
@@ -701,7 +701,7 @@ export function SidebarNav() {
                           {canAccessFinancials && !userData?.role?.includes('Site Supervisor') && (
                               <SidebarMenuSubItem>
                                   <SidebarMenuSubButton asChild isActive={pathname === '/admin/quotations'}>
-                                      <Link href="/admin/quotations" prefetch={true}>
+                                      <Link href="/admin/quotations">
                                           <FileText className="mr-2 h-4 w-4" />
                                           <span>Quotation Tracker</span>
                                       </Link>
@@ -712,7 +712,7 @@ export function SidebarNav() {
                           {isAdmin && (
                               <SidebarMenuSubItem>
                                   <SidebarMenuSubButton asChild isActive={pathname === '/admin/rates'}>
-                                      <Link href="/admin/rates" prefetch={true}>
+                                      <Link href="/admin/rates">
                                           <Banknote className="mr-2 h-4 w-4" />
                                           <span>Service Rates</span>
                                       </Link>

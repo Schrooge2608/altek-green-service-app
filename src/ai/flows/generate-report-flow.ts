@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {formatMarkdownTables} from '@/lib/utils';
 
 // Zod schemas matching the data structures from Firestore
 const BreakdownReportSchema = z.object({
@@ -150,6 +151,9 @@ export async function generateReport(
     }
 
     const result = await generateReportFlow(safeInput);
+    if (result && typeof result.report === 'string') {
+      result.report = formatMarkdownTables(result.report);
+    }
     return { success: true, data: result };
   } catch (e: any) {
     console.error("AI Generation Error:", e);
@@ -159,7 +163,7 @@ export async function generateReport(
 
 const prompt = ai.definePrompt({
   name: 'generateWeeklyActivityReportPrompt',
-  model: 'googleai/gemini-3.1-pro-preview',
+  model: 'googleai/gemini-3.5-flash',
   input: {schema: ReportInputSchema},
   output: {schema: ReportOutputSchema},
   config: {
@@ -188,6 +192,9 @@ CRITICAL FORMATTING & HEADING RULES:
 2. When listing asset entries under site sections, do NOT wrap asset names or breakdown titles in square brackets (e.g., write '• **Equipment Name / Breakdown**:' instead of '• **[Equipment Name / Breakdown]**:').
 3. Strictly preserve the date range and reporting period line as requested in the user prompt.
 
+CRITICAL EMPTY DATA RULES:
+If there are no records logged for a specific section or category (for example, no Field Service Reports or no Daily Diaries during this period), explicitly state that no interventions or records were logged for this reporting period (e.g., 'No Field Service Reports were logged during this period.') rather than inventing data or leaving sections blank.
+
 User Request: "{{{customQuery}}}"
 
 ---
@@ -195,34 +202,55 @@ DATA CONTEXT
 The data covers the period from {{{startDate}}} to {{{endDate}}}.
 
 Equipment Data:
+{{#if equipment.length}}
 {{#each equipment}}
 - Name: {{this.name}}, SN: {{this.serialNumber}}, Plant: {{this.plant}}, Div: {{this.division}}, Status: {{this.status}}, Loc: {{this.location}}
 {{/each}}
+{{else}}
+(No equipment records logged for this period)
+{{/if}}
 
 New Breakdowns:
+{{#if newBreakdowns.length}}
 {{#each newBreakdowns}}
 - Eq: {{this.equipmentName}}, Comp: {{this.component}}, Date: {{this.date}}, Resolved: {{this.resolved}}
 {{/each}}
+{{else}}
+(No new breakdowns logged for this period)
+{{/if}}
 
 Resolved Breakdowns:
+{{#if closedBreakdowns.length}}
 {{#each closedBreakdowns}}
 - Eq: {{this.equipmentName}}, Comp: {{this.component}}, Date: {{this.date}}, Res: {{this.resolution}}
 {{/each}}
+{{else}}
+(No resolved breakdowns logged for this period)
+{{/if}}
 
 Completed Schedules:
+{{#if completedSchedules.length}}
 {{#each completedSchedules}}
 - Eq: {{this.equipmentName}}, Type: {{this.maintenanceType}}, Freq: {{this.frequency}}, Date: {{this.completionDate}}
 {{/each}}
+{{else}}
+(No completed schedules logged for this period)
+{{/if}}
 
 Daily Diaries:
+{{#if dailyDiaries.length}}
 {{#each dailyDiaries}}
 - Date: {{this.date}}, Title: {{this.contractTitle}}{{#if this.contractorName}} (Technician: {{this.contractorName}}){{/if}}{{#if this.area}} [Area: {{this.area}}]{{/if}}
   {{#each this.works}}
   * Scope: {{this.scope}}{{#if this.area}} (Area: {{this.area}}){{/if}}
   {{/each}}
 {{/each}}
+{{else}}
+(No daily diaries logged for this period)
+{{/if}}
 
 Field Service Reports:
+{{#if fieldServiceReports.length}}
 {{#each fieldServiceReports}}
 - Ref: {{this.fsrReference}}, Customer: {{this.customer}}, Site: {{this.site}}{{#if this.location}} ({{this.location}}){{/if}}, Asset: {{this.assetName}}, Date: {{this.date}}, Status: {{this.status}}
   {{#if this.customerFault}}* Customer Fault: {{this.customerFault}}{{/if}}
@@ -231,6 +259,9 @@ Field Service Reports:
   {{#if this.correctiveActions}}* Corrective Actions: {{this.correctiveActions}}{{/if}}
   {{#if this.recommendations}}* Recommendations: {{this.recommendations}}{{/if}}
 {{/each}}
+{{else}}
+(No Field Service Reports logged for this period)
+{{/if}}
 ---
 
 {{else}}

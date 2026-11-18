@@ -47,7 +47,7 @@ function AuthenticatedEquipmentPage() {
   const canDelete = userData?.role && ['Admin', 'Superadmin'].includes(userData.role);
   const isClientManager = userData?.role === 'Client Manager';
 
-  const isLoading = equipmentLoading || usersLoading;
+  const isLoading = equipmentLoading;
 
   const handleDeleteEquipment = (item: Equipment) => {
     if (!item.id || !item.vsdId) {

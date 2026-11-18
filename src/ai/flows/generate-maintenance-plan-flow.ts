@@ -226,7 +226,7 @@ export async function generateMaintenancePlan(
 
 const planPrompt = ai.definePrompt({
   name: 'generateMaintenancePlanPrompt',
-  model: 'googleai/gemini-3.1-pro-preview',
+  model: 'googleai/gemini-3.5-flash',
   input: { schema: MaintenancePlanInputSchema },
   output: { schema: MaintenancePlanOutputSchema },
   config: {

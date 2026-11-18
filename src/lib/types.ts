@@ -498,6 +498,23 @@ export interface Timesheet {
     adminOverrides?: Record<string, 'QUALIFIED' | 'DISQUALIFIED' | null>;
 }
 
+export interface WeeklyTimesheetSignoff {
+  id: string; // {userId}_{weekMonday}
+  userId: string;
+  userName: string;
+  weekMonday: string; // YYYY-MM-DD
+  technicianSignature?: string | null;
+  technicianDate?: string | null;
+  technicianSignerName?: string | null;
+  technicianSignMethod?: 'pin' | 'pad' | 'saved' | string | null;
+  supervisorSignature?: string | null;
+  supervisorDate?: string | null;
+  supervisorSignerName?: string | null;
+  supervisorSignerId?: string | null;
+  supervisorSignMethod?: 'pin' | 'pad' | 'saved' | string | null;
+  updatedAt?: any;
+}
+
 export interface GeneratedReport {
   id: string;
   reportText: string;

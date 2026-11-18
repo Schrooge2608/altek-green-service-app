@@ -61,7 +61,7 @@ interface ReportPromptPreset {
     prompt: string;
 }
 
-export function formatReportingPeriod(dateRange?: DateRange): string {
+function formatReportingPeriod(dateRange?: DateRange): string {
     if (!dateRange || !dateRange.from) {
         const now = new Date();
         const week = getISOWeek(now);
@@ -96,7 +96,7 @@ export function formatReportingPeriod(dateRange?: DateRange): string {
     return `Activity Period (Week ${weekFrom} to Week ${weekTo}) ${datePart}`;
 }
 
-export function getFullModularPrompt(reportingPeriodText: string): string {
+function getFullModularPrompt(reportingPeriodText: string): string {
     return `Generate a complete, formal Weekly Service & Maintenance Report combining all key sections in the Altek Green management style:
 
 # Weekly Service & Maintenance Report
@@ -120,6 +120,7 @@ Followed by a concise paragraph titled 'Analytical Insights from FSR Data:' summ
 Extract all daily diary interventions strictly into this table with each row on its own separate line:
 | Date | Technician | Site | Activity Summary |
 |---|---|---|---|
+CRITICAL: Every table row (header, separator, and each data row) MUST be on its own separate line ending with a newline. Never combine rows on the same line.
 
 ## Safety, Incidents & Administrative Updates
 Include 3 distinct bullet points:
@@ -171,7 +172,8 @@ const REPORT_PROMPT_PRESETS: ReportPromptPreset[] = [
         description: 'Extracts daily diary logs strictly into a Markdown table with exact column headers: | Date | Technician | Site | Activity Summary |.',
         prompt: `Extract all daily diary interventions strictly into this table with each row on its own separate line:
 | Date | Technician | Site | Activity Summary |
-|---|---|---|---|`
+|---|---|---|---|
+CRITICAL: Every table row (header, separator, and each data row) MUST be on its own separate line ending with a newline. Never combine rows on the same line.`
     },
     {
         id: 'full-modular-report',
@@ -245,7 +247,8 @@ Extract all FSR interventions strictly into this table with each row on its own 
                 sectionsText.push(`## Scheduled and Unscheduled Maintenance (Daily Diaries)
 Extract all daily diary interventions strictly into this table with each row on its own separate line:
 | Date | Technician | Site | Activity Summary |
-|---|---|---|---|`);
+|---|---|---|---|
+CRITICAL: Every table row (header, separator, and each data row) MUST be on its own separate line ending with a newline. Never combine rows on the same line.`);
                 break;
             default: {
                 const found = REPORT_PROMPT_PRESETS.find(p => p.id === id);
@@ -328,9 +331,7 @@ export default function GenerateReportPage() {
         setCustomQuery('');
     };
 
-    const userRoleRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-    const { data: userData, isLoading: userDataLoading } = useDoc<User>(userRoleRef);
-
+    
     useEffect(() => {
       setDate({
         from: startOfWeek(new Date(), { weekStartsOn: 1 }),
@@ -339,7 +340,7 @@ export default function GenerateReportPage() {
     }, []);
 
     const handleFetchData = async () => {
-        if (!date?.from || !date?.to) {
+        if (!date?.from) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please select a valid date range.' });
             return;
         }
@@ -350,10 +351,11 @@ export default function GenerateReportPage() {
 
         try {
             const startDate = format(date.from, 'yyyy-MM-dd');
-            const endDate = format(date.to, 'yyyy-MM-dd');
+            const effectiveTo = date.to || date.from;
+            const endDate = format(effectiveTo, 'yyyy-MM-dd');
             
             const startDateISO = startOfDay(date.from).toISOString();
-            const endDateISO = endOfDay(date.to).toISOString();
+            const endDateISO = endOfDay(effectiveTo).toISOString();
 
             const newBreakdownsQuery = query(
                 collection(firestore, 'breakdown_reports'),
@@ -426,12 +428,13 @@ export default function GenerateReportPage() {
 
 
     const handleGenerateReport = async (queryOverride?: string) => {
-        if (!date?.from || !date?.to || !aggregatedData) {
+        if (!date?.from || !aggregatedData) {
             toast({ variant: 'destructive', title: 'Cannot Generate', description: 'Please fetch data for a date range first.' });
             return;
         }
 
         const effectiveQuery = queryOverride !== undefined ? queryOverride : customQuery;
+        const effectiveTo = date.to || date.from;
 
         setIsGenerating(true);
         setError(null);
@@ -502,7 +505,7 @@ export default function GenerateReportPage() {
 
         const reportInput: ReportInput = {
             startDate: format(date.from, 'yyyy-MM-dd'),
-            endDate: format(date.to, 'yyyy-MM-dd'),
+            endDate: format(effectiveTo, 'yyyy-MM-dd'),
             customQuery: effectiveQuery,
             newBreakdowns: sanitizeBreakdowns(aggregatedData.newBreakdowns),
             closedBreakdowns: sanitizeBreakdowns(aggregatedData.closedBreakdowns),
@@ -549,7 +552,8 @@ export default function GenerateReportPage() {
             const pdf = await generateSmartPagedPdf(element);
             const pdfBlob = pdf.output('blob');
             const fromStr = date?.from ? format(date.from, 'yyyy-MM-dd') : 'report';
-            const toStr = date?.to ? format(date.to, 'yyyy-MM-dd') : fromStr;
+            const effectiveTo = date?.to || date?.from;
+            const toStr = effectiveTo ? format(effectiveTo, 'yyyy-MM-dd') : fromStr;
             const fileName = `AltekGreen_Weekly_Report_${fromStr}_to_${toStr}.pdf`;
             const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
@@ -606,7 +610,7 @@ export default function GenerateReportPage() {
             const reportData: Omit<GeneratedReport, 'id'> = {
                 reportText: formatMarkdownTables(generatedReport),
                 startDate: format(date.from, 'yyyy-MM-dd'),
-                endDate: format(date.to, 'yyyy-MM-dd'),
+                endDate: format(date?.to || date?.from || new Date(), 'yyyy-MM-dd'),
                 generatedAt: serverTimestamp(),
                 generatedByUserId: user.uid,
                 generatedByUserName: user.displayName || user.email || 'Unknown User',
@@ -622,8 +626,7 @@ export default function GenerateReportPage() {
         }
     };
 
-    if (userDataLoading || isUserLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
-
+    
 
     return (
         <div className="flex flex-col gap-8 p-4 md:p-8 print:p-0 print:gap-0">
@@ -944,7 +947,7 @@ export default function GenerateReportPage() {
                             ),
                             }}
                         >
-                            {generatedReport}
+                            {formatMarkdownTables(generatedReport)}
                         </ReactMarkdown>
 
                         <div className="mt-16 pt-8 border-t border-slate-300 flex justify-start relative h-32 w-64 print:mt-6 print:pt-4 print:h-24 print:break-inside-avoid">

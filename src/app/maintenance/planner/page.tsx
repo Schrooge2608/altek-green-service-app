@@ -175,6 +175,8 @@ function PlannerContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCompiling, setIsCompiling] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [hasLoadedDraft, setHasLoadedDraft] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -238,6 +240,74 @@ function PlannerContent() {
       promptDirective: 'Prioritize routine lifecycle renewals: 3-monthly/6-monthly VSD servicing, capacitor renewals, blower fan inspections, busbar torquing, and MCC dust mitigation across MPE, MPC, MPD, MPA, and Smelter for Monday to Friday.',
     },
   ], []);
+
+  // Auto-restore preliminary draft from localStorage if present on initial load
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('altek_planner_preliminary_draft');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.stagingTasks) && parsed.stagingTasks.length > 0) {
+        setStagingTasks((current) => {
+          if (current.length === 0) {
+            if (parsed.startDate && parsed.endDate) {
+              const from = parseISO(parsed.startDate);
+              const to = parseISO(parsed.endDate);
+              if (isValid(from) && isValid(to)) {
+                setTargetDateRange({ from, to });
+              }
+            }
+            if (parsed.lookbackStartDate && parsed.lookbackEndDate) {
+              const lbFrom = parseISO(parsed.lookbackStartDate);
+              const lbTo = parseISO(parsed.lookbackEndDate);
+              if (isValid(lbFrom) && isValid(lbTo)) {
+                setLookbackRange({ from: lbFrom, to: lbTo });
+              }
+            }
+            if (parsed.clientSuggestedWork) setClientSuggestedWork(parsed.clientSuggestedWork);
+            if (parsed.customInstructions) setCustomInstructions(parsed.customInstructions);
+            if (parsed.selectedPreset) setSelectedPreset(parsed.selectedPreset);
+            if (parsed.structuredPlan) setStructuredPlan(parsed.structuredPlan);
+            if (parsed.id) {
+              setEditingPlanId(parsed.id);
+              setEditingPlanTitle(parsed.title || `Preliminary Work Orders Draft (Week ${parsed.targetWeek || ''})`);
+            }
+            setHasLoadedDraft(true);
+            return parsed.stagingTasks;
+          }
+          return current;
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to restore draft from localStorage:', e);
+    }
+  }, []);
+
+  // Background auto-save stagingTasks to localStorage whenever modified
+  useEffect(() => {
+    if (stagingTasks.length > 0) {
+      try {
+        const localDraft = {
+          id: editingPlanId || null,
+          title: editingPlanTitle || null,
+          targetWeek: targetWeekNumber,
+          startDate: targetDateRange.from ? format(targetDateRange.from, 'yyyy-MM-dd') : null,
+          endDate: targetDateRange.to ? format(targetDateRange.to, 'yyyy-MM-dd') : null,
+          lookbackStartDate: lookbackRange.from ? format(lookbackRange.from, 'yyyy-MM-dd') : null,
+          lookbackEndDate: lookbackRange.to ? format(lookbackRange.to, 'yyyy-MM-dd') : null,
+          clientSuggestedWork,
+          customInstructions,
+          selectedPreset,
+          stagingTasks,
+          structuredPlan,
+          savedAt: new Date().toISOString(),
+        };
+        localStorage.setItem('altek_planner_preliminary_draft', JSON.stringify(localDraft));
+      } catch (e) {
+        console.warn('Auto-save to localStorage failed:', e);
+      }
+    }
+  }, [stagingTasks, targetWeekNumber, targetDateRange, lookbackRange, clientSuggestedWork, customInstructions, selectedPreset, structuredPlan, editingPlanId, editingPlanTitle]);
 
   // Open Load Saved Plan Dialog
   const handleOpenLoadPlanDialog = async () => {
@@ -324,7 +394,8 @@ function PlannerContent() {
       }
 
       // 6. Restore Compiled Markdown Text
-      setGeneratedPlan(plan.reportText);
+      if (plan.reportText) { setGeneratedPlan(plan.reportText); } else { setGeneratedPlan(null); }
+      if ((plan as any).isDraft) { setHasLoadedDraft(true); }
 
       // 7. Track Amendment ID & Revision
       setEditingPlanId(plan.id);
@@ -547,7 +618,7 @@ function PlannerContent() {
         targetWeek: targetWeekNumber,
         targetStartDate: format(targetDateRange.from, 'yyyy-MM-dd'),
         targetEndDate: format(targetDateRange.to, 'yyyy-MM-dd'), // Friday
-        clientSuggestedWork: clientSuggestedWork.trim() || undefined,
+        clientSuggestedWork: clientSuggestedWork.trim() || '',
         customQuery: fullPrompt,
         newBreakdowns: sanitizeForServer(aggregatedData.newBreakdowns),
         closedBreakdowns: sanitizeForServer(aggregatedData.closedBreakdowns),
@@ -657,6 +728,125 @@ function PlannerContent() {
 
   const handleToggleAll = (included: boolean) => {
     setStagingTasks(prev => prev.map(t => ({ ...t, included })));
+  };
+
+  // Save Preliminary Draft (Staging Work Orders to Cloud & Local Storage)
+  const handleSavePreliminaryDraft = async () => {
+    if (stagingTasks.length === 0) {
+      toast({ variant: 'destructive', title: 'Nothing to Save', description: 'There are no staged work orders to save yet.' });
+      return;
+    }
+
+    setIsSavingDraft(true);
+    try {
+      const isUpdatingExisting = Boolean(editingPlanId);
+      const title = `Preliminary Work Orders Draft (Week ${targetWeekNumber})`;
+
+      // 1. Save to Local Storage immediately
+      const localDraft = {
+        id: editingPlanId || null,
+        title,
+        targetWeek: targetWeekNumber,
+        startDate: targetDateRange.from ? format(targetDateRange.from, 'yyyy-MM-dd') : null,
+        endDate: targetDateRange.to ? format(targetDateRange.to, 'yyyy-MM-dd') : null,
+        lookbackStartDate: lookbackRange.from ? format(lookbackRange.from, 'yyyy-MM-dd') : null,
+        lookbackEndDate: lookbackRange.to ? format(lookbackRange.to, 'yyyy-MM-dd') : null,
+        clientSuggestedWork,
+        customInstructions,
+        selectedPreset,
+        stagingTasks,
+        structuredPlan,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem('altek_planner_preliminary_draft', JSON.stringify(localDraft));
+
+      // 2. If authenticated, persist / update in Firestore
+      if (user) {
+        if (isUpdatingExisting && editingPlanId) {
+          await updateDoc(doc(firestore, 'generated_reports', editingPlanId), {
+            title,
+            stagingTasks,
+            structuredPlan: structuredPlan || null,
+            clientSuggestedWork: clientSuggestedWork.trim() || null,
+            customInstructions: customInstructions.trim() || null,
+            selectedPreset,
+            startDate: targetDateRange.from ? format(targetDateRange.from, 'yyyy-MM-dd') : null,
+            endDate: targetDateRange.to ? format(targetDateRange.to, 'yyyy-MM-dd') : null,
+            lookbackStartDate: lookbackRange.from ? format(lookbackRange.from, 'yyyy-MM-dd') : null,
+            lookbackEndDate: lookbackRange.to ? format(lookbackRange.to, 'yyyy-MM-dd') : null,
+            targetWeek: targetWeekNumber,
+            isDraft: true,
+            type: 'maintenance_plan',
+            updatedAt: serverTimestamp(),
+            updatedByUserName: userData?.name || user.email || 'Services Manager',
+          });
+
+          setEditingPlanTitle(title);
+          setHasLoadedDraft(true);
+
+          toast({
+            title: 'Preliminary Draft Updated',
+            description: `Saved ${stagingTasks.length} staged work orders for Week ${targetWeekNumber}. You can leave and resume refining anytime.`,
+          });
+        } else {
+          const docRef = await addDoc(collection(firestore, 'generated_reports'), {
+            reportText: '',
+            title,
+            type: 'maintenance_plan',
+            targetWeek: targetWeekNumber,
+            clientSuggestedWork: clientSuggestedWork.trim() || null,
+            customInstructions: customInstructions.trim() || null,
+            selectedPreset,
+            stagingTasks,
+            structuredPlan: structuredPlan || null,
+            startDate: targetDateRange.from ? format(targetDateRange.from, 'yyyy-MM-dd') : null,
+            endDate: targetDateRange.to ? format(targetDateRange.to, 'yyyy-MM-dd') : null,
+            lookbackStartDate: lookbackRange.from ? format(lookbackRange.from, 'yyyy-MM-dd') : null,
+            lookbackEndDate: lookbackRange.to ? format(lookbackRange.to, 'yyyy-MM-dd') : null,
+            isDraft: true,
+            generatedAt: serverTimestamp(),
+            generatedByUserId: user.uid,
+            generatedByUserName: userData?.name || user.email || 'Services Manager',
+            revision: 1,
+          });
+
+          setEditingPlanId(docRef.id);
+          setEditingPlanTitle(title);
+          setHasLoadedDraft(true);
+
+          toast({
+            title: 'Preliminary Draft Saved',
+            description: `Saved ${stagingTasks.length} staged work orders for Week ${targetWeekNumber}. You can leave and resume refining anytime.`,
+          });
+        }
+      } else {
+        setHasLoadedDraft(true);
+        toast({
+          title: 'Preliminary Draft Saved Locally',
+          description: `Saved ${stagingTasks.length} staged work orders on this device. You can leave and resume refining anytime.`,
+        });
+      }
+    } catch (e: any) {
+      console.error('Save Preliminary Draft Error:', e);
+      toast({ variant: 'destructive', title: 'Save Failed', description: e.message });
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const handleDiscardDraft = () => {
+    if (window.confirm('Discard this preliminary draft and clear the staged work orders table?')) {
+      try {
+        localStorage.removeItem('altek_planner_preliminary_draft');
+      } catch (e) {
+        console.warn(e);
+      }
+      setStagingTasks([]);
+      setHasLoadedDraft(false);
+      setEditingPlanId(null);
+      setEditingPlanTitle('');
+      toast({ title: 'Draft Discarded', description: 'Preliminary staged tasks cleared.' });
+    }
   };
 
   // Copy Markdown
@@ -769,7 +959,10 @@ function PlannerContent() {
           amendedAt: serverTimestamp(),
           amendedByUserName: userData?.name || user.email || 'Services Manager',
           revision: nextRev,
+          isDraft: false,
         });
+        try { localStorage.removeItem('altek_planner_preliminary_draft'); } catch(e){}
+        setHasLoadedDraft(false);
 
         setEditingPlanRevision(nextRev);
         setEditingPlanTitle(updatedTitle);
@@ -803,7 +996,10 @@ function PlannerContent() {
           amendedAt: nextRev > 1 ? serverTimestamp() : null,
           amendedByUserName: userData?.name || user.email || 'Services Manager',
           revision: nextRev,
+          isDraft: false,
         });
+        try { localStorage.removeItem('altek_planner_preliminary_draft'); } catch(e){}
+        setHasLoadedDraft(false);
 
         setEditingPlanId(docRef.id);
         setEditingPlanRevision(nextRev);
@@ -910,6 +1106,11 @@ function PlannerContent() {
                       <span className="font-bold text-xs text-slate-900">
                         {plan.title || `Weekly Maintenance Plan (Week ${plan.targetWeek || ''})`}
                       </span>
+                      {(plan as any).isDraft && (
+                        <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px]">
+                          Preliminary Draft
+                        </Badge>
+                      )}
                       {plan.isAmended && (
                         <Badge variant="outline" className="text-amber-800 bg-amber-50 border-amber-300 text-[10px]">
                           Rev {plan.revision || 2}
@@ -939,8 +1140,17 @@ function PlannerContent() {
                     onClick={() => handleLoadPlanForAmendment(plan)}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shrink-0"
                   >
-                    <Wrench className="mr-1.5 h-3.5 w-3.5" />
-                    Amend This Plan
+                    {(plan as any).isDraft ? (
+                      <>
+                        <Edit3 className="mr-1.5 h-3.5 w-3.5" />
+                        Continue Draft
+                      </>
+                    ) : (
+                      <>
+                        <Wrench className="mr-1.5 h-3.5 w-3.5" />
+                        Amend This Plan
+                      </>
+                    )}
                   </Button>
                 </div>
               ))
@@ -1421,6 +1631,22 @@ function PlannerContent() {
                 </Button>
                 <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSavePreliminaryDraft}
+                  disabled={isSavingDraft}
+                  className="bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 hover:border-amber-400 text-xs font-semibold shadow-sm"
+                  title="Save this preliminary work order table so you can leave and resume refining anytime"
+                >
+                  {isSavingDraft ? (
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin text-amber-700" />
+                  ) : (
+                    <Save className="mr-1 h-3.5 w-3.5 text-amber-700" />
+                  )}
+                  Save Preliminary Draft
+                </Button>
+                <Button
+                  type="button"
                   size="sm"
                   onClick={handleCompileReport}
                   disabled={isCompiling}
@@ -1435,6 +1661,23 @@ function PlannerContent() {
                 </Button>
               </div>
             </CardHeader>
+            {hasLoadedDraft && (
+              <div className="bg-amber-100/70 border-b border-amber-200 px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-950">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Save className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                  Preliminary draft restored. Your staged work orders, scopes, and crew assignments are safely preserved.
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDiscardDraft}
+                  className="h-6 text-[11px] text-amber-800 hover:text-amber-950 hover:bg-amber-200/60 px-2 shrink-0 self-start sm:self-auto"
+                >
+                  Clear / Discard Draft
+                </Button>
+              </div>
+            )}
 
             <CardContent className="p-0 overflow-x-auto">
               <table className="w-full text-xs text-left border-collapse">

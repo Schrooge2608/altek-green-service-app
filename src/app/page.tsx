@@ -22,7 +22,7 @@ function UnauthenticatedDashboard() {
             <CardTitle>Welcome to the Altek Green VSD Data Base</CardTitle>
             <CardContent>
                 <p className="text-muted-foreground mb-4">Please log in to view the dashboard and manage your equipment.</p>
-                <Link href="/auth/register" passHref prefetch={true}>
+                <Link href="/auth/register" passHref>
                     <Button>
                         <LogIn className="mr-2 h-4 w-4" />
                         Login or Register

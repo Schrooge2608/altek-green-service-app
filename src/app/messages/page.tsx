@@ -49,7 +49,8 @@ import {
   setDoc,
   addDoc,
   writeBatch,
-  deleteDoc
+  deleteDoc,
+  limitToLast
 } from 'firebase/firestore';
 import type { Channel, ChatMessage, User } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -140,10 +141,14 @@ export default function MessagingPage() {
     });
   }, [rawChannels]);
 
-  // 2. FETCH MESSAGES FOR ACTIVE CHANNEL
+  // 2. FETCH MESSAGES FOR ACTIVE CHANNEL (Limited to latest 150 for high-performance rendering)
   const messagesQuery = useMemoFirebase(
     () => activeChannelId 
-      ? query(collection(firestore, `channels/${activeChannelId}/messages`), orderBy('createdAt', 'asc')) 
+      ? query(
+          collection(firestore, `channels/${activeChannelId}/messages`), 
+          orderBy('createdAt', 'asc'),
+          limitToLast(150)
+        ) 
       : null,
     [firestore, activeChannelId]
   );
@@ -155,13 +160,72 @@ export default function MessagingPage() {
     if (channel.type === 'breakdown' || name.startsWith('Breakdown:')) {
       name = name.replace('Breakdown:', '').replace('Breakdown for', '').trim();
     }
-    const words = name.split(' ').filter((w: string) => w.length > 0);
+    const parsed = parseChannelName(name);
+    const words = parsed.title.split(' ').filter((w: string) => w.length > 0);
     if (words.length >= 2) {
       return (words[0][0] + words[1][0]).toUpperCase();
     } else if (words.length === 1) {
       return words[0].substring(0, 2).toUpperCase();
     }
     return 'BR';
+  };
+
+  // Helper to parse channel name and extract date if present
+  const parseChannelName = (name: string = ''): { title: string; dateStr: string | null } => {
+    if (!name) return { title: '', dateStr: null };
+    const trimmed = name.trim();
+    const matchParen = trimmed.match(/^(.*?)\s*\(([0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}|[0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{4})\)\s*$/);
+    if (matchParen) {
+      return { title: matchParen[1].trim(), dateStr: matchParen[2].trim() };
+    }
+    const matchTrailing = trimmed.match(/^(.*?)\s*[-–]\s*([0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}|[0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{4})\s*$/);
+    if (matchTrailing) {
+      return { title: matchTrailing[1].trim(), dateStr: matchTrailing[2].trim() };
+    }
+    return { title: trimmed, dateStr: null };
+  };
+
+  const resolveDate = (time: any): Date | null => {
+    if (!time) return null;
+    if (typeof time?.toDate === 'function') {
+      const d = time.toDate();
+      return isNaN(d.getTime()) ? null : d;
+    }
+    if (time?.seconds) {
+      const d = new Date(time.seconds * 1000);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    if (typeof time === 'string' || typeof time === 'number') {
+      const d = new Date(time);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  };
+
+  const formatChannelTimestamp = (time: any): string => {
+    const d = resolveDate(time);
+    if (!d) return '';
+    const now = new Date();
+    const isToday = now.toDateString() === d.toDateString();
+    if (isToday) {
+      return format(d, 'HH:mm');
+    }
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (yesterday.toDateString() === d.toDateString()) {
+      return 'Yesterday';
+    }
+    const diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+    if (diffDays < 7) {
+      return format(d, 'EEE');
+    }
+    return format(d, 'dd/MM/yy');
+  };
+
+  const formatChannelDate = (time: any): string | null => {
+    const d = resolveDate(time);
+    if (!d) return null;
+    return format(d, 'yyyy-MM-dd');
   };
 
   // Deep Link Selection (only once per urlChannelId, and never if deleted)
@@ -1198,7 +1262,7 @@ export default function MessagingPage() {
         />
       )}
       {/* --- SIDEBAR: CHANNEL LIST --- */}
-      <div className="w-[350px] border-r bg-white flex flex-col shadow-sm">
+      <div className={cn("w-full md:w-[410px] lg:w-[450px] shrink-0 border-r bg-white flex flex-col shadow-sm", activeChannelId ? "hidden md:flex" : "flex")}>
         <header className="p-4 border-b space-y-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -1280,60 +1344,79 @@ export default function MessagingPage() {
           {channelsLoading ? (
             <div className="flex justify-center p-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
           ) : filteredChannels?.length ? (
-            filteredChannels.map(channel => (
-              <div 
-                key={channel.id}
-                onClick={() => setActiveChannelId(channel.id)}
-                className={cn(
-                  "p-4 flex items-center gap-3 cursor-pointer transition-colors border-b border-slate-50",
-                  activeChannelId === channel.id ? "bg-slate-100" : "hover:bg-slate-50"
-                )}
-              >
-                <Avatar className="h-12 w-12 border">
-                  <AvatarFallback className={cn(
-                    "font-bold text-xs",
-                    channel.type === 'breakdown' ? "bg-orange-100 text-orange-700" : "bg-primary/10 text-primary"
-                  )}>
-                    {getChannelInitials(channel)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5 gap-1">
-                    <h3 className="font-semibold text-slate-900 truncate">#{channel.name}</h3>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-[10px] text-slate-400 uppercase font-medium">
-                        {channel.lastMessageTime?.toDate ? format(channel.lastMessageTime.toDate(), 'HH:mm') : ''}
-                      </span>
-                      {(isAdmin || canManageWhatsApp) && (
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteChannel(channel.id, e)}
-                          className="p-1 rounded text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="Delete Chat Permanently"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+            filteredChannels.map(channel => {
+              const parsed = parseChannelName(channel.name);
+              const cleanTitle = parsed.title.startsWith('#') ? parsed.title.slice(1) : parsed.title;
+              const displayDate = parsed.dateStr || formatChannelDate(channel.lastMessageTime || channel.createdAt);
+              const timeStr = formatChannelTimestamp(channel.lastMessageTime || channel.createdAt);
+
+              return (
+                <div 
+                  key={channel.id}
+                  onClick={() => setActiveChannelId(channel.id)}
+                  className={cn(
+                    "p-3.5 flex items-start gap-3 cursor-pointer transition-colors border-b border-slate-100",
+                    activeChannelId === channel.id ? "bg-slate-100" : "hover:bg-slate-50"
+                  )}
+                >
+                  <Avatar className="h-11 w-11 border shrink-0 mt-0.5">
+                    <AvatarFallback className={cn(
+                      "font-bold text-xs",
+                      channel.type === 'breakdown' ? "bg-orange-100 text-orange-700" : "bg-primary/10 text-primary"
+                    )}>
+                      {getChannelInitials(channel)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-1 gap-2">
+                      <h3 className="font-semibold text-slate-900 text-sm leading-snug line-clamp-2 break-words" title={channel.name}>
+                        #{cleanTitle}
+                      </h3>
+                      <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                        {timeStr && (
+                          <span className="text-[10px] text-slate-500 font-semibold uppercase whitespace-nowrap">
+                            {timeStr}
+                          </span>
+                        )}
+                        {(isAdmin || canManageWhatsApp) && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteChannel(channel.id, e)}
+                            className="p-1 rounded text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete Chat Permanently"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Date & Equipment Badges */}
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                      {displayDate && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold shrink-0">
+                          📅 {displayDate}
+                        </span>
+                      )}
+                      {(channel as any)?.aiSummaryRca?.equipmentBreakdowns?.length > 0 && (
+                        (channel as any).aiSummaryRca.equipmentBreakdowns.map((eb: any, idx: number) => (
+                          <span
+                            key={idx}
+                            className="inline-block px-1.5 py-0.5 rounded bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold truncate max-w-full"
+                          >
+                            🔧 {eb.equipmentName}
+                          </span>
+                        ))
                       )}
                     </div>
+
+                    <p className="text-xs text-slate-500 truncate italic">
+                      {channel.lastMessage || 'No messages yet'}
+                    </p>
                   </div>
-                  {(channel as any)?.aiSummaryRca?.equipmentBreakdowns?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-0.5">
-                      {(channel as any).aiSummaryRca.equipmentBreakdowns.map((eb: any, idx: number) => (
-                        <span
-                          key={idx}
-                          className="inline-block px-1.5 py-0.2 rounded bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold truncate max-w-full"
-                        >
-                          🔧 {eb.equipmentName}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-sm text-slate-500 truncate italic">
-                    {channel.lastMessage || 'No messages yet'}
-                  </p>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="p-8 text-center text-slate-400 text-sm">
               {showArchived ? 'No archived chats found.' : 'No active channels found. Create one to get started.'}
@@ -1343,13 +1426,21 @@ export default function MessagingPage() {
       </div>
 
       {/* --- MAIN AREA: CHAT WINDOW --- */}
-      <div className="flex-1 flex flex-col bg-[#F0F2F5] relative">
+      <div className={cn("flex-1 flex flex-col bg-[#F0F2F5] relative", !activeChannelId ? "hidden md:flex" : "flex")}>
         {activeChannelId && activeChannel ? (
           <>
             {/* Header */}
             <header className="bg-white p-3 border-b flex items-center justify-between shadow-sm z-10">
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden -ml-1 text-slate-600 h-9 w-9 shrink-0"
+                  onClick={() => setActiveChannelId(null)}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <Avatar className="h-10 w-10 shrink-0">
                   <AvatarFallback className={cn(
                     "font-bold text-xs",
                     activeChannel?.type === 'breakdown' ? "bg-orange-100 text-orange-700" : "bg-primary text-white"
@@ -1359,7 +1450,20 @@ export default function MessagingPage() {
                 </Avatar>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="font-bold text-slate-900 leading-tight">#{activeChannel?.name}</h2>
+                    {(() => {
+                      const parsed = parseChannelName(activeChannel?.name || '');
+                      const cleanTitle = parsed.title.startsWith('#') ? parsed.title.slice(1) : parsed.title;
+                      return (
+                        <>
+                          <h2 className="font-bold text-slate-900 leading-tight">#{cleanTitle}</h2>
+                          {parsed.dateStr && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold">
+                              📅 {parsed.dateStr}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                     <button
                       type="button"
                       onClick={async () => {
