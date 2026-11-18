@@ -525,8 +525,19 @@ export default function GenerateReportPage() {
             toast({ title: 'Report Generated', description: 'The weekly summary report has been created below.' });
         } catch (e: any) {
             console.error(e);
-            setError(`Failed to generate the report: ${e.message}`);
-            toast({ variant: 'destructive', title: 'Generation Failed', description: e.message || 'An unknown error occurred.' });
+            const msg = e.message || 'An unknown error occurred.';
+            if (msg.includes('was not found on the server') || msg.includes('failed-to-find-server-action') || msg.includes('Server Action')) {
+                const updateMsg = 'A new version of the application was deployed while this tab was open. Please refresh your browser (press Ctrl+R or F5) to load the update and run the report.';
+                setError(updateMsg);
+                toast({
+                    variant: 'destructive',
+                    title: 'App Updated - Refresh Required',
+                    description: 'A new version was just deployed. Please reload the page (F5) to connect.',
+                });
+                return;
+            }
+            setError(`Failed to generate the report: ${msg}`);
+            toast({ variant: 'destructive', title: 'Generation Failed', description: msg });
         } finally {
             setIsGenerating(false);
         }
@@ -882,7 +893,20 @@ export default function GenerateReportPage() {
             {error && (
                 <Alert variant="destructive">
                     <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertDescription className="space-y-3">
+                        <div>{error}</div>
+                        {(error.includes('deployed') || error.includes('refresh') || error.includes('Server Action')) && (
+                            <Button 
+                                type="button" 
+                                size="sm" 
+                                variant="outline" 
+                                className="bg-white text-destructive hover:bg-slate-100 font-semibold"
+                                onClick={() => window.location.reload()}
+                            >
+                                <RotateCcw className="mr-2 h-4 w-4" /> Refresh Page Now
+                            </Button>
+                        )}
+                    </AlertDescription>
                 </Alert>
             )}
 
