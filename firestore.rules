@@ -116,6 +116,12 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || (isManager() && !(userRole() in ['Site Supervisor', 'Site Supervisor (Beta)'])));
     }
 
+    match /weekly_timesheet_signoffs/{document=**} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || (isManager() && !(userRole() in ['Site Supervisor', 'Site Supervisor (Beta)'])));
+    }
+
     match /tools/{document=**} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isManager();

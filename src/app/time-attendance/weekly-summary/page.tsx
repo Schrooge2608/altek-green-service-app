@@ -444,7 +444,7 @@ export default function WeeklyTimesheetSummaryPage() {
   );
 
   const signoffRef = useMemoFirebase(
-    () => (signoffDocId ? doc(firestore, 'weekly_timesheet_signoffs', signoffDocId) : null),
+    () => (signoffDocId ? doc(firestore, 'timesheets', 'weekly_signoffs', 'records', signoffDocId) : null),
     [firestore, signoffDocId]
   );
   const { data: signoffData } = useDoc<WeeklyTimesheetSignoff>(signoffRef);
@@ -503,7 +503,7 @@ export default function WeeklyTimesheetSummaryPage() {
 
   const handleSaveSignoff = async (updates: Partial<WeeklyTimesheetSignoff>) => {
     if (!firestore || !selectedUserId || !selectedMondayStr) return;
-    const docRef = doc(firestore, 'weekly_timesheet_signoffs', `${selectedUserId}_${selectedMondayStr}`);
+    const docRef = doc(firestore, 'timesheets', 'weekly_signoffs', 'records', `${selectedUserId}_${selectedMondayStr}`);
     try {
       await setDoc(
         docRef,
